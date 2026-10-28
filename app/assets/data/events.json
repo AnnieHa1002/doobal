@@ -1,0 +1,391 @@
+{
+ "version": 1,
+ "propChance": 0.0,
+ "propChanceAfterLaunch": 0.1,
+ "scenes": [
+  {
+   "id": "mountain_spring_day",
+   "terrain": "mountain",
+   "season": "spring",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_mountain_spring_day"
+  },
+  {
+   "id": "mountain_spring_night",
+   "terrain": "mountain",
+   "season": "spring",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_mountain_spring_night"
+  },
+  {
+   "id": "mountain_summer_day",
+   "terrain": "mountain",
+   "season": "summer",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_mountain_summer_day"
+  },
+  {
+   "id": "mountain_summer_night",
+   "terrain": "mountain",
+   "season": "summer",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_mountain_summer_night"
+  },
+  {
+   "id": "mountain_autumn_day",
+   "terrain": "mountain",
+   "season": "autumn",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_mountain_autumn_day"
+  },
+  {
+   "id": "mountain_autumn_night",
+   "terrain": "mountain",
+   "season": "autumn",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_mountain_autumn_night"
+  },
+  {
+   "id": "mountain_winter_day",
+   "terrain": "mountain",
+   "season": "winter",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_mountain_winter_day"
+  },
+  {
+   "id": "mountain_winter_night",
+   "terrain": "mountain",
+   "season": "winter",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_mountain_winter_night"
+  },
+  {
+   "id": "coast_spring_day",
+   "terrain": "coast",
+   "season": "spring",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_coast_spring_day"
+  },
+  {
+   "id": "coast_spring_night",
+   "terrain": "coast",
+   "season": "spring",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_coast_spring_night"
+  },
+  {
+   "id": "coast_summer_day",
+   "terrain": "coast",
+   "season": "summer",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_coast_summer_day"
+  },
+  {
+   "id": "coast_summer_night",
+   "terrain": "coast",
+   "season": "summer",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_coast_summer_night"
+  },
+  {
+   "id": "coast_autumn_day",
+   "terrain": "coast",
+   "season": "autumn",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_coast_autumn_day"
+  },
+  {
+   "id": "coast_autumn_night",
+   "terrain": "coast",
+   "season": "autumn",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_coast_autumn_night"
+  },
+  {
+   "id": "coast_winter_day",
+   "terrain": "coast",
+   "season": "winter",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_coast_winter_day"
+  },
+  {
+   "id": "coast_winter_night",
+   "terrain": "coast",
+   "season": "winter",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_coast_winter_night"
+  },
+  {
+   "id": "field_spring_day",
+   "terrain": "field",
+   "season": "spring",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_field_spring_day"
+  },
+  {
+   "id": "field_spring_night",
+   "terrain": "field",
+   "season": "spring",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_field_spring_night"
+  },
+  {
+   "id": "field_summer_day",
+   "terrain": "field",
+   "season": "summer",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_field_summer_day"
+  },
+  {
+   "id": "field_summer_night",
+   "terrain": "field",
+   "season": "summer",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_field_summer_night"
+  },
+  {
+   "id": "field_autumn_day",
+   "terrain": "field",
+   "season": "autumn",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_field_autumn_day"
+  },
+  {
+   "id": "field_autumn_night",
+   "terrain": "field",
+   "season": "autumn",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_field_autumn_night"
+  },
+  {
+   "id": "field_winter_day",
+   "terrain": "field",
+   "season": "winter",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_field_winter_day"
+  },
+  {
+   "id": "field_winter_night",
+   "terrain": "field",
+   "season": "winter",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_field_winter_night"
+  },
+  {
+   "id": "city_spring_day",
+   "terrain": "city",
+   "season": "spring",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_city_spring_day"
+  },
+  {
+   "id": "city_spring_night",
+   "terrain": "city",
+   "season": "spring",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_city_spring_night"
+  },
+  {
+   "id": "city_summer_day",
+   "terrain": "city",
+   "season": "summer",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_city_summer_day"
+  },
+  {
+   "id": "city_summer_night",
+   "terrain": "city",
+   "season": "summer",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_city_summer_night"
+  },
+  {
+   "id": "city_autumn_day",
+   "terrain": "city",
+   "season": "autumn",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_city_autumn_day"
+  },
+  {
+   "id": "city_autumn_night",
+   "terrain": "city",
+   "season": "autumn",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_city_autumn_night"
+  },
+  {
+   "id": "city_winter_day",
+   "terrain": "city",
+   "season": "winter",
+   "dayNight": "day",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_city_winter_day"
+  },
+  {
+   "id": "city_winter_night",
+   "terrain": "city",
+   "season": "winter",
+   "dayNight": "night",
+   "texts": [
+    "",
+    "",
+    ""
+   ],
+   "art": "event_city_winter_night"
+  }
+ ]
+}

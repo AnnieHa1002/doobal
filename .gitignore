@@ -1,0 +1,43 @@
+# OS / 편집기
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Flutter / Dart (app/)
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/coverage/
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/flutter_export_environment.sh
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+*.jks
+*.keystore
+
+# Firebase
+.firebase/
+firebase-debug.log*
+functions/node_modules/
+functions/lib/
+# 앱 설정 파일은 공개 리포로 바꿀 때 다시 판단 (지금은 private 기준으로 커밋해도 됨)
+# app/lib/firebase_options.dart
+# app/ios/Runner/GoogleService-Info.plist
+# app/android/app/google-services.json
+
+# Python (data/, tools/)
+__pycache__/
+*.pyc
+.venv/
+data/*_new.csv
+geocode_report.txt
+
+# 비밀 값
+.env
+*.env

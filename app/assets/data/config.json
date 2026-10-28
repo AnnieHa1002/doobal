@@ -1,0 +1,47 @@
+{
+ "version": 1,
+ "gait": { "walkMaxSpm": 130, "runMinSpm": 140, "walkStrideM": 0.7, "runStrideM": 1.0 },
+ "session": { "maxGapMin": 2, "minMin": 10, "minSteps": 1000, "maxPerDay": 3 },
+ "sync": { "refetchHours": 48, "walkingRefreshSec": 30 },
+ "route": {
+  "seaFactor": 0.3333333333,
+  "earthRadiusKm": 6371.0088,
+  "ports": {
+   "wando":  { "lat": 34.315,  "lng": 126.755, "approx": true },
+   "jeju":   { "lat": 33.5275, "lng": 126.543, "approx": true },
+   "pohang": { "lat": 36.035,  "lng": 129.375, "approx": true },
+   "dodong": { "lat": 37.484,  "lng": 130.906, "approx": true }
+  },
+  "islands": {
+   "jeju":    { "latMin": 33.1, "latMax": 33.6, "lngMin": 126.1,  "lngMax": 127.0 },
+   "ulleung": { "latMin": 37.4, "latMax": 37.6, "lngMin": 130.75, "lngMax": 130.95 }
+  },
+  "fallbackOrigin": { "name": "국토 정중앙(양구)", "lat": 38.03, "lng": 128.03, "approx": true }
+ },
+ "journey": {
+  "firstSketchKm": { "min": 2, "max": 3 },
+  "sketchSteps": [0.25, 0.5, 0.75],
+  "frame": { "silverKm": 20, "goldKm": 50 },
+  "travelFundCapKm": 15,
+  "eta": { "windowDays": 30, "defaultDailySteps": 7000 }
+ },
+ "events": { "everyKm": 2, "propChance": 0.0, "propChanceAfterLaunch": 0.1 },
+ "seasons": { "spring": [3, 4, 5], "summer": [6, 7, 8], "autumn": [9, 10, 11], "winter": [12, 1, 2] },
+ "companions": {
+  "firstMeet": "firstEventOfFirstRealJourney",
+  "guaranteeByDay": [14, 28],
+  "walksPerChapter": 4,
+  "chapters": 8
+ },
+ "guestbook": {
+  "maxChars": 200,
+  "milestoneWindowSteps": 500,
+  "readCount": 5,
+  "blindMinX": 5,
+  "xMinTotalSteps": 10000,
+  "reviewHours": 48,
+  "banAfterDeletes": 3,
+  "banDays": 7
+ },
+ "allowedSources": { "ios": [], "android": [] }
+}

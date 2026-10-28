@@ -1,0 +1,400 @@
+{
+ "version": 1,
+ "props": [
+  {
+   "id": "hat_01",
+   "slot": "hat",
+   "name": "베레모",
+   "unlock": {
+    "kind": "default"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hat_02",
+   "slot": "hat",
+   "name": "깃털 꽂은 여행 모자",
+   "unlock": {
+    "kind": "distance",
+    "km": 25
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hat_03",
+   "slot": "hat",
+   "name": "금빛 베레모",
+   "unlock": {
+    "kind": "distance",
+    "km": 1000
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hat_04",
+   "slot": "hat",
+   "name": "대나무 삿갓",
+   "unlock": {
+    "kind": "region",
+    "region": "jeolla"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hat_05",
+   "slot": "hat",
+   "name": "신라 금관",
+   "unlock": {
+    "kind": "region",
+    "region": "gyeongsang"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hat_06",
+   "slot": "hat",
+   "name": "화관",
+   "unlock": {
+    "kind": "event",
+    "terrain": "field",
+    "season": "spring"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "hat_07",
+   "slot": "hat",
+   "name": "밀짚모자",
+   "unlock": {
+    "kind": "event",
+    "terrain": "field",
+    "season": "summer"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "hat_08",
+   "slot": "hat",
+   "name": "단풍잎 모자",
+   "unlock": {
+    "kind": "event",
+    "terrain": "mountain",
+    "season": "autumn"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "hat_09",
+   "slot": "hat",
+   "name": "털모자",
+   "unlock": {
+    "kind": "event",
+    "terrain": "mountain",
+    "season": "winter"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "hand_01",
+   "slot": "hand",
+   "name": "붓",
+   "unlock": {
+    "kind": "default"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hand_02",
+   "slot": "hand",
+   "name": "지팡이",
+   "unlock": {
+    "kind": "distance",
+    "km": 10
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hand_03",
+   "slot": "hand",
+   "name": "나침반",
+   "unlock": {
+    "kind": "distance",
+    "km": 150
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hand_04",
+   "slot": "hand",
+   "name": "큰 팔레트",
+   "unlock": {
+    "kind": "distance",
+    "km": 200
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hand_05",
+   "slot": "hand",
+   "name": "연잎 우산",
+   "unlock": {
+    "kind": "region",
+    "region": "chungcheong"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hand_06",
+   "slot": "hand",
+   "name": "낚싯대",
+   "unlock": {
+    "kind": "event",
+    "terrain": "coast",
+    "dayNight": "day"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "hand_07",
+   "slot": "hand",
+   "name": "바람개비",
+   "unlock": {
+    "kind": "event",
+    "terrain": "coast"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "hand_08",
+   "slot": "hand",
+   "name": "랜턴",
+   "unlock": {
+    "kind": "event",
+    "terrain": "city",
+    "dayNight": "night"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "hand_09",
+   "slot": "hand",
+   "name": null,
+   "unlock": {
+    "kind": "companion",
+    "companion": null
+   },
+   "status": "pending"
+  },
+  {
+   "id": "pet_01",
+   "slot": "pet",
+   "name": "종이새",
+   "unlock": {
+    "kind": "default"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "pet_02",
+   "slot": "pet",
+   "name": "해치",
+   "unlock": {
+    "kind": "region",
+    "region": "capital"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "pet_03",
+   "slot": "pet",
+   "name": "아기 양",
+   "unlock": {
+    "kind": "region",
+    "region": "gangwon"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "pet_04",
+   "slot": "pet",
+   "name": "돌하르방",
+   "unlock": {
+    "kind": "region",
+    "region": "jeju"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "pet_05",
+   "slot": "pet",
+   "name": "괭이갈매기",
+   "unlock": {
+    "kind": "region",
+    "region": "ulleung"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "pet_06",
+   "slot": "pet",
+   "name": "다람쥐",
+   "unlock": {
+    "kind": "event",
+    "terrain": "mountain",
+    "dayNight": "day"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "pet_07",
+   "slot": "pet",
+   "name": "길고양이",
+   "unlock": {
+    "kind": "event",
+    "terrain": "city",
+    "dayNight": "day"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "pet_08",
+   "slot": "pet",
+   "name": "반딧불이",
+   "unlock": {
+    "kind": "event",
+    "terrain": "field",
+    "season": "summer",
+    "dayNight": "night"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "pet_09",
+   "slot": "pet",
+   "name": null,
+   "unlock": {
+    "kind": "companion",
+    "companion": null
+   },
+   "status": "pending"
+  },
+  {
+   "id": "bag_01",
+   "slot": "bag",
+   "name": "화구 가방",
+   "unlock": {
+    "kind": "default"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "bag_02",
+   "slot": "bag",
+   "name": "이젤 배낭",
+   "unlock": {
+    "kind": "distance",
+    "km": 50
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "bag_03",
+   "slot": "bag",
+   "name": "두루마리 통",
+   "unlock": {
+    "kind": "distance",
+    "km": 500
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "bag_04",
+   "slot": "bag",
+   "name": "꽃 바구니",
+   "unlock": {
+    "kind": "event",
+    "terrain": "city",
+    "season": "spring"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "bag_05",
+   "slot": "bag",
+   "name": null,
+   "unlock": {
+    "kind": "companion",
+    "companion": null
+   },
+   "status": "pending"
+  },
+  {
+   "id": "shoe_01",
+   "slot": "shoe",
+   "name": "갈색 신발",
+   "unlock": {
+    "kind": "default"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "shoe_02",
+   "slot": "shoe",
+   "name": "등산화",
+   "unlock": {
+    "kind": "distance",
+    "km": 100
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "shoe_03",
+   "slot": "shoe",
+   "name": "장화",
+   "unlock": {
+    "kind": "event",
+    "terrain": "coast"
+   },
+   "status": "pending"
+  },
+  {
+   "id": "cloth_01",
+   "slot": "cloth",
+   "name": "앞치마 작업복",
+   "unlock": {
+    "kind": "default"
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "cloth_02",
+   "slot": "cloth",
+   "name": "여행 조끼",
+   "unlock": {
+    "kind": "distance",
+    "km": 300
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "cloth_03",
+   "slot": "cloth",
+   "name": "별밤 망토",
+   "unlock": {
+    "kind": "distance",
+    "km": 700
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "cloth_04",
+   "slot": "cloth",
+   "name": "금빛 화가 코트",
+   "unlock": {
+    "kind": "steps",
+    "steps": 1000000
+   },
+   "status": "mvp"
+  }
+ ]
+}
