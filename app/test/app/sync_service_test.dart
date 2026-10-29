@@ -128,6 +128,37 @@ Future<_Env> _env({bool home = true}) async {
   return e;
 }
 
+/// 도착 화면 값까지 채운 도착한 여정 한 줄을 DB에 직접 넣는다
+Future<void> _insertArrival(
+  AppDb db,
+  String id,
+  String destId,
+  DateTime arrivedAt, {
+  int visitNo = 1,
+  Frame frame = Frame.wood,
+  Frame? prevFrame,
+  double km = 10,
+  bool withVisitNo = true,
+}) {
+  return db.into(db.journeys).insert(JourneysCompanion.insert(
+        id: id,
+        originLat: 38,
+        originLng: 128,
+        destId: destId,
+        startUtc: arrivedAt.millisecondsSinceEpoch - 1000,
+        fundKm: 0,
+        totalEffectiveKm: km,
+        status: JourneyStatus.arrived,
+        arrivedUtc: Value(arrivedAt.millisecondsSinceEpoch),
+        visitNo: Value(withVisitNo ? visitNo : null),
+        prevFrame: Value(prevFrame),
+        newFrame: Value(frame),
+      ));
+}
+
+Future<void> _insertDay(AppDb db, String day, int steps) => db.into(db.daySummaries).insert(
+    DaySummariesCompanion.insert(day: day, steps: steps, distanceM: 0, countedSessions: 0));
+
 void main() {
   // 테스트마다 따로 여는 메모리 DB라 같은 파일을 두 번 여는 경우가 아니다
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
@@ -1111,6 +1142,601 @@ void main() {
       await _trip(e, jeju[1].id, t1);
       expect(await _propIds(e.db), contains('pet_04'));
       expect((await e.svc.snapshot(t1.add(const Duration(days: 1)))).paintingsCount, 2);
+    });
+  });
+
+  group('mapData·preview (지도)', () {
+    final t1 = _t0.add(const Duration(hours: 1));
+    final t2 = _t0.add(const Duration(hours: 3));
+    final t3 = _t0.add(const Duration(hours: 5));
+    const noHome = '출발 동네를 먼저 골라 주세요';
+
+    /// 도착 화면 값만 빼고 채운, 도착했지만 끝 지점이 안 적힌 옛 여정 (또는 끝이 적힌 여정)
+    Future<void> insertArrived(_Env e, String id, LatLng origin, String destId, DateTime at,
+        {LatLng? end}) {
+      return e.db.into(e.db.journeys).insert(JourneysCompanion.insert(
+            id: id,
+            originLat: origin.lat,
+            originLng: origin.lng,
+            destId: destId,
+            startUtc: _ms(at),
+            fundKm: 0,
+            totalEffectiveKm: 100,
+            status: JourneyStatus.arrived,
+            arrivedUtc: Value(_ms(at.add(const Duration(hours: 1)))),
+            endLat: Value(end?.lat),
+            endLng: Value(end?.lng),
+          ));
+    }
+
+    test('여정도 도착도 없으면 길·명소·목적지가 없고 위치는 출발 동네', () async {
+      final e = await _env();
+      final d = await e.svc.mapData(_t0);
+      expect(d.paths, isEmpty);
+      expect(d.visited, isEmpty);
+      expect(d.destId, isNull);
+      expect(d.position, testHome);
+      expect(d.fundKm, 0);
+    });
+
+    test('멈춘 여정 + 진행 중 여정: 길은 출발지 → 멈춘 곳, 멈춘 곳 → 지금 위치', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr003', t1, useFund: false);
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 40, 100));
+      await e.svc.stopJourney(t2);
+      final stopAt = (await e.svc.snapshot(t2)).position!;
+      expect(stopAt, isNot(testHome));
+
+      await e.svc.startJourney('kr001', t2, useFund: false);
+      e.source.records.add(_walk(t2.add(const Duration(minutes: 5)), 30, 100));
+      await e.svc.sync(t3);
+      final snap = await e.svc.snapshot(t3);
+      expect(snap.position, isNot(stopAt));
+
+      final d = await e.svc.mapData(t3);
+      expect(d.paths, [
+        [testHome, stopAt],
+        [stopAt, snap.position!],
+      ]);
+      expect(d.destId, 'kr001');
+      expect(d.position, snap.position);
+      expect(d.visited, isEmpty);
+      expect(d.fundKm, snap.fundKm);
+    });
+
+    test('도착한 명소는 액자와 함께 visited, 길은 도착지까지. 거리 0인 자리 기록은 길이 아니다', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      await placeAt(e.db, _nearGyeongbok, _t0);
+      final end = await _trip(e, 'kr001', t1);
+
+      final d = await e.svc.mapData(end);
+      expect(d.visited, {'kr001': Frame.wood});
+      expect(d.destId, isNull);
+      expect(d.position, _landmarks['kr001']!.latLng);
+      expect(d.paths, [
+        [_nearGyeongbok, _landmarks['kr001']!.latLng],
+      ]);
+    });
+
+    test('끝 지점이 안 적힌 옛 도착 여정은 목적지 명소까지', () async {
+      final e = await _env();
+      await insertArrived(e, 'old', testHome, 'kr003', t1);
+      final d = await e.svc.mapData(t2);
+      final kr003 = _landmarks['kr003']!.latLng;
+      expect(d.paths, [
+        [testHome, kr003],
+      ]);
+      expect(d.position, kr003);
+    });
+
+    test('바다를 건넌 여정의 길은 완도항·제주항을 거친다', () async {
+      final e = await _env();
+      final jeju = _landmarks.values.firstWhere((l) => l.island == Island.jeju);
+      await insertArrived(e, 'sea', testHome, jeju.id, t1, end: jeju.latLng);
+      final d = await e.svc.mapData(t2);
+      expect(d.paths.single, [
+        testHome,
+        rules.ports['wando']!,
+        rules.ports['jeju']!,
+        jeju.latLng,
+      ]);
+    });
+
+    test('배 위에서 진행 중인 여정의 길도 완도항을 거쳐 지금 위치까지', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final wando = rules.ports['wando']!;
+      // 완도항 북쪽 약 1.1km에서 제주로. 4,000보(2.8km)면 항구를 지나 바다 위
+      final origin = LatLng(wando.lat + 0.01, wando.lng);
+      await placeAt(e.db, origin, _t0);
+      final jeju = _landmarks.values.firstWhere((l) => l.island == Island.jeju);
+      await e.svc.startJourney(jeju.id, t1, useFund: false);
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 40, 100));
+      await e.svc.sync(t2);
+      final snap = await e.svc.snapshot(t2);
+      expect(snap.onSea, isTrue);
+
+      final d = await e.svc.mapData(t2);
+      expect(d.paths.single, [origin, wando, snap.position!]);
+    });
+
+    test('여정은 시작 순서대로 길이 되고, 행이 먼저 들어간 순서와 상관없다', () async {
+      final e = await _env();
+      final near = _landmarks['kr001']!.latLng;
+      await insertArrived(e, 'b', testHome, 'kr003', t2, end: _landmarks['kr003']!.latLng);
+      await insertArrived(e, 'a', testHome, 'kr001', t1, end: near);
+      final d = await e.svc.mapData(t3);
+      expect(d.paths.map((p) => p.last), [near, _landmarks['kr003']!.latLng]);
+    });
+
+    test('preview: 쉬는 자리에서 가는 환산 거리, 일수는 하루 평균 4.9km 기준', () async {
+      final e = await _env();
+      final p = await e.svc.preview('kr003', _t0);
+      final km = buildRoute(testHome, _landmarks['kr003']!.latLng, rules).totalEffectiveKm;
+      expect(p.totalKm, km);
+      expect(p.etaDays, (km / rules.defaultDailyKm - 1e-9).ceil());
+      expect(p.etaDays, greaterThan(1));
+    });
+
+    test('preview: 섬이면 배 환산이 들어간다', () async {
+      final e = await _env();
+      final jeju = _landmarks.values.firstWhere((l) => l.island == Island.jeju);
+      final p = await e.svc.preview(jeju.id, _t0);
+      expect(p.totalKm, _routeKm(testHome, jeju.id));
+      final raw = buildRoute(testHome, jeju.latLng, rules).legs.fold(0.0, (s, l) => s + l.rawKm);
+      expect(p.totalKm, lessThan(raw));
+    });
+
+    test('preview: 어제까지의 하루 평균이 있으면 그걸로 일수를 센다', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      // 첫날 100분 × 100보 × 0.7m = 7.0km
+      e.source.records.add(_walk(t1, 100, 100));
+      final next = _t0.add(const Duration(days: 1, hours: 1));
+      await e.svc.sync(next);
+      final p = await e.svc.preview('kr003', next);
+      expect(p.etaDays, (p.totalKm / 7.0 - 1e-9).ceil());
+    });
+
+    test('preview: 진행 중이면 그 여정의 지금 지점에서 센다', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr003', t1, useFund: false);
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 40, 100));
+      await e.svc.sync(t2);
+      final snap = await e.svc.snapshot(t2);
+
+      final p = await e.svc.preview('kr001', t2);
+      expect(p.totalKm, _routeKm(snap.position!, 'kr001'));
+      expect(p.totalKm, isNot(_routeKm(testHome, 'kr001')));
+    });
+
+    test('preview: 지금 가는 목적지는 스냅숏의 남은 거리·도착 예정일과 같다', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr003', t1, useFund: false);
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 40, 100));
+      await e.svc.sync(t2);
+      final snap = await e.svc.snapshot(t2);
+
+      final p = await e.svc.preview('kr003', t2);
+      expect(p.totalKm, closeTo(snap.journey!.progress.remainingKm, 0.05));
+      expect(p.etaDays, snap.journey!.eta.difference(dayFromKey(snap.today)).inDays);
+    });
+
+    test('preview: 지금 있는 명소는 거리 0이어도 일수는 최소 1', () async {
+      final e = await _env();
+      await placeAt(e.db, _landmarks['kr001']!.latLng, _t0);
+      final p = await e.svc.preview('kr001', _t0);
+      expect(p.totalKm, 0);
+      expect(p.etaDays, 1);
+    });
+
+    test('preview: 출발 동네도 여행도 없으면 StateError, 저장은 그대로', () async {
+      final e = await _env(home: false);
+      await e.svc.snapshot(_t0);
+      final before = await e.dump();
+      await expectLater(
+        e.svc.preview('kr003', _t0),
+        throwsA(isA<StateError>().having((x) => x.message, 'message', noHome)),
+      );
+      expect(await e.dump(), before);
+    });
+
+    test('preview·mapData는 저장을 바꾸지 않는다', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr003', t1);
+      final before = await e.dump();
+      await e.svc.preview('kr001', t2);
+      await e.svc.mapData(t2);
+      expect(await e.dump(), before);
+    });
+  });
+
+  group('arrivalView (도착 화면)', () {
+    final t1 = _t0.add(const Duration(hours: 1));
+    final hour = const Duration(hours: 1);
+
+    test('첫 방문: 방문 1, 액자 전후, 여정 거리, 도착 시각, 그날 걸음, 지난번·권역 소품 없음', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final dest = _destFor(testHome, Frame.wood);
+      final km = _routeKm(testHome, dest.id);
+      final end = await _trip(e, dest.id, t1);
+      final steps = e.source.records.single.steps;
+      // 같은 한국 날짜 안에서 걸었으니 그날 걸음은 이 기록의 걸음
+      expect(kstDayKey(t1), kstDayKey(end));
+
+      final id = (await _startedAt(e.db, t1)).id;
+      final v = await e.svc.arrivalView(id);
+      expect(v.journeyId, id);
+      expect(v.dest.id, dest.id);
+      expect(v.visitNo, 1);
+      expect(v.prevFrame, isNull);
+      expect(v.newFrame, Frame.wood);
+      expect(v.frameUp, isFalse);
+      expect(v.journeyKm, closeTo(km, 1e-9));
+      expect(v.arrivedAt, end);
+      expect(v.daySteps, steps);
+      expect(v.prevBestKm, isNull);
+      expect(v.regionProp, isNull);
+    });
+
+    test('그날 걸음은 도착한 시각의 한국 날짜 하루 요약 (UTC 날짜가 아니다)', () async {
+      final e = await _env();
+      await _insertDay(e.db, '2026-11-18', 111);
+      await _insertDay(e.db, '2026-11-19', 222);
+      await _insertDay(e.db, '2026-11-20', 333);
+      // UTC 2026-11-18 15:30 = 한국 11-19 00:30
+      await _insertArrival(e.db, 'j1', 'kr001', DateTime.utc(2026, 11, 18, 15, 30));
+      // UTC 2026-11-19 14:59 = 한국 11-19 23:59
+      await _insertArrival(e.db, 'j2', 'kr002', DateTime.utc(2026, 11, 19, 14, 59));
+      expect((await e.svc.arrivalView('j1')).daySteps, 222);
+      expect((await e.svc.arrivalView('j2')).daySteps, 222);
+    });
+
+    test('하루 요약이 없는 날은 그날 걸음 0', () async {
+      final e = await _env();
+      await _insertArrival(e.db, 'j1', 'kr001', DateTime.utc(2026, 12, 1));
+      expect((await e.svc.arrivalView('j1')).daySteps, 0);
+    });
+
+    test('2번째 방문에서 액자가 오르면: 지난번 거리는 첫 도착의 거리', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final a = _destFor(testHome, Frame.wood);
+      final b = _destFor(a.latLng, Frame.silver, not: a.id);
+      final end1 = await _trip(e, a.id, t1);
+      final end2 = await _trip(e, b.id, end1.add(hour));
+      final start3 = end2.add(hour);
+      await _trip(e, a.id, start3);
+
+      final v = await e.svc.arrivalView((await _startedAt(e.db, start3)).id);
+      expect(v.visitNo, 2);
+      expect(v.prevFrame, Frame.wood);
+      expect(v.newFrame, Frame.silver);
+      expect(v.frameUp, isTrue);
+      expect(v.journeyKm, closeTo(_routeKm(b.latLng, a.id), 1e-9));
+      expect(v.prevBestKm, closeTo(_routeKm(testHome, a.id), 1e-9));
+      expect(v.regionProp, isNull);
+    });
+
+    test('2·3번째 방문: 지난번 거리는 가장 최근이 아니라 가장 먼 거리', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      // 출발 동네에서는 금 액자이면서, 가까이에 다른 명소가 있는 곳
+      final a = _landmarks.values.firstWhere((l) =>
+          l.island == Island.mainland &&
+          frameFor(_routeKm(testHome, l.id), rules) == Frame.gold &&
+          _findDest(l.latLng, Frame.wood, not: l.id) != null);
+      final b = _destFor(a.latLng, Frame.wood, not: a.id);
+      final goldKm = _routeKm(testHome, a.id);
+      final shortKm = _routeKm(b.latLng, a.id);
+      expect(shortKm, lessThan(goldKm));
+
+      final end1 = await _trip(e, a.id, t1);
+      final end2 = await _trip(e, b.id, end1.add(hour));
+      final start3 = end2.add(hour);
+      final end3 = await _trip(e, a.id, start3);
+      final end4 = await _trip(e, b.id, end3.add(hour));
+      final start5 = end4.add(hour);
+      await _trip(e, a.id, start5);
+
+      final v2 = await e.svc.arrivalView((await _startedAt(e.db, start3)).id);
+      expect(v2.visitNo, 2);
+      expect(v2.newFrame, Frame.gold);
+      expect(v2.frameUp, isFalse);
+      expect(v2.journeyKm, closeTo(shortKm, 1e-9));
+      expect(v2.prevBestKm, closeTo(goldKm, 1e-9));
+
+      final v3 = await e.svc.arrivalView((await _startedAt(e.db, start5)).id);
+      expect(v3.visitNo, 3);
+      expect(v3.journeyKm, closeTo(shortKm, 1e-9));
+      // 2번째가 더 짧았으니 지난번 최고는 첫 도착 그대로
+      expect(v3.prevBestKm, closeTo(goldKm, 1e-9));
+    });
+
+    test('옛 도착이라 지난번 기록이 없는 재방문: 지난번 거리는 null', () async {
+      final e = await _env();
+      await _insertArrival(e.db, 'j1', 'kr001', DateTime.utc(2026, 11, 20),
+          visitNo: 2, prevFrame: Frame.wood);
+      expect((await e.svc.arrivalView('j1')).prevBestKm, isNull);
+    });
+
+    test('다른 명소의 도착과 멈춘 여정은 지난번에 들어가지 않는다', () async {
+      final e = await _env();
+      await _insertArrival(e.db, 'j1', 'kr001', DateTime.utc(2026, 11, 18), km: 40);
+      await _insertArrival(e.db, 'j2', 'kr002', DateTime.utc(2026, 11, 19), km: 90);
+      await _insertArrival(e.db, 'j3', 'kr001', DateTime.utc(2026, 11, 20),
+          visitNo: 2, prevFrame: Frame.silver, frame: Frame.silver, km: 10);
+      // 나중 도착 (다시 본 화면이 아니라 이 도착 뒤에 생긴 일)
+      await _insertArrival(e.db, 'j4', 'kr001', DateTime.utc(2026, 11, 25),
+          visitNo: 3, prevFrame: Frame.silver, frame: Frame.gold, km: 70);
+      await placeAt(e.db, testHome, DateTime.utc(2026, 11, 19));
+      expect((await e.svc.arrivalView('j3')).prevBestKm, 40);
+      expect((await e.svc.arrivalView('j4')).prevBestKm, 40);
+    });
+
+    test('울릉(명소 1곳)에 도착하면 첫 방문이 권역을 채워서 괭이갈매기', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final ulleung = _landmarks['kr089']!;
+      // 울릉도 안에서 약 1km 북쪽
+      await placeAt(e.db, LatLng(ulleung.latLng.lat + 0.009, ulleung.latLng.lng), _t0);
+      await _trip(e, ulleung.id, t1);
+      final v = await e.svc.arrivalView((await _startedAt(e.db, t1)).id);
+      expect(v.visitNo, 1);
+      expect(v.regionProp?.id, 'pet_05');
+      expect(v.regionProp?.name, '괭이갈매기');
+    });
+
+    test('제주(2곳)는 둘째 그림에서 돌하르방, 첫째에서는 없다', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final jeju = landmarks.where((l) => l.region == 'jeju').toList();
+      expect(jeju, hasLength(2));
+      await placeAt(e.db, LatLng(jeju[0].latLng.lat, jeju[0].latLng.lng + 0.0113), _t0);
+      final end1 = await _trip(e, jeju[0].id, t1);
+      final first = await e.svc.arrivalView((await _startedAt(e.db, t1)).id);
+      expect(first.visitNo, 1);
+      expect(first.regionProp, isNull);
+
+      final start2 = end1.add(hour);
+      await _trip(e, jeju[1].id, start2);
+      final second = await e.svc.arrivalView((await _startedAt(e.db, start2)).id);
+      expect(second.visitNo, 1);
+      expect(second.regionProp?.id, 'pet_04');
+    });
+
+    test('재방문은 권역이 이미 차 있어도 소품이 없다', () async {
+      final e = await _env();
+      final ulleung = _landmarks['kr089']!;
+      await _seedPaintings(e.db, [ulleung.id]);
+      await _insertArrival(e.db, 'j1', ulleung.id, DateTime.utc(2026, 11, 20),
+          visitNo: 2, prevFrame: Frame.wood);
+      expect((await e.svc.arrivalView('j1')).regionProp, isNull);
+    });
+
+    test('권역 소품은 그 도착까지의 그림으로 본다 (뒤에 채운 권역을 앞 도착에 붙이지 않는다)', () async {
+      final e = await _env();
+      final jeju = landmarks.where((l) => l.region == 'jeju').toList();
+      await e.db.batch((b) => b.insertAll(e.db.paintingsOwned, [
+            for (final (i, l) in jeju.indexed)
+              PaintingsOwnedCompanion.insert(
+                landmarkId: l.id,
+                visits: 1,
+                frame: Frame.wood,
+                bestKm: 1,
+                firstArrivedUtc: 100 + i * 100,
+                lastArrivedUtc: 100 + i * 100,
+              ),
+          ]));
+      DateTime at(int ms) => DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
+      await _insertArrival(e.db, 'j1', jeju[0].id, at(100));
+      await _insertArrival(e.db, 'j2', jeju[1].id, at(200));
+      expect((await e.svc.arrivalView('j1')).regionProp, isNull);
+      expect((await e.svc.arrivalView('j2')).regionProp?.id, 'pet_04');
+    });
+
+    test('도착한 여정이 아니거나 없으면 StateError', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr003', t1);
+      final active = (await _startedAt(e.db, t1)).id;
+      await expectLater(e.svc.arrivalView(active), throwsStateError);
+      await expectLater(e.svc.arrivalView('없는-id'), throwsStateError);
+      // 옛 도착 여정 (도착 화면 값이 없다)
+      await _insertArrival(e.db, 'old', 'kr001', DateTime.utc(2026, 11, 20), withVisitNo: false);
+      await expectLater(e.svc.arrivalView('old'), throwsStateError);
+      await e.svc.stopJourney(t1.add(const Duration(minutes: 5)));
+      await expectLater(e.svc.arrivalView(active), throwsStateError);
+    });
+
+    test('읽기만 한다: 도착 대기도 저장도 그대로', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final dest = _destFor(testHome, Frame.wood);
+      final end = await _trip(e, dest.id, t1);
+      final before = await e.dump();
+      await e.svc.arrivalView((await _startedAt(e.db, t1)).id);
+      expect(await e.dump(), before);
+      expect((await e.svc.snapshot(end)).pendingArrival, isNotNull);
+    });
+  });
+
+  group('화집 벽', () {
+    final ids = ['kr001', 'kr002', 'kr003', 'kr004', 'kr005', 'kr006'];
+
+    Future<_Env> envWithPaintings() async {
+      final e = await _env();
+      await _seedPaintings(e.db, ids);
+      return e;
+    }
+
+    test('처음엔 4칸이 모두 비어 있다', () async {
+      final e = await _env();
+      expect(await e.svc.wall(), [null, null, null, null]);
+    });
+
+    test('setWall: 칸에 건다. 4칸은 늘 유지된다', () async {
+      final e = await envWithPaintings();
+      await e.svc.setWall(2, 'kr001');
+      expect(await e.svc.wall(), [null, null, 'kr001', null]);
+      await e.svc.setWall(0, 'kr002');
+      expect(await e.svc.wall(), ['kr002', null, 'kr001', null]);
+    });
+
+    test('setWall: 다른 칸에 걸린 그림을 옮기면 원래 칸은 비고, 한 그림은 한 칸에만 있다', () async {
+      final e = await envWithPaintings();
+      await e.svc.setWall(0, 'kr001');
+      await e.svc.setWall(1, 'kr002');
+      await e.svc.setWall(3, 'kr001');
+      expect(await e.svc.wall(), [null, 'kr002', null, 'kr001']);
+      expect((await e.db.select(e.db.wallSlots).get()), hasLength(2));
+    });
+
+    test('setWall: 걸려 있던 자리에 새 그림을 걸면 바뀐다 (이전 그림은 벽에서 내려간다)', () async {
+      final e = await envWithPaintings();
+      await e.svc.setWall(1, 'kr001');
+      await e.svc.setWall(1, 'kr002');
+      expect(await e.svc.wall(), [null, 'kr002', null, null]);
+      await e.svc.setWall(1, 'kr002');
+      expect(await e.svc.wall(), [null, 'kr002', null, null]);
+    });
+
+    test('setWall: 칸 번호가 범위 밖이면 RangeError, 얻지 않은 그림이면 StateError, 둘 다 저장 그대로', () async {
+      final e = await envWithPaintings();
+      await e.svc.setWall(0, 'kr001');
+      await expectLater(e.svc.setWall(4, 'kr002'), throwsRangeError);
+      await expectLater(e.svc.setWall(-1, 'kr002'), throwsRangeError);
+      await expectLater(e.svc.setWall(1, 'kr050'), throwsStateError);
+      expect(await e.svc.wall(), ['kr001', null, null, null]);
+    });
+
+    test('hangOnWall: 첫 빈 칸에 걸고 그 칸을 돌려준다', () async {
+      final e = await envWithPaintings();
+      expect(await e.svc.hangOnWall('kr001'), 0);
+      expect(await e.svc.hangOnWall('kr002'), 1);
+      // 빈 칸이 가운데에 생기면 거기부터 채운다
+      await e.svc.setWall(3, 'kr003');
+      await e.svc.setWall(0, 'kr004');
+      expect(await e.svc.wall(), ['kr004', 'kr002', null, 'kr003']);
+      expect(await e.svc.hangOnWall('kr005'), 2);
+      expect(await e.svc.wall(), ['kr004', 'kr002', 'kr005', 'kr003']);
+    });
+
+    test('hangOnWall: 이미 걸려 있으면 그 칸을 돌려주고 그대로 둔다', () async {
+      final e = await envWithPaintings();
+      await e.svc.setWall(2, 'kr001');
+      expect(await e.svc.hangOnWall('kr001'), 2);
+      expect(await e.svc.wall(), [null, null, 'kr001', null]);
+    });
+
+    test('hangOnWall: 벽이 가득 차면 null이고 아무것도 바꾸지 않는다 (이미 걸린 그림은 그 칸)', () async {
+      final e = await envWithPaintings();
+      for (var i = 0; i < 4; i++) {
+        await e.svc.setWall(i, ids[i]);
+      }
+      expect(await e.svc.hangOnWall('kr005'), isNull);
+      expect(await e.svc.wall(), ['kr001', 'kr002', 'kr003', 'kr004']);
+      expect(await e.svc.hangOnWall('kr003'), 2);
+    });
+
+    test('hangOnWall: 얻지 않은 그림이면 StateError', () async {
+      final e = await envWithPaintings();
+      await expectLater(e.svc.hangOnWall('kr050'), throwsStateError);
+      expect(await e.svc.wall(), [null, null, null, null]);
+    });
+
+    test('벽은 동기화·도착과 상관없이 남는다', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final dest = _destFor(testHome, Frame.wood);
+      final end = await _trip(e, dest.id, _t0.add(const Duration(hours: 1)));
+      expect(await e.svc.hangOnWall(dest.id), 0);
+      await e.svc.sync(end.add(const Duration(hours: 2)));
+      expect(await e.svc.wall(), [dest.id, null, null, null]);
+    });
+  });
+
+  group('paintings·visits·ownedPropIds (화집)', () {
+    final t1 = _t0.add(const Duration(hours: 1));
+    final hour = const Duration(hours: 1);
+
+    test('paintings: 처음 얻은 순서, 명소·방문·액자·가장 먼 거리·처음/마지막 도착', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final a = _destFor(testHome, Frame.wood);
+      final b = _destFor(a.latLng, Frame.silver, not: a.id);
+      final end1 = await _trip(e, a.id, t1);
+      final end2 = await _trip(e, b.id, end1.add(hour));
+      final end3 = await _trip(e, a.id, end2.add(hour));
+
+      final list = await e.svc.paintings();
+      expect([for (final p in list) p.landmark.id], [a.id, b.id]);
+      final pa = list[0];
+      expect(pa.landmark.name, a.name);
+      expect(pa.visits, 2);
+      expect(pa.frame, Frame.silver);
+      expect(pa.bestKm, closeTo(_routeKm(b.latLng, a.id), 1e-9));
+      expect(pa.firstArrivedAt, end1);
+      expect(pa.lastArrivedAt, end3);
+      final pb = list[1];
+      expect((pb.visits, pb.frame, pb.firstArrivedAt, pb.lastArrivedAt),
+          (1, Frame.silver, end2, end2));
+    });
+
+    test('paintings: 얻은 그림이 없으면 빈 목록, 처음 얻은 시각이 같으면 명소 id 순', () async {
+      final e = await _env();
+      expect(await e.svc.paintings(), isEmpty);
+      await _seedPaintings(e.db, ['kr003', 'kr001', 'kr002']);
+      expect([for (final p in await e.svc.paintings()) p.landmark.id], ['kr001', 'kr002', 'kr003']);
+    });
+
+    test('visits: 그 명소에 도착한 여정만 도착 순서대로 (몇 번째·거리·도착 시각)', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final a = _destFor(testHome, Frame.wood);
+      final b = _destFor(a.latLng, Frame.silver, not: a.id);
+      final end1 = await _trip(e, a.id, t1);
+      final end2 = await _trip(e, b.id, end1.add(hour));
+      final end3 = await _trip(e, a.id, end2.add(hour));
+      // 멈춘 여정은 방문이 아니다
+      await e.svc.startJourney(b.id, end3.add(hour), useFund: false);
+      await e.svc.stopJourney(end3.add(hour * 2));
+
+      final va = await e.svc.visits(a.id);
+      expect([for (final v in va) v.visitNo], [1, 2]);
+      expect(va[0].km, closeTo(_routeKm(testHome, a.id), 1e-9));
+      expect(va[1].km, closeTo(_routeKm(b.latLng, a.id), 1e-9));
+      expect([for (final v in va) v.arrivedAt], [end1, end3]);
+      final vb = await e.svc.visits(b.id);
+      expect([for (final v in vb) (v.visitNo, v.arrivedAt)], [(1, end2)]);
+      expect(await e.svc.visits('kr050'), isEmpty);
+    });
+
+    test('visits: 몇 번째인지 안 적힌 옛 기록은 도착 순서', () async {
+      final e = await _env();
+      await _insertArrival(e.db, 'j2', 'kr001', DateTime.utc(2026, 11, 20),
+          withVisitNo: false, km: 7);
+      await _insertArrival(e.db, 'j1', 'kr001', DateTime.utc(2026, 11, 19),
+          withVisitNo: false, km: 5);
+      final v = await e.svc.visits('kr001');
+      expect([for (final x in v) (x.visitNo, x.km)], [(1, 5.0), (2, 7.0)]);
+    });
+
+    test('ownedPropIds: 기본 소품부터, 새로 얻으면 늘어난다', () async {
+      final e = await _env();
+      expect(await e.svc.ownedPropIds(), isEmpty);
+      await e.svc.sync(_t0);
+      final defaults = {for (final p in props) if (p.kind == PropUnlockKind.initial) p.id};
+      expect(await e.svc.ownedPropIds(), defaults);
+      e.source.records.add(_walkKm(_t0.add(const Duration(hours: 1)), 11));
+      await e.svc.sync(_t0.add(const Duration(hours: 5)));
+      expect(await e.svc.ownedPropIds(), {...defaults, 'hand_02'});
     });
   });
 }

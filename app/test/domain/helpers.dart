@@ -5,6 +5,8 @@ import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/camp_theme.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/landmark.dart';
+import 'package:doobal/domain/map_projection.dart';
+import 'package:doobal/domain/map_regions.dart';
 import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/rules.dart';
 
@@ -34,6 +36,16 @@ final List<int> milestones = ((jsonDecode(File('assets/data/milestones.json').re
 final CampTheme campTheme = CampTheme.fromJson(
   jsonDecode(File('assets/data/themes/camp.json').readAsStringSync()) as Map<String, dynamic>,
 );
+
+/// 실제 지도 투영 (assets/map/ui_map_projection_v01.json)
+final MapProjection mapProjection = MapProjection.fromJson(
+  jsonDecode(File('assets/map/ui_map_projection_v01.json').readAsStringSync())
+      as Map<String, dynamic>,
+);
+
+/// 실제 지도 경계 (assets/map/ui_map_regions_v01.svg의 18개)
+final List<MapRegion> mapRegions =
+    parseMapRegions(File('assets/map/ui_map_regions_v01.svg').readAsStringSync());
 
 /// 테스트용 출발 동네: 서울시청 (서울특별시 중구). 실제 출발 동네는 사용자가 고른다
 const testHome = LatLng(37.5665, 126.9780);

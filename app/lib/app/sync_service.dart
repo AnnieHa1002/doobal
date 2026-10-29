@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import '../data/db/app_db.dart';
 import '../data/step_source.dart';
+import '../domain/arrival.dart';
 import '../domain/bucket.dart';
 import '../domain/eta.dart';
 import '../domain/gait.dart';
@@ -16,6 +17,7 @@ import '../domain/rules.dart';
 import '../domain/session.dart';
 import '../domain/time_kst.dart';
 import '../domain/walk_record.dart';
+import '../domain/wall.dart';
 
 /// 한 번 가져온 결과. 출처별 걸음은 허용 목록을 정하는 실기기 확인용
 class SyncReport {
@@ -84,6 +86,80 @@ class PendingArrival {
   bool get frameUp => prevFrame != null && newFrame.index > prevFrame!.index;
 }
 
+/// 도착 화면에 보여 줄 값 (여정 하나)
+class ArrivalView {
+  const ArrivalView({
+    required this.journeyId,
+    required this.dest,
+    required this.visitNo,
+    required this.prevFrame,
+    required this.newFrame,
+    required this.journeyKm,
+    required this.arrivedAt,
+    required this.daySteps,
+    required this.prevBestKm,
+    required this.regionProp,
+  });
+
+  final String journeyId;
+  final Landmark dest;
+
+  /// 몇 번째 방문인지. 1이면 새 그림
+  final int visitNo;
+
+  /// 도착 전 액자. 첫 방문이면 null
+  final Frame? prevFrame;
+  final Frame newFrame;
+
+  /// 이 여정의 환산 거리(km)
+  final double journeyKm;
+  final DateTime arrivedAt;
+
+  /// 도착한 날(한국 날짜)의 걸음. 하루 요약이 없으면 0
+  final int daySteps;
+
+  /// 먼저 도착한 여정 중 가장 먼 환산 거리(km). 첫 방문이면 null
+  final double? prevBestKm;
+
+  /// 이 도착이 그 권역을 채웠을 때 받는 권역 소품. 아니면 null
+  final Prop? regionProp;
+
+  /// 재방문해서 액자가 올랐는가
+  bool get frameUp => prevFrame != null && newFrame.index > prevFrame!.index;
+}
+
+/// 화집에서 보는 얻은 그림 하나
+class OwnedPaintingView {
+  const OwnedPaintingView({
+    required this.landmark,
+    required this.visits,
+    required this.frame,
+    required this.bestKm,
+    required this.firstArrivedAt,
+    required this.lastArrivedAt,
+  });
+
+  final Landmark landmark;
+  final int visits;
+  final Frame frame;
+
+  /// 가장 멀리서 걸어 온 환산 거리(km)
+  final double bestKm;
+  final DateTime firstArrivedAt;
+  final DateTime lastArrivedAt;
+}
+
+/// 그림 상세의 방문 한 줄
+class VisitView {
+  const VisitView({required this.visitNo, required this.km, required this.arrivedAt});
+
+  final int visitNo;
+
+  /// 그 여정의 환산 거리(km)
+  final double km;
+  final DateTime arrivedAt;
+}
+
 /// 사용자가 고른 출발 동네 (시·군·구 이름과 대표 좌표)
 class Home {
   const Home(this.name, this.latLng);
@@ -145,6 +221,41 @@ class Snapshot {
 
   /// 설치 이후 실제로 걸은 거리(km). 하루 거리의 합이라 배 환산이 아니다 (소품 거리 기준)
   final double totalKm;
+}
+
+/// 지도 화면에 쓸 값
+class MapData {
+  const MapData({
+    required this.visited,
+    required this.paths,
+    required this.destId,
+    required this.position,
+    required this.fundKm,
+  });
+
+  /// 그림을 얻은 명소 id → 지금 액자
+  final Map<String, Frame> visited;
+
+  /// 지금까지 지나온 길. 여정마다 한 줄이고, 배 구간은 항구를 거친다
+  final List<List<LatLng>> paths;
+
+  /// 진행 중인 여정의 목적지. 여정이 없으면 null
+  final String? destId;
+
+  /// 지금 있는 곳 (Snapshot.position과 같다)
+  final LatLng? position;
+  final double fundKm;
+}
+
+/// 지금 자리에서 어떤 명소로 가면 얼마나 걸리는지 (지도 카드용 미리 보기)
+class JourneyPreview {
+  const JourneyPreview(this.totalKm, this.etaDays);
+
+  /// 환산 거리(km)
+  final double totalKm;
+
+  /// 오늘(한국 시간)부터 도착 예정일까지 며칠. 최소 1
+  final int etaDays;
 }
 
 /// 수집 → 저장 → 계산 (M1 명세 6장). 같은 데이터로 여러 번 돌려도 결과가 같다
@@ -341,6 +452,150 @@ class SyncService {
       (db.update(db.journeys)..where((t) => t.id.equals(journeyId)))
           .write(const JourneysCompanion(arrivalShown: Value(true)));
 
+  /// 도착 화면에 쓸 값. 도착한 여정이 아니면 StateError.
+  /// 날짜는 한국 날짜, 지난번 거리는 재방문(2번째부터)일 때만, 권역 소품은 첫 방문이 권역을 채웠을 때만
+  Future<ArrivalView> arrivalView(String journeyId) async {
+    final row = await (db.select(db.journeys)..where((t) => t.id.equals(journeyId)))
+        .getSingleOrNull();
+    if (row == null ||
+        row.status != JourneyStatus.arrived ||
+        row.arrivedUtc == null ||
+        row.visitNo == null ||
+        row.newFrame == null) {
+      throw StateError('도착한 여정이 아니에요: $journeyId');
+    }
+    final dest = landmarks[row.destId]!;
+    final arrivedAt = _utc(row.arrivedUtc!);
+    final visitNo = row.visitNo!;
+
+    final day = await (db.select(db.daySummaries)
+          ..where((t) => t.day.equals(kstDayKey(arrivedAt))))
+        .getSingleOrNull();
+    // 그때까지 얻은 그림만 본다 (이 도착 뒤에 채운 권역을 이 도착의 일로 치지 않게)
+    final visited = {
+      for (final r in await db.select(db.paintingsOwned).get())
+        if (r.firstArrivedUtc <= row.arrivedUtc!) r.landmarkId,
+    };
+
+    double? prevBestKm;
+    if (visitNo > 1) {
+      final trips = [
+        for (final r in await _arrivedTo(dest.id))
+          ArrivedTrip(_utc(r.arrivedUtc!), r.totalEffectiveKm),
+      ];
+      prevBestKm = previousBestKm(trips, arrivedAt);
+    }
+
+    return ArrivalView(
+      journeyId: row.id,
+      dest: dest,
+      visitNo: visitNo,
+      prevFrame: row.prevFrame,
+      newFrame: row.newFrame!,
+      journeyKm: row.totalEffectiveKm,
+      arrivedAt: arrivedAt,
+      daySteps: day?.steps ?? 0,
+      prevBestKm: prevBestKm,
+      regionProp: regionPropOnArrival(
+        visitNo: visitNo,
+        region: dest.region,
+        visitedIds: visited,
+        landmarks: landmarks.values.toList(),
+        props: props,
+      ),
+    );
+  }
+
+  /// [landmarkId]에 도착한 여정을 도착 순서대로 (같은 시각이면 id 순)
+  Future<List<JourneyRow>> _arrivedTo(String landmarkId) => (db.select(db.journeys)
+        ..where((t) =>
+            t.status.equalsValue(JourneyStatus.arrived) &
+            t.destId.equals(landmarkId) &
+            t.arrivedUtc.isNotNull())
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.arrivedUtc),
+          (t) => OrderingTerm(expression: t.id),
+        ]))
+      .get();
+
+  /// 화집 벽: 늘 [wallSlots]칸. 안 건 칸은 null
+  Future<List<String?>> wall() async => wallFromSlots({
+        for (final r in await db.select(db.wallSlots).get()) r.slot: r.landmarkId,
+      });
+
+  /// [slot]에 얻은 그림 [landmarkId]를 건다. 같은 그림이 다른 칸에 있으면 그 칸은 비운다.
+  /// 칸 번호가 범위 밖이면 RangeError, 얻지 않은 그림이면 StateError
+  Future<void> setWall(int slot, String landmarkId) => db.transaction(() async {
+        await _requireOwned(landmarkId);
+        await _saveWall(placeOnWall(await wall(), slot, landmarkId));
+      });
+
+  /// 벽의 첫 빈 칸에 건다 (이미 걸려 있으면 그대로 두고 그 칸). 걸린 칸을 돌려주고,
+  /// 벽이 가득 찼으면 null (아무것도 바꾸지 않는다)
+  Future<int?> hangOnWall(String landmarkId) => db.transaction(() async {
+        await _requireOwned(landmarkId);
+        final current = await wall();
+        final slot = slotToHang(current, landmarkId);
+        if (slot == null) return null;
+        await _saveWall(placeOnWall(current, slot, landmarkId));
+        return slot;
+      });
+
+  Future<void> _requireOwned(String landmarkId) async {
+    final owned = await (db.select(db.paintingsOwned)
+          ..where((t) => t.landmarkId.equals(landmarkId)))
+        .getSingleOrNull();
+    if (owned == null) throw StateError('얻지 않은 그림이에요: $landmarkId');
+  }
+
+  Future<void> _saveWall(List<String?> wall) async {
+    await db.delete(db.wallSlots).go();
+    await db.batch((b) => b.insertAll(db.wallSlots, [
+          for (var i = 0; i < wall.length; i++)
+            if (wall[i] != null) WallSlotsCompanion.insert(slot: Value(i), landmarkId: wall[i]!),
+        ]));
+  }
+
+  /// 얻은 그림 전부. 처음 얻은 순서 (같으면 명소 id 순)
+  Future<List<OwnedPaintingView>> paintings() async {
+    final rows = await (db.select(db.paintingsOwned)
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.firstArrivedUtc),
+            (t) => OrderingTerm(expression: t.landmarkId),
+          ]))
+        .get();
+    return [
+      for (final r in rows)
+        if (landmarks[r.landmarkId] case final l?)
+          OwnedPaintingView(
+            landmark: l,
+            visits: r.visits,
+            frame: r.frame,
+            bestKm: r.bestKm,
+            firstArrivedAt: _utc(r.firstArrivedUtc),
+            lastArrivedAt: _utc(r.lastArrivedUtc),
+          ),
+    ];
+  }
+
+  /// 그 명소에 도착한 기록을 도착 순서대로. 몇 번째인지는 도착할 때 적어 둔 값
+  /// (옛 기록처럼 없으면 순서)
+  Future<List<VisitView>> visits(String landmarkId) async {
+    final rows = await _arrivedTo(landmarkId);
+    return [
+      for (var i = 0; i < rows.length; i++)
+        VisitView(
+          visitNo: rows[i].visitNo ?? i + 1,
+          km: rows[i].totalEffectiveKm,
+          arrivedAt: _utc(rows[i].arrivedUtc!),
+        ),
+    ];
+  }
+
+  /// 얻은 소품 id (소품 탭)
+  Future<Set<String>> ownedPropIds() async =>
+      {for (final r in await db.select(db.propsOwned).get()) r.propId};
+
   /// 배낭의 새 소품 표시를 지운다
   Future<void> markPropsSeen() => (db.update(db.propsOwned)..where((t) => t.seen.equals(false)))
       .write(const PropsOwnedCompanion(seen: Value(true)));
@@ -380,21 +635,13 @@ class SyncService {
     final fund = await _fund();
 
     final days = await db.select(db.daySummaries).get();
-    JourneyView? view;
-    LatLng? position;
-    var onSea = false;
     final active = await _activeJourney();
-    if (active == null) {
-      position = await _restingPosition();
-    } else {
-      final j = _toJourney(active);
-      final p = progress(j, await _distanceKmFrom(_minuteOf(active.startUtc)), rules);
-      final daily = {for (final d in days) d.day: d.distanceM / 1000};
-      final eta = etaDate(p.remainingKm, daily, today, state.firstRecordDay, rules);
-      view = JourneyView(landmarks[active.destId]!, j.route.totalEffectiveKm, p, eta);
-      final at = positionAt(j.route, p.progressKm);
-      position = at.latLng;
-      onSea = at.onSea;
+    final here = await _whereNow(active);
+    JourneyView? view;
+    if (active != null) {
+      final p = here.progress!;
+      final eta = _etaOf(p.remainingKm, days, today, state);
+      view = JourneyView(landmarks[active.destId]!, here.journey!.route.totalEffectiveKm, p, eta);
     }
 
     return Snapshot(
@@ -406,15 +653,77 @@ class SyncService {
       lastFetched: state.lastFetchedUtc == null ? null : _utc(state.lastFetchedUtc!),
       journey: view,
       totalSteps: days.fold(0, (sum, d) => sum + d.steps),
-      position: position,
+      position: here.position,
       home: await home(),
-      onSea: onSea,
+      onSea: here.onSea,
       pendingArrival: await _pendingArrival(),
       unseenProps: (await (db.select(db.propsOwned)..where((t) => t.seen.equals(false))).get())
           .length,
       paintingsCount: (await db.select(db.paintingsOwned).get()).length,
       totalKm: days.fold(0.0, (sum, d) => sum + d.distanceM) / 1000,
     );
+  }
+
+  /// 지도 화면용: 다녀온 명소와 액자, 지나온 길, 목적지, 지금 위치, 여행 경비.
+  /// 길은 여정을 시작 순서대로 출발지 → 끝 지점이고, 끝 지점은 멈춘 지점·도착한 명소
+  /// (끝이 안 적힌 옛 도착 여정은 목적지 명소)·진행 중 여정의 지금 위치다.
+  /// 배 구간이 항구를 거치도록 buildRoute로 펴고, 길이가 0인 여정은 뺀다
+  Future<MapData> mapData(DateTime now) async {
+    await _ensureState(now);
+    final active = await _activeJourney();
+    final here = await _whereNow(active);
+    final rows = await (db.select(db.journeys)
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.startUtc),
+            (t) => OrderingTerm(expression: t.id),
+          ]))
+        .get();
+
+    final paths = <List<LatLng>>[];
+    for (final r in rows) {
+      // 진행 중인 여정은 자기 경로를 지금 지점에서 자른다 (배 위에 있어도 항구를 거친다)
+      if (r.status == JourneyStatus.active) {
+        final route = here.journey!.route;
+        final at = positionAt(route, here.progress!.progressKm);
+        final path = [route.start, for (final l in route.legs.take(at.legIndex)) l.to, at.latLng];
+        if (here.progress!.progressKm > 0) paths.add(path);
+        continue;
+      }
+      final LatLng? end;
+      if (r.endLat != null && r.endLng != null) {
+        end = LatLng(r.endLat!, r.endLng!);
+      } else if (r.status == JourneyStatus.arrived) {
+        end = landmarks[r.destId]!.latLng;
+      } else {
+        end = null;
+      }
+      if (end == null) continue;
+      final route = buildRoute(LatLng(r.originLat, r.originLng), end, rules);
+      if (route.legs.isEmpty) continue;
+      paths.add([route.start, for (final l in route.legs) l.to]);
+    }
+
+    return MapData(
+      visited: {
+        for (final p in await db.select(db.paintingsOwned).get()) p.landmarkId: p.frame,
+      },
+      paths: paths,
+      destId: active?.destId,
+      position: here.position,
+      fundKm: (await _fund()).km,
+    );
+  }
+
+  /// [destId]로 지금 자리에서 가면 환산 거리와 며칠 걸리는지. 동기화·저장은 하지 않는다.
+  /// 출발지는 진행 중인 여정의 지금 지점, 없으면 쉬는 자리. 둘 다 없으면 StateError(startJourney와 같다)
+  Future<JourneyPreview> preview(String destId, DateTime now) async {
+    final state = await _ensureState(now);
+    final from = (await _whereNow(await _activeJourney())).position;
+    if (from == null) throw StateError(_needHome);
+    final totalKm = buildRoute(from, landmarks[destId]!.latLng, rules).totalEffectiveKm;
+    final today = kstDayKey(now);
+    final eta = _etaOf(totalKm, await db.select(db.daySummaries).get(), today, state);
+    return JourneyPreview(totalKm, math.max(1, eta.difference(dayFromKey(today)).inDays));
   }
 
   Future<PendingArrival?> _pendingArrival() async {
@@ -456,6 +765,28 @@ class SyncService {
     }
     return Home(row.homeName!, LatLng(row.homeLat!, row.homeLng!));
   }
+
+  /// 지금 있는 곳. 진행 중인 여정이 있으면 그 여정·진행·경로 위 지점·배 구간 여부,
+  /// 없으면 쉬는 자리 (여정과 진행은 null)
+  Future<_Here> _whereNow(JourneyRow? active) async {
+    if (active == null) {
+      return (journey: null, progress: null, position: await _restingPosition(), onSea: false);
+    }
+    final j = _toJourney(active);
+    final p = progress(j, await _distanceKmFrom(_minuteOf(active.startUtc)), rules);
+    final at = positionAt(j.route, p.progressKm);
+    return (journey: j, progress: p, position: at.latLng, onSea: at.onSea);
+  }
+
+  /// 남은 거리 [remainingKm]를 가는 도착 예정일 (하루 평균은 하루 요약에서)
+  DateTime _etaOf(
+    double remainingKm,
+    List<DaySummaryRow> days,
+    String today,
+    SyncStateRow state,
+  ) =>
+      etaDate(remainingKm, {for (final d in days) d.day: d.distanceM / 1000}, today,
+          state.firstRecordDay, rules);
 
   /// 여정이 없을 때 장면의 위치: 가장 나중에 끝난 여정(도착·멈춤)의 끝 지점, 없으면 출발 동네,
   /// 그것도 없으면 null. 끝 지점이 안 적힌 옛 도착 여정은 목적지 명소로 본다
@@ -638,6 +969,8 @@ class SyncService {
 }
 
 const _needHome = '출발 동네를 먼저 골라 주세요';
+
+typedef _Here = ({Journey? journey, JourneyProgress? progress, LatLng? position, bool onSea});
 
 DateTime _utc(int ms) => DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
 

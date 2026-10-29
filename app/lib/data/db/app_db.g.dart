@@ -3480,6 +3480,203 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
   }
 }
 
+class $WallSlotsTable extends WallSlots
+    with TableInfo<$WallSlotsTable, WallSlotRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WallSlotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _slotMeta = const VerificationMeta('slot');
+  @override
+  late final GeneratedColumn<int> slot = GeneratedColumn<int>(
+    'slot',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _landmarkIdMeta = const VerificationMeta(
+    'landmarkId',
+  );
+  @override
+  late final GeneratedColumn<String> landmarkId = GeneratedColumn<String>(
+    'landmark_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [slot, landmarkId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'wall_slots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WallSlotRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('slot')) {
+      context.handle(
+        _slotMeta,
+        slot.isAcceptableOrUnknown(data['slot']!, _slotMeta),
+      );
+    }
+    if (data.containsKey('landmark_id')) {
+      context.handle(
+        _landmarkIdMeta,
+        landmarkId.isAcceptableOrUnknown(data['landmark_id']!, _landmarkIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_landmarkIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {slot};
+  @override
+  WallSlotRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WallSlotRow(
+      slot: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}slot'],
+      )!,
+      landmarkId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}landmark_id'],
+      )!,
+    );
+  }
+
+  @override
+  $WallSlotsTable createAlias(String alias) {
+    return $WallSlotsTable(attachedDatabase, alias);
+  }
+}
+
+class WallSlotRow extends DataClass implements Insertable<WallSlotRow> {
+  final int slot;
+  final String landmarkId;
+  const WallSlotRow({required this.slot, required this.landmarkId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['slot'] = Variable<int>(slot);
+    map['landmark_id'] = Variable<String>(landmarkId);
+    return map;
+  }
+
+  WallSlotsCompanion toCompanion(bool nullToAbsent) {
+    return WallSlotsCompanion(slot: Value(slot), landmarkId: Value(landmarkId));
+  }
+
+  factory WallSlotRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WallSlotRow(
+      slot: serializer.fromJson<int>(json['slot']),
+      landmarkId: serializer.fromJson<String>(json['landmarkId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'slot': serializer.toJson<int>(slot),
+      'landmarkId': serializer.toJson<String>(landmarkId),
+    };
+  }
+
+  WallSlotRow copyWith({int? slot, String? landmarkId}) => WallSlotRow(
+    slot: slot ?? this.slot,
+    landmarkId: landmarkId ?? this.landmarkId,
+  );
+  WallSlotRow copyWithCompanion(WallSlotsCompanion data) {
+    return WallSlotRow(
+      slot: data.slot.present ? data.slot.value : this.slot,
+      landmarkId: data.landmarkId.present
+          ? data.landmarkId.value
+          : this.landmarkId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WallSlotRow(')
+          ..write('slot: $slot, ')
+          ..write('landmarkId: $landmarkId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(slot, landmarkId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WallSlotRow &&
+          other.slot == this.slot &&
+          other.landmarkId == this.landmarkId);
+}
+
+class WallSlotsCompanion extends UpdateCompanion<WallSlotRow> {
+  final Value<int> slot;
+  final Value<String> landmarkId;
+  const WallSlotsCompanion({
+    this.slot = const Value.absent(),
+    this.landmarkId = const Value.absent(),
+  });
+  WallSlotsCompanion.insert({
+    this.slot = const Value.absent(),
+    required String landmarkId,
+  }) : landmarkId = Value(landmarkId);
+  static Insertable<WallSlotRow> custom({
+    Expression<int>? slot,
+    Expression<String>? landmarkId,
+  }) {
+    return RawValuesInsertable({
+      if (slot != null) 'slot': slot,
+      if (landmarkId != null) 'landmark_id': landmarkId,
+    });
+  }
+
+  WallSlotsCompanion copyWith({Value<int>? slot, Value<String>? landmarkId}) {
+    return WallSlotsCompanion(
+      slot: slot ?? this.slot,
+      landmarkId: landmarkId ?? this.landmarkId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (slot.present) {
+      map['slot'] = Variable<int>(slot.value);
+    }
+    if (landmarkId.present) {
+      map['landmark_id'] = Variable<String>(landmarkId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WallSlotsCompanion(')
+          ..write('slot: $slot, ')
+          ..write('landmarkId: $landmarkId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -3492,6 +3689,7 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $PaintingsOwnedTable paintingsOwned = $PaintingsOwnedTable(this);
   late final $PropsOwnedTable propsOwned = $PropsOwnedTable(this);
   late final $ProfileTable profile = $ProfileTable(this);
+  late final $WallSlotsTable wallSlots = $WallSlotsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3506,6 +3704,7 @@ abstract class _$AppDb extends GeneratedDatabase {
     paintingsOwned,
     propsOwned,
     profile,
+    wallSlots,
   ];
 }
 
@@ -5416,6 +5615,138 @@ typedef $$ProfileTableProcessedTableManager =
       ProfileRow,
       PrefetchHooks Function()
     >;
+typedef $$WallSlotsTableCreateCompanionBuilder = WallSlotsCompanion Function({
+  Value<int> slot,
+  required String landmarkId,
+});
+typedef $$WallSlotsTableUpdateCompanionBuilder = WallSlotsCompanion Function({
+  Value<int> slot,
+  Value<String> landmarkId,
+});
+
+class $$WallSlotsTableFilterComposer
+    extends Composer<_$AppDb, $WallSlotsTable> {
+  $$WallSlotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get slot => $composableBuilder(
+    column: $table.slot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get landmarkId => $composableBuilder(
+    column: $table.landmarkId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$WallSlotsTableOrderingComposer
+    extends Composer<_$AppDb, $WallSlotsTable> {
+  $$WallSlotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get slot => $composableBuilder(
+    column: $table.slot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get landmarkId => $composableBuilder(
+    column: $table.landmarkId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$WallSlotsTableAnnotationComposer
+    extends Composer<_$AppDb, $WallSlotsTable> {
+  $$WallSlotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get slot =>
+      $composableBuilder(column: $table.slot, builder: (column) => column);
+
+  GeneratedColumn<String> get landmarkId => $composableBuilder(
+    column: $table.landmarkId,
+    builder: (column) => column,
+  );
+}
+
+class $$WallSlotsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $WallSlotsTable,
+          WallSlotRow,
+          $$WallSlotsTableFilterComposer,
+          $$WallSlotsTableOrderingComposer,
+          $$WallSlotsTableAnnotationComposer,
+          $$WallSlotsTableCreateCompanionBuilder,
+          $$WallSlotsTableUpdateCompanionBuilder,
+          (WallSlotRow, BaseReferences<_$AppDb, $WallSlotsTable, WallSlotRow>),
+          WallSlotRow,
+          PrefetchHooks Function()
+        > {
+  $$WallSlotsTableTableManager(_$AppDb db, $WallSlotsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WallSlotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WallSlotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WallSlotsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> slot = const Value.absent(),
+            Value<String> landmarkId = const Value.absent(),
+          }) => WallSlotsCompanion(slot: slot, landmarkId: landmarkId),
+          createCompanionCallback: ({
+            Value<int> slot = const Value.absent(),
+            required String landmarkId,
+          }) => WallSlotsCompanion.insert(slot: slot, landmarkId: landmarkId),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$WallSlotsTable, WallSlotRow>(table),
+                  BaseReferences<_$AppDb, $WallSlotsTable, WallSlotRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$WallSlotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $WallSlotsTable,
+      WallSlotRow,
+      $$WallSlotsTableFilterComposer,
+      $$WallSlotsTableOrderingComposer,
+      $$WallSlotsTableAnnotationComposer,
+      $$WallSlotsTableCreateCompanionBuilder,
+      $$WallSlotsTableUpdateCompanionBuilder,
+      (WallSlotRow, BaseReferences<_$AppDb, $WallSlotsTable, WallSlotRow>),
+      WallSlotRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -5438,4 +5769,6 @@ class $AppDbManager {
       $$PropsOwnedTableTableManager(_db, _db.propsOwned);
   $$ProfileTableTableManager get profile =>
       $$ProfileTableTableManager(_db, _db.profile);
+  $$WallSlotsTableTableManager get wallSlots =>
+      $$WallSlotsTableTableManager(_db, _db.wallSlots);
 }

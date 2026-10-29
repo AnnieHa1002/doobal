@@ -1,0 +1,20 @@
+{
+  "file": "ui_map_regions_v01.svg",
+  "canvas": [2048, 2560],
+  "projection": "equirectangular, x scaled by cos(36deg)",
+  "lat": [33.0, 38.7],
+  "lon": [124.5, 131.0],
+  "x": {"lonOffset": 124.5, "pxPerDegLon": 315.0769},
+  "y": {"top": 170.05, "latOffset": 38.7, "pxPerDegLat": 389.4565},
+  "formula": "x = (lon - 124.5) * 315.0769 ; y = 170.05 + (38.7 - lat) * 389.4565",
+  "regions": {
+    "capital": ["gyeonggi", "incheon", "seoul"],
+    "gangwon": ["gangwon"],
+    "chungcheong": ["chungbuk", "chungnam", "daejeon", "sejong"],
+    "jeolla": ["gwangju", "jeonbuk", "jeonnam"],
+    "gyeongsang": ["busan", "daegu", "gyeongbuk", "gyeongnam", "ulsan"],
+    "jeju": ["jeju"],
+    "ulleung": ["ulleung"]
+  },
+  "source": "southkorea-maps kostat 2013 시도 경계(간략본, 통계청 공개 데이터)"
+}

@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/camp_theme.dart';
+import '../album/album_screen.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
 import '../common/name_tag.dart';
 import '../common/palette.dart';
 import '../debug/debug_screen.dart';
+import '../map/map_screen.dart';
 import '../placeholder/placeholder_screens.dart';
 import '../scene/scene_view.dart';
 import '../walking/walking_screen.dart';
@@ -51,7 +53,7 @@ class RestScreen extends ConsumerWidget {
               camp: camp,
             ),
             for (final o in camp.objects)
-              _campObject(context, box.biggest, o),
+              _campObject(context, box.biggest, o, newProps: snap.unseenProps > 0),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -91,7 +93,9 @@ class RestScreen extends ConsumerWidget {
                         primary: true,
                         onPressed: () => _push(
                           context,
-                          snap.journey == null ? const MapScreen() : const WalkingScreen(),
+                          snap.journey == null
+                              ? const MapScreen(walkAfterStart: true)
+                              : const WalkingScreen(),
                         ),
                       ),
                     ),
@@ -164,8 +168,9 @@ class RestScreen extends ConsumerWidget {
     return '쉬는 중 · 목적지까지 ${formatKm(j.progress.remainingKm)}';
   }
 
-  /// 물건: 테마가 정한 비율 위치에 중심을 두고, 아래에 이름표를 붙인다
-  Widget _campObject(BuildContext context, Size screen, CampObject o) {
+  /// 물건: 테마가 정한 비율 위치에 중심을 두고, 아래에 이름표를 붙인다.
+  /// 배낭은 [newProps]이면(아직 안 본 소품이 있으면) 오른쪽 위에 알림 점이 붙는다
+  Widget _campObject(BuildContext context, Size screen, CampObject o, {required bool newProps}) {
     const tagRoom = 40.0;
     return Positioned(
       left: o.x * screen.width - o.size / 2 - tagRoom,
@@ -177,15 +182,35 @@ class RestScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: o.size,
-              height: o.size,
-              decoration: BoxDecoration(
-                color: Palette.card,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Palette.ink, width: 2.5),
-              ),
-              child: Icon(_iconOf(o.id), size: o.size * 0.5, color: Palette.ink),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: o.size,
+                  height: o.size,
+                  decoration: BoxDecoration(
+                    color: Palette.card,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Palette.ink, width: 2.5),
+                  ),
+                  child: Icon(_iconOf(o.id), size: o.size * 0.5, color: Palette.ink),
+                ),
+                if (o.id == 'backpack' && newProps)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      key: const ValueKey('backpack-dot'),
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Palette.terracotta,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Palette.ink, width: 1.5),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 2),
             NameTag(o.label),

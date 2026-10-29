@@ -17,22 +17,6 @@ class _Placeholder extends StatelessWidget {
   }
 }
 
-/// 지도: 지도 그림이 나오기 전까지는 목적지를 고르는 디버그 화면을 쓴다
-class MapScreen extends StatelessWidget {
-  const MapScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => const DebugScreen(title: '지도 (임시)');
-}
-
-/// 화집 (배낭)
-class AlbumScreen extends StatelessWidget {
-  const AlbumScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => const _Placeholder('화집');
-}
-
 class NoteScreen extends StatelessWidget {
   const NoteScreen({super.key});
 

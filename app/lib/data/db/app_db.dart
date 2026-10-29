@@ -4,8 +4,8 @@ import '../../domain/journey.dart' show Frame;
 
 part 'app_db.g.dart';
 
-// M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝) + 스키마 3 (프로필: 출발 동네).
-// 시각은 모두 UTC 정수
+// M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝) + 스키마 3 (프로필: 출발 동네)
+// + 스키마 4 (화집 벽). 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
 
@@ -104,6 +104,17 @@ class PropsOwned extends Table {
   Set<Column> get primaryKey => {propId};
 }
 
+/// 화집 벽에 건 그림. 칸(0~3)마다 한 점이고, 안 건 칸은 행이 없다.
+/// 같은 그림이 두 칸에 걸리지 않게 하는 건 SyncService가 한다
+@DataClassName('WallSlotRow')
+class WallSlots extends Table {
+  IntColumn get slot => integer()();
+  TextColumn get landmarkId => text()();
+
+  @override
+  Set<Column> get primaryKey => {slot};
+}
+
 /// 1행. fundedUntilUtc = 어디까지 경비에 넣었는지 (다시 동기화해도 두 번 넣지 않게)
 @DataClassName('TravelFundRow')
 class TravelFund extends Table {
@@ -151,13 +162,14 @@ class Profile extends Table {
     PaintingsOwned,
     PropsOwned,
     Profile,
+    WallSlots,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -178,6 +190,9 @@ class AppDb extends _$AppDb {
           }
           if (from < 3) {
             await m.createTable(profile);
+          }
+          if (from < 4) {
+            await m.createTable(wallSlots);
           }
         },
       );

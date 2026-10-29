@@ -60,3 +60,19 @@ Set<String> completedRegions(Set<String> visitedLandmarkIds, List<Landmark> land
       if (e.value.every((l) => visitedLandmarkIds.contains(l.id))) e.key,
   };
 }
+
+/// 권역별 다녀온 곳 수와 전체 명소 수 (지도 칩의 `경상 4/31`)
+Map<String, ({int visited, int total})> regionProgress(
+  Set<String> visitedIds,
+  List<Landmark> landmarks,
+) {
+  final out = <String, ({int visited, int total})>{};
+  for (final l in landmarks) {
+    final p = out[l.region] ?? (visited: 0, total: 0);
+    out[l.region] = (
+      visited: p.visited + (visitedIds.contains(l.id) ? 1 : 0),
+      total: p.total + 1,
+    );
+  }
+  return out;
+}

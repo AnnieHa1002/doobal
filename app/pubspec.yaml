@@ -33,3 +33,5 @@ flutter:
   assets:
     - assets/data/
     - assets/data/themes/
+    # 지도 경계 SVG와 위경도 투영 (Drive Assets 폴더의 ui_map_*_v01)
+    - assets/map/

@@ -10,14 +10,15 @@ Future<int> _userVersion(AppDb db) async =>
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
-  test('새 DB는 스키마 3으로 열리고 새 표를 바로 쓸 수 있다', () async {
+  test('새 DB는 스키마 4로 열리고 새 표를 바로 쓸 수 있다', () async {
     final db = AppDb(NativeDatabase.memory());
     addTearDown(db.close);
 
     expect(await db.select(db.paintingsOwned).get(), isEmpty);
     expect(await db.select(db.propsOwned).get(), isEmpty);
     expect(await db.select(db.profile).get(), isEmpty);
-    expect(await _userVersion(db), 3);
+    expect(await db.select(db.wallSlots).get(), isEmpty);
+    expect(await _userVersion(db), 4);
 
     await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
           landmarkId: 'kr001',
@@ -44,9 +45,16 @@ void main() {
         homeLng: const Value(126.978)));
     profile = await db.select(db.profile).getSingle();
     expect((profile.homeName, profile.homeLat, profile.homeLng), ('중구', 37.5665, 126.978));
+
+    // 벽은 칸(0~3)이 키라서 같은 칸에 다시 넣으면 바뀐다
+    await db.into(db.wallSlots)
+        .insert(WallSlotsCompanion.insert(slot: const Value(0), landmarkId: 'kr001'));
+    await db.into(db.wallSlots).insertOnConflictUpdate(
+        WallSlotsCompanion.insert(slot: const Value(0), landmarkId: 'kr002'));
+    expect((await db.select(db.wallSlots).getSingle()).landmarkId, 'kr002');
   });
 
-  test('스키마 1(여정 표만 있던 때)에서 열면 3으로 올라가고 옛 행이 남는다', () async {
+  test('스키마 1(여정 표만 있던 때)에서 열면 4로 올라가고 옛 행이 남는다', () async {
     // 스키마 1의 journeys 표와 행 둘(도착, 멈춤)을 직접 만들어 두고 user_version = 1로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -63,7 +71,7 @@ void main() {
     addTearDown(db.close);
 
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
-    expect(await _userVersion(db), 3);
+    expect(await _userVersion(db), 4);
     expect(rows.keys, {'j1', 'j2'});
     // 새 열은 비어 있고, 옛 도착 여정은 도착 화면을 이미 본 것으로 둔다
     expect(rows['j1']!.endLat, isNull);
@@ -81,9 +89,10 @@ void main() {
     expect(await db.select(db.paintingsOwned).get(), isEmpty);
     expect(await db.select(db.propsOwned).get(), isEmpty);
     expect(await db.select(db.profile).get(), isEmpty);
+    expect(await db.select(db.wallSlots).get(), isEmpty);
   });
 
-  test('스키마 2(프로필 표가 없던 때)에서 열면 3으로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 2(프로필 표가 없던 때)에서 열면 4로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 2의 journeys 표(새 열 포함)·그림·소품 표와 행을 직접 만들어 두고 user_version = 2로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -119,7 +128,7 @@ void main() {
     addTearDown(db.close);
 
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
-    expect(await _userVersion(db), 3);
+    expect(await _userVersion(db), 4);
     expect(rows.keys, {'j1', 'j2'});
     expect(rows['j1']!.status, JourneyStatus.arrived);
     expect(rows['j1']!.newFrame, Frame.wood);
@@ -139,5 +148,67 @@ void main() {
     final painting = await db.select(db.paintingsOwned).getSingle();
     expect((painting.landmarkId, painting.visits, painting.frame), ('kr001', 2, Frame.silver));
     expect((await db.select(db.propsOwned).getSingle()).seen, isTrue);
+    // 벽 표도 새로 생겼고 비어 있다
+    expect(await db.select(db.wallSlots).get(), isEmpty);
+  });
+
+  test('스키마 3(화집 벽 표가 없던 때)에서 열면 4로 올라가고 옛 행이 그대로 남는다', () async {
+    // 스키마 3의 journeys·그림·소품·프로필 표와 행을 직접 만들어 두고 user_version = 3으로 연다
+    final db = AppDb(NativeDatabase.memory(setup: (raw) {
+      raw.execute('''
+        CREATE TABLE journeys (
+          id TEXT NOT NULL, origin_lat REAL NOT NULL, origin_lng REAL NOT NULL,
+          dest_id TEXT NOT NULL, start_utc INTEGER NOT NULL, fund_km REAL NOT NULL,
+          total_effective_km REAL NOT NULL, status TEXT NOT NULL, arrived_utc INTEGER NULL,
+          end_lat REAL NULL, end_lng REAL NULL, ended_utc INTEGER NULL,
+          visit_no INTEGER NULL, prev_frame TEXT NULL, new_frame TEXT NULL,
+          arrival_shown INTEGER NOT NULL DEFAULT 0 CHECK (arrival_shown IN (0, 1)),
+          PRIMARY KEY (id))
+      ''');
+      // 도착했고 도착 화면을 아직 안 본 여정 (3 → 4에서 건드리면 안 된다)
+      raw.execute("INSERT INTO journeys VALUES ('j1', 38.0, 128.0, 'kr001', 10, 0, 5, 'arrived', "
+          "20, 37.5, 127.0, NULL, 1, NULL, 'wood', 0)");
+      raw.execute('''
+        CREATE TABLE paintings_owned (
+          landmark_id TEXT NOT NULL, visits INTEGER NOT NULL, frame TEXT NOT NULL,
+          best_km REAL NOT NULL, first_arrived_utc INTEGER NOT NULL,
+          last_arrived_utc INTEGER NOT NULL, PRIMARY KEY (landmark_id))
+      ''');
+      raw.execute("INSERT INTO paintings_owned VALUES ('kr001', 1, 'wood', 5, 20, 20)");
+      raw.execute('''
+        CREATE TABLE props_owned (
+          prop_id TEXT NOT NULL, unlocked_utc INTEGER NOT NULL,
+          seen INTEGER NOT NULL DEFAULT 0 CHECK (seen IN (0, 1)), PRIMARY KEY (prop_id))
+      ''');
+      raw.execute("INSERT INTO props_owned VALUES ('hat_01', 5, 1)");
+      raw.execute('''
+        CREATE TABLE profile (
+          id INTEGER NOT NULL, home_name TEXT NULL, home_lat REAL NULL, home_lng REAL NULL,
+          PRIMARY KEY (id))
+      ''');
+      raw.execute("INSERT INTO profile VALUES (1, '종로구', 37.57, 126.98)");
+      raw.execute('PRAGMA user_version = 3');
+    }));
+    addTearDown(db.close);
+
+    expect(await _userVersion(db), 4);
+    final j = await db.select(db.journeys).getSingle();
+    expect((j.id, j.status, j.visitNo, j.newFrame, j.arrivalShown),
+        ('j1', JourneyStatus.arrived, 1, Frame.wood, false));
+    final painting = await db.select(db.paintingsOwned).getSingle();
+    expect((painting.landmarkId, painting.visits, painting.frame), ('kr001', 1, Frame.wood));
+    expect((await db.select(db.propsOwned).getSingle()).propId, 'hat_01');
+    expect((await db.select(db.profile).getSingle()).homeName, '종로구');
+
+    // 벽 표가 새로 생겼고 비어 있다. 칸마다 한 행이라 같은 칸은 바뀐다
+    expect(await db.select(db.wallSlots).get(), isEmpty);
+    await db.into(db.wallSlots)
+        .insert(WallSlotsCompanion.insert(slot: const Value(1), landmarkId: 'kr001'));
+    await db.into(db.wallSlots)
+        .insert(WallSlotsCompanion.insert(slot: const Value(3), landmarkId: 'kr002'));
+    await db.into(db.wallSlots).insertOnConflictUpdate(
+        WallSlotsCompanion.insert(slot: const Value(1), landmarkId: 'kr003'));
+    final wall = {for (final r in await db.select(db.wallSlots).get()) r.slot: r.landmarkId};
+    expect(wall, {1: 'kr003', 3: 'kr002'});
   });
 }

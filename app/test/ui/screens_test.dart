@@ -6,7 +6,9 @@ import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/route.dart';
 import 'package:doobal/main.dart';
+import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/common/format.dart';
+import 'package:doobal/ui/map/map_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/scene/scene_view.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
@@ -59,6 +61,8 @@ class _Env {
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
         campThemeProvider.overrideWith((ref) => campTheme),
+        mapProjectionProvider.overrideWith((ref) => mapProjection),
+        mapRegionsProvider.overrideWith((ref) => mapRegions),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
         clockProvider.overrideWithValue(() => now),
@@ -135,7 +139,8 @@ void main() {
       expect(find.text('노트'), findsOneWidget);
 
       await _tapIcon(tester, Icons.directions_walk);
-      expect(find.text('지도 (임시)'), findsOneWidget);
+      expect(find.byType(MapScreen), findsOneWidget);
+      expect(find.text('명소 이름 검색'), findsOneWidget);
       expect(find.text('걷기 마치기'), findsNothing);
       await _end(tester, e);
     });
@@ -211,16 +216,19 @@ void main() {
 
       await tester.tap(find.text('지도'));
       await _transition(tester);
-      expect(find.text('지도 (임시)'), findsOneWidget);
-      await tester.pageBack();
-      await _transition(tester);
+      expect(find.byType(MapScreen), findsOneWidget);
+      expect(find.text('명소 이름 검색'), findsOneWidget);
+      // 지도는 앱바가 없어서 자기 뒤로 가기 버튼을 쓴다
+      await _tapIcon(tester, Icons.arrow_back);
+      expect(find.byType(MapScreen), findsNothing);
 
       await tester.tap(find.byIcon(Icons.backpack_outlined));
       await _transition(tester);
+      expect(find.byType(AlbumScreen), findsOneWidget);
       expect(find.text('화집'), findsOneWidget);
-      expect(find.text('준비 중'), findsOneWidget);
-      await tester.pageBack();
-      await _transition(tester);
+      expect(find.text('준비 중'), findsNothing);
+      await _tapIcon(tester, Icons.arrow_back);
+      expect(find.byType(AlbumScreen), findsNothing);
 
       await tester.tap(find.byIcon(Icons.menu_book_outlined));
       await _transition(tester);
@@ -260,15 +268,14 @@ void main() {
 
       await tester.tap(find.text('지도'));
       await _transition(tester);
-      await tester.tap(find.text('목적지'), warnIfMissed: false);
+      await _settle(tester, () => find.byType(InteractiveViewer).evaluate().isNotEmpty);
+      await tester.enterText(find.byType(TextField), '엑스포');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('result-kr003')));
       await _transition(tester);
-      await tester.tap(find.text('kr003 엑스포과학공원 한빛탑').last);
-      await _transition(tester);
-      await tester.tap(find.text('지금 자리에서 출발'));
-      await _settle(tester, () => find.text('여정: 출발함').evaluate().isNotEmpty ||
-          find.textContaining('출발함').evaluate().isNotEmpty);
-      await tester.pageBack();
-      await _transition(tester);
+      await tester.tap(find.text('여기로 가기'));
+      await _settle(tester, () => find.text('여기로 가기').evaluate().isEmpty);
+      await _tapIcon(tester, Icons.arrow_back);
       await _settle(tester, () => find.textContaining('목적지까지').evaluate().isNotEmpty);
 
       expect(find.text('쉬는 중 · 목적지까지 ${formatKm(_totalKm('kr003'))}'), findsOneWidget);
