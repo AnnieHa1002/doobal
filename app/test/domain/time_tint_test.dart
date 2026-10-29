@@ -48,7 +48,7 @@ void main() {
       expect(t.character, 0.25);
     });
 
-    test('밤 #1F2A3C 52% / 38%', () {
+    test('밤 #1F2A3C 65% / 40%', () {
       final t = timeTintOf(SkyPhase.night, rules)!;
       expect(t.color, 0xFF1F2A3C);
       expect(t.background, 0.65);
