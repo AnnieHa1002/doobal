@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/camp_theme.dart';
 import 'package:doobal/domain/landmark.dart';
+import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/rules.dart';
 
 /// 테스트도 실제 config.json 값으로 돈다 (flutter test는 app/에서 실행)
@@ -17,6 +18,11 @@ final List<Landmark> landmarks = [
           as Map<String, dynamic>)['landmarks'] as List)
     Landmark.fromJson(l as Map<String, dynamic>),
 ];
+
+/// 실제 props.json의 MVP 소품 24개
+final List<Prop> props = parseProps(
+  jsonDecode(File('assets/data/props.json').readAsStringSync()) as Map<String, dynamic>,
+);
 
 /// 실제 milestones.json의 방명록 걸음 숫자 23개
 final List<int> milestones = ((jsonDecode(File('assets/data/milestones.json').readAsStringSync())

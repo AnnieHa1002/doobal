@@ -85,4 +85,55 @@ void main() {
       expect(ratioBeforeWalk(0, 0, 0), 1.0);
     });
   });
+
+  group('paintingAfterArrival', () {
+    test('첫 도착: 방문 1, 거리에 맞는 액자, 이전 액자는 없다', () {
+      for (final (km, frame) in [
+        (3.0, Frame.wood),
+        (19.99, Frame.wood),
+        (20.0, Frame.silver),
+        (49.99, Frame.silver),
+        (50.0, Frame.gold),
+      ]) {
+        final o = paintingAfterArrival(null, km, rules);
+        expect(o.painting.visits, 1, reason: '$km');
+        expect(o.painting.frame, frame, reason: '$km');
+        expect(o.painting.bestKm, km);
+        expect(o.prevFrame, isNull);
+      }
+    });
+
+    test('재방문이 더 길면 액자가 오른다 (이전 액자를 돌려준다)', () {
+      for (final (before, km, after) in [
+        (Frame.wood, 25.0, Frame.silver),
+        (Frame.wood, 60.0, Frame.gold),
+        (Frame.silver, 50.0, Frame.gold),
+      ]) {
+        final o = paintingAfterArrival(OwnedPainting(1, before, 10), km, rules);
+        expect(o.painting.frame, after);
+        expect(o.painting.visits, 2);
+        expect(o.painting.bestKm, km);
+        expect(o.prevFrame, before);
+      }
+    });
+
+    test('재방문이 더 짧으면 액자는 그대로, 방문만 늘고 가장 먼 거리도 그대로', () {
+      final o = paintingAfterArrival(const OwnedPainting(1, Frame.gold, 55), 5, rules);
+      expect(o.painting.frame, Frame.gold);
+      expect(o.painting.visits, 2);
+      expect(o.painting.bestKm, 55);
+      expect(o.prevFrame, Frame.gold);
+
+      final s = paintingAfterArrival(const OwnedPainting(3, Frame.silver, 30), 22, rules);
+      expect(s.painting.frame, Frame.silver);
+      expect(s.painting.visits, 4);
+    });
+
+    test('같은 등급이면 그대로, 가장 먼 거리만 큰 쪽으로', () {
+      final o = paintingAfterArrival(const OwnedPainting(1, Frame.silver, 22), 30, rules);
+      expect(o.painting.frame, Frame.silver);
+      expect(o.painting.bestKm, 30);
+      expect(o.prevFrame, Frame.silver);
+    });
+  });
 }

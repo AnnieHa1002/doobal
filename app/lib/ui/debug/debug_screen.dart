@@ -55,8 +55,14 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
 
   Future<String> _start() async {
     final svc = await ref.read(syncServiceProvider.future);
-    await svc.startJourney(_destId!, svc.rules.fallbackOrigin, ref.read(clockProvider)());
+    await svc.startJourney(_destId!, ref.read(clockProvider)());
     return '출발함';
+  }
+
+  Future<String> _stop() async {
+    final svc = await ref.read(syncServiceProvider.future);
+    await svc.stopJourney(ref.read(clockProvider)());
+    return '멈춤';
   }
 
   @override
@@ -91,6 +97,10 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                 onPressed: _busy ? null : () => _run('출처 보기', _inspect),
                 child: const Text('최근 48시간 출처 보기'),
               ),
+              OutlinedButton(
+                onPressed: _busy ? null : () => _run('여정', _stop),
+                child: const Text('멈추기'),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -111,7 +121,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
               const SizedBox(width: 8),
               OutlinedButton(
                 onPressed: _busy || _destId == null ? null : () => _run('여정', _start),
-                child: const Text('양구에서 출발'),
+                child: const Text('지금 자리에서 출발'),
               ),
             ],
           ),
@@ -146,6 +156,11 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
             ? '도착함'
             : '남은 ${j.progress.remainingKm.toStringAsFixed(2)}km · 도착 예정 ${_date(j.eta)}',
       ],
+      '누적 ${s.totalKm.toStringAsFixed(2)}km · 그림 ${s.paintingsCount}점 · '
+          '새 소품 ${s.unseenProps}개',
+      if (s.pendingArrival case final a?)
+        '도착 화면 대기: ${a.dest.name} ${a.visitNo}번째 · 액자 ${a.prevFrame?.name ?? '-'} → '
+            '${a.newFrame.name}',
       '마지막 동기화 ${s.lastFetched?.toLocal() ?? '-'}',
     ];
     return Column(

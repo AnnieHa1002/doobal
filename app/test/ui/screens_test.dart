@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import '../app/helpers.dart';
 import '../domain/helpers.dart';
 
 // 설치 KST 2026-11-18 09:00, 걷기 시작은 한 시간 뒤 (낮)
@@ -42,6 +43,7 @@ class _Env {
       rules: rules,
       allowedSources: const [],
       landmarks: _byId,
+      props: props,
     );
   }
 
@@ -53,6 +55,7 @@ class _Env {
   List<Override> get overrides => [
         rulesProvider.overrideWith((ref) => rules),
         landmarksProvider.overrideWith((ref) => landmarks),
+        propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
         campThemeProvider.overrideWith((ref) => campTheme),
         dbProvider.overrideWithValue(db),
@@ -64,7 +67,8 @@ class _Env {
   Future<void> seed(WidgetTester tester, {String? dest, LatLng? origin}) =>
       tester.runAsync(() async {
         await svc.sync(_t0);
-        if (dest != null) await svc.startJourney(dest, origin ?? rules.fallbackOrigin, _t1);
+        if (origin != null) await placeAt(db, origin, _t0);
+        if (dest != null) await svc.startJourney(dest, _t1);
       }) as Future<void>;
 }
 
@@ -207,7 +211,7 @@ void main() {
       await _transition(tester);
       await tester.tap(find.text('kr003 엑스포과학공원 한빛탑').last);
       await _transition(tester);
-      await tester.tap(find.text('양구에서 출발'));
+      await tester.tap(find.text('지금 자리에서 출발'));
       await _settle(tester, () => find.text('여정: 출발함').evaluate().isNotEmpty ||
           find.textContaining('출발함').evaluate().isNotEmpty);
       await tester.pageBack();

@@ -20,6 +20,7 @@ void main() {
         // 에셋은 직접 넣는다 (테스트 환경에서 rootBundle이 불안정하다)
         rulesProvider.overrideWith((ref) => rules),
         landmarksProvider.overrideWith((ref) => landmarks),
+        propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
         campThemeProvider.overrideWith((ref) => campTheme),
         dbProvider.overrideWithValue(db),
@@ -52,6 +53,7 @@ void main() {
       rules: rules,
       allowedSources: const [],
       landmarks: const {},
+      props: props,
     );
     await tester.runAsync(() => svc.sync(now.subtract(const Duration(hours: 3))));
     source.records.add(StepRecord(
@@ -67,6 +69,7 @@ void main() {
         // 두 번째 testWidgets부터는 rootBundle 에셋이 로드되지 않아(테스트 환경 한계) 직접 넣는다
         rulesProvider.overrideWith((ref) => rules),
         landmarksProvider.overrideWith((ref) => landmarks),
+        propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
         campThemeProvider.overrideWith((ref) => campTheme),
         dbProvider.overrideWithValue(db),

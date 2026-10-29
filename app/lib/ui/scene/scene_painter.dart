@@ -7,6 +7,7 @@ import '../../domain/parallax.dart';
 import '../../domain/rules.dart';
 import '../../domain/scene.dart';
 import '../../domain/sky.dart';
+import '../../domain/time_tint.dart';
 import '../common/palette.dart';
 import 'scene_palette.dart';
 
@@ -30,7 +31,8 @@ const _tentSpot = FootSpot(0.52, 0.74);
 
 /// 쉼터·걷는 중 공용 장면을 칠한다. 그림 파일이 생기기 전의 임시 그림이다.
 /// 걷는 중: 하늘 → 후경 → 땅(배 구간은 물결 + 고정된 배) → 캐릭터 → 전경.
-/// 쉼터: 하늘 → 후경 → 땅(안 움직임) → 캠프 뒤(텐트·이정표) → 캐릭터 → 캠프 앞(모닥불)
+/// 쉼터: 하늘 → 후경 → 땅(안 움직임) → 캠프 뒤(텐트·이정표) → 캐릭터 → 캠프 앞(모닥불).
+/// 시간대 색(config scene.timeTint)은 하늘만 빼고 곱해 입힌다. 캐릭터는 따로 약하게
 class ScenePainter extends CustomPainter {
   ScenePainter({
     required this.look,
@@ -56,33 +58,51 @@ class ScenePainter extends CustomPainter {
 
   bool get _rest => mode == SceneMode.rest;
 
-  Color _shade(Color c) => Color.lerp(c, shadeColor, phaseShade[look.phase]!)!;
-
   @override
   void paint(Canvas canvas, Size size) {
     final k = size.height / _designH;
     _sky(canvas, size);
-    _backdrop(canvas, size, k);
     if (_rest) {
-      _land(canvas, size, scrolling: false);
-      if (camp != null) {
-        _tent(canvas, size, k, _tentSpot);
-        _signpost(canvas, size, k, camp!.signpost);
-      }
+      _tinted(canvas, size, () {
+        _backdrop(canvas, size, k);
+        _land(canvas, size, scrolling: false);
+        if (camp != null) {
+          _tent(canvas, size, k, _tentSpot);
+          _signpost(canvas, size, k, camp!.signpost);
+        }
+      });
       final spot = camp?.character ?? const FootSpot(0.5, _walkFootY);
       _character(canvas, k, spot.x * size.width, spot.footY * size.height, standing: true);
-      if (camp != null) _fire(canvas, size, k, camp!);
+      if (camp != null) _tinted(canvas, size, () => _fire(canvas, size, k, camp!));
       return;
     }
-    if (onSea) {
-      _sea(canvas, size, k);
-    } else {
-      _land(canvas, size, scrolling: true);
-    }
+    _tinted(canvas, size, () {
+      _backdrop(canvas, size, k);
+      if (onSea) {
+        _sea(canvas, size, k);
+      } else {
+        _land(canvas, size, scrolling: true);
+      }
+    });
     _character(canvas, k, size.width / 2, size.height * _walkFootY, standing: onSea);
     // 물 위에는 풀이 없다
-    if (!onSea) _foreground(canvas, size, k);
+    if (!onSea) _tinted(canvas, size, () => _foreground(canvas, size, k));
   }
+
+  /// [draw]가 그린 것에 시간대 색(배경 세기)을 곱한다. 낮은 그대로 그린다.
+  /// 투명한 곳(하늘이 비치는 곳)은 그대로 두려고 곱하기 중 알파도 곱하는 modulate를 쓴다.
+  /// 불투명한 그림 위에서는 multiply와 같다
+  void _tinted(Canvas canvas, Size size, VoidCallback draw) {
+    final tint = timeTintOf(look.phase, rules);
+    if (tint == null) return draw();
+    canvas.saveLayer(Offset.zero & size, _tintPaint(tint.color, tint.background));
+    draw();
+    canvas.restore();
+  }
+
+  Paint _tintPaint(int color, double strength) => Paint()
+    ..colorFilter =
+        ColorFilter.mode(Color(multiplyFactor(color, strength)), BlendMode.modulate);
 
   void _sky(Canvas canvas, Size size) {
     final c = skyColors[look.phase]!;
@@ -106,8 +126,8 @@ class ScenePainter extends CustomPainter {
     final skyBottom = skyColors[look.phase]!.bottom;
     // 먼 언덕은 하늘 쪽으로 흐리게
     _hills(canvas, size, offset, base - 16 * k, (sea ? 50 : 150) * k, 1.3,
-        Color.lerp(_shade(tint), skyBottom, 0.45)!);
-    _hills(canvas, size, offset, base + 4 * k, (sea ? 24 : 90) * k, 0.0, _shade(tint));
+        Color.lerp(tint, skyBottom, 0.45)!);
+    _hills(canvas, size, offset, base + 4 * k, (sea ? 24 : 90) * k, 0.0, tint);
   }
 
   /// 가로 한 바퀴(groundTileWidthPx)에서 끊김 없이 이어지는 언덕 실루엣
@@ -131,7 +151,7 @@ class ScenePainter extends CustomPainter {
 
   void _land(Canvas canvas, Size size, {required bool scrolling}) {
     final top = size.height * _groundTop;
-    final base = _shade(groundColors[look.season]!);
+    final base = groundColors[look.season]!;
     canvas.drawRect(Rect.fromLTRB(0, top, size.width, size.height), Paint()..color = base);
 
     final period = rules.groundWidthPx;
@@ -157,14 +177,14 @@ class ScenePainter extends CustomPainter {
   void _sea(Canvas canvas, Size size, double k) {
     final top = size.height * _groundTop;
     canvas.drawRect(Rect.fromLTRB(0, top, size.width, size.height),
-        Paint()..color = _shade(seaColor));
+        Paint()..color = seaColor);
 
     // 물결은 땅과 같은 속도로 스크롤. 파장이 한 바퀴를 나눠 떨어져야 이어진다
     final period = rules.groundWidthPx;
     final waveLen = period / 16;
     final offset = layerOffsetPx(distanceM, rules.parallaxGround, rules.groundPxPerM, period);
     final wave = Paint()
-      ..color = _shade(waveColor)
+      ..color = waveColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2 * k
       ..strokeCap = StrokeCap.round;
@@ -213,11 +233,11 @@ class ScenePainter extends CustomPainter {
       ..lineTo(cx + halfKeel, deckY + depth)
       ..lineTo(cx - halfKeel, deckY + depth)
       ..close();
-    canvas.drawPath(hull, Paint()..color = _shade(boatHull));
+    canvas.drawPath(hull, Paint()..color = boatHull);
     canvas.drawPath(hull, stroke);
     canvas.drawLine(Offset(cx - halfDeck, deckY), Offset(cx + halfDeck, deckY),
         Paint()
-          ..color = _shade(boatDeck)
+          ..color = boatDeck
           ..strokeWidth = 6 * k);
   }
 
@@ -227,11 +247,11 @@ class ScenePainter extends CustomPainter {
     final offset =
         layerOffsetPx(distanceM, rules.parallaxForeground, rules.groundPxPerM, period);
     final blade = Paint()
-      ..color = _shade(tuftColors[look.season]!)
+      ..color = tuftColors[look.season]!
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3 * k
       ..strokeCap = StrokeCap.round;
-    final speck = Paint()..color = _shade(tuftSpecks[look.season]!);
+    final speck = Paint()..color = tuftSpecks[look.season]!;
     final spacing = period / _tuftCount;
     for (var i = 0; i < _tuftCount; i++) {
       // 풀마다 높이·간격을 다르게 하는 고정된 값 (i로만 정해 항상 같다)
@@ -266,21 +286,21 @@ class ScenePainter extends CustomPainter {
       ..lineTo(cx, fy - h)
       ..lineTo(cx + w / 2, fy)
       ..close();
-    canvas.drawPath(body, Paint()..color = _shade(tentColor));
+    canvas.drawPath(body, Paint()..color = tentColor);
     canvas.drawPath(body, stroke);
     final door = Path()
       ..moveTo(cx - w * 0.12, fy)
       ..lineTo(cx, fy - h * 0.55)
       ..lineTo(cx + w * 0.12, fy)
       ..close();
-    canvas.drawPath(door, Paint()..color = _shade(tentDoor));
+    canvas.drawPath(door, Paint()..color = tentDoor);
     canvas.drawPath(door, stroke);
   }
 
   void _signpost(Canvas canvas, Size size, double k, FootSpot spot) {
     final x = spot.x * size.width;
     final fy = spot.footY * size.height;
-    final wood = Paint()..color = _shade(woodColor);
+    final wood = Paint()..color = woodColor;
     final stroke = Paint()
       ..color = Palette.ink
       ..style = PaintingStyle.stroke
@@ -315,7 +335,7 @@ class ScenePainter extends CustomPainter {
         ]).createShader(Rect.fromCircle(center: Offset(x, fy - 18 * k), radius: 70 * k)),
     );
     final log = Paint()
-      ..color = _shade(woodColor)
+      ..color = woodColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 7 * k
       ..strokeCap = StrokeCap.round;
@@ -337,6 +357,12 @@ class ScenePainter extends CustomPainter {
     canvas.save();
     canvas.translate(cx, footY);
     canvas.scale(k);
+    // 캐릭터에는 캐릭터 세기로 입힌다 (그려지는 범위만 레이어로)
+    final tint = timeTintOf(look.phase, rules);
+    if (tint != null) {
+      canvas.saveLayer(
+          const Rect.fromLTRB(-100, -160, 70, 20), _tintPaint(tint.color, tint.character));
+    }
 
     final ink = Paint()
       ..color = Palette.ink
@@ -409,6 +435,7 @@ class ScenePainter extends CustomPainter {
               ..strokeCap = StrokeCap.round);
       }
     }
+    if (tint != null) canvas.restore();
     canvas.restore();
   }
 

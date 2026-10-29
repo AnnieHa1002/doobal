@@ -1076,6 +1076,79 @@ class $JourneysTable extends Journeys
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _endLatMeta = const VerificationMeta('endLat');
+  @override
+  late final GeneratedColumn<double> endLat = GeneratedColumn<double>(
+    'end_lat',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _endLngMeta = const VerificationMeta('endLng');
+  @override
+  late final GeneratedColumn<double> endLng = GeneratedColumn<double>(
+    'end_lng',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _endedUtcMeta = const VerificationMeta(
+    'endedUtc',
+  );
+  @override
+  late final GeneratedColumn<int> endedUtc = GeneratedColumn<int>(
+    'ended_utc',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _visitNoMeta = const VerificationMeta(
+    'visitNo',
+  );
+  @override
+  late final GeneratedColumn<int> visitNo = GeneratedColumn<int>(
+    'visit_no',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<Frame?, String> prevFrame =
+      GeneratedColumn<String>(
+        'prev_frame',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      ).withConverter<Frame?>($JourneysTable.$converterprevFramen);
+  @override
+  late final GeneratedColumnWithTypeConverter<Frame?, String> newFrame =
+      GeneratedColumn<String>(
+        'new_frame',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      ).withConverter<Frame?>($JourneysTable.$converternewFramen);
+  static const VerificationMeta _arrivalShownMeta = const VerificationMeta(
+    'arrivalShown',
+  );
+  @override
+  late final GeneratedColumn<bool> arrivalShown = GeneratedColumn<bool>(
+    'arrival_shown',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("arrival_shown" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1087,6 +1160,13 @@ class $JourneysTable extends Journeys
     totalEffectiveKm,
     status,
     arrivedUtc,
+    endLat,
+    endLng,
+    endedUtc,
+    visitNo,
+    prevFrame,
+    newFrame,
+    arrivalShown,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1162,6 +1242,39 @@ class $JourneysTable extends Journeys
         arrivedUtc.isAcceptableOrUnknown(data['arrived_utc']!, _arrivedUtcMeta),
       );
     }
+    if (data.containsKey('end_lat')) {
+      context.handle(
+        _endLatMeta,
+        endLat.isAcceptableOrUnknown(data['end_lat']!, _endLatMeta),
+      );
+    }
+    if (data.containsKey('end_lng')) {
+      context.handle(
+        _endLngMeta,
+        endLng.isAcceptableOrUnknown(data['end_lng']!, _endLngMeta),
+      );
+    }
+    if (data.containsKey('ended_utc')) {
+      context.handle(
+        _endedUtcMeta,
+        endedUtc.isAcceptableOrUnknown(data['ended_utc']!, _endedUtcMeta),
+      );
+    }
+    if (data.containsKey('visit_no')) {
+      context.handle(
+        _visitNoMeta,
+        visitNo.isAcceptableOrUnknown(data['visit_no']!, _visitNoMeta),
+      );
+    }
+    if (data.containsKey('arrival_shown')) {
+      context.handle(
+        _arrivalShownMeta,
+        arrivalShown.isAcceptableOrUnknown(
+          data['arrival_shown']!,
+          _arrivalShownMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1209,6 +1322,38 @@ class $JourneysTable extends Journeys
         DriftSqlType.int,
         data['${effectivePrefix}arrived_utc'],
       ),
+      endLat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}end_lat'],
+      ),
+      endLng: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}end_lng'],
+      ),
+      endedUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ended_utc'],
+      ),
+      visitNo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}visit_no'],
+      ),
+      prevFrame: $JourneysTable.$converterprevFramen.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}prev_frame'],
+        ),
+      ),
+      newFrame: $JourneysTable.$converternewFramen.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}new_frame'],
+        ),
+      ),
+      arrivalShown: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}arrival_shown'],
+      )!,
     );
   }
 
@@ -1219,6 +1364,14 @@ class $JourneysTable extends Journeys
 
   static JsonTypeConverter2<JourneyStatus, String, String> $converterstatus =
       const EnumNameConverter<JourneyStatus>(JourneyStatus.values);
+  static JsonTypeConverter2<Frame, String, String> $converterprevFrame =
+      const EnumNameConverter<Frame>(Frame.values);
+  static JsonTypeConverter2<Frame?, String?, String?> $converterprevFramen =
+      JsonTypeConverter2.asNullable($converterprevFrame);
+  static JsonTypeConverter2<Frame, String, String> $converternewFrame =
+      const EnumNameConverter<Frame>(Frame.values);
+  static JsonTypeConverter2<Frame?, String?, String?> $converternewFramen =
+      JsonTypeConverter2.asNullable($converternewFrame);
 }
 
 class JourneyRow extends DataClass implements Insertable<JourneyRow> {
@@ -1231,6 +1384,21 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
   final double totalEffectiveKm;
   final JourneyStatus status;
   final int? arrivedUtc;
+
+  /// 여정이 끝난 곳: 도착이면 목적지, 멈춤이면 멈춘 지점. 진행 중이면 null
+  final double? endLat;
+  final double? endLng;
+
+  /// 멈춘 시각 (도착은 arrivedUtc)
+  final int? endedUtc;
+
+  /// 도착 화면에 쓸 값 (도착한 여정만): 몇 번째 방문, 도착 전·후 액자
+  final int? visitNo;
+  final Frame? prevFrame;
+  final Frame? newFrame;
+
+  /// 도착 화면을 보여 줬는지. 앱 밖에서 도착하면 다음 실행 때 먼저 보여 준다
+  final bool arrivalShown;
   const JourneyRow({
     required this.id,
     required this.originLat,
@@ -1241,6 +1409,13 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     required this.totalEffectiveKm,
     required this.status,
     this.arrivedUtc,
+    this.endLat,
+    this.endLng,
+    this.endedUtc,
+    this.visitNo,
+    this.prevFrame,
+    this.newFrame,
+    required this.arrivalShown,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1260,6 +1435,29 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     if (!nullToAbsent || arrivedUtc != null) {
       map['arrived_utc'] = Variable<int>(arrivedUtc);
     }
+    if (!nullToAbsent || endLat != null) {
+      map['end_lat'] = Variable<double>(endLat);
+    }
+    if (!nullToAbsent || endLng != null) {
+      map['end_lng'] = Variable<double>(endLng);
+    }
+    if (!nullToAbsent || endedUtc != null) {
+      map['ended_utc'] = Variable<int>(endedUtc);
+    }
+    if (!nullToAbsent || visitNo != null) {
+      map['visit_no'] = Variable<int>(visitNo);
+    }
+    if (!nullToAbsent || prevFrame != null) {
+      map['prev_frame'] = Variable<String>(
+        $JourneysTable.$converterprevFramen.toSql(prevFrame),
+      );
+    }
+    if (!nullToAbsent || newFrame != null) {
+      map['new_frame'] = Variable<String>(
+        $JourneysTable.$converternewFramen.toSql(newFrame),
+      );
+    }
+    map['arrival_shown'] = Variable<bool>(arrivalShown);
     return map;
   }
 
@@ -1276,6 +1474,25 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
       arrivedUtc: arrivedUtc == null && nullToAbsent
           ? const Value.absent()
           : Value(arrivedUtc),
+      endLat: endLat == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endLat),
+      endLng: endLng == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endLng),
+      endedUtc: endedUtc == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endedUtc),
+      visitNo: visitNo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(visitNo),
+      prevFrame: prevFrame == null && nullToAbsent
+          ? const Value.absent()
+          : Value(prevFrame),
+      newFrame: newFrame == null && nullToAbsent
+          ? const Value.absent()
+          : Value(newFrame),
+      arrivalShown: Value(arrivalShown),
     );
   }
 
@@ -1296,6 +1513,17 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
         serializer.fromJson<String>(json['status']),
       ),
       arrivedUtc: serializer.fromJson<int?>(json['arrivedUtc']),
+      endLat: serializer.fromJson<double?>(json['endLat']),
+      endLng: serializer.fromJson<double?>(json['endLng']),
+      endedUtc: serializer.fromJson<int?>(json['endedUtc']),
+      visitNo: serializer.fromJson<int?>(json['visitNo']),
+      prevFrame: $JourneysTable.$converterprevFramen.fromJson(
+        serializer.fromJson<String?>(json['prevFrame']),
+      ),
+      newFrame: $JourneysTable.$converternewFramen.fromJson(
+        serializer.fromJson<String?>(json['newFrame']),
+      ),
+      arrivalShown: serializer.fromJson<bool>(json['arrivalShown']),
     );
   }
   @override
@@ -1313,6 +1541,17 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
         $JourneysTable.$converterstatus.toJson(status),
       ),
       'arrivedUtc': serializer.toJson<int?>(arrivedUtc),
+      'endLat': serializer.toJson<double?>(endLat),
+      'endLng': serializer.toJson<double?>(endLng),
+      'endedUtc': serializer.toJson<int?>(endedUtc),
+      'visitNo': serializer.toJson<int?>(visitNo),
+      'prevFrame': serializer.toJson<String?>(
+        $JourneysTable.$converterprevFramen.toJson(prevFrame),
+      ),
+      'newFrame': serializer.toJson<String?>(
+        $JourneysTable.$converternewFramen.toJson(newFrame),
+      ),
+      'arrivalShown': serializer.toJson<bool>(arrivalShown),
     };
   }
 
@@ -1326,6 +1565,13 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     double? totalEffectiveKm,
     JourneyStatus? status,
     Value<int?> arrivedUtc = const Value.absent(),
+    Value<double?> endLat = const Value.absent(),
+    Value<double?> endLng = const Value.absent(),
+    Value<int?> endedUtc = const Value.absent(),
+    Value<int?> visitNo = const Value.absent(),
+    Value<Frame?> prevFrame = const Value.absent(),
+    Value<Frame?> newFrame = const Value.absent(),
+    bool? arrivalShown,
   }) => JourneyRow(
     id: id ?? this.id,
     originLat: originLat ?? this.originLat,
@@ -1336,6 +1582,13 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     totalEffectiveKm: totalEffectiveKm ?? this.totalEffectiveKm,
     status: status ?? this.status,
     arrivedUtc: arrivedUtc.present ? arrivedUtc.value : this.arrivedUtc,
+    endLat: endLat.present ? endLat.value : this.endLat,
+    endLng: endLng.present ? endLng.value : this.endLng,
+    endedUtc: endedUtc.present ? endedUtc.value : this.endedUtc,
+    visitNo: visitNo.present ? visitNo.value : this.visitNo,
+    prevFrame: prevFrame.present ? prevFrame.value : this.prevFrame,
+    newFrame: newFrame.present ? newFrame.value : this.newFrame,
+    arrivalShown: arrivalShown ?? this.arrivalShown,
   );
   JourneyRow copyWithCompanion(JourneysCompanion data) {
     return JourneyRow(
@@ -1352,6 +1605,15 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
       arrivedUtc: data.arrivedUtc.present
           ? data.arrivedUtc.value
           : this.arrivedUtc,
+      endLat: data.endLat.present ? data.endLat.value : this.endLat,
+      endLng: data.endLng.present ? data.endLng.value : this.endLng,
+      endedUtc: data.endedUtc.present ? data.endedUtc.value : this.endedUtc,
+      visitNo: data.visitNo.present ? data.visitNo.value : this.visitNo,
+      prevFrame: data.prevFrame.present ? data.prevFrame.value : this.prevFrame,
+      newFrame: data.newFrame.present ? data.newFrame.value : this.newFrame,
+      arrivalShown: data.arrivalShown.present
+          ? data.arrivalShown.value
+          : this.arrivalShown,
     );
   }
 
@@ -1366,7 +1628,14 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
           ..write('fundKm: $fundKm, ')
           ..write('totalEffectiveKm: $totalEffectiveKm, ')
           ..write('status: $status, ')
-          ..write('arrivedUtc: $arrivedUtc')
+          ..write('arrivedUtc: $arrivedUtc, ')
+          ..write('endLat: $endLat, ')
+          ..write('endLng: $endLng, ')
+          ..write('endedUtc: $endedUtc, ')
+          ..write('visitNo: $visitNo, ')
+          ..write('prevFrame: $prevFrame, ')
+          ..write('newFrame: $newFrame, ')
+          ..write('arrivalShown: $arrivalShown')
           ..write(')'))
         .toString();
   }
@@ -1382,6 +1651,13 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     totalEffectiveKm,
     status,
     arrivedUtc,
+    endLat,
+    endLng,
+    endedUtc,
+    visitNo,
+    prevFrame,
+    newFrame,
+    arrivalShown,
   );
   @override
   bool operator ==(Object other) =>
@@ -1395,7 +1671,14 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
           other.fundKm == this.fundKm &&
           other.totalEffectiveKm == this.totalEffectiveKm &&
           other.status == this.status &&
-          other.arrivedUtc == this.arrivedUtc);
+          other.arrivedUtc == this.arrivedUtc &&
+          other.endLat == this.endLat &&
+          other.endLng == this.endLng &&
+          other.endedUtc == this.endedUtc &&
+          other.visitNo == this.visitNo &&
+          other.prevFrame == this.prevFrame &&
+          other.newFrame == this.newFrame &&
+          other.arrivalShown == this.arrivalShown);
 }
 
 class JourneysCompanion extends UpdateCompanion<JourneyRow> {
@@ -1408,6 +1691,13 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
   final Value<double> totalEffectiveKm;
   final Value<JourneyStatus> status;
   final Value<int?> arrivedUtc;
+  final Value<double?> endLat;
+  final Value<double?> endLng;
+  final Value<int?> endedUtc;
+  final Value<int?> visitNo;
+  final Value<Frame?> prevFrame;
+  final Value<Frame?> newFrame;
+  final Value<bool> arrivalShown;
   final Value<int> rowid;
   const JourneysCompanion({
     this.id = const Value.absent(),
@@ -1419,6 +1709,13 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     this.totalEffectiveKm = const Value.absent(),
     this.status = const Value.absent(),
     this.arrivedUtc = const Value.absent(),
+    this.endLat = const Value.absent(),
+    this.endLng = const Value.absent(),
+    this.endedUtc = const Value.absent(),
+    this.visitNo = const Value.absent(),
+    this.prevFrame = const Value.absent(),
+    this.newFrame = const Value.absent(),
+    this.arrivalShown = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   JourneysCompanion.insert({
@@ -1431,6 +1728,13 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     required double totalEffectiveKm,
     required JourneyStatus status,
     this.arrivedUtc = const Value.absent(),
+    this.endLat = const Value.absent(),
+    this.endLng = const Value.absent(),
+    this.endedUtc = const Value.absent(),
+    this.visitNo = const Value.absent(),
+    this.prevFrame = const Value.absent(),
+    this.newFrame = const Value.absent(),
+    this.arrivalShown = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        originLat = Value(originLat),
@@ -1450,6 +1754,13 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     Expression<double>? totalEffectiveKm,
     Expression<String>? status,
     Expression<int>? arrivedUtc,
+    Expression<double>? endLat,
+    Expression<double>? endLng,
+    Expression<int>? endedUtc,
+    Expression<int>? visitNo,
+    Expression<String>? prevFrame,
+    Expression<String>? newFrame,
+    Expression<bool>? arrivalShown,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1462,6 +1773,13 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
       if (totalEffectiveKm != null) 'total_effective_km': totalEffectiveKm,
       if (status != null) 'status': status,
       if (arrivedUtc != null) 'arrived_utc': arrivedUtc,
+      if (endLat != null) 'end_lat': endLat,
+      if (endLng != null) 'end_lng': endLng,
+      if (endedUtc != null) 'ended_utc': endedUtc,
+      if (visitNo != null) 'visit_no': visitNo,
+      if (prevFrame != null) 'prev_frame': prevFrame,
+      if (newFrame != null) 'new_frame': newFrame,
+      if (arrivalShown != null) 'arrival_shown': arrivalShown,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1476,6 +1794,13 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     Value<double>? totalEffectiveKm,
     Value<JourneyStatus>? status,
     Value<int?>? arrivedUtc,
+    Value<double?>? endLat,
+    Value<double?>? endLng,
+    Value<int?>? endedUtc,
+    Value<int?>? visitNo,
+    Value<Frame?>? prevFrame,
+    Value<Frame?>? newFrame,
+    Value<bool>? arrivalShown,
     Value<int>? rowid,
   }) {
     return JourneysCompanion(
@@ -1488,6 +1813,13 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
       totalEffectiveKm: totalEffectiveKm ?? this.totalEffectiveKm,
       status: status ?? this.status,
       arrivedUtc: arrivedUtc ?? this.arrivedUtc,
+      endLat: endLat ?? this.endLat,
+      endLng: endLng ?? this.endLng,
+      endedUtc: endedUtc ?? this.endedUtc,
+      visitNo: visitNo ?? this.visitNo,
+      prevFrame: prevFrame ?? this.prevFrame,
+      newFrame: newFrame ?? this.newFrame,
+      arrivalShown: arrivalShown ?? this.arrivalShown,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1524,6 +1856,31 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     if (arrivedUtc.present) {
       map['arrived_utc'] = Variable<int>(arrivedUtc.value);
     }
+    if (endLat.present) {
+      map['end_lat'] = Variable<double>(endLat.value);
+    }
+    if (endLng.present) {
+      map['end_lng'] = Variable<double>(endLng.value);
+    }
+    if (endedUtc.present) {
+      map['ended_utc'] = Variable<int>(endedUtc.value);
+    }
+    if (visitNo.present) {
+      map['visit_no'] = Variable<int>(visitNo.value);
+    }
+    if (prevFrame.present) {
+      map['prev_frame'] = Variable<String>(
+        $JourneysTable.$converterprevFramen.toSql(prevFrame.value),
+      );
+    }
+    if (newFrame.present) {
+      map['new_frame'] = Variable<String>(
+        $JourneysTable.$converternewFramen.toSql(newFrame.value),
+      );
+    }
+    if (arrivalShown.present) {
+      map['arrival_shown'] = Variable<bool>(arrivalShown.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1542,6 +1899,13 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
           ..write('totalEffectiveKm: $totalEffectiveKm, ')
           ..write('status: $status, ')
           ..write('arrivedUtc: $arrivedUtc, ')
+          ..write('endLat: $endLat, ')
+          ..write('endLng: $endLng, ')
+          ..write('endedUtc: $endedUtc, ')
+          ..write('visitNo: $visitNo, ')
+          ..write('prevFrame: $prevFrame, ')
+          ..write('newFrame: $newFrame, ')
+          ..write('arrivalShown: $arrivalShown, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2112,6 +2476,711 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
   }
 }
 
+class $PaintingsOwnedTable extends PaintingsOwned
+    with TableInfo<$PaintingsOwnedTable, PaintingOwnedRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PaintingsOwnedTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _landmarkIdMeta = const VerificationMeta(
+    'landmarkId',
+  );
+  @override
+  late final GeneratedColumn<String> landmarkId = GeneratedColumn<String>(
+    'landmark_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _visitsMeta = const VerificationMeta('visits');
+  @override
+  late final GeneratedColumn<int> visits = GeneratedColumn<int>(
+    'visits',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<Frame, String> frame =
+      GeneratedColumn<String>(
+        'frame',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<Frame>($PaintingsOwnedTable.$converterframe);
+  static const VerificationMeta _bestKmMeta = const VerificationMeta('bestKm');
+  @override
+  late final GeneratedColumn<double> bestKm = GeneratedColumn<double>(
+    'best_km',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _firstArrivedUtcMeta = const VerificationMeta(
+    'firstArrivedUtc',
+  );
+  @override
+  late final GeneratedColumn<int> firstArrivedUtc = GeneratedColumn<int>(
+    'first_arrived_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastArrivedUtcMeta = const VerificationMeta(
+    'lastArrivedUtc',
+  );
+  @override
+  late final GeneratedColumn<int> lastArrivedUtc = GeneratedColumn<int>(
+    'last_arrived_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    landmarkId,
+    visits,
+    frame,
+    bestKm,
+    firstArrivedUtc,
+    lastArrivedUtc,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'paintings_owned';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PaintingOwnedRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('landmark_id')) {
+      context.handle(
+        _landmarkIdMeta,
+        landmarkId.isAcceptableOrUnknown(data['landmark_id']!, _landmarkIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_landmarkIdMeta);
+    }
+    if (data.containsKey('visits')) {
+      context.handle(
+        _visitsMeta,
+        visits.isAcceptableOrUnknown(data['visits']!, _visitsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_visitsMeta);
+    }
+    if (data.containsKey('best_km')) {
+      context.handle(
+        _bestKmMeta,
+        bestKm.isAcceptableOrUnknown(data['best_km']!, _bestKmMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bestKmMeta);
+    }
+    if (data.containsKey('first_arrived_utc')) {
+      context.handle(
+        _firstArrivedUtcMeta,
+        firstArrivedUtc.isAcceptableOrUnknown(
+          data['first_arrived_utc']!,
+          _firstArrivedUtcMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_firstArrivedUtcMeta);
+    }
+    if (data.containsKey('last_arrived_utc')) {
+      context.handle(
+        _lastArrivedUtcMeta,
+        lastArrivedUtc.isAcceptableOrUnknown(
+          data['last_arrived_utc']!,
+          _lastArrivedUtcMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastArrivedUtcMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {landmarkId};
+  @override
+  PaintingOwnedRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PaintingOwnedRow(
+      landmarkId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}landmark_id'],
+      )!,
+      visits: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}visits'],
+      )!,
+      frame: $PaintingsOwnedTable.$converterframe.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}frame'],
+        )!,
+      ),
+      bestKm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}best_km'],
+      )!,
+      firstArrivedUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}first_arrived_utc'],
+      )!,
+      lastArrivedUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_arrived_utc'],
+      )!,
+    );
+  }
+
+  @override
+  $PaintingsOwnedTable createAlias(String alias) {
+    return $PaintingsOwnedTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<Frame, String, String> $converterframe =
+      const EnumNameConverter<Frame>(Frame.values);
+}
+
+class PaintingOwnedRow extends DataClass
+    implements Insertable<PaintingOwnedRow> {
+  final String landmarkId;
+  final int visits;
+  final Frame frame;
+
+  /// 가장 멀리서 걸어 온 환산 거리(km)
+  final double bestKm;
+  final int firstArrivedUtc;
+  final int lastArrivedUtc;
+  const PaintingOwnedRow({
+    required this.landmarkId,
+    required this.visits,
+    required this.frame,
+    required this.bestKm,
+    required this.firstArrivedUtc,
+    required this.lastArrivedUtc,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['landmark_id'] = Variable<String>(landmarkId);
+    map['visits'] = Variable<int>(visits);
+    {
+      map['frame'] = Variable<String>(
+        $PaintingsOwnedTable.$converterframe.toSql(frame),
+      );
+    }
+    map['best_km'] = Variable<double>(bestKm);
+    map['first_arrived_utc'] = Variable<int>(firstArrivedUtc);
+    map['last_arrived_utc'] = Variable<int>(lastArrivedUtc);
+    return map;
+  }
+
+  PaintingsOwnedCompanion toCompanion(bool nullToAbsent) {
+    return PaintingsOwnedCompanion(
+      landmarkId: Value(landmarkId),
+      visits: Value(visits),
+      frame: Value(frame),
+      bestKm: Value(bestKm),
+      firstArrivedUtc: Value(firstArrivedUtc),
+      lastArrivedUtc: Value(lastArrivedUtc),
+    );
+  }
+
+  factory PaintingOwnedRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PaintingOwnedRow(
+      landmarkId: serializer.fromJson<String>(json['landmarkId']),
+      visits: serializer.fromJson<int>(json['visits']),
+      frame: $PaintingsOwnedTable.$converterframe.fromJson(
+        serializer.fromJson<String>(json['frame']),
+      ),
+      bestKm: serializer.fromJson<double>(json['bestKm']),
+      firstArrivedUtc: serializer.fromJson<int>(json['firstArrivedUtc']),
+      lastArrivedUtc: serializer.fromJson<int>(json['lastArrivedUtc']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'landmarkId': serializer.toJson<String>(landmarkId),
+      'visits': serializer.toJson<int>(visits),
+      'frame': serializer.toJson<String>(
+        $PaintingsOwnedTable.$converterframe.toJson(frame),
+      ),
+      'bestKm': serializer.toJson<double>(bestKm),
+      'firstArrivedUtc': serializer.toJson<int>(firstArrivedUtc),
+      'lastArrivedUtc': serializer.toJson<int>(lastArrivedUtc),
+    };
+  }
+
+  PaintingOwnedRow copyWith({
+    String? landmarkId,
+    int? visits,
+    Frame? frame,
+    double? bestKm,
+    int? firstArrivedUtc,
+    int? lastArrivedUtc,
+  }) => PaintingOwnedRow(
+    landmarkId: landmarkId ?? this.landmarkId,
+    visits: visits ?? this.visits,
+    frame: frame ?? this.frame,
+    bestKm: bestKm ?? this.bestKm,
+    firstArrivedUtc: firstArrivedUtc ?? this.firstArrivedUtc,
+    lastArrivedUtc: lastArrivedUtc ?? this.lastArrivedUtc,
+  );
+  PaintingOwnedRow copyWithCompanion(PaintingsOwnedCompanion data) {
+    return PaintingOwnedRow(
+      landmarkId: data.landmarkId.present
+          ? data.landmarkId.value
+          : this.landmarkId,
+      visits: data.visits.present ? data.visits.value : this.visits,
+      frame: data.frame.present ? data.frame.value : this.frame,
+      bestKm: data.bestKm.present ? data.bestKm.value : this.bestKm,
+      firstArrivedUtc: data.firstArrivedUtc.present
+          ? data.firstArrivedUtc.value
+          : this.firstArrivedUtc,
+      lastArrivedUtc: data.lastArrivedUtc.present
+          ? data.lastArrivedUtc.value
+          : this.lastArrivedUtc,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PaintingOwnedRow(')
+          ..write('landmarkId: $landmarkId, ')
+          ..write('visits: $visits, ')
+          ..write('frame: $frame, ')
+          ..write('bestKm: $bestKm, ')
+          ..write('firstArrivedUtc: $firstArrivedUtc, ')
+          ..write('lastArrivedUtc: $lastArrivedUtc')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    landmarkId,
+    visits,
+    frame,
+    bestKm,
+    firstArrivedUtc,
+    lastArrivedUtc,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PaintingOwnedRow &&
+          other.landmarkId == this.landmarkId &&
+          other.visits == this.visits &&
+          other.frame == this.frame &&
+          other.bestKm == this.bestKm &&
+          other.firstArrivedUtc == this.firstArrivedUtc &&
+          other.lastArrivedUtc == this.lastArrivedUtc);
+}
+
+class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
+  final Value<String> landmarkId;
+  final Value<int> visits;
+  final Value<Frame> frame;
+  final Value<double> bestKm;
+  final Value<int> firstArrivedUtc;
+  final Value<int> lastArrivedUtc;
+  final Value<int> rowid;
+  const PaintingsOwnedCompanion({
+    this.landmarkId = const Value.absent(),
+    this.visits = const Value.absent(),
+    this.frame = const Value.absent(),
+    this.bestKm = const Value.absent(),
+    this.firstArrivedUtc = const Value.absent(),
+    this.lastArrivedUtc = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PaintingsOwnedCompanion.insert({
+    required String landmarkId,
+    required int visits,
+    required Frame frame,
+    required double bestKm,
+    required int firstArrivedUtc,
+    required int lastArrivedUtc,
+    this.rowid = const Value.absent(),
+  }) : landmarkId = Value(landmarkId),
+       visits = Value(visits),
+       frame = Value(frame),
+       bestKm = Value(bestKm),
+       firstArrivedUtc = Value(firstArrivedUtc),
+       lastArrivedUtc = Value(lastArrivedUtc);
+  static Insertable<PaintingOwnedRow> custom({
+    Expression<String>? landmarkId,
+    Expression<int>? visits,
+    Expression<String>? frame,
+    Expression<double>? bestKm,
+    Expression<int>? firstArrivedUtc,
+    Expression<int>? lastArrivedUtc,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (landmarkId != null) 'landmark_id': landmarkId,
+      if (visits != null) 'visits': visits,
+      if (frame != null) 'frame': frame,
+      if (bestKm != null) 'best_km': bestKm,
+      if (firstArrivedUtc != null) 'first_arrived_utc': firstArrivedUtc,
+      if (lastArrivedUtc != null) 'last_arrived_utc': lastArrivedUtc,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PaintingsOwnedCompanion copyWith({
+    Value<String>? landmarkId,
+    Value<int>? visits,
+    Value<Frame>? frame,
+    Value<double>? bestKm,
+    Value<int>? firstArrivedUtc,
+    Value<int>? lastArrivedUtc,
+    Value<int>? rowid,
+  }) {
+    return PaintingsOwnedCompanion(
+      landmarkId: landmarkId ?? this.landmarkId,
+      visits: visits ?? this.visits,
+      frame: frame ?? this.frame,
+      bestKm: bestKm ?? this.bestKm,
+      firstArrivedUtc: firstArrivedUtc ?? this.firstArrivedUtc,
+      lastArrivedUtc: lastArrivedUtc ?? this.lastArrivedUtc,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (landmarkId.present) {
+      map['landmark_id'] = Variable<String>(landmarkId.value);
+    }
+    if (visits.present) {
+      map['visits'] = Variable<int>(visits.value);
+    }
+    if (frame.present) {
+      map['frame'] = Variable<String>(
+        $PaintingsOwnedTable.$converterframe.toSql(frame.value),
+      );
+    }
+    if (bestKm.present) {
+      map['best_km'] = Variable<double>(bestKm.value);
+    }
+    if (firstArrivedUtc.present) {
+      map['first_arrived_utc'] = Variable<int>(firstArrivedUtc.value);
+    }
+    if (lastArrivedUtc.present) {
+      map['last_arrived_utc'] = Variable<int>(lastArrivedUtc.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PaintingsOwnedCompanion(')
+          ..write('landmarkId: $landmarkId, ')
+          ..write('visits: $visits, ')
+          ..write('frame: $frame, ')
+          ..write('bestKm: $bestKm, ')
+          ..write('firstArrivedUtc: $firstArrivedUtc, ')
+          ..write('lastArrivedUtc: $lastArrivedUtc, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PropsOwnedTable extends PropsOwned
+    with TableInfo<$PropsOwnedTable, PropOwnedRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PropsOwnedTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _propIdMeta = const VerificationMeta('propId');
+  @override
+  late final GeneratedColumn<String> propId = GeneratedColumn<String>(
+    'prop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _unlockedUtcMeta = const VerificationMeta(
+    'unlockedUtc',
+  );
+  @override
+  late final GeneratedColumn<int> unlockedUtc = GeneratedColumn<int>(
+    'unlocked_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _seenMeta = const VerificationMeta('seen');
+  @override
+  late final GeneratedColumn<bool> seen = GeneratedColumn<bool>(
+    'seen',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("seen" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [propId, unlockedUtc, seen];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'props_owned';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PropOwnedRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('prop_id')) {
+      context.handle(
+        _propIdMeta,
+        propId.isAcceptableOrUnknown(data['prop_id']!, _propIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_propIdMeta);
+    }
+    if (data.containsKey('unlocked_utc')) {
+      context.handle(
+        _unlockedUtcMeta,
+        unlockedUtc.isAcceptableOrUnknown(
+          data['unlocked_utc']!,
+          _unlockedUtcMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_unlockedUtcMeta);
+    }
+    if (data.containsKey('seen')) {
+      context.handle(
+        _seenMeta,
+        seen.isAcceptableOrUnknown(data['seen']!, _seenMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {propId};
+  @override
+  PropOwnedRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PropOwnedRow(
+      propId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}prop_id'],
+      )!,
+      unlockedUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}unlocked_utc'],
+      )!,
+      seen: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}seen'],
+      )!,
+    );
+  }
+
+  @override
+  $PropsOwnedTable createAlias(String alias) {
+    return $PropsOwnedTable(attachedDatabase, alias);
+  }
+}
+
+class PropOwnedRow extends DataClass implements Insertable<PropOwnedRow> {
+  final String propId;
+  final int unlockedUtc;
+  final bool seen;
+  const PropOwnedRow({
+    required this.propId,
+    required this.unlockedUtc,
+    required this.seen,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['prop_id'] = Variable<String>(propId);
+    map['unlocked_utc'] = Variable<int>(unlockedUtc);
+    map['seen'] = Variable<bool>(seen);
+    return map;
+  }
+
+  PropsOwnedCompanion toCompanion(bool nullToAbsent) {
+    return PropsOwnedCompanion(
+      propId: Value(propId),
+      unlockedUtc: Value(unlockedUtc),
+      seen: Value(seen),
+    );
+  }
+
+  factory PropOwnedRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PropOwnedRow(
+      propId: serializer.fromJson<String>(json['propId']),
+      unlockedUtc: serializer.fromJson<int>(json['unlockedUtc']),
+      seen: serializer.fromJson<bool>(json['seen']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'propId': serializer.toJson<String>(propId),
+      'unlockedUtc': serializer.toJson<int>(unlockedUtc),
+      'seen': serializer.toJson<bool>(seen),
+    };
+  }
+
+  PropOwnedRow copyWith({String? propId, int? unlockedUtc, bool? seen}) =>
+      PropOwnedRow(
+        propId: propId ?? this.propId,
+        unlockedUtc: unlockedUtc ?? this.unlockedUtc,
+        seen: seen ?? this.seen,
+      );
+  PropOwnedRow copyWithCompanion(PropsOwnedCompanion data) {
+    return PropOwnedRow(
+      propId: data.propId.present ? data.propId.value : this.propId,
+      unlockedUtc: data.unlockedUtc.present
+          ? data.unlockedUtc.value
+          : this.unlockedUtc,
+      seen: data.seen.present ? data.seen.value : this.seen,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PropOwnedRow(')
+          ..write('propId: $propId, ')
+          ..write('unlockedUtc: $unlockedUtc, ')
+          ..write('seen: $seen')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(propId, unlockedUtc, seen);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PropOwnedRow &&
+          other.propId == this.propId &&
+          other.unlockedUtc == this.unlockedUtc &&
+          other.seen == this.seen);
+}
+
+class PropsOwnedCompanion extends UpdateCompanion<PropOwnedRow> {
+  final Value<String> propId;
+  final Value<int> unlockedUtc;
+  final Value<bool> seen;
+  final Value<int> rowid;
+  const PropsOwnedCompanion({
+    this.propId = const Value.absent(),
+    this.unlockedUtc = const Value.absent(),
+    this.seen = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PropsOwnedCompanion.insert({
+    required String propId,
+    required int unlockedUtc,
+    this.seen = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : propId = Value(propId),
+       unlockedUtc = Value(unlockedUtc);
+  static Insertable<PropOwnedRow> custom({
+    Expression<String>? propId,
+    Expression<int>? unlockedUtc,
+    Expression<bool>? seen,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (propId != null) 'prop_id': propId,
+      if (unlockedUtc != null) 'unlocked_utc': unlockedUtc,
+      if (seen != null) 'seen': seen,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PropsOwnedCompanion copyWith({
+    Value<String>? propId,
+    Value<int>? unlockedUtc,
+    Value<bool>? seen,
+    Value<int>? rowid,
+  }) {
+    return PropsOwnedCompanion(
+      propId: propId ?? this.propId,
+      unlockedUtc: unlockedUtc ?? this.unlockedUtc,
+      seen: seen ?? this.seen,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (propId.present) {
+      map['prop_id'] = Variable<String>(propId.value);
+    }
+    if (unlockedUtc.present) {
+      map['unlocked_utc'] = Variable<int>(unlockedUtc.value);
+    }
+    if (seen.present) {
+      map['seen'] = Variable<bool>(seen.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PropsOwnedCompanion(')
+          ..write('propId: $propId, ')
+          ..write('unlockedUtc: $unlockedUtc, ')
+          ..write('seen: $seen, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -2121,6 +3190,8 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $JourneysTable journeys = $JourneysTable(this);
   late final $TravelFundTable travelFund = $TravelFundTable(this);
   late final $SyncStateTable syncState = $SyncStateTable(this);
+  late final $PaintingsOwnedTable paintingsOwned = $PaintingsOwnedTable(this);
+  late final $PropsOwnedTable propsOwned = $PropsOwnedTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2132,6 +3203,8 @@ abstract class _$AppDb extends GeneratedDatabase {
     journeys,
     travelFund,
     syncState,
+    paintingsOwned,
+    propsOwned,
   ];
 }
 
@@ -2710,6 +3783,13 @@ typedef $$JourneysTableCreateCompanionBuilder = JourneysCompanion Function({
   required double totalEffectiveKm,
   required JourneyStatus status,
   Value<int?> arrivedUtc,
+  Value<double?> endLat,
+  Value<double?> endLng,
+  Value<int?> endedUtc,
+  Value<int?> visitNo,
+  Value<Frame?> prevFrame,
+  Value<Frame?> newFrame,
+  Value<bool> arrivalShown,
   Value<int> rowid,
 });
 typedef $$JourneysTableUpdateCompanionBuilder = JourneysCompanion Function({
@@ -2722,6 +3802,13 @@ typedef $$JourneysTableUpdateCompanionBuilder = JourneysCompanion Function({
   Value<double> totalEffectiveKm,
   Value<JourneyStatus> status,
   Value<int?> arrivedUtc,
+  Value<double?> endLat,
+  Value<double?> endLng,
+  Value<int?> endedUtc,
+  Value<int?> visitNo,
+  Value<Frame?> prevFrame,
+  Value<Frame?> newFrame,
+  Value<bool> arrivalShown,
   Value<int> rowid,
 });
 
@@ -2776,6 +3863,43 @@ class $$JourneysTableFilterComposer extends Composer<_$AppDb, $JourneysTable> {
 
   ColumnFilters<int> get arrivedUtc => $composableBuilder(
     column: $table.arrivedUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get endLat => $composableBuilder(
+    column: $table.endLat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get endLng => $composableBuilder(
+    column: $table.endLng,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endedUtc => $composableBuilder(
+    column: $table.endedUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get visitNo => $composableBuilder(
+    column: $table.visitNo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Frame?, Frame, String> get prevFrame =>
+      $composableBuilder(
+        column: $table.prevFrame,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnWithTypeConverterFilters<Frame?, Frame, String> get newFrame =>
+      $composableBuilder(
+        column: $table.newFrame,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<bool> get arrivalShown => $composableBuilder(
+    column: $table.arrivalShown,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2833,6 +3957,41 @@ class $$JourneysTableOrderingComposer
     column: $table.arrivedUtc,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get endLat => $composableBuilder(
+    column: $table.endLat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get endLng => $composableBuilder(
+    column: $table.endLng,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endedUtc => $composableBuilder(
+    column: $table.endedUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get visitNo => $composableBuilder(
+    column: $table.visitNo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get prevFrame => $composableBuilder(
+    column: $table.prevFrame,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get newFrame => $composableBuilder(
+    column: $table.newFrame,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get arrivalShown => $composableBuilder(
+    column: $table.arrivalShown,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$JourneysTableAnnotationComposer
@@ -2874,6 +4033,29 @@ class $$JourneysTableAnnotationComposer
     column: $table.arrivedUtc,
     builder: (column) => column,
   );
+
+  GeneratedColumn<double> get endLat =>
+      $composableBuilder(column: $table.endLat, builder: (column) => column);
+
+  GeneratedColumn<double> get endLng =>
+      $composableBuilder(column: $table.endLng, builder: (column) => column);
+
+  GeneratedColumn<int> get endedUtc =>
+      $composableBuilder(column: $table.endedUtc, builder: (column) => column);
+
+  GeneratedColumn<int> get visitNo =>
+      $composableBuilder(column: $table.visitNo, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Frame?, String> get prevFrame =>
+      $composableBuilder(column: $table.prevFrame, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Frame?, String> get newFrame =>
+      $composableBuilder(column: $table.newFrame, builder: (column) => column);
+
+  GeneratedColumn<bool> get arrivalShown => $composableBuilder(
+    column: $table.arrivalShown,
+    builder: (column) => column,
+  );
 }
 
 class $$JourneysTableTableManager
@@ -2913,6 +4095,13 @@ class $$JourneysTableTableManager
                 Value<double> totalEffectiveKm = const Value.absent(),
                 Value<JourneyStatus> status = const Value.absent(),
                 Value<int?> arrivedUtc = const Value.absent(),
+                Value<double?> endLat = const Value.absent(),
+                Value<double?> endLng = const Value.absent(),
+                Value<int?> endedUtc = const Value.absent(),
+                Value<int?> visitNo = const Value.absent(),
+                Value<Frame?> prevFrame = const Value.absent(),
+                Value<Frame?> newFrame = const Value.absent(),
+                Value<bool> arrivalShown = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => JourneysCompanion(
                 id: id,
@@ -2924,6 +4113,13 @@ class $$JourneysTableTableManager
                 totalEffectiveKm: totalEffectiveKm,
                 status: status,
                 arrivedUtc: arrivedUtc,
+                endLat: endLat,
+                endLng: endLng,
+                endedUtc: endedUtc,
+                visitNo: visitNo,
+                prevFrame: prevFrame,
+                newFrame: newFrame,
+                arrivalShown: arrivalShown,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2937,6 +4133,13 @@ class $$JourneysTableTableManager
                 required double totalEffectiveKm,
                 required JourneyStatus status,
                 Value<int?> arrivedUtc = const Value.absent(),
+                Value<double?> endLat = const Value.absent(),
+                Value<double?> endLng = const Value.absent(),
+                Value<int?> endedUtc = const Value.absent(),
+                Value<int?> visitNo = const Value.absent(),
+                Value<Frame?> prevFrame = const Value.absent(),
+                Value<Frame?> newFrame = const Value.absent(),
+                Value<bool> arrivalShown = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => JourneysCompanion.insert(
                 id: id,
@@ -2948,6 +4151,13 @@ class $$JourneysTableTableManager
                 totalEffectiveKm: totalEffectiveKm,
                 status: status,
                 arrivedUtc: arrivedUtc,
+                endLat: endLat,
+                endLng: endLng,
+                endedUtc: endedUtc,
+                visitNo: visitNo,
+                prevFrame: prevFrame,
+                newFrame: newFrame,
+                arrivalShown: arrivalShown,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -3328,6 +4538,409 @@ typedef $$SyncStateTableProcessedTableManager =
       SyncStateRow,
       PrefetchHooks Function()
     >;
+typedef $$PaintingsOwnedTableCreateCompanionBuilder =
+    PaintingsOwnedCompanion Function({
+      required String landmarkId,
+      required int visits,
+      required Frame frame,
+      required double bestKm,
+      required int firstArrivedUtc,
+      required int lastArrivedUtc,
+      Value<int> rowid,
+    });
+typedef $$PaintingsOwnedTableUpdateCompanionBuilder =
+    PaintingsOwnedCompanion Function({
+      Value<String> landmarkId,
+      Value<int> visits,
+      Value<Frame> frame,
+      Value<double> bestKm,
+      Value<int> firstArrivedUtc,
+      Value<int> lastArrivedUtc,
+      Value<int> rowid,
+    });
+
+class $$PaintingsOwnedTableFilterComposer
+    extends Composer<_$AppDb, $PaintingsOwnedTable> {
+  $$PaintingsOwnedTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get landmarkId => $composableBuilder(
+    column: $table.landmarkId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get visits => $composableBuilder(
+    column: $table.visits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Frame, Frame, String> get frame =>
+      $composableBuilder(
+        column: $table.frame,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<double> get bestKm => $composableBuilder(
+    column: $table.bestKm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get firstArrivedUtc => $composableBuilder(
+    column: $table.firstArrivedUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastArrivedUtc => $composableBuilder(
+    column: $table.lastArrivedUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PaintingsOwnedTableOrderingComposer
+    extends Composer<_$AppDb, $PaintingsOwnedTable> {
+  $$PaintingsOwnedTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get landmarkId => $composableBuilder(
+    column: $table.landmarkId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get visits => $composableBuilder(
+    column: $table.visits,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get frame => $composableBuilder(
+    column: $table.frame,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get bestKm => $composableBuilder(
+    column: $table.bestKm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get firstArrivedUtc => $composableBuilder(
+    column: $table.firstArrivedUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastArrivedUtc => $composableBuilder(
+    column: $table.lastArrivedUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PaintingsOwnedTableAnnotationComposer
+    extends Composer<_$AppDb, $PaintingsOwnedTable> {
+  $$PaintingsOwnedTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get landmarkId => $composableBuilder(
+    column: $table.landmarkId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get visits =>
+      $composableBuilder(column: $table.visits, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Frame, String> get frame =>
+      $composableBuilder(column: $table.frame, builder: (column) => column);
+
+  GeneratedColumn<double> get bestKm =>
+      $composableBuilder(column: $table.bestKm, builder: (column) => column);
+
+  GeneratedColumn<int> get firstArrivedUtc => $composableBuilder(
+    column: $table.firstArrivedUtc,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastArrivedUtc => $composableBuilder(
+    column: $table.lastArrivedUtc,
+    builder: (column) => column,
+  );
+}
+
+class $$PaintingsOwnedTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $PaintingsOwnedTable,
+          PaintingOwnedRow,
+          $$PaintingsOwnedTableFilterComposer,
+          $$PaintingsOwnedTableOrderingComposer,
+          $$PaintingsOwnedTableAnnotationComposer,
+          $$PaintingsOwnedTableCreateCompanionBuilder,
+          $$PaintingsOwnedTableUpdateCompanionBuilder,
+          (
+            PaintingOwnedRow,
+            BaseReferences<_$AppDb, $PaintingsOwnedTable, PaintingOwnedRow>,
+          ),
+          PaintingOwnedRow,
+          PrefetchHooks Function()
+        > {
+  $$PaintingsOwnedTableTableManager(_$AppDb db, $PaintingsOwnedTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PaintingsOwnedTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PaintingsOwnedTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PaintingsOwnedTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> landmarkId = const Value.absent(),
+                Value<int> visits = const Value.absent(),
+                Value<Frame> frame = const Value.absent(),
+                Value<double> bestKm = const Value.absent(),
+                Value<int> firstArrivedUtc = const Value.absent(),
+                Value<int> lastArrivedUtc = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PaintingsOwnedCompanion(
+                landmarkId: landmarkId,
+                visits: visits,
+                frame: frame,
+                bestKm: bestKm,
+                firstArrivedUtc: firstArrivedUtc,
+                lastArrivedUtc: lastArrivedUtc,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String landmarkId,
+                required int visits,
+                required Frame frame,
+                required double bestKm,
+                required int firstArrivedUtc,
+                required int lastArrivedUtc,
+                Value<int> rowid = const Value.absent(),
+              }) => PaintingsOwnedCompanion.insert(
+                landmarkId: landmarkId,
+                visits: visits,
+                frame: frame,
+                bestKm: bestKm,
+                firstArrivedUtc: firstArrivedUtc,
+                lastArrivedUtc: lastArrivedUtc,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PaintingsOwnedTable, PaintingOwnedRow>(table),
+                  BaseReferences<
+                    _$AppDb,
+                    $PaintingsOwnedTable,
+                    PaintingOwnedRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PaintingsOwnedTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $PaintingsOwnedTable,
+      PaintingOwnedRow,
+      $$PaintingsOwnedTableFilterComposer,
+      $$PaintingsOwnedTableOrderingComposer,
+      $$PaintingsOwnedTableAnnotationComposer,
+      $$PaintingsOwnedTableCreateCompanionBuilder,
+      $$PaintingsOwnedTableUpdateCompanionBuilder,
+      (
+        PaintingOwnedRow,
+        BaseReferences<_$AppDb, $PaintingsOwnedTable, PaintingOwnedRow>,
+      ),
+      PaintingOwnedRow,
+      PrefetchHooks Function()
+    >;
+typedef $$PropsOwnedTableCreateCompanionBuilder = PropsOwnedCompanion Function({
+  required String propId,
+  required int unlockedUtc,
+  Value<bool> seen,
+  Value<int> rowid,
+});
+typedef $$PropsOwnedTableUpdateCompanionBuilder = PropsOwnedCompanion Function({
+  Value<String> propId,
+  Value<int> unlockedUtc,
+  Value<bool> seen,
+  Value<int> rowid,
+});
+
+class $$PropsOwnedTableFilterComposer
+    extends Composer<_$AppDb, $PropsOwnedTable> {
+  $$PropsOwnedTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get propId => $composableBuilder(
+    column: $table.propId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get unlockedUtc => $composableBuilder(
+    column: $table.unlockedUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get seen => $composableBuilder(
+    column: $table.seen,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PropsOwnedTableOrderingComposer
+    extends Composer<_$AppDb, $PropsOwnedTable> {
+  $$PropsOwnedTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get propId => $composableBuilder(
+    column: $table.propId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get unlockedUtc => $composableBuilder(
+    column: $table.unlockedUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get seen => $composableBuilder(
+    column: $table.seen,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PropsOwnedTableAnnotationComposer
+    extends Composer<_$AppDb, $PropsOwnedTable> {
+  $$PropsOwnedTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get propId =>
+      $composableBuilder(column: $table.propId, builder: (column) => column);
+
+  GeneratedColumn<int> get unlockedUtc => $composableBuilder(
+    column: $table.unlockedUtc,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get seen =>
+      $composableBuilder(column: $table.seen, builder: (column) => column);
+}
+
+class $$PropsOwnedTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $PropsOwnedTable,
+          PropOwnedRow,
+          $$PropsOwnedTableFilterComposer,
+          $$PropsOwnedTableOrderingComposer,
+          $$PropsOwnedTableAnnotationComposer,
+          $$PropsOwnedTableCreateCompanionBuilder,
+          $$PropsOwnedTableUpdateCompanionBuilder,
+          (
+            PropOwnedRow,
+            BaseReferences<_$AppDb, $PropsOwnedTable, PropOwnedRow>,
+          ),
+          PropOwnedRow,
+          PrefetchHooks Function()
+        > {
+  $$PropsOwnedTableTableManager(_$AppDb db, $PropsOwnedTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PropsOwnedTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PropsOwnedTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PropsOwnedTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> propId = const Value.absent(),
+                Value<int> unlockedUtc = const Value.absent(),
+                Value<bool> seen = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PropsOwnedCompanion(
+                propId: propId,
+                unlockedUtc: unlockedUtc,
+                seen: seen,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String propId,
+                required int unlockedUtc,
+                Value<bool> seen = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PropsOwnedCompanion.insert(
+                propId: propId,
+                unlockedUtc: unlockedUtc,
+                seen: seen,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PropsOwnedTable, PropOwnedRow>(table),
+                  BaseReferences<_$AppDb, $PropsOwnedTable, PropOwnedRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PropsOwnedTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $PropsOwnedTable,
+      PropOwnedRow,
+      $$PropsOwnedTableFilterComposer,
+      $$PropsOwnedTableOrderingComposer,
+      $$PropsOwnedTableAnnotationComposer,
+      $$PropsOwnedTableCreateCompanionBuilder,
+      $$PropsOwnedTableUpdateCompanionBuilder,
+      (PropOwnedRow, BaseReferences<_$AppDb, $PropsOwnedTable, PropOwnedRow>),
+      PropOwnedRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -3344,4 +4957,8 @@ class $AppDbManager {
       $$TravelFundTableTableManager(_db, _db.travelFund);
   $$SyncStateTableTableManager get syncState =>
       $$SyncStateTableTableManager(_db, _db.syncState);
+  $$PaintingsOwnedTableTableManager get paintingsOwned =>
+      $$PaintingsOwnedTableTableManager(_db, _db.paintingsOwned);
+  $$PropsOwnedTableTableManager get propsOwned =>
+      $$PropsOwnedTableTableManager(_db, _db.propsOwned);
 }

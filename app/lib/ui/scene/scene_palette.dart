@@ -21,17 +21,6 @@ const skyColors = {
   SkyPhase.night: SkyColors(Color(0xFF1F2A44), Color(0xFF4A5478)),
 };
 
-/// 땅·후경·전경을 하늘 단계에 맞춰 어둡게 섞는 비율
-const phaseShade = {
-  SkyPhase.dawn: 0.20,
-  SkyPhase.morning: 0.05,
-  SkyPhase.day: 0.0,
-  SkyPhase.sunset: 0.18,
-  SkyPhase.night: 0.55,
-};
-
-const shadeColor = Color(0xFF1F2A44);
-
 /// 후경 지역(landmarks.json의 backdrop 7종 + sea)별 언덕 색
 const backdropTints = {
   'capital': Color(0xFF8FA38A),

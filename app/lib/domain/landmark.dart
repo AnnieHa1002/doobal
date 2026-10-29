@@ -48,3 +48,15 @@ class Landmark {
         painting: j['painting'] as String,
       );
 }
+
+/// 명소를 하나도 빠짐없이 다녀온 권역
+Set<String> completedRegions(Set<String> visitedLandmarkIds, List<Landmark> landmarks) {
+  final byRegion = <String, List<Landmark>>{};
+  for (final l in landmarks) {
+    byRegion.putIfAbsent(l.region, () => []).add(l);
+  }
+  return {
+    for (final e in byRegion.entries)
+      if (e.value.every((l) => visitedLandmarkIds.contains(l.id))) e.key,
+  };
+}

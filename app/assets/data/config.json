@@ -34,7 +34,13 @@
   "skyTileWidthPx": 1024,
   "groundTileWidthPx": 2048,
   "sunZenithDeg": 90.833,
-  "skyPhases": { "approx": true, "dawn": 5, "morning": 6.5, "day": 9, "sunset": 17, "night": 19 }
+  "skyPhases": { "approx": true, "dawn": 5, "morning": 6.5, "day": 9, "sunset": 17, "night": 19 },
+  "timeTint": {
+   "dawn":    { "color": "#8C7BA8", "background": 0.32, "character": 0.25 },
+   "morning": { "color": "#F2C9A0", "background": 0.20, "character": 0.15 },
+   "sunset":  { "color": "#E58A6A", "background": 0.32, "character": 0.25 },
+   "night":   { "color": "#1F2A3C", "background": 0.52, "character": 0.38 }
+  }
  },
  "companions": {
   "firstMeet": "firstEventOfFirstRealJourney",

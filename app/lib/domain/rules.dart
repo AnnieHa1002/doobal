@@ -1,5 +1,17 @@
 import 'geo.dart';
 
+/// 시간대 색 입히기 한 단계 (config scene.timeTint). 곱하기로 입힌다
+class TimeTint {
+  const TimeTint(this.color, this.background, this.character);
+
+  /// 불투명 ARGB (0xFFRRGGBB)
+  final int color;
+
+  /// 하늘을 뺀 배경 레이어에 입히는 세기와 캐릭터에 입히는 세기 (0~1)
+  final double background;
+  final double character;
+}
+
 /// config.json의 규칙 숫자. 엔진은 숫자를 코드에 두지 않고 여기서 읽는다
 class Rules {
   const Rules({
@@ -38,6 +50,7 @@ class Rules {
     required this.skyDayHour,
     required this.skySunsetHour,
     required this.skyNightHour,
+    required this.timeTint,
     required this.allowedSourcesIos,
     required this.allowedSourcesAndroid,
   });
@@ -99,6 +112,10 @@ class Rules {
   final double skyDayHour;
   final double skySunsetHour;
   final double skyNightHour;
+
+  /// 하늘 단계 이름(dawn·morning·sunset·night) → 색 입히기. 낮은 없다 = 입히지 않는다.
+  /// SkyPhase 변환은 time_tint.dart (sky.dart가 rules.dart를 읽어서 여기서는 문자열 키)
+  final Map<String, TimeTint> timeTint;
 
   /// 비어 있으면 출처로 거르지 않는다 (M1 초기 수집용)
   final List<String> allowedSourcesIos;
@@ -169,6 +186,8 @@ class Rules {
       skyDayHour: _d(phases['day']),
       skySunsetHour: _d(phases['sunset']),
       skyNightHour: _d(phases['night']),
+      timeTint: (scene['timeTint'] as Map<String, dynamic>).map((k, v) => MapEntry(
+          k, TimeTint(_hex(v['color'] as String), _d(v['background']), _d(v['character'])))),
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),
       allowedSourcesAndroid: (sources['android'] as List).cast<String>(),
     );
@@ -176,3 +195,6 @@ class Rules {
 }
 
 double _d(dynamic v) => (v as num).toDouble();
+
+/// "#RRGGBB" → 불투명 ARGB
+int _hex(String s) => 0xFF000000 | int.parse(s.substring(1), radix: 16);

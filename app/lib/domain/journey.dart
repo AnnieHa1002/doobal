@@ -72,3 +72,39 @@ Frame frameFor(double journeyEffectiveKm, Rules rules) {
   if (journeyEffectiveKm >= rules.frameSilverKm) return Frame.silver;
   return Frame.wood;
 }
+
+/// 소장한 그림 하나의 상태 (PaintingsOwned 한 행에 해당)
+class OwnedPainting {
+  const OwnedPainting(this.visits, this.frame, this.bestKm);
+
+  final int visits;
+  final Frame frame;
+
+  /// 가장 멀리서 걸어 온 환산 거리(km)
+  final double bestKm;
+}
+
+/// 도착 결과: 도착 뒤 그림 상태와 도착 전 액자(첫 방문이면 null)
+class ArrivalOutcome {
+  const ArrivalOutcome(this.painting, this.prevFrame);
+
+  final OwnedPainting painting;
+  final Frame? prevFrame;
+}
+
+/// 도착했을 때의 그림 상태. 방문 +1, 액자는 이전과 이번 중 높은 쪽(내려가지 않는다),
+/// 가장 먼 거리도 큰 쪽. 액자 순서는 wood < silver < gold (enum 순서)
+ArrivalOutcome paintingAfterArrival(
+  OwnedPainting? previous,
+  double journeyEffectiveKm,
+  Rules rules,
+) {
+  final now = frameFor(journeyEffectiveKm, rules);
+  if (previous == null) {
+    return ArrivalOutcome(OwnedPainting(1, now, journeyEffectiveKm), null);
+  }
+  final frame = now.index > previous.frame.index ? now : previous.frame;
+  final best =
+      journeyEffectiveKm > previous.bestKm ? journeyEffectiveKm : previous.bestKm;
+  return ArrivalOutcome(OwnedPainting(previous.visits + 1, frame, best), previous.frame);
+}

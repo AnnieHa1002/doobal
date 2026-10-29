@@ -7,16 +7,21 @@ import '../data/config_loader.dart';
 import '../data/db/app_db.dart';
 import '../data/landmark_loader.dart';
 import '../data/milestone_loader.dart';
+import '../data/prop_loader.dart';
 import '../data/step_source.dart';
 import '../data/theme_loader.dart';
 import '../domain/camp_theme.dart';
 import '../domain/landmark.dart';
+import '../domain/prop.dart';
 import '../domain/rules.dart';
 import 'sync_service.dart';
 
 final rulesProvider = FutureProvider<Rules>((ref) => loadRules());
 
 final landmarksProvider = FutureProvider<List<Landmark>>((ref) => loadLandmarks());
+
+/// 소품 MVP 24개 (props.json)
+final propsProvider = FutureProvider<List<Prop>>((ref) => loadProps());
 
 /// 방명록 걸음 숫자 (milestones.json)
 final milestonesProvider = FutureProvider<List<int>>((ref) => loadMilestones());
@@ -44,12 +49,14 @@ final stepSourceProvider = Provider<StepSource>((ref) => HealthStepSource());
 final syncServiceProvider = FutureProvider<SyncService>((ref) async {
   final rules = await ref.watch(rulesProvider.future);
   final landmarks = await ref.watch(landmarksProvider.future);
+  final props = await ref.watch(propsProvider.future);
   return SyncService(
     db: ref.watch(dbProvider),
     source: ref.watch(stepSourceProvider),
     rules: rules,
     allowedSources: Platform.isIOS ? rules.allowedSourcesIos : rules.allowedSourcesAndroid,
     landmarks: {for (final l in landmarks) l.id: l},
+    props: props,
   );
 });
 
