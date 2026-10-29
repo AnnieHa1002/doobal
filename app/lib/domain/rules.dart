@@ -12,6 +12,7 @@ class Rules {
     required this.sessionMinSteps,
     required this.sessionMaxPerDay,
     required this.refetchHours,
+    required this.walkingRefreshSec,
     required this.seaFactor,
     required this.earthRadiusKm,
     required this.ports,
@@ -52,6 +53,9 @@ class Rules {
   final int sessionMaxPerDay;
 
   final int refetchHours;
+
+  /// 걷는 중 화면이 동기화하는 간격(초)
+  final int walkingRefreshSec;
 
   final double seaFactor;
   final double earthRadiusKm;
@@ -109,6 +113,7 @@ class Rules {
   factory Rules.fromJson(Map<String, dynamic> j) {
     final gait = j['gait'] as Map<String, dynamic>;
     final session = j['session'] as Map<String, dynamic>;
+    final sync = j['sync'] as Map<String, dynamic>;
     final route = j['route'] as Map<String, dynamic>;
     final journey = j['journey'] as Map<String, dynamic>;
     final frame = journey['frame'] as Map<String, dynamic>;
@@ -132,7 +137,8 @@ class Rules {
       sessionMinMin: session['minMin'] as int,
       sessionMinSteps: session['minSteps'] as int,
       sessionMaxPerDay: session['maxPerDay'] as int,
-      refetchHours: (j['sync'] as Map<String, dynamic>)['refetchHours'] as int,
+      refetchHours: sync['refetchHours'] as int,
+      walkingRefreshSec: sync['walkingRefreshSec'] as int,
       seaFactor: _d(route['seaFactor']),
       earthRadiusKm: _d(route['earthRadiusKm']),
       ports: (route['ports'] as Map<String, dynamic>)

@@ -66,4 +66,23 @@ void main() {
         DateTime.utc(2026, 11, 20));
     expect(etaDate(0, const {}, '2026-11-18', '2026-11-18', rules), DateTime.utc(2026, 11, 18));
   });
+  group('ratioBeforeWalk', () {
+    test('진행 6km 중 이번에 2km 걸었고 전체 20km → 걷기 전 20%', () {
+      expect(ratioBeforeWalk(6, 2, 20), closeTo(0.2, 1e-12));
+    });
+
+    test('이번 걷기가 진행의 전부면 0, 경비 포함 진행이 더 크면 그만큼', () {
+      expect(ratioBeforeWalk(2, 2, 20), 0);
+      expect(ratioBeforeWalk(7.5, 2, 20), closeTo(0.275, 1e-12));
+    });
+
+    test('도착을 넘겨 걸어도 1을 넘지 않고, 걸은 거리가 더 크면 0 밑으로 내려가지 않는다', () {
+      expect(ratioBeforeWalk(30, 2, 20), 1.0);
+      expect(ratioBeforeWalk(1, 3, 20), 0);
+    });
+
+    test('전체 거리가 0이면 1', () {
+      expect(ratioBeforeWalk(0, 0, 0), 1.0);
+    });
+  });
 }

@@ -6,7 +6,9 @@ import '../../app/sync_service.dart';
 
 /// M1 디버그 화면: 오늘 걸음·거리·걷기 1번·여정 진행·도착 예정일, 걸음 출처 확인
 class DebugScreen extends ConsumerStatefulWidget {
-  const DebugScreen({super.key});
+  const DebugScreen({super.key, this.title = '두발 디버그'});
+
+  final String title;
 
   @override
   ConsumerState<DebugScreen> createState() => _DebugScreenState();
@@ -38,14 +40,14 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
 
   Future<String> _sync() async {
     final svc = await ref.read(syncServiceProvider.future);
-    final r = await svc.sync(DateTime.now().toUtc());
+    final r = await svc.sync(ref.read(clockProvider)());
     setState(() => _report = r);
     return '기록 ${r.records}개 (버림 ${r.dropped})';
   }
 
   Future<String> _inspect() async {
     final svc = await ref.read(syncServiceProvider.future);
-    final now = DateTime.now().toUtc();
+    final now = ref.read(clockProvider)();
     final r = await svc.inspect(now.subtract(Duration(hours: svc.rules.refetchHours)), now);
     setState(() => _report = r);
     return '기록 ${r.records}개 (버림 ${r.dropped})';
@@ -53,7 +55,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
 
   Future<String> _start() async {
     final svc = await ref.read(syncServiceProvider.future);
-    await svc.startJourney(_destId!, svc.rules.fallbackOrigin, DateTime.now().toUtc());
+    await svc.startJourney(_destId!, svc.rules.fallbackOrigin, ref.read(clockProvider)());
     return '출발함';
   }
 
@@ -63,7 +65,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
     final landmarks = ref.watch(landmarksProvider).value ?? const [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('두발 디버그')),
+      appBar: AppBar(title: Text(widget.title)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

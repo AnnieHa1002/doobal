@@ -2,6 +2,8 @@ import 'geo.dart';
 import 'landmark.dart';
 import 'route.dart';
 import 'rules.dart';
+import 'sky.dart';
+import 'sun.dart';
 import 'time_kst.dart';
 
 enum Season { spring, summer, autumn, winter }
@@ -30,4 +32,31 @@ Landmark nearestLandmark(LatLng p, List<Landmark> landmarks, double earthRadiusK
 String backdropAt(RoutePosition pos, List<Landmark> landmarks, Rules rules) {
   if (pos.onSea) return seaBackdrop;
   return nearestLandmark(pos.latLng, landmarks, rules.earthRadiusKm).backdrop;
+}
+
+/// 장면을 칠할 때 쓰는 값: 하늘 단계, 후경 지역, 계절
+class SceneLook {
+  const SceneLook(this.phase, this.backdrop, this.season);
+
+  final SkyPhase phase;
+  final String backdrop;
+  final Season season;
+}
+
+/// 지금 시각·위치의 장면. 하늘은 그 위치의 일출·일몰로 환산한다.
+/// 위치는 한국 안이어야 한다(sunTimes가 한국 밖 극지방에서 StateError)
+SceneLook sceneLook(
+  DateTime nowUtc,
+  LatLng position,
+  bool onSea,
+  List<Landmark> landmarks,
+  Rules rules,
+) {
+  final day = kstDayKey(nowUtc);
+  final sun = sunTimes(position, day, rules.sunZenithDeg);
+  return SceneLook(
+    skyPhaseAt(skyRefHour(nowUtc, sun), rules),
+    backdropAt(RoutePosition(position, 0, onSea), landmarks, rules),
+    seasonOf(day, rules),
+  );
 }

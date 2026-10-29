@@ -53,7 +53,7 @@ class JourneyView {
   final DateTime eta;
 }
 
-/// 디버그 화면에 보여 줄 지금 상태
+/// 화면에 보여 줄 지금 상태
 class Snapshot {
   const Snapshot({
     required this.today,
@@ -63,6 +63,9 @@ class Snapshot {
     required this.fundKm,
     required this.lastFetched,
     required this.journey,
+    required this.totalSteps,
+    required this.position,
+    required this.onSea,
   });
 
   final String today;
@@ -72,6 +75,16 @@ class Snapshot {
   final double fundKm;
   final DateTime? lastFetched;
   final JourneyView? journey;
+
+  /// 설치 이후 모든 하루 걸음의 합 (방명록 걸음 숫자 기준)
+  final int totalSteps;
+
+  /// 장면의 현재 위치. 여정 중이면 경로 위 지점, 아니면 마지막으로 도착한 곳,
+  /// 도착한 적이 없으면 rules.fallbackOrigin. 위치 권한은 아직 쓰지 않는다
+  final LatLng position;
+
+  /// 배 구간 위인지 (여정 중일 때만 true가 될 수 있다)
+  final bool onSea;
 }
 
 /// 수집 → 저장 → 계산 (M1 명세 6장). 같은 데이터로 여러 번 돌려도 결과가 같다
@@ -203,16 +216,22 @@ class SyncService {
         .getSingleOrNull();
     final fund = await _fund();
 
+    final days = await db.select(db.daySummaries).get();
     JourneyView? view;
+    LatLng position;
+    var onSea = false;
     final active = await _activeJourney();
-    if (active != null) {
+    if (active == null) {
+      position = await _restingPosition();
+    } else {
       final j = _toJourney(active);
       final p = progress(j, await _distanceKmFrom(_minuteOf(active.startUtc)), rules);
-      final daily = {
-        for (final d in await db.select(db.daySummaries).get()) d.day: d.distanceM / 1000,
-      };
+      final daily = {for (final d in days) d.day: d.distanceM / 1000};
       final eta = etaDate(p.remainingKm, daily, today, state.firstRecordDay, rules);
       view = JourneyView(landmarks[active.destId]!, j.route.totalEffectiveKm, p, eta);
+      final at = positionAt(j.route, p.progressKm);
+      position = at.latLng;
+      onSea = at.onSea;
     }
 
     return Snapshot(
@@ -223,7 +242,23 @@ class SyncService {
       fundKm: fund.km,
       lastFetched: state.lastFetchedUtc == null ? null : _utc(state.lastFetchedUtc!),
       journey: view,
+      totalSteps: days.fold(0, (sum, d) => sum + d.steps),
+      position: position,
+      onSea: onSea,
     );
+  }
+
+  /// 여정이 없을 때 장면의 위치: 마지막으로 도착한 명소, 없으면 기본 출발지
+  Future<LatLng> _restingPosition() async {
+    final row = await (db.select(db.journeys)
+          ..where((t) => t.status.equalsValue(JourneyStatus.arrived))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.arrivedUtc),
+            (t) => OrderingTerm.desc(t.startUtc),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+    return row == null ? rules.fallbackOrigin : landmarks[row.destId]!.latLng;
   }
 
   Future<SyncStateRow> _ensureState(DateTime now) async {

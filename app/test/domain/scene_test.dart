@@ -1,6 +1,8 @@
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/route.dart';
 import 'package:doobal/domain/scene.dart';
+import 'package:doobal/domain/sky.dart';
+import 'package:doobal/domain/sun.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
@@ -49,6 +51,54 @@ void main() {
     test('명소가 없으면 StateError', () {
       expect(() => nearestLandmark(nearGyeongbok, const [], rules.earthRadiusKm),
           throwsStateError);
+    });
+  });
+  group('sceneLook: 시각·위치 → 하늘 단계·후경·계절', () {
+    const seoul = LatLng(37.5776, 126.9769);
+    // 한국 시각 → UTC
+    DateTime kst(int y, int mo, int d, int h, [int mi = 0]) =>
+        DateTime.utc(y, mo, d, h - 9, mi);
+
+    test('서울 11월 한낮 → 낮·capital·가을', () {
+      final look = sceneLook(kst(2026, 11, 18, 12), seoul, false, landmarks, rules);
+      expect(look.phase, SkyPhase.day);
+      expect(look.backdrop, 'capital');
+      expect(look.season, Season.autumn);
+    });
+
+    test('한밤은 밤, 자정 직전도 밤', () {
+      expect(sceneLook(kst(2026, 11, 18, 2), seoul, false, landmarks, rules).phase,
+          SkyPhase.night);
+      expect(sceneLook(kst(2026, 11, 18, 23, 30), seoul, false, landmarks, rules).phase,
+          SkyPhase.night);
+    });
+
+    test('일몰 직후는 노을, 일출 직후는 새벽', () {
+      final sun = sunTimes(seoul, '2026-11-18', rules.sunZenithDeg);
+      final afterSunset = sun.sunset.add(const Duration(minutes: 20));
+      expect(sceneLook(afterSunset, seoul, false, landmarks, rules).phase, SkyPhase.sunset);
+      final afterRise = sun.sunrise.add(const Duration(minutes: 20));
+      expect(sceneLook(afterRise, seoul, false, landmarks, rules).phase, SkyPhase.dawn);
+    });
+
+    test('배 구간이면 후경 sea', () {
+      final look = sceneLook(kst(2026, 11, 18, 12), seoul, true, landmarks, rules);
+      expect(look.backdrop, 'sea');
+    });
+
+    test('계절은 한국 날짜 기준 (UTC 2/28 15:30 = 한국 3/1 → 봄, UTC 5/31 14:00 = 한국 5/31 → 봄)', () {
+      expect(sceneLook(DateTime.utc(2026, 2, 28, 15, 30), seoul, false, landmarks, rules).season,
+          Season.spring);
+      expect(sceneLook(DateTime.utc(2026, 5, 31, 14), seoul, false, landmarks, rules).season,
+          Season.spring);
+      expect(sceneLook(DateTime.utc(2026, 5, 31, 15, 30), seoul, false, landmarks, rules).season,
+          Season.summer);
+    });
+
+    test('기본 출발지(양구)도 계산된다', () {
+      final look = sceneLook(kst(2026, 6, 10, 12), rules.fallbackOrigin, false, landmarks, rules);
+      expect(look.phase, SkyPhase.day);
+      expect(look.backdrop, 'gangwon');
     });
   });
 }

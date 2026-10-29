@@ -32,3 +32,4 @@ flutter:
   # 정적 데이터 JSON (data/build_static.py 로 생성, config.json·events.json 문구는 손으로 고침)
   assets:
     - assets/data/
+    - assets/data/themes/

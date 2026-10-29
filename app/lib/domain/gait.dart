@@ -39,8 +39,18 @@ List<GaitMinute> classifyGait(
   return out;
 }
 
+/// 보폭(m): 걷기·뛰기별로 config에서 읽는다
+double strideM(Gait gait, Rules rules) =>
+    gait == Gait.run ? rules.runStrideM : rules.walkStrideM;
+
 /// 거리(m) = Σ 걸음 × 보폭
-double distanceM(List<GaitMinute> minutes, Rules rules) => minutes.fold(
-    0.0,
-    (sum, m) =>
-        sum + m.steps * (m.gait == Gait.run ? rules.runStrideM : rules.walkStrideM));
+double distanceM(List<GaitMinute> minutes, Rules rules) =>
+    minutes.fold(0.0, (sum, m) => sum + m.steps * strideM(m.gait, rules));
+
+/// 속도(km/h) = 분당 걸음 × 보폭(m) × 60 ÷ 1000
+double speedKmh(int stepsPerMin, Gait gait, Rules rules) =>
+    stepsPerMin * strideM(gait, rules) * 60 / 1000;
+
+/// 속도(m/s) = 분당 걸음 × 보폭(m) ÷ 60
+double speedMps(int stepsPerMin, Gait gait, Rules rules) =>
+    stepsPerMin * strideM(gait, rules) / 60;

@@ -327,4 +327,133 @@ void main() {
       expect(r.summary.runSteps, 675);
     });
   });
+  group('Snapshot: totalSteps·position·onSea', () {
+    final t1 = _t0.add(const Duration(hours: 1));
+    final t2 = _t0.add(const Duration(hours: 3));
+
+    test('totalSteps는 모든 하루 걸음의 합 (설치 이후 여러 날)', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      expect((await e.svc.snapshot(_t0)).totalSteps, 0);
+      // 첫날 30분 × 100보, 이틀 뒤 20분 × 120보
+      final day3 = _t0.add(const Duration(days: 2, hours: 1));
+      e.source.records.addAll([_walk(t1, 30, 100), _walk(day3, 20, 120)]);
+      await e.svc.sync(_t0.add(const Duration(days: 2, hours: 3)));
+
+      final s = await e.svc.snapshot(_t0.add(const Duration(days: 2, hours: 3)));
+      expect(s.totalSteps, 3000 + 2400);
+      final days = await e.db.select(e.db.daySummaries).get();
+      expect(days.fold(0, (sum, d) => sum + d.steps), s.totalSteps);
+      expect(s.todaySteps, 2400);
+    });
+
+    test('여정도 도착한 적도 없으면 기본 출발지', () async {
+      final e = _env();
+      final s = await e.svc.snapshot(_t0);
+      expect(s.position, rules.fallbackOrigin);
+      expect(s.onSea, isFalse);
+      expect(s.journey, isNull);
+    });
+
+    test('여정 중(땅): 경로 위 진행 지점', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr003', rules.fallbackOrigin, t1);
+      // 시작 직후는 출발지
+      expect((await e.svc.snapshot(t1)).position, rules.fallbackOrigin);
+
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 10)), 40, 100));
+      await e.svc.sync(t2);
+      final s = await e.svc.snapshot(t2);
+      final route = buildRoute(rules.fallbackOrigin, _landmarks['kr003']!.latLng, rules);
+      final expected = positionAt(route, s.journey!.progress.progressKm);
+      expect(s.position, expected.latLng);
+      expect(s.position, isNot(rules.fallbackOrigin));
+      expect(s.onSea, isFalse);
+    });
+
+    test('여정 중(배 구간): onSea, 위치는 완도항과 제주항 사이', () async {
+      final e = _env();
+      final jeju = _landmarks.values.firstWhere((l) => l.island == Island.jeju);
+      final wando = rules.ports['wando']!;
+      final port = rules.ports['jeju']!;
+      await e.svc.sync(_t0);
+      // 완도항에서 제주로: 첫 다리가 배 (환산 약 30km)
+      await e.svc.startJourney(jeju.id, wando, t1);
+      expect((await e.svc.snapshot(t1)).onSea, isTrue);
+
+      // 143분 × 100보 × 0.7m = 10.01km (환산 거리) → 아직 배 위
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 143, 100));
+      await e.svc.sync(t1.add(const Duration(hours: 4)));
+      final s = await e.svc.snapshot(t1.add(const Duration(hours: 4)));
+      expect(s.onSea, isTrue);
+      expect(s.position.lat, inInclusiveRange(port.lat, wando.lat));
+      expect(s.position, isNot(wando));
+    });
+
+    test('배 구간을 지나면 onSea가 꺼지고 제주 땅 위 지점', () async {
+      final e = _env();
+      final jeju = _landmarks.values.firstWhere((l) => l.island == Island.jeju);
+      await e.svc.sync(_t0);
+      await e.svc.startJourney(jeju.id, rules.ports['wando']!, t1);
+      // 443분 × 100보 × 0.7m = 31.01km: 배 구간 환산(약 30km)을 막 넘겼다
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 443, 100));
+      final end = t1.add(const Duration(hours: 9));
+      await e.svc.sync(end);
+      final s = await e.svc.snapshot(end);
+      final route = buildRoute(rules.ports['wando']!, jeju.latLng, rules);
+      expect(route.legs.first.kind, LegKind.sea);
+      expect(s.journey!.progress.progressKm, greaterThan(route.legs.first.effectiveKm));
+      expect(s.onSea, isFalse);
+      expect(s.position, positionAt(route, s.journey!.progress.progressKm).latLng);
+    });
+
+    test('도착하면 여정이 없어도 도착한 명소가 위치', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr001', _nearGyeongbok, t1);
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 30, 100));
+      await e.svc.sync(t2);
+
+      final s = await e.svc.snapshot(t2);
+      expect(s.journey, isNull);
+      expect(s.position, _landmarks['kr001']!.latLng);
+      expect(s.onSea, isFalse);
+    });
+
+    test('여러 번 도착했으면 가장 최근에 도착한 곳', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr001', _nearGyeongbok, t1);
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 30, 100));
+      await e.svc.sync(t2);
+
+      // 두 번째: 인천 차이나타운 옆에서 출발해 도착
+      final kr002 = _landmarks['kr002']!.latLng;
+      final t3 = t2.add(const Duration(hours: 1));
+      await e.svc.startJourney('kr002', LatLng(kr002.lat, kr002.lng + 0.0113), t3, useFund: false);
+      e.source.records.add(_walk(t3.add(const Duration(minutes: 5)), 30, 100));
+      await e.svc.sync(t3.add(const Duration(hours: 2)));
+
+      final arrived = await (e.db.select(e.db.journeys)
+            ..where((t) => t.status.equalsValue(JourneyStatus.arrived)))
+          .get();
+      expect(arrived, hasLength(2));
+      final s = await e.svc.snapshot(t3.add(const Duration(hours: 2)));
+      expect(s.position, kr002);
+    });
+
+    test('멈춘(stopped) 여정은 위치에 쓰지 않는다', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr001', _nearGyeongbok, t1);
+      // 새 여정을 시작하면 앞 여정은 멈춘다. 둘 다 도착하지 않았으니 활성 여정의 출발지
+      await e.svc.startJourney('kr003', rules.fallbackOrigin, t2);
+      final stopped = await (e.db.select(e.db.journeys)
+            ..where((t) => t.status.equalsValue(JourneyStatus.stopped)))
+          .get();
+      expect(stopped, hasLength(1));
+      expect((await e.svc.snapshot(t2)).position, rules.fallbackOrigin);
+    });
+  });
 }

@@ -54,6 +54,10 @@ JourneyProgress progress(Journey j, double walkedKmSinceStart, Rules rules) {
   );
 }
 
+/// 이번 걷기 전의 진행 비율 = (지금 진행 거리 − 이번에 걸은 거리) ÷ 전체. 0~1
+double ratioBeforeWalk(double progressKm, double walkedKm, double totalKm) =>
+    totalKm <= 0 ? 1.0 : ((progressKm - walkedKm) / totalKm).clamp(0.0, 1.0);
+
 /// 여행 경비에 더하되 상한을 넘지 않는다
 double addToFund(double fundKm, double km, Rules rules) {
   final sum = fundKm + km;

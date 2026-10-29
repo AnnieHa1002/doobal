@@ -1,0 +1,13 @@
+{
+ "version": 1,
+ "id": "camp",
+ "approx": true,
+ "objects": [
+  { "id": "map",      "label": "지도", "x": 0.20, "y": 0.70, "size": 64 },
+  { "id": "backpack", "label": "배낭", "x": 0.80, "y": 0.66, "size": 64 },
+  { "id": "note",     "label": "노트", "x": 0.62, "y": 0.79, "size": 56 }
+ ],
+ "character": { "x": 0.42, "footY": 0.845 },
+ "companion": { "x": 0.66, "footY": 0.80 },
+ "signpost": { "x": 0.12, "footY": 0.62 }
+}

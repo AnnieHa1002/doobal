@@ -43,7 +43,7 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     _running = true;
     try {
       final svc = await ref.read(syncServiceProvider.future);
-      final report = await svc.sync(DateTime.now().toUtc());
+      final report = await svc.sync(ref.read(clockProvider)());
       if (!mounted) return;
       ref.invalidate(snapshotProvider);
       if (report.advancedKm >= _toastMinKm) {

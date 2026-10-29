@@ -51,4 +51,45 @@ void main() {
     expect(s.activeMinutes, 2);
     expect(summarizeWalk(const [], from, from + 3, rules).runRatio, 0);
   });
+  group('창 안 가장 최근 걸음 분', () {
+    test('마지막 걸음 있는 분의 걸음과 걷기/뛰기', () {
+      // 100보 10분 → 150보 5분: 마지막은 150보, 뛰기
+      final s = summarizeWalk(gaits, from, from + 15, rules);
+      expect(s.lastSteps, 150);
+      expect(s.lastGait, Gait.run);
+      // 창을 앞 10분으로 자르면 마지막은 100보, 걷기
+      final w = summarizeWalk(gaits, from, from + 10, rules);
+      expect(w.lastSteps, 100);
+      expect(w.lastGait, Gait.walk);
+    });
+
+    test('뒤쪽 걸음 없는 분은 건너뛰고 걸음이 있었던 마지막 분', () {
+      final m = minutesFrom(_t0, [100, 120, 0, 0]);
+      final s = summarizeWalk(classifyGait(m, rules), from, from + 4, rules);
+      expect(s.lastSteps, 120);
+      expect(s.lastGait, Gait.walk);
+    });
+
+    test('창 밖의 분은 보지 않고, 창 앞에서 이어진 뛰기 상태를 따른다', () {
+      // 창 앞 150보(뛰기), 창 안 135보(직전 상태 = 뛰기), 창 뒤 100보
+      final m = minutesFrom(_t0, [150, 135, 100]);
+      final s = summarizeWalk(classifyGait(m, rules), from + 1, from + 2, rules);
+      expect(s.lastSteps, 135);
+      expect(s.lastGait, Gait.run);
+    });
+
+    test('창 안에 걸음이 없으면 0, 걷기', () {
+      final m = minutesFrom(_t0, [150, 0, 0]);
+      final s = summarizeWalk(classifyGait(m, rules), from + 1, from + 3, rules);
+      expect(s.lastSteps, 0);
+      expect(s.lastGait, Gait.walk);
+      expect(summarizeWalk(const [], from, from + 3, rules).lastSteps, 0);
+    });
+
+    test('속도·보폭은 마지막 분의 걷기/뛰기로: 150보 뛰기 → 9.0km/h', () {
+      final s = summarizeWalk(gaits, from, from + 15, rules);
+      expect(speedKmh(s.lastSteps, s.lastGait, rules), closeTo(9.0, 1e-9));
+      expect(strideM(s.lastGait, rules), 1.0);
+    });
+  });
 }
