@@ -95,6 +95,26 @@
    "status": "pending"
   },
   {
+   "id": "hat_10",
+   "slot": "hat",
+   "name": "달 핀",
+   "unlock": {
+    "kind": "companion",
+    "companion": null
+   },
+   "status": "mvp"
+  },
+  {
+   "id": "hat_11",
+   "slot": "hat",
+   "name": "동그란 안경",
+   "unlock": {
+    "kind": "companion",
+    "companion": null
+   },
+   "status": "mvp"
+  },
+  {
    "id": "hand_01",
    "slot": "hand",
    "name": "붓",
@@ -178,12 +198,12 @@
   {
    "id": "hand_09",
    "slot": "hand",
-   "name": null,
+   "name": "꾹꾹이 장갑",
    "unlock": {
     "kind": "companion",
     "companion": null
    },
-   "status": "pending"
+   "status": "mvp"
   },
   {
    "id": "pet_01",
@@ -269,16 +289,6 @@
    "status": "pending"
   },
   {
-   "id": "pet_09",
-   "slot": "pet",
-   "name": null,
-   "unlock": {
-    "kind": "companion",
-    "companion": null
-   },
-   "status": "pending"
-  },
-  {
    "id": "bag_01",
    "slot": "bag",
    "name": "화구 가방",
@@ -315,16 +325,6 @@
     "kind": "event",
     "terrain": "city",
     "season": "spring"
-   },
-   "status": "pending"
-  },
-  {
-   "id": "bag_05",
-   "slot": "bag",
-   "name": null,
-   "unlock": {
-    "kind": "companion",
-    "companion": null
    },
    "status": "pending"
   },

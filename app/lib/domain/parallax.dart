@@ -7,8 +7,7 @@ double layerOffsetPx(double distanceM, double speed, double pxPerM, double width
 
 /// 화면 [leftPx, leftPx + viewportPx)와 겹치는 조각 번호(왼쪽부터). 조각 끝을 넘으면 처음으로 이어진다.
 /// 1170px 화면은 1024px 조각 3장에 걸칠 수 있다.
-/// 하늘은 현재 시각의 띠 x(skyBandX)를 화면 가운데에 두므로
-/// leftPx = skyBandX − viewportPx / 2 (음수도 된다). 땅·후경은 layerOffsetPx를 leftPx로 쓴다
+/// leftPx는 음수도 된다. 레이어는 layerOffsetPx를 leftPx로 쓴다
 List<int> visibleTiles(
   double leftPx,
   double viewportPx,

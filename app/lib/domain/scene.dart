@@ -34,13 +34,30 @@ String backdropAt(RoutePosition pos, List<Landmark> landmarks, Rules rules) {
   return nearestLandmark(pos.latLng, landmarks, rules.earthRadiusKm).backdrop;
 }
 
-/// 장면을 칠할 때 쓰는 값: 하늘 단계, 후경 지역, 계절
+/// 장면을 칠할 때 쓰는 값: 하늘 섞임·하늘 모습·해달, 후경 지역, 계절
 class SceneLook {
-  const SceneLook(this.phase, this.backdrop, this.season);
+  const SceneLook(this.mix, this.sky, this.celestial, this.backdrop, this.season);
 
-  final SkyPhase phase;
+  final SkyMix mix;
+  final SkyLook sky;
+  final Celestial celestial;
   final String backdrop;
   final Season season;
+
+  /// 더 가까운 하늘 단계 (모닥불 빛처럼 단계로 갈리는 것에 쓴다)
+  SkyPhase get phase => mix.dominant;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SceneLook &&
+      other.mix == mix &&
+      other.sky == sky &&
+      other.celestial == celestial &&
+      other.backdrop == backdrop &&
+      other.season == season;
+
+  @override
+  int get hashCode => Object.hash(mix, sky, celestial, backdrop, season);
 }
 
 /// 지금 시각·위치의 장면. 하늘은 그 위치의 일출·일몰로 환산한다.
@@ -54,8 +71,11 @@ SceneLook sceneLook(
 ) {
   final day = kstDayKey(nowUtc);
   final sun = sunTimes(position, day, rules.sunZenithDeg);
+  final mix = skyMixAt(nowUtc, sun, rules);
   return SceneLook(
-    skyPhaseAt(skyRefHour(nowUtc, sun), rules),
+    mix,
+    skyLookOf(mix, rules),
+    celestialAt(nowUtc, sun, rules),
     backdropAt(RoutePosition(position, 0, onSea), landmarks, rules),
     seasonOf(day, rules),
   );

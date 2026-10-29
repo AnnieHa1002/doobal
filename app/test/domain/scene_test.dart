@@ -73,12 +73,42 @@ void main() {
           SkyPhase.night);
     });
 
-    test('일몰 직후는 노을, 일출 직후는 새벽', () {
+    test('일몰 20분 뒤는 노을 (노을→밤 t 0.33), 일출 10분 뒤는 새벽 (새벽→아침 t 0.375)', () {
       final sun = sunTimes(seoul, '2026-11-18', rules.sunZenithDeg);
       final afterSunset = sun.sunset.add(const Duration(minutes: 20));
       expect(sceneLook(afterSunset, seoul, false, landmarks, rules).phase, SkyPhase.sunset);
-      final afterRise = sun.sunrise.add(const Duration(minutes: 20));
+      final afterRise = sun.sunrise.add(const Duration(minutes: 10));
       expect(sceneLook(afterRise, seoul, false, landmarks, rules).phase, SkyPhase.dawn);
+    });
+
+    test('일출 20분 뒤는 새벽→아침 한가운데라 아침으로 센다 (dominant)', () {
+      final sun = sunTimes(seoul, '2026-11-18', rules.sunZenithDeg);
+      final look = sceneLook(
+          sun.sunrise.add(const Duration(minutes: 20)), seoul, false, landmarks, rules);
+      expect(look.mix.from, SkyPhase.dawn);
+      expect(look.mix.to, SkyPhase.morning);
+      expect(look.mix.t, closeTo(0.5, 1e-6));
+      expect(look.phase, SkyPhase.morning);
+    });
+
+    test('하늘 모습·해달도 같이 정해진다: 한낮은 해(호 한가운데쯤), 한밤은 달', () {
+      final noon = sceneLook(kst(2026, 11, 18, 12, 26), seoul, false, landmarks, rules);
+      expect(noon.celestial.body, SkyBody.sun);
+      expect(noon.celestial.progress, closeTo(0.5, 0.05));
+      expect(noon.sky, skyLookOf(noon.mix, rules));
+      expect(noon.sky.stars, 0);
+      final night = sceneLook(kst(2026, 11, 18, 2), seoul, false, landmarks, rules);
+      expect(night.celestial.body, SkyBody.moon);
+      expect(night.sky.stars, 1.0);
+    });
+
+    test('같은 값이면 같은 장면 (repaint 판단용)', () {
+      final a = sceneLook(kst(2026, 11, 18, 12), seoul, false, landmarks, rules);
+      final b = sceneLook(kst(2026, 11, 18, 12), seoul, false, landmarks, rules);
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(sceneLook(kst(2026, 11, 18, 13), seoul, false, landmarks, rules)));
+      expect(a, isNot(sceneLook(kst(2026, 11, 18, 12), seoul, true, landmarks, rules)));
     });
 
     test('배 구간이면 후경 sea', () {

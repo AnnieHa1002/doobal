@@ -65,24 +65,26 @@ def build_props():
         p('hat_07', 'hat', '밀짚모자', 'event', terrain='field', season='summer'),
         p('hat_08', 'hat', '단풍잎 모자', 'event', terrain='mountain', season='autumn'),
         p('hat_09', 'hat', '털모자', 'event', terrain='mountain', season='winter'),
+        # 동료 소품: companion id는 companions.json이 생기면 채운다
+        # (폐이 달 핀, 휴 꾹꾹이 장갑, 심 박사 동그란 안경)
+        p('hat_10', 'hat', '달 핀', 'companion', companion=None),
+        p('hat_11', 'hat', '동그란 안경', 'companion', companion=None),
         p('hand_01', 'hand', '붓', 'default'), p('hand_02', 'hand', '지팡이', 'distance', km=10),
         p('hand_03', 'hand', '나침반', 'distance', km=150), p('hand_04', 'hand', '큰 팔레트', 'distance', km=200),
         p('hand_05', 'hand', '연잎 우산', 'region', region='chungcheong'),
         p('hand_06', 'hand', '낚싯대', 'event', terrain='coast', dayNight='day'),
         p('hand_07', 'hand', '바람개비', 'event', terrain='coast'),
         p('hand_08', 'hand', '랜턴', 'event', terrain='city', dayNight='night'),
-        p('hand_09', 'hand', None, 'companion', companion=None),
+        p('hand_09', 'hand', '꾹꾹이 장갑', 'companion', companion=None),
         p('pet_01', 'pet', '종이새', 'default'), p('pet_02', 'pet', '해치', 'region', region='capital'),
         p('pet_03', 'pet', '아기 양', 'region', region='gangwon'), p('pet_04', 'pet', '돌하르방', 'region', region='jeju'),
         p('pet_05', 'pet', '괭이갈매기', 'region', region='ulleung'),
         p('pet_06', 'pet', '다람쥐', 'event', terrain='mountain', dayNight='day'),
         p('pet_07', 'pet', '길고양이', 'event', terrain='city', dayNight='day'),
         p('pet_08', 'pet', '반딧불이', 'event', terrain='field', season='summer', dayNight='night'),
-        p('pet_09', 'pet', None, 'companion', companion=None),
         p('bag_01', 'bag', '화구 가방', 'default'), p('bag_02', 'bag', '이젤 배낭', 'distance', km=50),
         p('bag_03', 'bag', '두루마리 통', 'distance', km=500),
         p('bag_04', 'bag', '꽃 바구니', 'event', terrain='city', season='spring'),
-        p('bag_05', 'bag', None, 'companion', companion=None),
         p('shoe_01', 'shoe', '갈색 신발', 'default'), p('shoe_02', 'shoe', '등산화', 'distance', km=100),
         p('shoe_03', 'shoe', '장화', 'event', terrain='coast'),
         p('cloth_01', 'cloth', '앞치마 작업복', 'default'), p('cloth_02', 'cloth', '여행 조끼', 'distance', km=300),
@@ -92,9 +94,9 @@ def build_props():
         x['status'] = 'pending' if (x['name'] is None or x['unlock']['kind'] == 'event') else 'mvp'
     c = collections.Counter(x['slot'] for x in props)
     k = collections.Counter(x['unlock']['kind'] for x in props)
-    assert len(props) == 39 and dict(c) == {'hat': 9, 'hand': 9, 'pet': 9, 'bag': 5, 'shoe': 3, 'cloth': 4}, c
+    assert len(props) == 39 and dict(c) == {'hat': 11, 'hand': 9, 'pet': 8, 'bag': 4, 'shoe': 3, 'cloth': 4}, c
     assert dict(k) == {'default': 6, 'distance': 10, 'region': 7, 'event': 12, 'companion': 3, 'steps': 1}, k
-    assert sum(x['status'] == 'mvp' for x in props) == 24
+    assert sum(x['status'] == 'mvp' for x in props) == 27
     dump('props.json', {'version': 1, 'props': props})
     return props
 

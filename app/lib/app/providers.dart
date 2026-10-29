@@ -20,7 +20,7 @@ final rulesProvider = FutureProvider<Rules>((ref) => loadRules());
 
 final landmarksProvider = FutureProvider<List<Landmark>>((ref) => loadLandmarks());
 
-/// 소품 MVP 24개 (props.json)
+/// 소품 MVP 27개 (props.json)
 final propsProvider = FutureProvider<List<Prop>>((ref) => loadProps());
 
 /// 방명록 걸음 숫자 (milestones.json)

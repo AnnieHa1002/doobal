@@ -12,6 +12,71 @@ class TimeTint {
   final double character;
 }
 
+/// 장면 레이어 이름 (config scene.layers). 그리는 순서는 painter가 정한다
+enum SceneLayerId { sky, backdrop, ridge, grove, meadow, ground, foreground }
+
+/// 레이어 하나의 규격 (config scene.layers). 좌표는 기준 화면(1170×2532) px.
+/// sky는 그린 하늘이라 speed만 있고, 땅 이미지(ground)에는 띠가 없다
+class SceneLayer {
+  const SceneLayer({
+    required this.speed,
+    this.widthPx,
+    this.heightPx,
+    this.topY,
+    this.bandTop,
+    this.bandBottom,
+  });
+
+  /// 땅 속도에 대한 비율 (땅 1.0)
+  final double speed;
+
+  /// 이미지 크기와 위 가장자리 y. 이미지는 topY에서 topY + heightPx까지
+  final double? widthPx;
+  final double? heightPx;
+  final double? topY;
+
+  /// 윗선(실루엣의 위 가장자리)이 놓이는 y 범위
+  final double? bandTop;
+  final double? bandBottom;
+}
+
+/// 하늘 단계 하나의 색 (config scene.sky.keys). 색은 불투명 ARGB, glow는 빛무리
+class SkyKeyColors {
+  const SkyKeyColors({
+    required this.top,
+    required this.mid,
+    required this.horizon,
+    required this.glow,
+    required this.glowStrength,
+  });
+
+  final int top;
+  final int mid;
+  final int horizon;
+  final int glow;
+
+  /// 빛무리 중심의 알파 (0~1)
+  final double glowStrength;
+}
+
+/// 해·달이 지나는 호 (config scene.sky.arc)
+class SkyArc {
+  const SkyArc({
+    required this.leftX,
+    required this.rightX,
+    required this.peakY,
+    required this.glowRadiusPx,
+  });
+
+  /// 호의 왼쪽·오른쪽 끝 (화면 가로 비율)
+  final double leftX;
+  final double rightX;
+
+  /// 호의 꼭대기 y와 빛무리 반지름 (기준 화면 px)
+  final double peakY;
+  final double glowRadiusPx;
+}
+
 /// config.json의 규칙 숫자. 엔진은 숫자를 코드에 두지 않고 여기서 읽는다
 class Rules {
   const Rules({
@@ -37,18 +102,24 @@ class Rules {
     required this.seasons,
     required this.groundWidthPx,
     required this.groundMeters,
-    required this.parallaxBackdrop,
-    required this.parallaxGround,
-    required this.parallaxForeground,
-    required this.skyBandWidthPx,
-    required this.skyTileWidthPx,
-    required this.groundTileWidthPx,
+    required this.screenHeightPx,
+    required this.horizonY,
+    required this.pathY,
+    required this.characterHeightPx,
+    required this.layers,
+    required this.seaHiddenLayers,
     required this.sunZenithDeg,
-    required this.skyDawnHour,
-    required this.skyMorningHour,
-    required this.skyDayHour,
-    required this.skySunsetHour,
-    required this.skyNightHour,
+    required this.skyMidStop,
+    required this.skyNightEndMin,
+    required this.skyDawnMin,
+    required this.skyMorningMin,
+    required this.skyDayStartMin,
+    required this.skyDayEndMin,
+    required this.skySunsetMin,
+    required this.skyNightStartMin,
+    required this.skyKeys,
+    required this.skyStars,
+    required this.skyArc,
     required this.timeTint,
     required this.allowedSourcesIos,
     required this.allowedSourcesAndroid,
@@ -89,25 +160,45 @@ class Rules {
   final double groundWidthPx;
   final double groundMeters;
 
-  /// 레이어별 스크롤 배율 (후경 0.3, 땅 1.0, 전경 1.3)
-  final double parallaxBackdrop;
-  final double parallaxGround;
-  final double parallaxForeground;
+  /// 기준 화면 높이(px). 그리는 쪽이 실제 화면 높이 / 이 값으로 줄이거나 늘린다
+  final double screenHeightPx;
 
-  /// 하늘 띠 전체 가로와 조각 가로, 땅 조각 가로 (px)
-  final double skyBandWidthPx;
-  final double skyTileWidthPx;
-  final double groundTileWidthPx;
+  /// 지평선 y, 길 가운데 y (= 걷는 캐릭터의 발 높이), 캐릭터 키 (발에서 모자 끝까지). 기준 화면 px
+  final double horizonY;
+  final double pathY;
+  final double characterHeightPx;
+
+  /// 레이어별 규격. 모든 SceneLayerId가 들어 있다
+  final Map<SceneLayerId, SceneLayer> layers;
+
+  /// 배 구간(바다)에서 숨기는 레이어
+  final Set<SceneLayerId> seaHiddenLayers;
 
   /// 일출·일몰 천정각(도). NOAA 기본 90.833
   final double sunZenithDeg;
 
-  /// 하늘 5단계가 시작하는 기준 시각(h). 밤은 [night, 24)과 [0, dawn). 잠정값(approx)
-  final double skyDawnHour;
-  final double skyMorningHour;
-  final double skyDayHour;
-  final double skySunsetHour;
-  final double skyNightHour;
+  /// 하늘 세로 그라디언트(위·가운데·지평선)의 가운데 정지점 (지평선까지 높이의 비율)
+  final double skyMidStop;
+
+  /// 하늘 단계가 바뀌는 시각의 간격(분). 일출 기준: 밤 끝·새벽·아침·낮 시작,
+  /// 일몰 기준: 낮 끝·노을·밤 시작. 음수는 앞
+  final double skyNightEndMin;
+  final double skyDawnMin;
+  final double skyMorningMin;
+  final double skyDayStartMin;
+  final double skyDayEndMin;
+  final double skySunsetMin;
+  final double skyNightStartMin;
+
+  /// 하늘 단계 이름(dawn·morning·day·sunset·night) → 색. 단계 사이는 시각에 따라 섞는다.
+  /// SkyPhase 변환은 sky.dart (sky.dart가 rules.dart를 읽어서 여기서는 문자열 키)
+  final Map<String, SkyKeyColors> skyKeys;
+
+  /// 하늘 단계 이름 → 별 불투명도 (0~1). 없는 단계는 0. 잠정값(approx)
+  final Map<String, double> skyStars;
+
+  /// 해·달 호와 빛무리. 잠정값(approx)
+  final SkyArc skyArc;
 
   /// 하늘 단계 이름(dawn·morning·sunset·night) → 색 입히기. 낮은 없다 = 입히지 않는다.
   /// SkyPhase 변환은 time_tint.dart (sky.dart가 rules.dart를 읽어서 여기서는 문자열 키)
@@ -120,7 +211,7 @@ class Rules {
   /// 기록이 없을 때의 하루 거리 = 기본 걸음 × 걷기 보폭
   double get defaultDailyKm => etaDefaultDailySteps * walkStrideM / 1000;
 
-  /// 거리 1m당 땅이 움직이는 px (20.48). 따로 저장하지 않는다
+  /// 거리 1m당 땅이 움직이는 px (40.96). 따로 저장하지 않는다
   double get groundPxPerM => groundWidthPx / groundMeters;
 
   factory Rules.fromJson(Map<String, dynamic> j) {
@@ -132,14 +223,33 @@ class Rules {
     final frame = journey['frame'] as Map<String, dynamic>;
     final eta = journey['eta'] as Map<String, dynamic>;
     final scene = j['scene'] as Map<String, dynamic>;
-    final parallax = scene['parallax'] as Map<String, dynamic>;
-    final phases = scene['skyPhases'] as Map<String, dynamic>;
+    final sky = scene['sky'] as Map<String, dynamic>;
+    final fromSunrise = sky['fromSunriseMin'] as Map<String, dynamic>;
+    final fromSunset = sky['fromSunsetMin'] as Map<String, dynamic>;
+    final arc = sky['arc'] as Map<String, dynamic>;
     final sources = j['allowedSources'] as Map<String, dynamic>;
 
     LatLng latLng(dynamic v) => LatLng(_d(v['lat']), _d(v['lng']));
     Bounds bounds(dynamic v) =>
         Bounds(_d(v['latMin']), _d(v['latMax']), _d(v['lngMin']), _d(v['lngMax']));
     final islandJson = route['islands'] as Map<String, dynamic>;
+
+    SceneLayerId layerId(String name) =>
+        SceneLayerId.values.asNameMap()[name] ?? (throw FormatException('모르는 레이어: $name'));
+    final layers = {
+      for (final e in (scene['layers'] as Map<String, dynamic>).entries)
+        layerId(e.key): SceneLayer(
+          speed: _d(e.value['speed']),
+          widthPx: _dn(e.value['widthPx']),
+          heightPx: _dn(e.value['heightPx']),
+          topY: _dn(e.value['topY']),
+          bandTop: _dn(e.value['bandTop']),
+          bandBottom: _dn(e.value['bandBottom']),
+        ),
+    };
+    for (final id in SceneLayerId.values) {
+      if (!layers.containsKey(id)) throw FormatException('레이어 규격이 없다: ${id.name}');
+    }
 
     return Rules(
       walkMaxSpm: gait['walkMaxSpm'] as int,
@@ -169,18 +279,41 @@ class Rules {
           .map((k, v) => MapEntry(k, (v as List).cast<int>())),
       groundWidthPx: _d(scene['groundWidthPx']),
       groundMeters: _d(scene['groundMeters']),
-      parallaxBackdrop: _d(parallax['backdrop']),
-      parallaxGround: _d(parallax['ground']),
-      parallaxForeground: _d(parallax['foreground']),
-      skyBandWidthPx: _d(scene['skyBandWidthPx']),
-      skyTileWidthPx: _d(scene['skyTileWidthPx']),
-      groundTileWidthPx: _d(scene['groundTileWidthPx']),
+      screenHeightPx: _d(scene['screenHeightPx']),
+      horizonY: _d(scene['horizonY']),
+      pathY: _d(scene['pathY']),
+      characterHeightPx: _d(scene['characterHeightPx']),
+      layers: layers,
+      seaHiddenLayers: {for (final n in scene['seaHiddenLayers'] as List) layerId(n as String)},
       sunZenithDeg: _d(scene['sunZenithDeg']),
-      skyDawnHour: _d(phases['dawn']),
-      skyMorningHour: _d(phases['morning']),
-      skyDayHour: _d(phases['day']),
-      skySunsetHour: _d(phases['sunset']),
-      skyNightHour: _d(phases['night']),
+      skyMidStop: _d(sky['midStop']),
+      skyNightEndMin: _d(fromSunrise['nightEnd']),
+      skyDawnMin: _d(fromSunrise['dawn']),
+      skyMorningMin: _d(fromSunrise['morning']),
+      skyDayStartMin: _d(fromSunrise['dayStart']),
+      skyDayEndMin: _d(fromSunset['dayEnd']),
+      skySunsetMin: _d(fromSunset['sunset']),
+      skyNightStartMin: _d(fromSunset['nightStart']),
+      skyKeys: (sky['keys'] as Map<String, dynamic>).map((k, v) => MapEntry(
+          k,
+          SkyKeyColors(
+            top: _hex(v['top'] as String),
+            mid: _hex(v['mid'] as String),
+            horizon: _hex(v['horizon'] as String),
+            glow: _hex(v['glow'] as String),
+            glowStrength: _d(v['glowStrength']),
+          ))),
+      // approx 같은 표시는 숫자가 아니라 건너뛴다
+      skyStars: {
+        for (final e in (sky['stars'] as Map<String, dynamic>).entries)
+          if (e.value is num) e.key: _d(e.value),
+      },
+      skyArc: SkyArc(
+        leftX: _d(arc['leftX']),
+        rightX: _d(arc['rightX']),
+        peakY: _d(arc['peakY']),
+        glowRadiusPx: _d(arc['glowRadiusPx']),
+      ),
       timeTint: (scene['timeTint'] as Map<String, dynamic>).map((k, v) => MapEntry(
           k, TimeTint(_hex(v['color'] as String), _d(v['background']), _d(v['character'])))),
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),
@@ -190,6 +323,8 @@ class Rules {
 }
 
 double _d(dynamic v) => (v as num).toDouble();
+
+double? _dn(dynamic v) => v == null ? null : _d(v);
 
 /// "#RRGGBB" → 불투명 ARGB
 int _hex(String s) => 0xFF000000 | int.parse(s.substring(1), radix: 16);

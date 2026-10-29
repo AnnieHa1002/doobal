@@ -20,7 +20,7 @@ final List<Landmark> landmarks = [
     Landmark.fromJson(l as Map<String, dynamic>),
 ];
 
-/// 실제 props.json의 MVP 소품 24개
+/// 실제 props.json의 MVP 소품 27개
 final List<Prop> props = parseProps(
   jsonDecode(File('assets/data/props.json').readAsStringSync()) as Map<String, dynamic>,
 );
