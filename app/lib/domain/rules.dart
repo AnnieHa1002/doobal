@@ -23,6 +23,21 @@ class Rules {
     required this.sketchSteps,
     required this.etaWindowDays,
     required this.etaDefaultDailySteps,
+    required this.seasons,
+    required this.groundWidthPx,
+    required this.groundMeters,
+    required this.parallaxBackdrop,
+    required this.parallaxGround,
+    required this.parallaxForeground,
+    required this.skyBandWidthPx,
+    required this.skyTileWidthPx,
+    required this.groundTileWidthPx,
+    required this.sunZenithDeg,
+    required this.skyDawnHour,
+    required this.skyMorningHour,
+    required this.skyDayHour,
+    required this.skySunsetHour,
+    required this.skyNightHour,
     required this.allowedSourcesIos,
     required this.allowedSourcesAndroid,
   });
@@ -56,12 +71,42 @@ class Rules {
   final int etaWindowDays;
   final int etaDefaultDailySteps;
 
+  /// 계절 이름(spring·summer·autumn·winter) → 달. Season 변환은 scene.dart
+  final Map<String, List<int>> seasons;
+
+  /// 땅 이미지 한 장의 가로(px)와 그게 나타내는 거리(m)
+  final double groundWidthPx;
+  final double groundMeters;
+
+  /// 레이어별 스크롤 배율 (후경 0.3, 땅 1.0, 전경 1.3)
+  final double parallaxBackdrop;
+  final double parallaxGround;
+  final double parallaxForeground;
+
+  /// 하늘 띠 전체 가로와 조각 가로, 땅 조각 가로 (px)
+  final double skyBandWidthPx;
+  final double skyTileWidthPx;
+  final double groundTileWidthPx;
+
+  /// 일출·일몰 천정각(도). NOAA 기본 90.833
+  final double sunZenithDeg;
+
+  /// 하늘 5단계가 시작하는 기준 시각(h). 밤은 [night, 24)과 [0, dawn). 잠정값(approx)
+  final double skyDawnHour;
+  final double skyMorningHour;
+  final double skyDayHour;
+  final double skySunsetHour;
+  final double skyNightHour;
+
   /// 비어 있으면 출처로 거르지 않는다 (M1 초기 수집용)
   final List<String> allowedSourcesIos;
   final List<String> allowedSourcesAndroid;
 
   /// 기록이 없을 때의 하루 거리 = 기본 걸음 × 걷기 보폭
   double get defaultDailyKm => etaDefaultDailySteps * walkStrideM / 1000;
+
+  /// 거리 1m당 땅이 움직이는 px (20.48). 따로 저장하지 않는다
+  double get groundPxPerM => groundWidthPx / groundMeters;
 
   factory Rules.fromJson(Map<String, dynamic> j) {
     final gait = j['gait'] as Map<String, dynamic>;
@@ -70,6 +115,9 @@ class Rules {
     final journey = j['journey'] as Map<String, dynamic>;
     final frame = journey['frame'] as Map<String, dynamic>;
     final eta = journey['eta'] as Map<String, dynamic>;
+    final scene = j['scene'] as Map<String, dynamic>;
+    final parallax = scene['parallax'] as Map<String, dynamic>;
+    final phases = scene['skyPhases'] as Map<String, dynamic>;
     final sources = j['allowedSources'] as Map<String, dynamic>;
 
     LatLng latLng(dynamic v) => LatLng(_d(v['lat']), _d(v['lng']));
@@ -102,6 +150,22 @@ class Rules {
       sketchSteps: (journey['sketchSteps'] as List).map(_d).toList(),
       etaWindowDays: eta['windowDays'] as int,
       etaDefaultDailySteps: eta['defaultDailySteps'] as int,
+      seasons: (j['seasons'] as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, (v as List).cast<int>())),
+      groundWidthPx: _d(scene['groundWidthPx']),
+      groundMeters: _d(scene['groundMeters']),
+      parallaxBackdrop: _d(parallax['backdrop']),
+      parallaxGround: _d(parallax['ground']),
+      parallaxForeground: _d(parallax['foreground']),
+      skyBandWidthPx: _d(scene['skyBandWidthPx']),
+      skyTileWidthPx: _d(scene['skyTileWidthPx']),
+      groundTileWidthPx: _d(scene['groundTileWidthPx']),
+      sunZenithDeg: _d(scene['sunZenithDeg']),
+      skyDawnHour: _d(phases['dawn']),
+      skyMorningHour: _d(phases['morning']),
+      skyDayHour: _d(phases['day']),
+      skySunsetHour: _d(phases['sunset']),
+      skyNightHour: _d(phases['night']),
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),
       allowedSourcesAndroid: (sources['android'] as List).cast<String>(),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app/auto_sync.dart';
 import 'ui/debug/debug_screen.dart';
 
 void main() {
@@ -19,6 +20,7 @@ class DoobalApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '두발',
+      scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -30,7 +32,7 @@ class DoobalApp extends StatelessWidget {
         scaffoldBackgroundColor: _paper,
       ),
       // M2에서 쉼터로 바꾼다
-      home: const DebugScreen(),
+      home: const AutoSync(child: DebugScreen()),
     );
   }
 }

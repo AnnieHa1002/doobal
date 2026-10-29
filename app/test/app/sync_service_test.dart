@@ -8,6 +8,7 @@ import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/domain/route.dart';
+import 'package:doobal/domain/time_kst.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -138,5 +139,192 @@ void main() {
     e.source.records.add(_walk(_t0.add(const Duration(minutes: 30)), 250, 100));
     await e.svc.sync(_t0.add(const Duration(hours: 6)));
     expect((await e.db.select(e.db.travelFund).getSingle()).km, rules.travelFundCapKm);
+  });
+
+  group('SyncReport.advancedKm', () {
+    final t1 = _t0.add(const Duration(hours: 1));
+    final t2 = _t0.add(const Duration(hours: 3));
+
+    test('여정 없음: 경비가 늘어난 만큼, 같은 기록으로 또 돌리면 0', () async {
+      final e = _env();
+      expect((await e.svc.sync(_t0)).advancedKm, 0);
+      e.source.records.add(_walk(t1, 30, 100));
+      // 3000보 × 0.7m
+      expect((await e.svc.sync(t2)).advancedKm, closeTo(2.1, 1e-9));
+      expect((await e.svc.sync(t2)).advancedKm, 0);
+      expect((await e.svc.sync(t2.add(const Duration(minutes: 10)))).advancedKm, 0);
+    });
+
+    test('여정 중: 진행 거리가 는 만큼', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr003', rules.fallbackOrigin, t1);
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 10)), 40, 100));
+      final r = await e.svc.sync(t2);
+      final p = (await e.svc.snapshot(t2)).journey!.progress;
+      expect(r.advancedKm, closeTo(2.8, 1e-9));
+      expect(r.advancedKm, closeTo(p.progressKm, 1e-9));
+      expect((await e.svc.sync(t2)).advancedKm, 0);
+    });
+
+    test('여정 중 두 번째 동기화는 그 사이 늘어난 만큼만', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr003', rules.fallbackOrigin, t1);
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 10)), 20, 100));
+      await e.svc.sync(t1.add(const Duration(minutes: 40)));
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 60)), 10, 100));
+      // 10분 × 100보 × 0.7m
+      expect((await e.svc.sync(t2)).advancedKm, closeTo(0.7, 1e-9));
+    });
+
+    test('도착한 동기화도 걸은 거리 그대로 (넘친 거리를 또 더하지 않는다)', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      await e.svc.startJourney('kr001', _nearGyeongbok, t1);
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 30, 100));
+      final r = await e.svc.sync(t2);
+
+      final total =
+          buildRoute(_nearGyeongbok, _landmarks['kr001']!.latLng, rules).totalEffectiveKm;
+      expect((await e.db.select(e.db.journeys).getSingle()).status, JourneyStatus.arrived);
+      expect((await e.db.select(e.db.travelFund).getSingle()).km, closeTo(2.1 - total, 1e-9));
+      expect(r.advancedKm, closeTo(2.1, 1e-9));
+      expect((await e.svc.sync(t2)).advancedKm, 0);
+    });
+
+    test('경비가 상한에 닿으면 그 뒤로는 늘지 않아 0', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      // 250분 × 100보 = 17.5km → 상한까지만
+      e.source.records.add(_walk(_t0.add(const Duration(minutes: 30)), 250, 100));
+      final r = await e.svc.sync(_t0.add(const Duration(hours: 6)));
+      expect(r.advancedKm, rules.travelFundCapKm);
+      e.source.records.add(_walk(_t0.add(const Duration(hours: 7)), 30, 100));
+      expect((await e.svc.sync(_t0.add(const Duration(hours: 9)))).advancedKm, 0);
+    });
+
+    test('inspect는 저장하지 않으니 0', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      e.source.records.add(_walk(t1, 30, 100));
+      expect((await e.svc.inspect(_t0, t2)).advancedKm, 0);
+    });
+  });
+
+  group('walkRecord', () {
+    final t1 = _t0.add(const Duration(hours: 1));
+    final t2 = _t0.add(const Duration(hours: 3));
+    DateTime at(int minutes) => t1.add(Duration(minutes: minutes));
+
+    test('걸음·거리·뛴 비율과 걷기 1번 인정, 오늘 1/3', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      // 100보 10분 → 150보 5분
+      e.source.records.addAll([
+        _walk(t1, 10, 100),
+        _walk(at(10), 5, 150),
+      ]);
+      await e.svc.sync(t2);
+
+      final r = await e.svc.walkRecord(t1, at(15));
+      expect(r.summary.steps, 1750);
+      expect(r.summary.distanceM, closeTo(1450, 1e-9));
+      expect(r.summary.activeMinutes, 15);
+      expect(r.summary.runRatio, closeTo(750 / 1750, 1e-12));
+      final s = r.sessions.single;
+      expect(s.start, t1);
+      expect(s.end, at(15));
+      expect(s.qualified, isTrue);
+      expect(s.counted, isTrue);
+      expect(r.countedToday, 1);
+    });
+
+    test('창 밖은 뺀다: 앞뒤를 자르면 걸음이 줄고, 걷기 구간은 겹치면 그대로 나온다', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      e.source.records.add(_walk(t1, 15, 100));
+      await e.svc.sync(t2);
+
+      final mid = await e.svc.walkRecord(at(5), at(10));
+      expect(mid.summary.steps, 500);
+      expect(mid.sessions, hasLength(1));
+
+      final after = await e.svc.walkRecord(at(20), at(30));
+      expect(after.summary.steps, 0);
+      expect(after.sessions, isEmpty);
+      expect(after.countedToday, 1);
+    });
+
+    test('끝 시각이 분 중간이면 그 분까지 포함한다', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      e.source.records.add(_walk(t1, 15, 100));
+      await e.svc.sync(t2);
+
+      final r = await e.svc.walkRecord(t1, t1.add(const Duration(minutes: 9, seconds: 30)));
+      expect(r.summary.steps, 1000);
+    });
+
+    test('짧은 걷기는 인정되지 않고 오늘 0/3', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      e.source.records.add(_walk(t1, 5, 100));
+      await e.svc.sync(t2);
+
+      final r = await e.svc.walkRecord(t1, at(5));
+      expect(r.summary.steps, 500);
+      expect(r.sessions.single.qualified, isFalse);
+      expect(r.sessions.single.counted, isFalse);
+      expect(r.countedToday, 0);
+    });
+
+    test('하루 전체 창은 저장된 하루 합계와 같다', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      e.source.records.addAll([
+        _walk(t1, 10, 100),
+        _walk(t1.add(const Duration(minutes: 10)), 5, 150),
+        _walk(t1.add(const Duration(minutes: 20)), 5, 135),
+      ]);
+      await e.svc.sync(t2);
+
+      final start = kstDayStartUtc(kstDayKey(t1));
+      final r = await e.svc.walkRecord(start, start.add(const Duration(days: 1)));
+      final day = (await e.db.select(e.db.daySummaries).get()).single;
+      expect(r.summary.steps, day.steps);
+      expect(r.summary.distanceM, closeTo(day.distanceM, 1e-9));
+    });
+
+    test('창이 직전 뛰기 상태를 이어 받는다 (창 앞 150보 → 창 안 135보도 뛰기)', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      e.source.records.addAll([
+        _walk(t1, 5, 150),
+        _walk(t1.add(const Duration(minutes: 5)), 5, 135),
+      ]);
+      await e.svc.sync(t2);
+
+      final r = await e.svc.walkRecord(at(5), at(10));
+      expect(r.summary.steps, 675);
+      expect(r.summary.runRatio, 1.0);
+      expect(r.summary.distanceM, closeTo(675, 1e-9));
+    });
+
+    test('자정을 넘어도 전날 분까지 불러 상태를 이어 본다', () async {
+      final e = _env();
+      await e.svc.sync(_t0);
+      // 한국 23:58~00:00 150보, 00:00~00:05 135보
+      final midnight = kstDayStartUtc('2026-11-19');
+      e.source.records.addAll([
+        _walk(midnight.subtract(const Duration(minutes: 2)), 2, 150),
+        _walk(midnight, 5, 135),
+      ]);
+      await e.svc.sync(midnight.add(const Duration(hours: 1)));
+
+      final r = await e.svc.walkRecord(midnight, midnight.add(const Duration(minutes: 5)));
+      expect(r.summary.steps, 675);
+      expect(r.summary.runSteps, 675);
+    });
   });
 }

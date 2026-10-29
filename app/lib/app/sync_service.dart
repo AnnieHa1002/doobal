@@ -14,16 +14,34 @@ import '../domain/route.dart';
 import '../domain/rules.dart';
 import '../domain/session.dart';
 import '../domain/time_kst.dart';
+import '../domain/walk_record.dart';
 
 /// 한 번 가져온 결과. 출처별 걸음은 허용 목록을 정하는 실기기 확인용
 class SyncReport {
-  const SyncReport(this.records, this.dropped, this.stepsBySource);
+  const SyncReport(this.records, this.dropped, this.stepsBySource, {this.advancedKm = 0});
 
   final int records;
 
   /// 수동 입력·허용 목록 밖이라 버린 기록 수
   final int dropped;
   final Map<String, int> stepsBySource;
+
+  /// 이번 동기화로 인정된 거리(km). 진행 중 여정이 있었으면 그 진행 거리의 증가,
+  /// 없었으면 여행 경비의 증가(상한에서 멈춤). 같은 기록으로 또 돌리면 0
+  final double advancedKm;
+}
+
+/// 걷기 마치기 직후 걷기 기록 화면의 내용
+class WalkRecord {
+  const WalkRecord(this.summary, this.sessions, this.countedToday);
+
+  final WalkSummary summary;
+
+  /// 창과 겹치는 저장된 걷기 구간 (걷기 1번 인정 여부 포함)
+  final List<WalkSession> sessions;
+
+  /// 오늘(창이 끝나는 시각의 한국 날짜) 인정된 걷기 1번 수. 하루 최대는 rules.sessionMaxPerDay
+  final int countedToday;
 }
 
 class JourneyView {
@@ -89,7 +107,10 @@ class SyncService {
         .where((m) => m.minute >= fromMin && m.minute <= toMin)
         .toList();
 
+    var advancedKm = 0.0;
     await db.transaction(() async {
+      final activeBefore = await _activeJourney();
+      final before = await _creditedKm(activeBefore);
       await (db.delete(db.stepMinutes)
             ..where((t) => t.minuteUtc.isBetweenValues(fromMin, toMin)))
           .go();
@@ -101,8 +122,14 @@ class SyncService {
       await _advanceJourney(to);
       await (db.update(db.syncState)..where((t) => t.id.equals(1)))
           .write(SyncStateCompanion(lastFetchedUtc: Value(to.millisecondsSinceEpoch)));
+      // 도착한 여정은 더 이상 active가 아니라서 id로 다시 읽는다
+      final journeyAfter = activeBefore == null
+          ? null
+          : await (db.select(db.journeys)..where((t) => t.id.equals(activeBefore.id)))
+              .getSingle();
+      advancedKm = math.max(0.0, await _creditedKm(journeyAfter) - before);
     });
-    return _report(raw, kept);
+    return _report(raw, kept, advancedKm: advancedKm);
   }
 
   /// 저장하지 않고 출처만 본다 (허용 목록을 정할 때)
@@ -140,6 +167,33 @@ class SyncService {
       await (db.update(db.travelFund)..where((t) => t.id.equals(1)))
           .write(TravelFundCompanion(km: Value(fund.km - used)));
     });
+  }
+
+  /// 걷기 기록: [fromUtc, toUtc)와 겹치는 분의 걸음·거리·걷기/달리기와 걷기 1번 인정 여부.
+  /// 동기화는 하지 않는다. 부른 쪽이 먼저 sync 한다.
+  /// 하루 계산(_recomputeDays)처럼 전날 0시부터 불러 걷기/뛰기 상태를 이어 판정한다
+  Future<WalkRecord> walkRecord(DateTime fromUtc, DateTime toUtc) async {
+    final fromMin = epochMinute(fromUtc);
+    // 끝 시각이 걸친 분도 포함 (올림)
+    final toMin = (toUtc.millisecondsSinceEpoch + Duration.millisecondsPerMinute - 1) ~/
+        Duration.millisecondsPerMinute;
+    final minutes = await _minutesFrom(
+      epochMinute(kstDayStartUtc(addDays(kstDayKey(fromUtc), -1))),
+      beforeMinute: toMin,
+    );
+    final summary = summarizeWalk(classifyGait(minutes, rules), fromMin, toMin, rules);
+
+    final fromMs = fromMin * Duration.millisecondsPerMinute;
+    final toMs = toMin * Duration.millisecondsPerMinute;
+    final rows = await (db.select(db.walkSessions)
+          ..where((t) => t.startUtc.isSmallerThanValue(toMs) & t.endUtc.isBiggerThanValue(fromMs))
+          ..orderBy([(t) => OrderingTerm(expression: t.startUtc)]))
+        .get();
+    final today = await (db.select(db.daySummaries)
+          ..where((t) => t.day.equals(kstDayKey(toUtc))))
+        .getSingleOrNull();
+
+    return WalkRecord(summary, [for (final r in rows) _sessionOf(r)], today?.countedSessions ?? 0);
   }
 
   Future<Snapshot> snapshot(DateTime now) async {
@@ -286,6 +340,15 @@ class SyncService {
     return distanceM(classifyGait(minutes, rules), rules) / 1000;
   }
 
+  /// 동기화 전후로 비교하는 값: 여정이 있으면 그 진행 거리(도착 뒤에도 넘친 만큼 포함),
+  /// 없으면 여행 경비. 여정이 있는 동안 경비는 도착할 때 넘친 거리만 늘고 그건 진행 거리에
+  /// 이미 들어 있으니, 둘을 더하면 두 번 세게 된다
+  Future<double> _creditedKm(JourneyRow? journey) async {
+    if (journey == null) return (await _fund()).km;
+    final walked = await _distanceKmFrom(_minuteOf(journey.startUtc));
+    return progress(_toJourney(journey), walked, rules).progressKm;
+  }
+
   Future<TravelFundRow> _fund() =>
       (db.select(db.travelFund)..where((t) => t.id.equals(1))).getSingle();
 
@@ -305,12 +368,22 @@ class SyncService {
     );
   }
 
-  SyncReport _report(List<StepRecord> raw, List<StepRecord> kept) {
+  WalkSession _sessionOf(WalkSessionRow r) => WalkSession(
+        start: _utc(r.startUtc),
+        end: _utc(r.endUtc),
+        steps: r.steps,
+        distanceM: r.distanceM,
+        runRatio: r.runRatio,
+        qualified: r.qualified,
+        counted: r.counted,
+      );
+
+  SyncReport _report(List<StepRecord> raw, List<StepRecord> kept, {double advancedKm = 0}) {
     final bySource = <String, int>{};
     for (final r in raw) {
       bySource[r.sourceId] = (bySource[r.sourceId] ?? 0) + r.steps;
     }
-    return SyncReport(raw.length, raw.length - kept.length, bySource);
+    return SyncReport(raw.length, raw.length - kept.length, bySource, advancedKm: advancedKm);
   }
 }
 
