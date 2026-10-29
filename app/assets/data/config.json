@@ -1,5 +1,5 @@
 {
- "version": 1,
+ "version": 2,
  "gait": { "walkMaxSpm": 130, "runMinSpm": 140, "walkStrideM": 0.7, "runStrideM": 1.0 },
  "session": { "maxGapMin": 2, "minMin": 10, "minSteps": 1000, "maxPerDay": 3 },
  "sync": { "refetchHours": 48, "walkingRefreshSec": 30 },
@@ -57,18 +57,19 @@
    "stars": { "approx": true, "night": 1.0, "dawn": 0.4 },
    "arc": { "approx": true, "leftX": 0.12, "rightX": 0.88, "peakY": 380, "glowRadiusPx": 700 }
   },
-  "timeTint": {
-   "dawn":    { "color": "#8C7BA8", "background": 0.32, "character": 0.25 },
-   "morning": { "color": "#F2C9A0", "background": 0.20, "character": 0.15 },
-   "sunset":  { "color": "#E58A6A", "background": 0.32, "character": 0.25 },
-   "night":   { "color": "#1F2A3C", "background": 0.52, "character": 0.38 }
+   "tint": {
+   "dawn":    { "color": "#8C7BA8", "bg": 0.32, "char": 0.25 },
+   "morning": { "color": "#F2C9A0", "bg": 0.20, "char": 0.15 },
+   "sunset":  { "color": "#E58A6A", "bg": 0.32, "char": 0.25 },
+   "night":   { "color": "#1F2A3C", "bg": 0.65, "char": 0.40 }
   }
  },
  "companions": {
   "firstMeet": "firstEventOfFirstRealJourney",
   "guaranteeByDay": [14, 28],
   "walksPerChapter": 4,
-  "chapters": 8
+  "chapters": 8,
+  "pace": { "approx": true, "aheadEverySec": 90, "aheadAwaySec": 8, "lagCatchUpMps": 0.5, "lateArrivalMaxSec": 600 }
  },
  "guestbook": {
   "maxChars": 200,
@@ -80,5 +81,6 @@
   "banAfterDeletes": 3,
   "banDays": 7
  },
+ "notifications": { "quietFromHour": 22, "quietToHour": 8, "dailyMax": 2, "nearDestKm": 10, "inactiveHours": 72 },
  "allowedSources": { "ios": [], "android": [] }
 }

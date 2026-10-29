@@ -201,7 +201,7 @@ void main() {
       final sky = (await tester.runAsync(() => pixel(image, 20, 0)))!;
       final ground = (await tester.runAsync(() => pixel(image, 20, py(2400))))!;
       expectNear(sky, topKey('night'));
-      final factor = multiplyFactor(0xFF1F2A3C, 0.52);
+      final factor = multiplyFactor(0xFF1F2A3C, 0.65);
       expect(tintFactorAt(look.mix, rules, character: false), factor);
       expectNear(ground, multiplied(groundColors[look.season]!, factor));
     });
@@ -234,7 +234,7 @@ void main() {
       final key = rules.skyKeys['night']!;
       expectNear(sky, Color.lerp(Color(key.top), Color(key.mid), t)!);
       // 곱해졌다면 이렇게 어두워진다
-      final dimmed = multiplied(Color(key.top), multiplyFactor(0xFF1F2A3C, 0.52));
+      final dimmed = multiplied(Color(key.top), multiplyFactor(0xFF1F2A3C, 0.65));
       expect((sky.b - dimmed.b).abs() * 255, greaterThan(20));
     });
 
