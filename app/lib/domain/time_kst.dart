@@ -9,6 +9,9 @@ DateTime dayFromKey(String key) {
   return DateTime.utc(p[0], p[1], p[2]);
 }
 
+/// 그 한국 날짜가 시작하는 시각(UTC)
+DateTime kstDayStartUtc(String key) => dayFromKey(key).subtract(_kstOffset);
+
 String addDays(String key, int days) {
   final d = dayFromKey(key);
   return _format(DateTime.utc(d.year, d.month, d.day + days));

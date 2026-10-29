@@ -32,6 +32,12 @@ flutter run
 
 iOS 빌드는 Xcode, 안드로이드 빌드는 Android SDK가 있어야 한다(`flutter doctor`로 확인).
 
+Drift 테이블(`lib/data/db/app_db.dart`)을 고치면 생성 코드를 다시 만든다. 생성된 `app_db.g.dart`도 커밋한다.
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
 ## 걸음 권한 (플랫폼 설정)
 
 걸음은 읽기만 한다. 쓰기 권한은 넣지 않는다.

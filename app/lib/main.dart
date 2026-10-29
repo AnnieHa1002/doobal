@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'ui/debug/debug_screen.dart';
+
 void main() {
   runApp(const ProviderScope(child: DoobalApp()));
 }
@@ -27,8 +29,8 @@ class DoobalApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: _paper,
       ),
-      // M1에서 디버그 화면으로 바꾼다
-      home: const Scaffold(body: Center(child: Text('두발'))),
+      // M2에서 쉼터로 바꾼다
+      home: const DebugScreen(),
     );
   }
 }

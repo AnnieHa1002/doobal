@@ -16,6 +16,7 @@ class Rules {
     required this.earthRadiusKm,
     required this.ports,
     required this.islands,
+    required this.fallbackOrigin,
     required this.frameSilverKm,
     required this.frameGoldKm,
     required this.travelFundCapKm,
@@ -44,6 +45,9 @@ class Rules {
   /// wando·jeju·pohang·dodong
   final Map<String, LatLng> ports;
   final Map<Island, Bounds> islands;
+
+  /// 위치를 거부했을 때의 출발지 (국토 정중앙, 양구)
+  final LatLng fallbackOrigin;
 
   final double frameSilverKm;
   final double frameGoldKm;
@@ -91,6 +95,7 @@ class Rules {
         Island.jeju: bounds(islandJson['jeju']),
         Island.ulleung: bounds(islandJson['ulleung']),
       },
+      fallbackOrigin: latLng(route['fallbackOrigin']),
       frameSilverKm: _d(frame['silverKm']),
       frameGoldKm: _d(frame['goldKm']),
       travelFundCapKm: _d(journey['travelFundCapKm']),
