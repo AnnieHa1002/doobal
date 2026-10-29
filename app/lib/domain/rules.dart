@@ -1,6 +1,6 @@
 import 'geo.dart';
 
-/// 시간대 색 입히기 한 단계 (config scene.timeTint). 곱하기로 입힌다
+/// 시간대 색 입히기 한 단계 (config scene.tint: bg·char). 곱하기로 입힌다
 class TimeTint {
   const TimeTint(this.color, this.background, this.character);
 
@@ -314,8 +314,8 @@ class Rules {
         peakY: _d(arc['peakY']),
         glowRadiusPx: _d(arc['glowRadiusPx']),
       ),
-      timeTint: (scene['timeTint'] as Map<String, dynamic>).map((k, v) => MapEntry(
-          k, TimeTint(_hex(v['color'] as String), _d(v['background']), _d(v['character'])))),
+      timeTint: (scene['tint'] as Map<String, dynamic>).map((k, v) => MapEntry(
+          k, TimeTint(_hex(v['color'] as String), _d(v['bg']), _d(v['char'])))),
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),
       allowedSourcesAndroid: (sources['android'] as List).cast<String>(),
     );

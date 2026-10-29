@@ -51,8 +51,8 @@ void main() {
     test('밤 #1F2A3C 52% / 38%', () {
       final t = timeTintOf(SkyPhase.night, rules)!;
       expect(t.color, 0xFF1F2A3C);
-      expect(t.background, 0.52);
-      expect(t.character, 0.38);
+      expect(t.background, 0.65);
+      expect(t.character, 0.40);
     });
 
     test('낮은 입히지 않는다 (null)', () {
@@ -106,21 +106,21 @@ void main() {
       expect(_factor(12, 0, character: true), 0xFFFFFFFF);
     });
 
-    test('03:00 밤은 밤 색 × 배경 52%', () {
-      expect(_factor(3, 0, character: false), multiplyFactor(0xFF1F2A3C, 0.52));
+    test('03:00 밤은 밤 색 × 배경 65%', () {
+      expect(_factor(3, 0, character: false), multiplyFactor(0xFF1F2A3C, 0.65));
     });
 
-    test('05:27 밤→새벽 0.5: 배경은 두 색의 한가운데 (179, 179, 191)', () {
-      _expectChannels(_factor(5, 27, character: false), 179, 179, 191);
+    test('05:27 밤→새벽 0.5: 배경은 두 색의 한가운데 (164, 165, 178)', () {
+      _expectChannels(_factor(5, 27, character: false), 164, 165, 178);
     });
 
     test('17:40 낮→노을 0.5: 배경은 흰색과 노을 색의 한가운데 (251, 237, 231)', () {
       _expectChannels(_factor(17, 40, character: false), 251, 237, 231);
     });
 
-    test('캐릭터는 캐릭터 세기로 섞는다 (밤 38%, 05:27은 밤 38%와 새벽 25%의 한가운데)', () {
-      expect(_factor(3, 0, character: true), multiplyFactor(0xFF1F2A3C, 0.38));
-      final night = multiplyFactor(0xFF1F2A3C, 0.38);
+    test('캐릭터는 캐릭터 세기로 섞는다 (밤 40%, 05:27은 밤 40%와 새벽 25%의 한가운데)', () {
+      expect(_factor(3, 0, character: true), multiplyFactor(0xFF1F2A3C, 0.40));
+      final night = multiplyFactor(0xFF1F2A3C, 0.40);
       final dawn = multiplyFactor(0xFF8C7BA8, 0.25);
       for (final shift in [16, 8, 0]) {
         final mid = (((night >> shift) & 0xFF) + ((dawn >> shift) & 0xFF)) / 2;
