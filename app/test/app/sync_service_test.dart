@@ -120,9 +120,11 @@ Future<Set<String>> _propIds(AppDb db) async =>
 
 int _ms(DateTime t) => t.millisecondsSinceEpoch;
 
-_Env _env() {
+/// [home]이 true면 출발 동네를 testHome으로 골라 둔다 (여정을 시작하려면 쉬는 자리가 있어야 한다)
+Future<_Env> _env({bool home = true}) async {
   final e = _Env();
   addTearDown(e.db.close);
+  if (home) await e.svc.setHome(testHomeName, testHome);
   return e;
 }
 
@@ -132,8 +134,8 @@ void main() {
 
   group('#26 멱등: 같은 기록으로 한 번 / 여러 번 동기화한 결과가 같다', () {
     test('여정 없음 → 경비가 한 번만 쌓인다', () async {
-      final once = _env();
-      final twice = _env();
+      final once = await _env();
+      final twice = await _env();
       final t2 = _t0.add(const Duration(hours: 3));
       for (final e in [once, twice]) {
         await e.svc.sync(_t0);
@@ -156,8 +158,8 @@ void main() {
     });
 
     test('여정 중 → 진행이 같다', () async {
-      final once = _env();
-      final twice = _env();
+      final once = await _env();
+      final twice = await _env();
       final t1 = _t0.add(const Duration(hours: 1));
       final t2 = _t0.add(const Duration(hours: 3));
       for (final e in [once, twice]) {
@@ -178,7 +180,7 @@ void main() {
   });
 
   test('도착하면 넘친 거리가 경비로 간다', () async {
-    final e = _env();
+    final e = await _env();
     final t1 = _t0.add(const Duration(hours: 1));
     await e.svc.sync(_t0);
     await placeAt(e.db, _nearGyeongbok, _t0);
@@ -193,7 +195,7 @@ void main() {
   });
 
   test('경비는 상한에서 멈춘다', () async {
-    final e = _env();
+    final e = await _env();
     await e.svc.sync(_t0);
     // 250분 × 100보 = 17.5km
     e.source.records.add(_walk(_t0.add(const Duration(minutes: 30)), 250, 100));
@@ -206,7 +208,7 @@ void main() {
     final t2 = _t0.add(const Duration(hours: 3));
 
     test('여정 없음: 경비가 늘어난 만큼, 같은 기록으로 또 돌리면 0', () async {
-      final e = _env();
+      final e = await _env();
       expect((await e.svc.sync(_t0)).advancedKm, 0);
       e.source.records.add(_walk(t1, 30, 100));
       // 3000보 × 0.7m
@@ -216,7 +218,7 @@ void main() {
     });
 
     test('여정 중: 진행 거리가 는 만큼', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await e.svc.startJourney('kr003', t1);
       e.source.records.add(_walk(t1.add(const Duration(minutes: 10)), 40, 100));
@@ -228,7 +230,7 @@ void main() {
     });
 
     test('여정 중 두 번째 동기화는 그 사이 늘어난 만큼만', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await e.svc.startJourney('kr003', t1);
       e.source.records.add(_walk(t1.add(const Duration(minutes: 10)), 20, 100));
@@ -239,7 +241,7 @@ void main() {
     });
 
     test('도착한 동기화도 걸은 거리 그대로 (넘친 거리를 또 더하지 않는다)', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await placeAt(e.db, _nearGyeongbok, _t0);
       await e.svc.startJourney('kr001', t1);
@@ -255,7 +257,7 @@ void main() {
     });
 
     test('경비가 상한에 닿으면 그 뒤로는 늘지 않아 0', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       // 250분 × 100보 = 17.5km → 상한까지만
       e.source.records.add(_walk(_t0.add(const Duration(minutes: 30)), 250, 100));
@@ -266,7 +268,7 @@ void main() {
     });
 
     test('inspect는 저장하지 않으니 0', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       e.source.records.add(_walk(t1, 30, 100));
       expect((await e.svc.inspect(_t0, t2)).advancedKm, 0);
@@ -279,7 +281,7 @@ void main() {
     DateTime at(int minutes) => t1.add(Duration(minutes: minutes));
 
     test('걸음·거리·뛴 비율과 걷기 1번 인정, 오늘 1/3', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       // 100보 10분 → 150보 5분
       e.source.records.addAll([
@@ -302,7 +304,7 @@ void main() {
     });
 
     test('창 밖은 뺀다: 앞뒤를 자르면 걸음이 줄고, 걷기 구간은 겹치면 그대로 나온다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       e.source.records.add(_walk(t1, 15, 100));
       await e.svc.sync(t2);
@@ -318,7 +320,7 @@ void main() {
     });
 
     test('끝 시각이 분 중간이면 그 분까지 포함한다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       e.source.records.add(_walk(t1, 15, 100));
       await e.svc.sync(t2);
@@ -328,7 +330,7 @@ void main() {
     });
 
     test('짧은 걷기는 인정되지 않고 오늘 0/3', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       e.source.records.add(_walk(t1, 5, 100));
       await e.svc.sync(t2);
@@ -341,7 +343,7 @@ void main() {
     });
 
     test('하루 전체 창은 저장된 하루 합계와 같다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       e.source.records.addAll([
         _walk(t1, 10, 100),
@@ -358,7 +360,7 @@ void main() {
     });
 
     test('창이 직전 뛰기 상태를 이어 받는다 (창 앞 150보 → 창 안 135보도 뛰기)', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       e.source.records.addAll([
         _walk(t1, 5, 150),
@@ -373,7 +375,7 @@ void main() {
     });
 
     test('자정을 넘어도 전날 분까지 불러 상태를 이어 본다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       // 한국 23:58~00:00 150보, 00:00~00:05 135보
       final midnight = kstDayStartUtc('2026-11-19');
@@ -393,7 +395,7 @@ void main() {
     final t2 = _t0.add(const Duration(hours: 3));
 
     test('totalSteps는 모든 하루 걸음의 합 (설치 이후 여러 날)', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       expect((await e.svc.snapshot(_t0)).totalSteps, 0);
       // 첫날 30분 × 100보, 이틀 뒤 20분 × 120보
@@ -408,33 +410,34 @@ void main() {
       expect(s.todaySteps, 2400);
     });
 
-    test('여정도 도착한 적도 없으면 기본 출발지', () async {
-      final e = _env();
+    test('여정도 도착한 적도 없으면 출발 동네', () async {
+      final e = await _env();
       final s = await e.svc.snapshot(_t0);
-      expect(s.position, rules.fallbackOrigin);
+      expect(s.position, testHome);
+      expect(s.home!.name, testHomeName);
       expect(s.onSea, isFalse);
       expect(s.journey, isNull);
     });
 
     test('여정 중(땅): 경로 위 진행 지점', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await e.svc.startJourney('kr003', t1);
       // 시작 직후는 출발지
-      expect((await e.svc.snapshot(t1)).position, rules.fallbackOrigin);
+      expect((await e.svc.snapshot(t1)).position, testHome);
 
       e.source.records.add(_walk(t1.add(const Duration(minutes: 10)), 40, 100));
       await e.svc.sync(t2);
       final s = await e.svc.snapshot(t2);
-      final route = buildRoute(rules.fallbackOrigin, _landmarks['kr003']!.latLng, rules);
+      final route = buildRoute(testHome, _landmarks['kr003']!.latLng, rules);
       final expected = positionAt(route, s.journey!.progress.progressKm);
       expect(s.position, expected.latLng);
-      expect(s.position, isNot(rules.fallbackOrigin));
+      expect(s.position, isNot(testHome));
       expect(s.onSea, isFalse);
     });
 
     test('여정 중(배 구간): onSea, 위치는 완도항과 제주항 사이', () async {
-      final e = _env();
+      final e = await _env();
       final jeju = _landmarks.values.firstWhere((l) => l.island == Island.jeju);
       final wando = rules.ports['wando']!;
       final port = rules.ports['jeju']!;
@@ -449,12 +452,12 @@ void main() {
       await e.svc.sync(t1.add(const Duration(hours: 4)));
       final s = await e.svc.snapshot(t1.add(const Duration(hours: 4)));
       expect(s.onSea, isTrue);
-      expect(s.position.lat, inInclusiveRange(port.lat, wando.lat));
+      expect(s.position!.lat, inInclusiveRange(port.lat, wando.lat));
       expect(s.position, isNot(wando));
     });
 
     test('배 구간을 지나면 onSea가 꺼지고 제주 땅 위 지점', () async {
-      final e = _env();
+      final e = await _env();
       final jeju = _landmarks.values.firstWhere((l) => l.island == Island.jeju);
       await e.svc.sync(_t0);
       await placeAt(e.db, rules.ports['wando']!, _t0);
@@ -472,7 +475,7 @@ void main() {
     });
 
     test('도착하면 여정이 없어도 도착한 명소가 위치', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await placeAt(e.db, _nearGyeongbok, _t0);
       await e.svc.startJourney('kr001', t1);
@@ -486,7 +489,7 @@ void main() {
     });
 
     test('여러 번 도착했으면 가장 최근에 도착한 곳', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await placeAt(e.db, _nearGyeongbok, _t0);
       await e.svc.startJourney('kr001', t1);
@@ -511,13 +514,135 @@ void main() {
     });
   });
 
+  group('출발 동네', () {
+    final t1 = _t0.add(const Duration(hours: 1));
+    final t2 = _t0.add(const Duration(hours: 3));
+    const noHome = '출발 동네를 먼저 골라 주세요';
+
+    test('안 골랐고 여행한 적도 없으면 position이 null, 출발은 StateError이고 아무것도 바꾸지 않는다', () async {
+      final e = await _env(home: false);
+      // 모든 표의 행 수 (설치 전이라 동기화 상태·경비 행도 아직 없다)
+      Future<List<int>> counts() async => [
+            (await e.db.select(e.db.stepMinutes).get()).length,
+            (await e.db.select(e.db.daySummaries).get()).length,
+            (await e.db.select(e.db.walkSessions).get()).length,
+            (await e.db.select(e.db.journeys).get()).length,
+            (await e.db.select(e.db.paintingsOwned).get()).length,
+            (await e.db.select(e.db.propsOwned).get()).length,
+            (await e.db.select(e.db.travelFund).get()).length,
+            (await e.db.select(e.db.syncState).get()).length,
+            (await e.db.select(e.db.profile).get()).length,
+          ];
+
+      // 동기화를 했다면 분 걸음과 상태 행이 생겼을 기록. 던지면서 동기화도 하지 않는다
+      e.source.records.add(_walk(t1, 30, 100));
+      expect(await counts(), everyElement(0));
+      await expectLater(
+          e.svc.startJourney('kr003', t2),
+          throwsA(isA<StateError>().having((x) => x.message, 'message', noHome)));
+      expect(await counts(), everyElement(0));
+
+      final s = await e.svc.snapshot(t2);
+      expect(s.position, isNull);
+      expect(s.home, isNull);
+      expect(s.onSea, isFalse);
+      expect(s.journey, isNull);
+      expect(await e.svc.home(), isNull);
+
+      // 동기화 상태가 생긴 뒤에도 마찬가지: 마지막 동기화 시각도 그대로
+      await e.svc.sync(_t0);
+      final dumpBefore = await e.dump();
+      final fetched = (await e.db.select(e.db.syncState).getSingle()).lastFetchedUtc;
+      await expectLater(e.svc.startJourney('kr003', t2), throwsStateError);
+      expect(await e.dump(), dumpBefore);
+      expect((await e.db.select(e.db.syncState).getSingle()).lastFetchedUtc, fetched);
+    });
+
+    test('setHome 뒤에는 position이 출발 동네, 출발지도 거기다', () async {
+      final e = await _env(home: false);
+      await e.svc.setHome('종로구', _nearGyeongbok);
+      final home = (await e.svc.home())!;
+      expect(home.name, '종로구');
+      expect(home.latLng, _nearGyeongbok);
+      final s = await e.svc.snapshot(_t0);
+      expect(s.position, _nearGyeongbok);
+      expect(s.home!.name, '종로구');
+      expect(s.onSea, isFalse);
+
+      await e.svc.startJourney('kr003', t1);
+      final j = await _startedAt(e.db, t1);
+      expect(j.originLat, _nearGyeongbok.lat);
+      expect(j.originLng, _nearGyeongbok.lng);
+      expect(j.totalEffectiveKm, closeTo(_routeKm(_nearGyeongbok, 'kr003'), 1e-9));
+      // 막 출발했으니 장면 위치는 아직 출발 동네
+      expect((await e.svc.snapshot(t1)).position, _nearGyeongbok);
+    });
+
+    test('setHome을 또 부르면 한 행이 바뀐다', () async {
+      final e = await _env(home: false);
+      await e.svc.setHome('종로구', _nearGyeongbok);
+      await e.svc.setHome(testHomeName, testHome);
+      final rows = await e.db.select(e.db.profile).get();
+      expect(rows, hasLength(1));
+      expect(rows.single.id, 1);
+      expect(rows.single.homeName, testHomeName);
+      expect((await e.svc.home())!.latLng, testHome);
+      expect((await e.svc.snapshot(_t0)).position, testHome);
+    });
+
+    test('쉬는 자리는 가장 나중에 끝난 여정이 출발 동네보다 먼저', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      expect((await e.svc.snapshot(_t0)).position, testHome);
+
+      await placeAt(e.db, _nearGyeongbok, _t0);
+      var s = await e.svc.snapshot(t1);
+      expect(s.position, _nearGyeongbok);
+      // 출발 동네는 그대로 남아 있고, 바꿔도 쉬는 자리는 여정 쪽
+      expect(s.home!.latLng, testHome);
+      await e.svc.setHome('종로구', _landmarks['kr002']!.latLng);
+      s = await e.svc.snapshot(t1);
+      expect(s.position, _nearGyeongbok);
+      expect(s.home!.name, '종로구');
+
+      // 그 자리에서 출발하면 출발지도 여정 쪽
+      await e.svc.startJourney('kr003', t2);
+      final j = await _startedAt(e.db, t2);
+      expect(j.originLat, _nearGyeongbok.lat);
+      expect(j.originLng, _nearGyeongbok.lng);
+    });
+
+    test('진행 중인 여정이 있으면 출발 동네가 없어도 목적지를 바꿀 수 있다', () async {
+      final e = await _env(home: false);
+      // 출발 동네를 고르는 기능이 생기기 전에 시작한 여정 (출발 동네 행은 없다)
+      await e.db.into(e.db.journeys).insert(JourneysCompanion.insert(
+            id: 'j1',
+            originLat: testHome.lat,
+            originLng: testHome.lng,
+            destId: 'kr003',
+            startUtc: _ms(t1),
+            fundKm: 0,
+            totalEffectiveKm: _routeKm(testHome, 'kr003'),
+            status: JourneyStatus.active,
+          ));
+      expect(await e.svc.home(), isNull);
+      expect((await e.svc.snapshot(t1)).position, testHome);
+
+      await e.svc.startJourney('kr001', t2);
+      expect((await e.svc.snapshot(t2)).journey!.dest.id, 'kr001');
+      expect((await (e.db.select(e.db.journeys)..where((t) => t.id.equals('j1'))).getSingle())
+              .status,
+          JourneyStatus.stopped);
+    });
+  });
+
   group('여정 바꾸기·멈추기', () {
     final t1 = _t0.add(const Duration(hours: 1));
     final t2 = _t0.add(const Duration(hours: 3));
     final t3 = _t0.add(const Duration(hours: 4));
 
     test('여정 중 목적지를 바꾸면: 새 출발지는 그 순간 경로 위 지점, 앞 여정은 거기서 멈춤', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await e.svc.startJourney('kr003', t1);
       // 40분 × 100보 × 0.7m = 2.8km
@@ -525,7 +650,7 @@ void main() {
       await e.svc.startJourney('kr001', t3);
 
       final here = positionAt(
-              buildRoute(rules.fallbackOrigin, _landmarks['kr003']!.latLng, rules), 2.8)
+              buildRoute(testHome, _landmarks['kr003']!.latLng, rules), 2.8)
           .latLng;
       final old = await _startedAt(e.db, t1);
       expect(old.status, JourneyStatus.stopped);
@@ -542,13 +667,13 @@ void main() {
       expect(now.totalEffectiveKm, closeTo(_routeKm(here, 'kr001'), 1e-6));
       // 막 바꾼 쪽은 아직 출발지 그대로
       final s = await e.svc.snapshot(t3);
-      expect(s.position.lat, closeTo(here.lat, 1e-9));
+      expect(s.position!.lat, closeTo(here.lat, 1e-9));
       expect(s.journey!.progress.progressKm, 0);
       expect(s.journey!.totalKm, closeTo(_routeKm(here, 'kr001'), 1e-6));
     });
 
     test('바꾼 뒤 액자 거리는 새 출발지부터 센다 (같은 목적지를 다시 골라도 처음부터)', () async {
-      final e = _env();
+      final e = await _env();
       final kr001 = _landmarks['kr001']!.latLng;
       await placeAt(e.db, LatLng(kr001.lat, kr001.lng + 0.0339), _t0);
       await e.svc.sync(_t0);
@@ -570,7 +695,7 @@ void main() {
     });
 
     test('지금 있는 명소로는 출발할 수 없고, 진행 중 여정은 멈추지 않는다', () async {
-      final e = _env();
+      final e = await _env();
       await placeAt(e.db, _landmarks['kr001']!.latLng, _t0);
       await e.svc.sync(_t0);
       await expectLater(e.svc.startJourney('kr001', t1), throwsStateError);
@@ -583,7 +708,7 @@ void main() {
     });
 
     test('멈춘 분은 앞 여정의 걸음이고, 새 여정은 다음 분부터 센다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await e.svc.startJourney('kr003', t1);
       // 30분 × 100보 기록이 t1부터. 10분 30초 지점에서 바꾼다: 0~10분(11분)은 앞 여정
@@ -593,7 +718,7 @@ void main() {
 
       final old = await _startedAt(e.db, t1);
       final here = positionAt(
-              buildRoute(rules.fallbackOrigin, _landmarks['kr003']!.latLng, rules), 0.77)
+              buildRoute(testHome, _landmarks['kr003']!.latLng, rules), 0.77)
           .latLng;
       expect(old.endLat, closeTo(here.lat, 1e-9));
       // 새 여정의 시작은 다음 분(11분째)
@@ -606,7 +731,7 @@ void main() {
     });
 
     test('같은 분 안에서 두 번 바꿔도 되고, 둘 다 같은 분 경계에서 시작한다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await e.svc.startJourney('kr003', t1);
       await e.svc.startJourney('kr001', t1.add(const Duration(seconds: 10)));
@@ -618,7 +743,7 @@ void main() {
     });
 
     test('출발할 때 경비를 더하면 fundKm에 들어가고 경비는 줄어든다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       // 30분 × 100보 = 2.1km → 경비
       e.source.records.add(_walk(t1, 30, 100));
@@ -631,7 +756,7 @@ void main() {
     });
 
     test('useFund: false면 경비를 그대로 둔다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       e.source.records.add(_walk(t1, 30, 100));
       await e.svc.startJourney('kr003', t2, useFund: false);
@@ -642,7 +767,7 @@ void main() {
     });
 
     test('멈추면 그 자리가 쉬는 자리, 이후 걸음은 경비로 간다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await e.svc.startJourney('kr003', t1);
       // 30분 × 100보 = 2.1km 걷고 멈춘다
@@ -650,7 +775,7 @@ void main() {
       await e.svc.stopJourney(t2);
 
       final here = positionAt(
-              buildRoute(rules.fallbackOrigin, _landmarks['kr003']!.latLng, rules), 2.1)
+              buildRoute(testHome, _landmarks['kr003']!.latLng, rules), 2.1)
           .latLng;
       final j = await _startedAt(e.db, t1);
       expect(j.status, JourneyStatus.stopped);
@@ -659,8 +784,8 @@ void main() {
       expect(j.endedUtc, _ms(t2));
       var s = await e.svc.snapshot(t2);
       expect(s.journey, isNull);
-      expect(s.position.lat, closeTo(here.lat, 1e-9));
-      expect(s.position.lng, closeTo(here.lng, 1e-9));
+      expect(s.position!.lat, closeTo(here.lat, 1e-9));
+      expect(s.position!.lng, closeTo(here.lng, 1e-9));
       expect((await e.db.select(e.db.travelFund).getSingle()).km, 0);
 
       // 멈춘 뒤 20분 × 100보 = 1.4km가 경비로
@@ -670,7 +795,7 @@ void main() {
       s = await e.svc.snapshot(t3);
       expect(s.fundKm, closeTo(1.4, 1e-9));
       // 쉬는 자리는 여전히 멈춘 곳
-      expect(s.position.lat, closeTo(here.lat, 1e-9));
+      expect(s.position!.lat, closeTo(here.lat, 1e-9));
       // 같은 기록으로 또 돌려도 늘지 않는다
       await e.svc.sync(t3);
       await e.svc.sync(t3.add(const Duration(minutes: 10)));
@@ -678,7 +803,7 @@ void main() {
     });
 
     test('멈춘 분에 걸친 기록은 잃지도 두 번 세지도 않는다 (여정 11분 + 경비 19분 = 30분)', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await e.svc.startJourney('kr003', t1);
       e.source.records.add(_walk(t1, 30, 100));
@@ -690,7 +815,7 @@ void main() {
 
       final j = await _startedAt(e.db, t1);
       final stop = positionAt(
-              buildRoute(rules.fallbackOrigin, _landmarks['kr003']!.latLng, rules), 0.77)
+              buildRoute(testHome, _landmarks['kr003']!.latLng, rules), 0.77)
           .latLng;
       expect(j.endLat, closeTo(stop.lat, 1e-9));
       expect((await e.db.select(e.db.travelFund).getSingle()).km, closeTo(1.33, 1e-9));
@@ -699,14 +824,14 @@ void main() {
     });
 
     test('진행 중인 여정이 없을 때 멈추기는 동기화만 한다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.stopJourney(t1);
       expect(await e.db.select(e.db.journeys).get(), isEmpty);
-      expect((await e.svc.snapshot(t1)).position, rules.fallbackOrigin);
+      expect((await e.svc.snapshot(t1)).position, testHome);
     });
 
     test('쉬는 자리에서 출발하면 그 자리가 출발지 (멈춘 곳, 도착한 곳 중 나중 것)', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await e.svc.startJourney('kr003', t1);
       e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 30, 100));
@@ -720,11 +845,11 @@ void main() {
     });
 
     test('옛 도착 여정(끝 지점이 안 적힌 것)은 목적지 명소가 쉬는 자리', () async {
-      final e = _env();
+      final e = await _env();
       await e.db.into(e.db.journeys).insert(JourneysCompanion.insert(
             id: 'j1',
-            originLat: rules.fallbackOrigin.lat,
-            originLng: rules.fallbackOrigin.lng,
+            originLat: testHome.lat,
+            originLng: testHome.lng,
             destId: 'kr003',
             startUtc: _ms(_t0),
             fundKm: 0,
@@ -743,10 +868,10 @@ void main() {
 
     for (final frame in Frame.values) {
       test('첫 도착: ${frame.name} 액자 (거리로 정해진다)', () async {
-        final e = _env();
+        final e = await _env();
         await e.svc.sync(_t0);
-        final dest = _destFor(rules.fallbackOrigin, frame);
-        final km = _routeKm(rules.fallbackOrigin, dest.id);
+        final dest = _destFor(testHome, frame);
+        final km = _routeKm(testHome, dest.id);
         final end = await _trip(e, dest.id, t1);
 
         final p = await e.db.select(e.db.paintingsOwned).getSingle();
@@ -770,9 +895,9 @@ void main() {
     }
 
     test('재방문이 더 길면 액자가 오른다: 방문 2, 이전·새 액자가 여정에 남는다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
-      final a = _destFor(rules.fallbackOrigin, Frame.wood);
+      final a = _destFor(testHome, Frame.wood);
       final b = _destFor(a.latLng, Frame.silver, not: a.id);
       final end1 = await _trip(e, a.id, t1);
       final end2 = await _trip(e, b.id, end1.add(const Duration(hours: 1)));
@@ -798,16 +923,16 @@ void main() {
     });
 
     test('재방문이 더 짧으면 액자는 그대로, 방문만 는다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
-      // 기본 출발지에서는 금 액자이면서, 가까이(20km 안)에 다른 명소가 있는 곳
+      // 출발 동네에서는 금 액자이면서, 가까이(20km 안)에 다른 명소가 있는 곳
       final a = _landmarks.values.firstWhere((l) =>
           l.island == Island.mainland &&
-          frameFor(_routeKm(rules.fallbackOrigin, l.id), rules) == Frame.gold &&
+          frameFor(_routeKm(testHome, l.id), rules) == Frame.gold &&
           _findDest(l.latLng, Frame.wood, not: l.id) != null);
       final b = _destFor(a.latLng, Frame.wood, not: a.id);
       final end1 = await _trip(e, a.id, t1);
-      final goldKm = _routeKm(rules.fallbackOrigin, a.id);
+      final goldKm = _routeKm(testHome, a.id);
       final end2 = await _trip(e, b.id, end1.add(const Duration(hours: 1)));
       final start3 = end2.add(const Duration(hours: 1));
       final end3 = await _trip(e, a.id, start3);
@@ -827,9 +952,9 @@ void main() {
     });
 
     test('같은 기록으로 또 동기화해도 그림·소품·방문 수가 그대로 (멱등)', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
-      final dest = _destFor(rules.fallbackOrigin, Frame.silver);
+      final dest = _destFor(testHome, Frame.silver);
       final end = await _trip(e, dest.id, t1);
       final before = await e.dump();
       expect((before['paintings'] as List), hasLength(1));
@@ -843,7 +968,7 @@ void main() {
     });
 
     test('도착한 분은 여정의 걸음: 넘친 거리 + 이후 경비 = 걸은 거리 − 여정 거리', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       await placeAt(e.db, _nearGyeongbok, _t0);
       await e.svc.startJourney('kr001', t1);
@@ -857,11 +982,11 @@ void main() {
     });
 
     test('도착 대기: 도착하면 생기고 markArrivalShown 하면 사라진다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       expect((await e.svc.snapshot(_t0)).pendingArrival, isNull);
-      final dest = _destFor(rules.fallbackOrigin, Frame.wood);
-      final km = _routeKm(rules.fallbackOrigin, dest.id);
+      final dest = _destFor(testHome, Frame.wood);
+      final km = _routeKm(testHome, dest.id);
       final end = await _trip(e, dest.id, t1);
 
       final pending = (await e.svc.snapshot(end)).pendingArrival!;
@@ -888,7 +1013,7 @@ void main() {
     final defaults = {for (final p in props) if (p.kind == PropUnlockKind.initial) p.id};
 
     test('첫 동기화에 기본 6개를 얻고, 처음부터 가진 것이라 새 소품 표시는 켜지 않는다', () async {
-      final e = _env();
+      final e = await _env();
       expect(defaults, hasLength(6));
       await e.svc.sync(_t0);
       expect(await _propIds(e.db), defaults);
@@ -898,7 +1023,7 @@ void main() {
     });
 
     test('누적 10km를 넘으면 hand_02, 얻은 소품은 다시 안 들어온다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       e.source.records.add(_walkKm(t1, 9));
       await e.svc.sync(_t0.add(const Duration(hours: 4)));
@@ -922,7 +1047,7 @@ void main() {
     });
 
     test('새로 얻은 소품만 표시가 켜지고, markPropsSeen으로 지워진다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       e.source.records.add(_walkKm(t1, 11));
       await e.svc.sync(_t0.add(const Duration(hours: 5)));
@@ -935,7 +1060,7 @@ void main() {
     });
 
     test('누적 거리는 여정이 있어도 실제로 걸은 거리 (배 환산이 아니다)', () async {
-      final e = _env();
+      final e = await _env();
       final jeju = _landmarks.values.firstWhere((l) => l.island == Island.jeju);
       await placeAt(e.db, rules.ports['wando']!, _t0);
       await e.svc.sync(_t0);
@@ -949,7 +1074,7 @@ void main() {
     });
 
     test('권역 완료: 수도권 12곳을 다 가면 pet_02, 11곳이면 없다', () async {
-      final e = _env();
+      final e = await _env();
       final capital = landmarks.where((l) => l.region == 'capital').map((l) => l.id).toList();
       expect(capital, hasLength(12));
       await _seedPaintings(e.db, capital.take(11));
@@ -966,7 +1091,7 @@ void main() {
     });
 
     test('울릉도는 명소가 한 곳이라 그림 하나로 pet_05', () async {
-      final e = _env();
+      final e = await _env();
       final ulleung = landmarks.singleWhere((l) => l.region == 'ulleung');
       await e.svc.sync(_t0);
       expect(await _propIds(e.db), isNot(contains('pet_05')));
@@ -976,7 +1101,7 @@ void main() {
     });
 
     test('실제로 도착해서 권역을 채워도 소품이 같은 동기화에서 들어온다', () async {
-      final e = _env();
+      final e = await _env();
       await e.svc.sync(_t0);
       // 제주(2곳) 중 한 곳은 미리 가 봤고, 남은 한 곳에 도착한다. 출발지는 제주 안
       final jeju = landmarks.where((l) => l.region == 'jeju').toList();

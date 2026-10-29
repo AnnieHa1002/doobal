@@ -3181,6 +3181,305 @@ class PropsOwnedCompanion extends UpdateCompanion<PropOwnedRow> {
   }
 }
 
+class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProfileTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _homeNameMeta = const VerificationMeta(
+    'homeName',
+  );
+  @override
+  late final GeneratedColumn<String> homeName = GeneratedColumn<String>(
+    'home_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _homeLatMeta = const VerificationMeta(
+    'homeLat',
+  );
+  @override
+  late final GeneratedColumn<double> homeLat = GeneratedColumn<double>(
+    'home_lat',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _homeLngMeta = const VerificationMeta(
+    'homeLng',
+  );
+  @override
+  late final GeneratedColumn<double> homeLng = GeneratedColumn<double>(
+    'home_lng',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, homeName, homeLat, homeLng];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'profile';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ProfileRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('home_name')) {
+      context.handle(
+        _homeNameMeta,
+        homeName.isAcceptableOrUnknown(data['home_name']!, _homeNameMeta),
+      );
+    }
+    if (data.containsKey('home_lat')) {
+      context.handle(
+        _homeLatMeta,
+        homeLat.isAcceptableOrUnknown(data['home_lat']!, _homeLatMeta),
+      );
+    }
+    if (data.containsKey('home_lng')) {
+      context.handle(
+        _homeLngMeta,
+        homeLng.isAcceptableOrUnknown(data['home_lng']!, _homeLngMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ProfileRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProfileRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      homeName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}home_name'],
+      ),
+      homeLat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}home_lat'],
+      ),
+      homeLng: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}home_lng'],
+      ),
+    );
+  }
+
+  @override
+  $ProfileTable createAlias(String alias) {
+    return $ProfileTable(attachedDatabase, alias);
+  }
+}
+
+class ProfileRow extends DataClass implements Insertable<ProfileRow> {
+  final int id;
+  final String? homeName;
+  final double? homeLat;
+  final double? homeLng;
+  const ProfileRow({
+    required this.id,
+    this.homeName,
+    this.homeLat,
+    this.homeLng,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || homeName != null) {
+      map['home_name'] = Variable<String>(homeName);
+    }
+    if (!nullToAbsent || homeLat != null) {
+      map['home_lat'] = Variable<double>(homeLat);
+    }
+    if (!nullToAbsent || homeLng != null) {
+      map['home_lng'] = Variable<double>(homeLng);
+    }
+    return map;
+  }
+
+  ProfileCompanion toCompanion(bool nullToAbsent) {
+    return ProfileCompanion(
+      id: Value(id),
+      homeName: homeName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(homeName),
+      homeLat: homeLat == null && nullToAbsent
+          ? const Value.absent()
+          : Value(homeLat),
+      homeLng: homeLng == null && nullToAbsent
+          ? const Value.absent()
+          : Value(homeLng),
+    );
+  }
+
+  factory ProfileRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProfileRow(
+      id: serializer.fromJson<int>(json['id']),
+      homeName: serializer.fromJson<String?>(json['homeName']),
+      homeLat: serializer.fromJson<double?>(json['homeLat']),
+      homeLng: serializer.fromJson<double?>(json['homeLng']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'homeName': serializer.toJson<String?>(homeName),
+      'homeLat': serializer.toJson<double?>(homeLat),
+      'homeLng': serializer.toJson<double?>(homeLng),
+    };
+  }
+
+  ProfileRow copyWith({
+    int? id,
+    Value<String?> homeName = const Value.absent(),
+    Value<double?> homeLat = const Value.absent(),
+    Value<double?> homeLng = const Value.absent(),
+  }) => ProfileRow(
+    id: id ?? this.id,
+    homeName: homeName.present ? homeName.value : this.homeName,
+    homeLat: homeLat.present ? homeLat.value : this.homeLat,
+    homeLng: homeLng.present ? homeLng.value : this.homeLng,
+  );
+  ProfileRow copyWithCompanion(ProfileCompanion data) {
+    return ProfileRow(
+      id: data.id.present ? data.id.value : this.id,
+      homeName: data.homeName.present ? data.homeName.value : this.homeName,
+      homeLat: data.homeLat.present ? data.homeLat.value : this.homeLat,
+      homeLng: data.homeLng.present ? data.homeLng.value : this.homeLng,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfileRow(')
+          ..write('id: $id, ')
+          ..write('homeName: $homeName, ')
+          ..write('homeLat: $homeLat, ')
+          ..write('homeLng: $homeLng')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, homeName, homeLat, homeLng);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProfileRow &&
+          other.id == this.id &&
+          other.homeName == this.homeName &&
+          other.homeLat == this.homeLat &&
+          other.homeLng == this.homeLng);
+}
+
+class ProfileCompanion extends UpdateCompanion<ProfileRow> {
+  final Value<int> id;
+  final Value<String?> homeName;
+  final Value<double?> homeLat;
+  final Value<double?> homeLng;
+  const ProfileCompanion({
+    this.id = const Value.absent(),
+    this.homeName = const Value.absent(),
+    this.homeLat = const Value.absent(),
+    this.homeLng = const Value.absent(),
+  });
+  ProfileCompanion.insert({
+    this.id = const Value.absent(),
+    this.homeName = const Value.absent(),
+    this.homeLat = const Value.absent(),
+    this.homeLng = const Value.absent(),
+  });
+  static Insertable<ProfileRow> custom({
+    Expression<int>? id,
+    Expression<String>? homeName,
+    Expression<double>? homeLat,
+    Expression<double>? homeLng,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (homeName != null) 'home_name': homeName,
+      if (homeLat != null) 'home_lat': homeLat,
+      if (homeLng != null) 'home_lng': homeLng,
+    });
+  }
+
+  ProfileCompanion copyWith({
+    Value<int>? id,
+    Value<String?>? homeName,
+    Value<double?>? homeLat,
+    Value<double?>? homeLng,
+  }) {
+    return ProfileCompanion(
+      id: id ?? this.id,
+      homeName: homeName ?? this.homeName,
+      homeLat: homeLat ?? this.homeLat,
+      homeLng: homeLng ?? this.homeLng,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (homeName.present) {
+      map['home_name'] = Variable<String>(homeName.value);
+    }
+    if (homeLat.present) {
+      map['home_lat'] = Variable<double>(homeLat.value);
+    }
+    if (homeLng.present) {
+      map['home_lng'] = Variable<double>(homeLng.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfileCompanion(')
+          ..write('id: $id, ')
+          ..write('homeName: $homeName, ')
+          ..write('homeLat: $homeLat, ')
+          ..write('homeLng: $homeLng')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -3192,6 +3491,7 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $SyncStateTable syncState = $SyncStateTable(this);
   late final $PaintingsOwnedTable paintingsOwned = $PaintingsOwnedTable(this);
   late final $PropsOwnedTable propsOwned = $PropsOwnedTable(this);
+  late final $ProfileTable profile = $ProfileTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3205,6 +3505,7 @@ abstract class _$AppDb extends GeneratedDatabase {
     syncState,
     paintingsOwned,
     propsOwned,
+    profile,
   ];
 }
 
@@ -4941,6 +5242,180 @@ typedef $$PropsOwnedTableProcessedTableManager =
       PropOwnedRow,
       PrefetchHooks Function()
     >;
+typedef $$ProfileTableCreateCompanionBuilder = ProfileCompanion Function({
+  Value<int> id,
+  Value<String?> homeName,
+  Value<double?> homeLat,
+  Value<double?> homeLng,
+});
+typedef $$ProfileTableUpdateCompanionBuilder = ProfileCompanion Function({
+  Value<int> id,
+  Value<String?> homeName,
+  Value<double?> homeLat,
+  Value<double?> homeLng,
+});
+
+class $$ProfileTableFilterComposer extends Composer<_$AppDb, $ProfileTable> {
+  $$ProfileTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get homeName => $composableBuilder(
+    column: $table.homeName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get homeLat => $composableBuilder(
+    column: $table.homeLat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get homeLng => $composableBuilder(
+    column: $table.homeLng,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ProfileTableOrderingComposer extends Composer<_$AppDb, $ProfileTable> {
+  $$ProfileTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get homeName => $composableBuilder(
+    column: $table.homeName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get homeLat => $composableBuilder(
+    column: $table.homeLat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get homeLng => $composableBuilder(
+    column: $table.homeLng,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ProfileTableAnnotationComposer
+    extends Composer<_$AppDb, $ProfileTable> {
+  $$ProfileTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get homeName =>
+      $composableBuilder(column: $table.homeName, builder: (column) => column);
+
+  GeneratedColumn<double> get homeLat =>
+      $composableBuilder(column: $table.homeLat, builder: (column) => column);
+
+  GeneratedColumn<double> get homeLng =>
+      $composableBuilder(column: $table.homeLng, builder: (column) => column);
+}
+
+class $$ProfileTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $ProfileTable,
+          ProfileRow,
+          $$ProfileTableFilterComposer,
+          $$ProfileTableOrderingComposer,
+          $$ProfileTableAnnotationComposer,
+          $$ProfileTableCreateCompanionBuilder,
+          $$ProfileTableUpdateCompanionBuilder,
+          (ProfileRow, BaseReferences<_$AppDb, $ProfileTable, ProfileRow>),
+          ProfileRow,
+          PrefetchHooks Function()
+        > {
+  $$ProfileTableTableManager(_$AppDb db, $ProfileTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProfileTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProfileTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProfileTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String?> homeName = const Value.absent(),
+                Value<double?> homeLat = const Value.absent(),
+                Value<double?> homeLng = const Value.absent(),
+              }) => ProfileCompanion(
+                id: id,
+                homeName: homeName,
+                homeLat: homeLat,
+                homeLng: homeLng,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String?> homeName = const Value.absent(),
+                Value<double?> homeLat = const Value.absent(),
+                Value<double?> homeLng = const Value.absent(),
+              }) => ProfileCompanion.insert(
+                id: id,
+                homeName: homeName,
+                homeLat: homeLat,
+                homeLng: homeLng,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ProfileTable, ProfileRow>(table),
+                  BaseReferences<_$AppDb, $ProfileTable, ProfileRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ProfileTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $ProfileTable,
+      ProfileRow,
+      $$ProfileTableFilterComposer,
+      $$ProfileTableOrderingComposer,
+      $$ProfileTableAnnotationComposer,
+      $$ProfileTableCreateCompanionBuilder,
+      $$ProfileTableUpdateCompanionBuilder,
+      (ProfileRow, BaseReferences<_$AppDb, $ProfileTable, ProfileRow>),
+      ProfileRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -4961,4 +5436,6 @@ class $AppDbManager {
       $$PaintingsOwnedTableTableManager(_db, _db.paintingsOwned);
   $$PropsOwnedTableTableManager get propsOwned =>
       $$PropsOwnedTableTableManager(_db, _db.propsOwned);
+  $$ProfileTableTableManager get profile =>
+      $$ProfileTableTableManager(_db, _db.profile);
 }

@@ -4,7 +4,8 @@ import '../../domain/journey.dart' show Frame;
 
 part 'app_db.g.dart';
 
-// M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝). 시각은 모두 UTC 정수
+// M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝) + 스키마 3 (프로필: 출발 동네).
+// 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
 
@@ -126,6 +127,19 @@ class SyncState extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// 1행(id = 1). 지금은 사용자가 고른 출발 동네(시·군·구 이름과 대표 좌표)만 둔다.
+/// 닉네임·머리 같은 나머지 열은 시작 화면을 만들 때 더한다. 고르기 전에는 행이 없거나 열이 null
+@DataClassName('ProfileRow')
+class Profile extends Table {
+  IntColumn get id => integer()();
+  TextColumn get homeName => text().nullable()();
+  RealColumn get homeLat => real().nullable()();
+  RealColumn get homeLng => real().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     StepMinutes,
@@ -136,13 +150,14 @@ class SyncState extends Table {
     SyncState,
     PaintingsOwned,
     PropsOwned,
+    Profile,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -160,6 +175,9 @@ class AppDb extends _$AppDb {
             await m.createTable(propsOwned);
             // 1에서 도착한 여정은 그림 기록이 없다. 도착 화면을 띄우지 않는다
             await customStatement("UPDATE journeys SET arrival_shown = 1 WHERE status = 'arrived'");
+          }
+          if (from < 3) {
+            await m.createTable(profile);
           }
         },
       );

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/camp_theme.dart';
+import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/rules.dart';
@@ -33,6 +34,10 @@ final List<int> milestones = ((jsonDecode(File('assets/data/milestones.json').re
 final CampTheme campTheme = CampTheme.fromJson(
   jsonDecode(File('assets/data/themes/camp.json').readAsStringSync()) as Map<String, dynamic>,
 );
+
+/// 테스트용 출발 동네: 서울시청 (서울특별시 중구). 실제 출발 동네는 사용자가 고른다
+const testHome = LatLng(37.5665, 126.9780);
+const testHomeName = '중구';
 
 /// start부터 1분 간격으로 걸음을 채운 분 목록 (0도 그대로 넣는다)
 List<StepMinute> minutesFrom(DateTime startUtc, List<int> steps) {

@@ -8,6 +8,7 @@ import 'package:doobal/domain/route.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
+import 'package:doobal/ui/scene/scene_view.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -63,10 +64,12 @@ class _Env {
         clockProvider.overrideWithValue(() => now),
       ];
 
-  /// 설치(= _t0)하고, 원하면 kr003으로 여정을 시작해 둔다
-  Future<void> seed(WidgetTester tester, {String? dest, LatLng? origin}) =>
+  /// 설치(= _t0)하고 출발 동네를 testHome으로 골라 둔다([home]이 false면 안 고른 채로).
+  /// 원하면 kr003으로 여정을 시작해 둔다
+  Future<void> seed(WidgetTester tester, {String? dest, LatLng? origin, bool home = true}) =>
       tester.runAsync(() async {
         await svc.sync(_t0);
+        if (home) await svc.setHome(testHomeName, testHome);
         if (origin != null) await placeAt(db, origin, _t0);
         if (dest != null) await svc.startJourney(dest, _t1);
       }) as Future<void>;
@@ -114,7 +117,7 @@ Future<void> _tapIcon(WidgetTester tester, IconData icon) async {
 }
 
 double _totalKm(String destId, [LatLng? origin]) =>
-    buildRoute(origin ?? rules.fallbackOrigin, _byId[destId]!.latLng, rules).totalEffectiveKm;
+    buildRoute(origin ?? testHome, _byId[destId]!.latLng, rules).totalEffectiveKm;
 
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
@@ -134,6 +137,56 @@ void main() {
       await _tapIcon(tester, Icons.directions_walk);
       expect(find.text('지도 (임시)'), findsOneWidget);
       expect(find.text('걷기 마치기'), findsNothing);
+      await _end(tester, e);
+    });
+
+    testWidgets('출발 동네를 안 골랐으면 고르라는 카드만 나오고, 임시 화면에서 고르면 쉼터가 된다', (tester) async {
+      final e = _Env();
+      await e.seed(tester, home: false);
+      _phone(tester);
+      await tester.pumpWidget(ProviderScope(overrides: e.overrides, child: const DoobalApp()));
+      await _settle(tester, () => find.text('출발 동네를 골라 주세요').evaluate().isNotEmpty);
+
+      expect(find.text('출발 동네를 골라 주세요'), findsOneWidget);
+      expect(find.text('고르기'), findsOneWidget);
+      // 장면·상태 알약·출발하기·모서리 물건은 없고, 설정 버튼은 남는다
+      expect(find.textContaining('쉬는 중'), findsNothing);
+      expect(find.text('출발하기'), findsNothing);
+      expect(find.byType(SceneView), findsNothing);
+      expect(find.byIcon(Icons.settings), findsOneWidget);
+
+      await tester.tap(find.text('고르기'));
+      await _transition(tester);
+      expect(find.text('출발 동네 (임시)'), findsOneWidget);
+      expect(find.text('출발 동네 없음'), findsOneWidget);
+
+      // 대전 유성구를 고른다
+      await tester.tap(find.text('출발 동네'), warnIfMissed: false);
+      await _transition(tester);
+      await tester.tap(find.text('대전광역시 유성구').last);
+      await _transition(tester);
+      await tester.tap(find.text('출발 동네로 정하기'));
+      await _settle(tester, () => find.text('출발 동네 유성구').evaluate().isNotEmpty);
+      expect(find.text('출발 동네 유성구'), findsOneWidget);
+      await tester.pageBack();
+      await _transition(tester);
+      await _settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
+
+      expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
+      expect(find.text('출발 동네를 골라 주세요'), findsNothing);
+      final snap = (await tester.runAsync(() => e.svc.snapshot(e.now)))!;
+      expect(snap.position, _byId['kr003']!.latLng);
+      await _end(tester, e);
+    });
+
+    testWidgets('출발 동네를 골라 둔 쉼터는 상태 알약과 장면이 나온다', (tester) async {
+      final e = _Env();
+      await e.seed(tester);
+      await _pumpApp(tester, e);
+
+      expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
+      expect(find.text('출발 동네를 골라 주세요'), findsNothing);
+      expect(find.byType(SceneView), findsOneWidget);
       await _end(tester, e);
     });
 

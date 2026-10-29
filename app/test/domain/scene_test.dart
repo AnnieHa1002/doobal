@@ -95,8 +95,9 @@ void main() {
           Season.summer);
     });
 
-    test('기본 출발지(양구)도 계산된다', () {
-      final look = sceneLook(kst(2026, 6, 10, 12), rules.fallbackOrigin, false, landmarks, rules);
+    test('서울 밖 명소 위치(강원)도 계산된다', () {
+      final gangwon = landmarks.firstWhere((l) => l.region == 'gangwon');
+      final look = sceneLook(kst(2026, 6, 10, 12), gangwon.latLng, false, landmarks, rules);
       expect(look.phase, SkyPhase.day);
       expect(look.backdrop, 'gangwon');
     });

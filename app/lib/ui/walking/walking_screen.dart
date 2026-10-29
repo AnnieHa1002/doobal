@@ -170,7 +170,9 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final rules = ref.watch(rulesProvider).value;
     final landmarks = ref.watch(landmarksProvider).value;
     final snap = ref.watch(snapshotProvider).value;
-    if (rules == null || landmarks == null || snap == null) {
+    // 위치는 여정이 있으면 늘 있다. 없으면(출발 동네 미선택) 다른 빠진 데이터처럼 빈 화면
+    final position = snap?.position;
+    if (rules == null || landmarks == null || snap == null || position == null) {
       return const Scaffold(body: SizedBox.expand());
     }
     final summary = _record?.summary;
@@ -183,7 +185,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             mode: SceneMode.walking,
             distanceM: _shownM,
             nowUtc: _now,
-            position: snap.position,
+            position: position,
             onSea: snap.onSea,
             rules: rules,
             landmarks: landmarks,

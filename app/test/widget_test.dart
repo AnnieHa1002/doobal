@@ -13,8 +13,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'domain/helpers.dart';
 
 void main() {
-  testWidgets('첫 화면은 쉼터다', (tester) async {
+  testWidgets('첫 화면은 쉼터다 (출발 동네를 골라 둔 뒤)', (tester) async {
     final db = AppDb(NativeDatabase.memory());
+    // 출발 동네가 없으면 쉼터 대신 고르라는 카드가 나온다
+    await tester.runAsync(() => SyncService(
+          db: db,
+          source: FakeStepSource(),
+          rules: rules,
+          allowedSources: const [],
+          landmarks: const {},
+          props: props,
+        ).setHome(testHomeName, testHome));
     await tester.pumpWidget(ProviderScope(
       overrides: [
         // 에셋은 직접 넣는다 (테스트 환경에서 rootBundle이 불안정하다)

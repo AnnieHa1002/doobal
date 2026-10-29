@@ -84,6 +84,14 @@ class PendingArrival {
   bool get frameUp => prevFrame != null && newFrame.index > prevFrame!.index;
 }
 
+/// 사용자가 고른 출발 동네 (시·군·구 이름과 대표 좌표)
+class Home {
+  const Home(this.name, this.latLng);
+
+  final String name;
+  final LatLng latLng;
+}
+
 /// 화면에 보여 줄 지금 상태
 class Snapshot {
   const Snapshot({
@@ -96,6 +104,7 @@ class Snapshot {
     required this.journey,
     required this.totalSteps,
     required this.position,
+    required this.home,
     required this.onSea,
     required this.pendingArrival,
     required this.unseenProps,
@@ -115,8 +124,12 @@ class Snapshot {
   final int totalSteps;
 
   /// 장면의 현재 위치. 여정 중이면 경로 위 지점, 아니면 가장 나중에 끝난 여정(도착·멈춤)의
-  /// 끝 지점, 끝난 여정이 없으면 rules.fallbackOrigin. 위치 권한은 아직 쓰지 않는다
-  final LatLng position;
+  /// 끝 지점, 끝난 여정이 없으면 사용자가 고른 출발 동네.
+  /// null은 출발 동네를 아직 안 골랐고 여행한 적도 없을 때뿐이다 (이때 onSea는 false)
+  final LatLng? position;
+
+  /// 사용자가 고른 출발 동네. 아직 안 골랐으면 null
+  final Home? home;
 
   /// 배 구간 위인지 (여정 중일 때만 true가 될 수 있다)
   final bool onSea;
@@ -206,12 +219,19 @@ class SyncService {
   /// 그때까지의 거리를 경비로 넣은 뒤, 지금 자리에서 출발한다.
   /// 출발지는 진행 중인 여정이 있으면 그 여정의 지금 지점(그 여정은 멈춘다), 없으면 쉬는 자리.
   /// [useFund]가 true면 여행 경비를 모두 더한다 (더한 만큼 경비는 줄어든다)
+  /// 진행 중인 여정도 쉬는 자리도 없으면(출발 동네를 안 골랐고 여행한 적도 없음) StateError를
+  /// 던지고 아무것도 바꾸지 않는다 (동기화도 하지 않는다)
   Future<void> startJourney(String destId, DateTime now, {bool useFund = true}) async {
+    if (await _activeJourney() == null && await _restingPosition() == null) {
+      throw StateError(_needHome);
+    }
     await sync(now);
     final dest = landmarks[destId]!;
     await db.transaction(() async {
       final active = await _activeJourney();
       final origin = active == null ? await _restingPosition() : await _stop(active, now);
+      // 위에서 걸렀으니 여기서 null일 수 없다 (동기화로 여정이 도착해도 도착지가 쉬는 자리다)
+      if (origin == null) throw StateError(_needHome);
       final route = buildRoute(origin, dest.latLng, rules);
       // 지금 있는 명소로는 출발하지 않는다 (거리 0이라 바로 도착해 방문 수만 오른다). 멈춤도 되돌린다
       if (route.totalEffectiveKm == 0) throw StateError('이미 ${dest.name}에 있어요');
@@ -361,7 +381,7 @@ class SyncService {
 
     final days = await db.select(db.daySummaries).get();
     JourneyView? view;
-    LatLng position;
+    LatLng? position;
     var onSea = false;
     final active = await _activeJourney();
     if (active == null) {
@@ -387,6 +407,7 @@ class SyncService {
       journey: view,
       totalSteps: days.fold(0, (sum, d) => sum + d.steps),
       position: position,
+      home: await home(),
       onSea: onSea,
       pendingArrival: await _pendingArrival(),
       unseenProps: (await (db.select(db.propsOwned)..where((t) => t.seen.equals(false))).get())
@@ -417,9 +438,28 @@ class SyncService {
     );
   }
 
-  /// 여정이 없을 때 장면의 위치: 가장 나중에 끝난 여정(도착·멈춤)의 끝 지점, 없으면 기본 출발지.
-  /// 끝 지점이 안 적힌 옛 도착 여정은 목적지 명소로 본다
-  Future<LatLng> _restingPosition() async {
+  /// 사용자가 고른 출발 동네를 적는다 (이미 있으면 바꾼다). 이름은 시·군·구,
+  /// 좌표는 그 행정구역의 대표 좌표. 이미 여행을 한 뒤에는 쉬는 자리에 영향이 없다
+  Future<void> setHome(String name, LatLng latLng) =>
+      db.into(db.profile).insertOnConflictUpdate(ProfileCompanion(
+        id: const Value(1),
+        homeName: Value(name),
+        homeLat: Value(latLng.lat),
+        homeLng: Value(latLng.lng),
+      ));
+
+  /// 사용자가 고른 출발 동네. 아직 안 골랐으면 null
+  Future<Home?> home() async {
+    final row = await (db.select(db.profile)..where((t) => t.id.equals(1))).getSingleOrNull();
+    if (row == null || row.homeName == null || row.homeLat == null || row.homeLng == null) {
+      return null;
+    }
+    return Home(row.homeName!, LatLng(row.homeLat!, row.homeLng!));
+  }
+
+  /// 여정이 없을 때 장면의 위치: 가장 나중에 끝난 여정(도착·멈춤)의 끝 지점, 없으면 출발 동네,
+  /// 그것도 없으면 null. 끝 지점이 안 적힌 옛 도착 여정은 목적지 명소로 본다
+  Future<LatLng?> _restingPosition() async {
     final row = await (db.select(db.journeys)
           ..where((t) =>
               t.endLat.isNotNull() | t.status.equalsValue(JourneyStatus.arrived))
@@ -429,7 +469,7 @@ class SyncService {
           ])
           ..limit(1))
         .getSingleOrNull();
-    if (row == null) return rules.fallbackOrigin;
+    if (row == null) return (await home())?.latLng;
     return row.endLat == null
         ? landmarks[row.destId]!.latLng
         : LatLng(row.endLat!, row.endLng!);
@@ -596,6 +636,8 @@ class SyncService {
     return SyncReport(raw.length, raw.length - kept.length, bySource, advancedKm: advancedKm);
   }
 }
+
+const _needHome = '출발 동네를 먼저 골라 주세요';
 
 DateTime _utc(int ms) => DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
 

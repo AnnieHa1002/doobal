@@ -15,8 +15,7 @@
   "islands": {
    "jeju":    { "latMin": 33.1, "latMax": 33.6, "lngMin": 126.1,  "lngMax": 127.0 },
    "ulleung": { "latMin": 37.4, "latMax": 37.6, "lngMin": 130.75, "lngMax": 130.95 }
-  },
-  "fallbackOrigin": { "name": "국토 정중앙(양구)", "lat": 38.03, "lng": 128.03, "approx": true }
+  }
  },
  "journey": {
   "firstSketchKm": { "min": 2, "max": 3 },
