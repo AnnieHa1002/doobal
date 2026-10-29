@@ -25,11 +25,6 @@ void main() {
         [Frame.wood, Frame.silver, Frame.silver, Frame.gold]);
   });
 
-  test('#21 sketchStage', () {
-    expect([0.249, 0.25, 0.75, 0.99].map((r) => sketchStage(r, rules)).toList(),
-        [0, 1, 3, 3]);
-  });
-
   test('#22 도착·넘침: 총 10km, 경비 0, 걸은 12km', () {
     final p = progress(_journey(totalKm: 10), 12, rules);
     expect(p.arrived, isTrue);
@@ -43,7 +38,6 @@ void main() {
     expect(p.progressKm, 5);
     expect(p.remainingKm, 5);
     expect(p.arrived, isFalse);
-    expect(p.sketchStage, 2);
   });
 
   test('#23 경비 상한: 14km + 3km → 15km', () {

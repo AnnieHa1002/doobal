@@ -20,7 +20,6 @@ class Rules {
     required this.frameSilverKm,
     required this.frameGoldKm,
     required this.travelFundCapKm,
-    required this.sketchSteps,
     required this.etaWindowDays,
     required this.etaDefaultDailySteps,
     required this.seasons,
@@ -67,7 +66,6 @@ class Rules {
   final double frameSilverKm;
   final double frameGoldKm;
   final double travelFundCapKm;
-  final List<double> sketchSteps;
   final int etaWindowDays;
   final int etaDefaultDailySteps;
 
@@ -147,7 +145,6 @@ class Rules {
       frameSilverKm: _d(frame['silverKm']),
       frameGoldKm: _d(frame['goldKm']),
       travelFundCapKm: _d(journey['travelFundCapKm']),
-      sketchSteps: (journey['sketchSteps'] as List).map(_d).toList(),
       etaWindowDays: eta['windowDays'] as int,
       etaDefaultDailySteps: eta['defaultDailySteps'] as int,
       seasons: (j['seasons'] as Map<String, dynamic>)

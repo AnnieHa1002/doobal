@@ -29,7 +29,6 @@ class JourneyProgress {
     required this.remainingKm,
     required this.arrived,
     required this.overflowKm,
-    required this.sketchStage,
   });
 
   final double progressKm;
@@ -39,7 +38,6 @@ class JourneyProgress {
 
   /// 도착하고 남은 거리 → 여행 경비로
   final double overflowKm;
-  final int sketchStage;
 }
 
 /// 진행 거리 = 경비 + 여정 시작 이후 걸은 거리(km)
@@ -53,7 +51,6 @@ JourneyProgress progress(Journey j, double walkedKmSinceStart, Rules rules) {
     remainingKm: done >= total ? 0 : total - done,
     arrived: done >= total,
     overflowKm: done > total ? done - total : 0,
-    sketchStage: sketchStage(ratio, rules),
   );
 }
 
@@ -62,10 +59,6 @@ double addToFund(double fundKm, double km, Rules rules) {
   final sum = fundKm + km;
   return sum < rules.travelFundCapKm ? sum : rules.travelFundCapKm;
 }
-
-/// 밑그림 단계 = 넘은 지점 수 (0~3)
-int sketchStage(double ratio, Rules rules) =>
-    rules.sketchSteps.where((s) => ratio >= s).length;
 
 enum Frame { wood, silver, gold }
 

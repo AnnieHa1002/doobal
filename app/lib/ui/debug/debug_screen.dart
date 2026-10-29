@@ -139,7 +139,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
       else ...[
         '여정 → ${j.dest.name}',
         '진행 ${j.progress.progressKm.toStringAsFixed(2)} / ${j.totalKm.toStringAsFixed(2)}km '
-            '(${(j.progress.ratio * 100).toStringAsFixed(1)}%), 밑그림 ${j.progress.sketchStage}단계',
+            '(${(j.progress.ratio * 100).toStringAsFixed(1)}%)',
         j.progress.arrived
             ? '도착함'
             : '남은 ${j.progress.remainingKm.toStringAsFixed(2)}km · 도착 예정 ${_date(j.eta)}',
