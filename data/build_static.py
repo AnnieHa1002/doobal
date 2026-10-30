@@ -6,7 +6,7 @@
 - landmarks.json, props.json, milestones.json 은 매번 새로 만든다.
 - 시도 이름은 2026-07-01 행정구역(광주·전남 → 전남광주통합특별시, 인천 중구 → 제물포구).
   옛 이름이 CSV에 남아 있으면 멈춘다. 권역(region)은 그대로.
-- events.json 은 만들지 않는다: data/build_events.py 가 기획/이벤트_문구.md 에서 만든다(v2).
+- events.json 은 만들지 않는다: data/build_events.py 가 기획/이벤트_문구.md 에서 만든다(v3).
 - config.json 은 손으로 고치는 파일이라 이 스크립트가 건드리지 않는다.
 """
 import collections
@@ -67,17 +67,17 @@ def build_props():
         p('hat_07', 'hat', '밀짚모자', 'event', terrain='field', season='summer'),
         p('hat_08', 'hat', '단풍잎 모자', 'event', terrain='mountain', season='autumn'),
         p('hat_09', 'hat', '털모자', 'event', terrain='mountain', season='winter'),
-        # 동료 소품: companion id는 companions.json이 생기면 채운다
-        # (폐이 달 핀, 휴 꾹꾹이 장갑, 심 박사 동그란 안경)
-        p('hat_10', 'hat', '달 핀', 'companion', companion=None),
-        p('hat_11', 'hat', '동그란 안경', 'companion', companion=None),
+        # 동행 완결 소품(10/30 개발 기획): companion = companions.json id
+        # bright 퐁이 → 달 핀, rest 휴 → 꾹꾹이 장갑, doctor 심 박사 → 동그란 안경
+        p('hat_10', 'hat', '달 핀', 'companion', companion='bright'),
+        p('hat_11', 'hat', '동그란 안경', 'companion', companion='doctor'),
         p('hand_01', 'hand', '붓', 'default'), p('hand_02', 'hand', '지팡이', 'distance', km=10),
         p('hand_03', 'hand', '나침반', 'distance', km=150), p('hand_04', 'hand', '큰 팔레트', 'distance', km=200),
         p('hand_05', 'hand', '연잎 우산', 'region', region='chungcheong'),
         p('hand_06', 'hand', '낚싯대', 'event', terrain='coast', dayNight='day'),
         p('hand_07', 'hand', '바람개비', 'event', terrain='coast'),
         p('hand_08', 'hand', '랜턴', 'event', terrain='city', dayNight='night'),
-        p('hand_09', 'hand', '꾹꾹이 장갑', 'companion', companion=None),
+        p('hand_09', 'hand', '꾹꾹이 장갑', 'companion', companion='rest'),
         p('pet_01', 'pet', '종이새', 'default'), p('pet_02', 'pet', '해치', 'region', region='capital'),
         p('pet_03', 'pet', '아기 양', 'region', region='gangwon'), p('pet_04', 'pet', '돌하르방', 'region', region='jeju'),
         p('pet_05', 'pet', '괭이갈매기', 'region', region='ulleung'),
@@ -99,7 +99,8 @@ def build_props():
     assert len(props) == 39 and dict(c) == {'hat': 11, 'hand': 9, 'pet': 8, 'bag': 4, 'shoe': 3, 'cloth': 4}, c
     assert dict(k) == {'default': 6, 'distance': 10, 'region': 7, 'event': 12, 'companion': 3, 'steps': 1}, k
     assert sum(x['status'] == 'mvp' for x in props) == 27
-    dump('props.json', {'version': 1, 'props': props})
+    assert sorted(x['unlock']['companion'] for x in props if x['unlock']['kind'] == 'companion') == ['bright', 'doctor', 'rest']
+    dump('props.json', {'version': 2, 'props': props})
     return props
 
 

@@ -29,7 +29,7 @@ Annie 1인 개발, MVP 2027년 3월(한국 명소 101곳, iOS + 안드로이드,
 
 ```
 app/                Flutter 앱 (패키지 doobal, 번들 ID com.annieha.doobal)
-  assets/data/      정적 데이터 JSON: landmarks·props·events·milestones·config·sigungu·notifications·palette
+  assets/data/      정적 데이터 JSON: landmarks·props·events·milestones·config·sigungu·notifications·palette·companions·badges
 functions/          Firebase Cloud Functions (아직 비어 있음)
 data/               명소 CSV, build_static.py, build_events.py, geocode_landmarks.py
 tools/              clean_assets.py (에셋 정리)
@@ -57,8 +57,8 @@ tools/              clean_assets.py (에셋 정리)
 ## 정적 데이터
 
 - `python3 data/build_static.py` → landmarks·props·milestones 재생성. 시도 이름은 2026-07-01 행정구역(옛 이름이면 멈춤).
-- `events.json`(v2: 풍경 96·칭찬 17·제안 6)은 `python3 data/build_events.py <이벤트_문구.md> app/assets/data/events.json`으로 만든다. 문구 원본은 Claude 프로젝트 문서 `기획/이벤트_문구.md`.
-- `sigungu.json`·`notifications.json`·`palette.json`은 Claude 프로젝트 문서 `데이터/app/`의 사본이다. 원본이 바뀌면 같이 바꾼다.
+- `events.json`(v3: 풍경 96·칭찬 17, 10/30 제안 삭제)은 `python3 data/build_events.py <이벤트_문구.md> app/assets/data/events.json`으로 만든다. 문구 원본은 Claude 프로젝트 문서 `기획/이벤트_문구.md`.
+- `sigungu.json`·`notifications.json`·`palette.json`·`companions.json`·`badges.json`은 Claude 프로젝트 문서 `데이터/app/`의 사본이다(companions는 `데이터/build_companions.py`로 만듦). 원본이 바뀌면 같이 바꾼다.
 - `config.json`은 손으로 고친다.
 
 ## 에셋

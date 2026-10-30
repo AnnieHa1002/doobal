@@ -38,11 +38,12 @@ void main() {
       expect(_idsOf(PropUnlockKind.companion), hasLength(3));
     });
 
-    test('동료 소품 3개: 달 핀 · 꾹꾹이 장갑 · 동그란 안경 (동료 id는 아직 없다)', () {
+    test('동행 소품 3개: 퐁이 달 핀 · 휴 꾹꾹이 장갑 · 심 박사 동그란 안경 (companions.json id)', () {
       final companion = props.where((p) => p.kind == PropUnlockKind.companion).toList();
       expect({for (final p in companion) p.id: p.name},
           {'hat_10': '달 핀', 'hat_11': '동그란 안경', 'hand_09': '꾹꾹이 장갑'});
-      expect(companion.every((p) => p.companion == null), isTrue);
+      expect({for (final p in companion) p.id: p.companion},
+          {'hat_10': 'bright', 'hat_11': 'doctor', 'hand_09': 'rest'});
     });
 
     test('전체 슬롯 개수: 모자 11 · 손 9 · 반려 8 · 가방 4 · 신발 3 · 옷 4 (pending 포함)', () {
@@ -61,10 +62,10 @@ void main() {
         'id': 'hat_10',
         'slot': 'hat',
         'name': '달 핀',
-        'unlock': {'kind': 'companion', 'companion': 'pei'},
+        'unlock': {'kind': 'companion', 'companion': 'bright'},
       });
       expect(p.kind, PropUnlockKind.companion);
-      expect(p.companion, 'pei');
+      expect(p.companion, 'bright');
     });
 
     test('모르는 해금 조건은 받아들이지 않는다', () {

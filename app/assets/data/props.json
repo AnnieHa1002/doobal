@@ -1,5 +1,5 @@
 {
- "version": 1,
+ "version": 2,
  "props": [
   {
    "id": "hat_01",
@@ -100,7 +100,7 @@
    "name": "달 핀",
    "unlock": {
     "kind": "companion",
-    "companion": null
+    "companion": "bright"
    },
    "status": "mvp"
   },
@@ -110,7 +110,7 @@
    "name": "동그란 안경",
    "unlock": {
     "kind": "companion",
-    "companion": null
+    "companion": "doctor"
    },
    "status": "mvp"
   },
@@ -201,7 +201,7 @@
    "name": "꾹꾹이 장갑",
    "unlock": {
     "kind": "companion",
-    "companion": null
+    "companion": "rest"
    },
    "status": "mvp"
   },
