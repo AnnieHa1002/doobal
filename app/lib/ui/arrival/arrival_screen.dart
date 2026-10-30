@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/journey.dart' show Frame;
+import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
 import '../album/album_screen.dart';
 import '../common/corner_button.dart';
@@ -13,7 +15,6 @@ import '../common/frame_style.dart';
 import '../common/framed_painting.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
-import '../common/sketch_painting.dart';
 import '../common/toast.dart';
 import '../map/map_screen.dart';
 
@@ -26,7 +27,8 @@ const _maxBlur = 14.0;
 const _frameThickness = 12.0;
 
 /// 도착: 그림이 종이에 먹이 번지듯 나타나고, 이어서 액자와 이름이 붙고, 방문·거리·날짜·걸음 카드가 나온다.
-/// 내 동네 스케치는 액자 없이 그림만 번지고, 카드에는 이름·거리·날짜·걸음만 나온다.
+/// 내 동네 스케치는 '첫 그림'(첫 여행 짐 꾸러미)이 나무 액자에 낀 채로 번지고(액자 단계·등급 라벨 없음),
+/// 카드에는 제목·이름·거리·날짜·걸음만 나온다.
 /// 닫은 뒤 본 것으로 적는 건 AutoSync가 한다
 class ArrivalScreen extends ConsumerWidget {
   const ArrivalScreen({super.key, required this.journeyId});
@@ -158,14 +160,13 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
 
   /// 그림은 번지며 나타나고(투명 → 불투명, 흐림 → 또렷), 끝나면 액자와 이름이 나타난다
   Widget _paintingAndFrame(ArrivalView v) {
-    final sketch = v.sketch;
+    final firstPack = v.isFirstPack;
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
         final blur = (1 - _painting.value) * _maxBlur;
-        Widget face = sketch == null
-            ? PaintingFace(landmark: v.dest, label: v.dest.name)
-            : SketchThumb(sketch: sketch);
+        Widget face =
+            firstPack ? const FirstPackFace() : PaintingFace(landmark: v.dest, label: v.dest.name);
         if (blur > 0.01) {
           face = ImageFiltered(
             imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur, tileMode: TileMode.decal),
@@ -183,8 +184,7 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
                     fit: StackFit.expand,
                     children: [
                       Padding(
-                        // 스케치는 액자가 없어서 그림이 자리를 다 쓴다
-                        padding: EdgeInsets.all(sketch == null ? frameInset(_frameThickness) : 0),
+                        padding: EdgeInsets.all(frameInset(_frameThickness)),
                         child: ClipRect(
                           child: Opacity(
                             key: const ValueKey('arrival-painting'),
@@ -193,7 +193,14 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
                           ),
                         ),
                       ),
-                      if (sketch == null)
+                      if (firstPack)
+                        // 첫 그림은 처음부터 나무 액자 (나중에 붙는 액자 단계가 없다)
+                        FrameBorder(
+                          key: const ValueKey('arrival-first-pack-frame'),
+                          color: frameColors[Frame.wood]!,
+                          thickness: _frameThickness,
+                        )
+                      else
                         Opacity(
                           key: const ValueKey('arrival-frame'),
                           opacity: _frame.value,
@@ -207,7 +214,7 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
                 ),
               ),
             ),
-            if (sketch == null) ...[
+            if (!firstPack) ...[
               const SizedBox(height: 8),
               Opacity(
                 key: const ValueKey('arrival-frame-label'),
@@ -230,22 +237,25 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
 
   Widget _infoCard(ArrivalView v) {
     const body = TextStyle(fontSize: 14, color: Palette.ink);
-    // 스케치는 액자 등급·몇 번째 방문·재방문 줄이 없다
-    final isSketch = v.sketch != null;
+    // 첫 그림은 액자 등급·몇 번째 방문·재방문 줄이 없다
+    final firstPack = v.isFirstPack;
     final revisit =
-        isSketch ? null : revisitLine(v.visitNo, v.prevFrame, v.newFrame, v.prevBestKm);
+        firstPack ? null : revisitLine(v.visitNo, v.prevFrame, v.newFrame, v.prevBestKm);
     return _Card(
       key: const ValueKey('arrival-card'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            v.dest.name,
+            firstPack ? firstPackLabel : v.dest.name,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
           ),
           const SizedBox(height: 4),
-          if (!isSketch)
-            Text('${v.visitNo}번째 방문', style: body.copyWith(fontWeight: FontWeight.w600)),
+          // 명소는 몇 번째 방문, 첫 그림은 그림 이름
+          Text(
+            firstPack ? firstPackName : '${v.visitNo}번째 방문',
+            style: body.copyWith(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 8),
           Text('이번 여정 ${formatKm(v.journeyKm)}', style: body),
           const SizedBox(height: 2),

@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/framed_painting.dart';
 import '../common/palette.dart';
-import '../common/sketch_painting.dart';
 
 /// 그림 상세: 큰 액자 그림, 이름, 시도·시군구·지형, 액자 등급과 방문 기록.
-/// 내 동네 스케치는 액자·방문 기록이 없어서 큰 그림과 이름·날짜만 보여 준다.
+/// 첫 그림(첫 여행 짐 꾸러미)은 방문 기록이 없어서 나무 액자의 큰 그림과 이름·받은 날짜만 보여 준다.
 /// 공유 버튼은 공유 패키지를 넣을 때 더한다
 class PaintingDetailScreen extends ConsumerWidget {
   const PaintingDetailScreen({super.key, required this.landmarkId});
@@ -49,8 +49,8 @@ class PaintingDetailScreen extends ConsumerWidget {
                   ? const SizedBox.shrink()
                   : SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                      child: painting.sketch != null
-                          ? _sketchContent(painting)
+                      child: painting.isFirstPack
+                          ? _firstPackContent(painting)
                           : _content(painting, visits),
                     ),
             ),
@@ -60,8 +60,8 @@ class PaintingDetailScreen extends ConsumerWidget {
     );
   }
 
-  /// 내 동네 스케치: 큰 그림, 이름, 도착한 날짜
-  Widget _sketchContent(OwnedPaintingView p) {
+  /// 첫 그림: 나무 액자의 큰 그림, `첫 그림 · 첫 여행 짐 꾸러미`, 받은 날짜
+  Widget _firstPackContent(OwnedPaintingView p) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -70,15 +70,15 @@ class PaintingDetailScreen extends ConsumerWidget {
             constraints: const BoxConstraints(maxWidth: 300),
             child: AspectRatio(
               aspectRatio: 4 / 3,
-              child: SketchThumb(key: const ValueKey('detail-sketch'), sketch: p.sketch!),
+              child: FramedPainting.firstPack(key: ValueKey('detail-first-pack'), thickness: 12),
             ),
           ),
         ),
         const SizedBox(height: 16),
-        Text(
-          p.landmark.name,
+        const Text(
+          '$firstPackLabel · $firstPackName',
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Palette.ink),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Palette.ink),
         ),
         const SizedBox(height: 4),
         Text(

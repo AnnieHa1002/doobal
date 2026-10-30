@@ -8,7 +8,6 @@ import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/landmark.dart';
-import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/map_land.dart';
 import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/route.dart';
@@ -2074,33 +2073,20 @@ void main() {
       }
     });
 
-    test('걸어서 도착하면 sketch 그림이 생기고, 다시 그리는 값에 도착 시각·후경·꾸미기가 들어간다', () async {
+    test('걸어서 도착하면 sketch 그림 한 행이 생긴다: visits 1, 도착 시각, seen false', () async {
       final e = await sketchEnv();
       await e.svc.sync(_t0);
-      // 도착 전에 꾸미기를 바꿔도 도착했을 때의 꾸미기가 남는다
-      const look = Look(hair: 3, hairColor: SwatchHairColor(5));
-      await e.db.into(e.db.profile).insertOnConflictUpdate(
-          ProfileCompanion(id: const Value(1), look: Value(jsonEncode(look.toJson()))));
       final end = await walkToSketch(e, t1);
-      await e.db.into(e.db.profile).insertOnConflictUpdate(ProfileCompanion(
-          id: const Value(1), look: Value(jsonEncode(Look.initial.toJson()))));
 
       final p = await e.db.select(e.db.paintingsOwned).getSingle();
       final j = await journeyRow(e);
       expect(p.landmarkId, sketchId);
       expect(p.visits, 1);
+      // 액자 열은 필수라 나무 액자 값이 들어간다 (화면의 나무 액자와 같고 등급 계산에는 쓰지 않는다)
       expect(p.frame, Frame.wood);
       expect(p.bestKm, closeTo(j.totalEffectiveKm, 1e-9));
       expect((p.firstArrivedUtc, p.lastArrivedUtc), (_ms(end), _ms(end)));
       expect(p.seen, isFalse);
-
-      final sketch = Sketch.decode(p.sketch!);
-      expect(sketch.point, destOf(j));
-      expect(sketch.arrivedAt, end);
-      expect(sketch.backdrop, 'capital');
-      expect(sketch.look, look);
-      // 값은 이 다섯 가지뿐 (하늘·계절은 도착 시각으로 다시 계산한다)
-      expect((jsonDecode(p.sketch!) as Map).keys, {'lat', 'lng', 'arrivedUtc', 'backdrop', 'look'});
 
       expect(j.status, JourneyStatus.arrived);
       expect(j.arrivedUtc, _ms(end));
@@ -2130,7 +2116,7 @@ void main() {
       expect((await e.svc.snapshot(_t0.add(const Duration(hours: 3)))).unseenPaintings, 0);
     });
 
-    test('도착 화면 값: 스케치 값과 가짜 명소, 액자·권역 소품·지난번 거리는 없다', () async {
+    test('도착 화면 값: 첫 그림 표시와 가짜 명소, 액자·권역 소품·지난번 거리는 없다', () async {
       final e = await sketchEnv();
       await e.svc.sync(_t0);
       final end = await walkToSketch(e, t1);
@@ -2144,23 +2130,23 @@ void main() {
       final v = await e.svc.arrivalView(j.id);
       expect(v.dest.id, sketchId);
       expect(v.dest.name, '내 동네 스케치');
-      expect(v.sketch, isNotNull);
-      expect(v.sketch!.point, destOf(j));
-      expect(v.sketch!.arrivedAt, end);
+      expect(v.isFirstPack, isTrue);
+      expect(v.arrivedAt, end);
+      expect((v.prevFrame, v.newFrame), (null, Frame.wood));
       expect(v.journeyKm, closeTo(j.totalEffectiveKm, 1e-9));
       expect(v.daySteps, greaterThan(0));
       expect((v.regionProp, v.prevBestKm, v.prevFrame), (null, null, null));
       expect(v.visitNo, 1);
     });
 
-    test('명소 도착의 도착 화면 값에는 스케치가 없다', () async {
+    test('명소 도착의 도착 화면 값은 첫 그림이 아니다', () async {
       final e = await sketchEnv();
       await e.svc.sync(_t0);
       await _insertArrival(e.db, 'j9', 'kr001', _t0.add(const Duration(hours: 1)));
-      expect((await e.svc.arrivalView('j9')).sketch, isNull);
+      expect((await e.svc.arrivalView('j9')).isFirstPack, isFalse);
     });
 
-    test('paintings: 스케치도 그림 목록에 있고 명소가 아니라 지도·권역 진행에서는 뺀다', () async {
+    test('paintings: 첫 그림도 그림 목록에 있고 명소가 아니라 지도·권역 진행에서는 뺀다', () async {
       final e = await sketchEnv();
       await e.svc.sync(_t0);
       // 도착 전에는 가상 목적지 좌표와 'sketch' 목적지
@@ -2180,8 +2166,8 @@ void main() {
       final list = await e.svc.paintings();
       expect(list, hasLength(1));
       final p = list.single;
-      expect((p.landmark.id, p.landmark.name, p.isSketch), (sketchId, '내 동네 스케치', true));
-      expect(p.sketch!.arrivedAt, end);
+      expect((p.landmark.id, p.landmark.name, p.isFirstPack), (sketchId, '첫 여행 짐 꾸러미', true));
+      expect(p.frame, Frame.wood);
       expect((p.visits, p.firstArrivedAt, p.lastArrivedAt), (1, end, end));
 
       map = await e.svc.mapData(end);
@@ -2195,7 +2181,7 @@ void main() {
       expect(map.paths.single.last, destOf(j));
     });
 
-    test('스케치와 명소 그림이 섞이면 도착 순서대로 나오고, 명소만 방문한 곳에 센다', () async {
+    test('첫 그림과 명소 그림이 섞이면 도착 순서대로 나오고, 명소만 방문한 곳에 센다', () async {
       final e = await sketchEnv();
       await e.svc.sync(_t0);
       final end = await walkToSketch(e, t1);
@@ -2204,12 +2190,35 @@ void main() {
 
       final list = await e.svc.paintings();
       expect([for (final p in list) p.landmark.id], [sketchId, dest.id]);
-      expect(list.last.isSketch, isFalse);
+      expect(list.last.isFirstPack, isFalse);
       expect((await e.svc.mapData(end2)).visited.keys, [dest.id]);
       expect((await e.svc.snapshot(end2)).paintingsCount, 2);
     });
 
-    test('스케치도 화집 벽에 걸 수 있다', () async {
+    test('첫 그림은 명소 그림의 방문 수·액자·권역 소품 판정에 영향이 없다', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      final end = await walkToSketch(e, t1);
+      final dest = _destFor(destOf(await journeyRow(e)), Frame.silver);
+      final start = end.add(const Duration(hours: 1));
+      await _trip(e, dest.id, start);
+
+      final rows = {for (final r in await e.db.select(e.db.paintingsOwned).get()) r.landmarkId: r};
+      expect(rows.keys.toSet(), {sketchId, dest.id});
+      expect((rows[sketchId]!.visits, rows[sketchId]!.frame), (1, Frame.wood));
+      expect((rows[dest.id]!.visits, rows[dest.id]!.frame), (1, Frame.silver));
+
+      // 첫 방문 그대로: 명소의 도착 화면은 첫 그림이 아니고 1번째 방문, 권역 소품도 없다
+      final v = await e.svc.arrivalView('j${_ms(start)}');
+      expect((v.isFirstPack, v.visitNo, v.prevFrame, v.newFrame), (false, 1, null, Frame.silver));
+      expect((v.prevBestKm, v.regionProp), (null, null));
+      // 거리로 얻는 소품은 늘어도, 권역을 채워 받는 소품은 없다
+      final owned = await _propIds(e.db);
+      final regionProps = [for (final p in props) if (p.kind == PropUnlockKind.region) p.id];
+      expect(regionProps.where(owned.contains), isEmpty);
+    });
+
+    test('첫 그림도 화집 벽에 걸 수 있다', () async {
       final e = await sketchEnv();
       await e.svc.sync(_t0);
       expect(() => e.svc.setWall(0, sketchId), throwsStateError);

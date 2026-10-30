@@ -7,12 +7,11 @@ import '../../domain/sketch.dart';
 import '../common/framed_painting.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
-import '../common/sketch_painting.dart';
 
 /// 벽 한 칸의 크기 비율 (너비 : 높이 = 4 : 5)
 const _wallSlotAspect = 0.8;
 
-/// 화집 벽: 액자 [wall].length칸을 한 줄로. 건 칸은 색 액자, 빈 칸은 빈 액자.
+/// 화집 벽: 액자 [wall].length칸을 한 줄로. 건 칸은 색 액자(첫 그림은 나무 액자), 빈 칸은 빈 액자.
 /// [replacing]이면 칸마다 테라코타 테두리를 둘러 눌러서 고르게 한다
 class WallRow extends StatelessWidget {
   const WallRow({
@@ -44,7 +43,6 @@ class WallRow extends StatelessWidget {
 
   Widget _slot(int i) {
     final p = wall[i] == null ? null : owned[wall[i]];
-    final sketch = p?.sketch;
     return AspectRatio(
       aspectRatio: _wallSlotAspect,
       child: GestureDetector(
@@ -64,9 +62,8 @@ class WallRow extends StatelessWidget {
             padding: const EdgeInsets.all(2),
             child: p == null
                 ? const FramedPainting.empty(thickness: 5)
-                : sketch != null
-                    // 내 동네 스케치는 액자 등급이 없다
-                    ? SketchThumb(sketch: sketch)
+                : p.isFirstPack
+                    ? const FramedPainting.firstPack(thickness: 5)
                     : FramedPainting(landmark: p.landmark, frame: p.frame, thickness: 5),
           ),
         ),
@@ -292,11 +289,11 @@ class PaintingCell extends StatelessWidget {
   }
 }
 
-/// 내 동네 스케치 칸 (그림 격자 맨 앞): 얻었으면 그림 썸네일, 아니면 빈 액자. 아래에 이름.
-/// 액자 등급이 없어서 색 액자 대신 얇은 선만 두른다. 누르는 동작은 얻었을 때만 [onTap]이 있다.
+/// 첫 그림 칸 (그림 격자 맨 앞): 얻었으면 나무 액자에 낀 짐 꾸러미 그림, 아니면 빈 액자.
+/// 아래에 이름표 '첫 그림'. 누르는 동작은 얻었을 때만 [onTap]이 있다.
 /// [isNew]이면 오른쪽 위에 알림 점이 붙는다 (명소 칸과 같다)
-class SketchCell extends StatelessWidget {
-  const SketchCell({super.key, required this.owned, this.onTap, this.isNew = false});
+class FirstPackCell extends StatelessWidget {
+  const FirstPackCell({super.key, required this.owned, this.onTap, this.isNew = false});
 
   final OwnedPaintingView? owned;
   final VoidCallback? onTap;
@@ -304,7 +301,7 @@ class SketchCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sketch = owned?.sketch;
+    final has = owned != null;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -315,15 +312,13 @@ class SketchCell extends StatelessWidget {
           Column(
             children: [
               Expanded(
-                child: sketch == null
-                    ? const FramedPainting.empty()
-                    : SketchThumb(key: const ValueKey('sketch-thumb'), sketch: sketch),
+                child: has ? const FramedPainting.firstPack() : const FramedPainting.empty(),
               ),
               const SizedBox(height: 4),
               SizedBox(
                 height: 32,
                 child: Text(
-                  sketchName,
+                  firstPackLabel,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -331,7 +326,7 @@ class SketchCell extends StatelessWidget {
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     height: 1.25,
-                    color: sketch == null ? Palette.subInk : Palette.ink,
+                    color: has ? Palette.ink : Palette.subInk,
                   ),
                 ),
               ),
@@ -439,8 +434,8 @@ Future<String?> showPaintingPicker(BuildContext context, List<OwnedPaintingView>
             void pick() => Navigator.of(context).pop(p.landmark.id);
             return KeyedSubtree(
               key: ValueKey('pick-${p.landmark.id}'),
-              child: p.isSketch
-                  ? SketchCell(owned: p, onTap: pick)
+              child: p.isFirstPack
+                  ? FirstPackCell(owned: p, onTap: pick)
                   : PaintingCell(landmark: p.landmark, owned: p, onTap: pick),
             );
           },

@@ -13,7 +13,7 @@ import 'album_widgets.dart';
 import 'painting_detail_screen.dart';
 import 'prop_text.dart';
 
-/// 화집: 벽에 건 액자 4칸, 그림 탭(명소 101곳 칸)과 소품 탭.
+/// 화집: 벽에 건 액자 4칸, 그림 탭(첫 그림 1칸 + 명소 101곳 칸)과 소품 탭.
 /// [hangLandmarkId]가 있으면 벽이 가득 찬 채 도착해서 연 것이라, 바꿀 액자를 눌러 거는 모드로 시작한다
 class AlbumScreen extends ConsumerStatefulWidget {
   const AlbumScreen({super.key, this.hangLandmarkId});
@@ -163,18 +163,18 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
         if (_tab == 0)
           ..._paintingSlivers(owned, landmarks)
         else
-          // 내 동네 스케치는 명소가 아니라 권역 진행에 세지 않는다
+          // 첫 그림은 명소가 아니라 권역 진행에 세지 않는다
           _propSliver(owned.keys.where((id) => id != sketchId), landmarks),
       ],
     );
   }
 
   /// 그림 탭: 권역 칩과 명소 칸 3열 (landmarks.json 순서). 칩이 `전체`일 때만
-  /// 맨 앞에 내 동네 스케치 칸이 하나 더 있다
+  /// 맨 앞에 첫 그림 칸이 하나 더 있다
   List<Widget> _paintingSlivers(Map<String, OwnedPaintingView> owned, List<Landmark> landmarks) {
     final shown = [for (final l in landmarks) if (_region == null || l.region == _region) l];
-    final withSketch = _region == null;
-    final sketch = owned[sketchId];
+    final withFirstPack = _region == null;
+    final firstPack = owned[sketchId];
     void openDetail(String id) => Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => PaintingDetailScreen(landmarkId: id)));
     return [
@@ -194,17 +194,17 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
             crossAxisSpacing: 8,
             childAspectRatio: 0.78,
           ),
-          itemCount: shown.length + (withSketch ? 1 : 0),
+          itemCount: shown.length + (withFirstPack ? 1 : 0),
           itemBuilder: (context, i) {
-            if (withSketch && i == 0) {
-              return SketchCell(
+            if (withFirstPack && i == 0) {
+              return FirstPackCell(
                 key: const ValueKey('cell-$sketchId'),
-                owned: sketch,
+                owned: firstPack,
                 isNew: _newIds.contains(sketchId),
-                onTap: sketch == null ? null : () => openDetail(sketchId),
+                onTap: firstPack == null ? null : () => openDetail(sketchId),
               );
             }
-            final l = shown[withSketch ? i - 1 : i];
+            final l = shown[withFirstPack ? i - 1 : i];
             final p = owned[l.id];
             return PaintingCell(
               key: ValueKey('cell-${l.id}'),

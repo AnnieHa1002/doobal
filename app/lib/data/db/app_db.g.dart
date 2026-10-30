@@ -2655,15 +2655,6 @@ class $PaintingsOwnedTable extends PaintingsOwned
     ),
     defaultValue: const Constant(true),
   );
-  static const VerificationMeta _sketchMeta = const VerificationMeta('sketch');
-  @override
-  late final GeneratedColumn<String> sketch = GeneratedColumn<String>(
-    'sketch',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   @override
   List<GeneratedColumn> get $columns => [
     landmarkId,
@@ -2673,7 +2664,6 @@ class $PaintingsOwnedTable extends PaintingsOwned
     firstArrivedUtc,
     lastArrivedUtc,
     seen,
-    sketch,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2739,12 +2729,6 @@ class $PaintingsOwnedTable extends PaintingsOwned
         seen.isAcceptableOrUnknown(data['seen']!, _seenMeta),
       );
     }
-    if (data.containsKey('sketch')) {
-      context.handle(
-        _sketchMeta,
-        sketch.isAcceptableOrUnknown(data['sketch']!, _sketchMeta),
-      );
-    }
     return context;
   }
 
@@ -2784,10 +2768,6 @@ class $PaintingsOwnedTable extends PaintingsOwned
         DriftSqlType.bool,
         data['${effectivePrefix}seen'],
       )!,
-      sketch: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}sketch'],
-      ),
     );
   }
 
@@ -2811,9 +2791,6 @@ class PaintingOwnedRow extends DataClass
   final int firstArrivedUtc;
   final int lastArrivedUtc;
   final bool seen;
-
-  /// 다시 그리는 값 JSON (domain/sketch.dart의 Sketch). landmarkId가 'sketch'인 그림만, 명소 그림은 null
-  final String? sketch;
   const PaintingOwnedRow({
     required this.landmarkId,
     required this.visits,
@@ -2822,7 +2799,6 @@ class PaintingOwnedRow extends DataClass
     required this.firstArrivedUtc,
     required this.lastArrivedUtc,
     required this.seen,
-    this.sketch,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2838,9 +2814,6 @@ class PaintingOwnedRow extends DataClass
     map['first_arrived_utc'] = Variable<int>(firstArrivedUtc);
     map['last_arrived_utc'] = Variable<int>(lastArrivedUtc);
     map['seen'] = Variable<bool>(seen);
-    if (!nullToAbsent || sketch != null) {
-      map['sketch'] = Variable<String>(sketch);
-    }
     return map;
   }
 
@@ -2853,9 +2826,6 @@ class PaintingOwnedRow extends DataClass
       firstArrivedUtc: Value(firstArrivedUtc),
       lastArrivedUtc: Value(lastArrivedUtc),
       seen: Value(seen),
-      sketch: sketch == null && nullToAbsent
-          ? const Value.absent()
-          : Value(sketch),
     );
   }
 
@@ -2874,7 +2844,6 @@ class PaintingOwnedRow extends DataClass
       firstArrivedUtc: serializer.fromJson<int>(json['firstArrivedUtc']),
       lastArrivedUtc: serializer.fromJson<int>(json['lastArrivedUtc']),
       seen: serializer.fromJson<bool>(json['seen']),
-      sketch: serializer.fromJson<String?>(json['sketch']),
     );
   }
   @override
@@ -2890,7 +2859,6 @@ class PaintingOwnedRow extends DataClass
       'firstArrivedUtc': serializer.toJson<int>(firstArrivedUtc),
       'lastArrivedUtc': serializer.toJson<int>(lastArrivedUtc),
       'seen': serializer.toJson<bool>(seen),
-      'sketch': serializer.toJson<String?>(sketch),
     };
   }
 
@@ -2902,7 +2870,6 @@ class PaintingOwnedRow extends DataClass
     int? firstArrivedUtc,
     int? lastArrivedUtc,
     bool? seen,
-    Value<String?> sketch = const Value.absent(),
   }) => PaintingOwnedRow(
     landmarkId: landmarkId ?? this.landmarkId,
     visits: visits ?? this.visits,
@@ -2911,7 +2878,6 @@ class PaintingOwnedRow extends DataClass
     firstArrivedUtc: firstArrivedUtc ?? this.firstArrivedUtc,
     lastArrivedUtc: lastArrivedUtc ?? this.lastArrivedUtc,
     seen: seen ?? this.seen,
-    sketch: sketch.present ? sketch.value : this.sketch,
   );
   PaintingOwnedRow copyWithCompanion(PaintingsOwnedCompanion data) {
     return PaintingOwnedRow(
@@ -2928,7 +2894,6 @@ class PaintingOwnedRow extends DataClass
           ? data.lastArrivedUtc.value
           : this.lastArrivedUtc,
       seen: data.seen.present ? data.seen.value : this.seen,
-      sketch: data.sketch.present ? data.sketch.value : this.sketch,
     );
   }
 
@@ -2941,8 +2906,7 @@ class PaintingOwnedRow extends DataClass
           ..write('bestKm: $bestKm, ')
           ..write('firstArrivedUtc: $firstArrivedUtc, ')
           ..write('lastArrivedUtc: $lastArrivedUtc, ')
-          ..write('seen: $seen, ')
-          ..write('sketch: $sketch')
+          ..write('seen: $seen')
           ..write(')'))
         .toString();
   }
@@ -2956,7 +2920,6 @@ class PaintingOwnedRow extends DataClass
     firstArrivedUtc,
     lastArrivedUtc,
     seen,
-    sketch,
   );
   @override
   bool operator ==(Object other) =>
@@ -2968,8 +2931,7 @@ class PaintingOwnedRow extends DataClass
           other.bestKm == this.bestKm &&
           other.firstArrivedUtc == this.firstArrivedUtc &&
           other.lastArrivedUtc == this.lastArrivedUtc &&
-          other.seen == this.seen &&
-          other.sketch == this.sketch);
+          other.seen == this.seen);
 }
 
 class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
@@ -2980,7 +2942,6 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
   final Value<int> firstArrivedUtc;
   final Value<int> lastArrivedUtc;
   final Value<bool> seen;
-  final Value<String?> sketch;
   final Value<int> rowid;
   const PaintingsOwnedCompanion({
     this.landmarkId = const Value.absent(),
@@ -2990,7 +2951,6 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     this.firstArrivedUtc = const Value.absent(),
     this.lastArrivedUtc = const Value.absent(),
     this.seen = const Value.absent(),
-    this.sketch = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PaintingsOwnedCompanion.insert({
@@ -3001,7 +2961,6 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     required int firstArrivedUtc,
     required int lastArrivedUtc,
     this.seen = const Value.absent(),
-    this.sketch = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : landmarkId = Value(landmarkId),
        visits = Value(visits),
@@ -3017,7 +2976,6 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     Expression<int>? firstArrivedUtc,
     Expression<int>? lastArrivedUtc,
     Expression<bool>? seen,
-    Expression<String>? sketch,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3028,7 +2986,6 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
       if (firstArrivedUtc != null) 'first_arrived_utc': firstArrivedUtc,
       if (lastArrivedUtc != null) 'last_arrived_utc': lastArrivedUtc,
       if (seen != null) 'seen': seen,
-      if (sketch != null) 'sketch': sketch,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3041,7 +2998,6 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     Value<int>? firstArrivedUtc,
     Value<int>? lastArrivedUtc,
     Value<bool>? seen,
-    Value<String?>? sketch,
     Value<int>? rowid,
   }) {
     return PaintingsOwnedCompanion(
@@ -3052,7 +3008,6 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
       firstArrivedUtc: firstArrivedUtc ?? this.firstArrivedUtc,
       lastArrivedUtc: lastArrivedUtc ?? this.lastArrivedUtc,
       seen: seen ?? this.seen,
-      sketch: sketch ?? this.sketch,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3083,9 +3038,6 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     if (seen.present) {
       map['seen'] = Variable<bool>(seen.value);
     }
-    if (sketch.present) {
-      map['sketch'] = Variable<String>(sketch.value);
-    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3102,7 +3054,6 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
           ..write('firstArrivedUtc: $firstArrivedUtc, ')
           ..write('lastArrivedUtc: $lastArrivedUtc, ')
           ..write('seen: $seen, ')
-          ..write('sketch: $sketch, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5715,7 +5666,6 @@ typedef $$PaintingsOwnedTableCreateCompanionBuilder =
       required int firstArrivedUtc,
       required int lastArrivedUtc,
       Value<bool> seen,
-      Value<String?> sketch,
       Value<int> rowid,
     });
 typedef $$PaintingsOwnedTableUpdateCompanionBuilder =
@@ -5727,7 +5677,6 @@ typedef $$PaintingsOwnedTableUpdateCompanionBuilder =
       Value<int> firstArrivedUtc,
       Value<int> lastArrivedUtc,
       Value<bool> seen,
-      Value<String?> sketch,
       Value<int> rowid,
     });
 
@@ -5775,11 +5724,6 @@ class $$PaintingsOwnedTableFilterComposer
     column: $table.seen,
     builder: (column) => ColumnFilters(column),
   );
-
-  ColumnFilters<String> get sketch => $composableBuilder(
-    column: $table.sketch,
-    builder: (column) => ColumnFilters(column),
-  );
 }
 
 class $$PaintingsOwnedTableOrderingComposer
@@ -5825,11 +5769,6 @@ class $$PaintingsOwnedTableOrderingComposer
     column: $table.seen,
     builder: (column) => ColumnOrderings(column),
   );
-
-  ColumnOrderings<String> get sketch => $composableBuilder(
-    column: $table.sketch,
-    builder: (column) => ColumnOrderings(column),
-  );
 }
 
 class $$PaintingsOwnedTableAnnotationComposer
@@ -5867,9 +5806,6 @@ class $$PaintingsOwnedTableAnnotationComposer
 
   GeneratedColumn<bool> get seen =>
       $composableBuilder(column: $table.seen, builder: (column) => column);
-
-  GeneratedColumn<String> get sketch =>
-      $composableBuilder(column: $table.sketch, builder: (column) => column);
 }
 
 class $$PaintingsOwnedTableTableManager
@@ -5910,7 +5846,6 @@ class $$PaintingsOwnedTableTableManager
                 Value<int> firstArrivedUtc = const Value.absent(),
                 Value<int> lastArrivedUtc = const Value.absent(),
                 Value<bool> seen = const Value.absent(),
-                Value<String?> sketch = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaintingsOwnedCompanion(
                 landmarkId: landmarkId,
@@ -5920,7 +5855,6 @@ class $$PaintingsOwnedTableTableManager
                 firstArrivedUtc: firstArrivedUtc,
                 lastArrivedUtc: lastArrivedUtc,
                 seen: seen,
-                sketch: sketch,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5932,7 +5866,6 @@ class $$PaintingsOwnedTableTableManager
                 required int firstArrivedUtc,
                 required int lastArrivedUtc,
                 Value<bool> seen = const Value.absent(),
-                Value<String?> sketch = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaintingsOwnedCompanion.insert(
                 landmarkId: landmarkId,
@@ -5942,7 +5875,6 @@ class $$PaintingsOwnedTableTableManager
                 firstArrivedUtc: firstArrivedUtc,
                 lastArrivedUtc: lastArrivedUtc,
                 seen: seen,
-                sketch: sketch,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

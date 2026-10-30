@@ -61,16 +61,14 @@ class SceneLook {
 }
 
 /// 지금 시각·위치의 장면. 하늘은 그 위치의 일출·일몰로 환산한다.
-/// 후경은 위치로 정하되, [backdrop]이 있으면 그걸 쓴다 (적어 둔 값으로 다시 그릴 때).
 /// 위치는 한국 안이어야 한다(sunTimes가 한국 밖 극지방에서 StateError)
 SceneLook sceneLook(
   DateTime nowUtc,
   LatLng position,
   bool onSea,
   List<Landmark> landmarks,
-  Rules rules, {
-  String? backdrop,
-}) {
+  Rules rules,
+) {
   final day = kstDayKey(nowUtc);
   final sun = sunTimes(position, day, rules.sunZenithDeg);
   final mix = skyMixAt(nowUtc, sun, rules);
@@ -78,7 +76,7 @@ SceneLook sceneLook(
     mix,
     skyLookOf(mix, rules),
     celestialAt(nowUtc, sun, rules),
-    backdrop ?? backdropAt(RoutePosition(position, 0, onSea), landmarks, rules),
+    backdropAt(RoutePosition(position, 0, onSea), landmarks, rules),
     seasonOf(day, rules),
   );
 }

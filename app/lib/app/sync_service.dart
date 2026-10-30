@@ -1,8 +1,6 @@
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../data/db/app_db.dart';
 import '../data/step_source.dart';
@@ -13,7 +11,6 @@ import '../domain/gait.dart';
 import '../domain/geo.dart';
 import '../domain/journey.dart';
 import '../domain/landmark.dart';
-import '../domain/look.dart';
 import '../domain/prop.dart';
 import '../domain/route.dart';
 import '../domain/rules.dart';
@@ -104,7 +101,7 @@ class ArrivalView {
     required this.daySteps,
     required this.prevBestKm,
     required this.regionProp,
-    this.sketch,
+    this.isFirstPack = false,
   });
 
   final String journeyId;
@@ -132,9 +129,9 @@ class ArrivalView {
   /// 이 도착이 그 권역을 채웠을 때 받는 권역 소품. 아니면 null
   final Prop? regionProp;
 
-  /// 내 동네 스케치에 도착했으면 그 그림을 다시 그리는 값, 명소면 null.
-  /// 스케치는 액자 등급·몇 번째 방문·권역 완성이 없다 (newFrame은 자리만 채운 값)
-  final Sketch? sketch;
+  /// 내 동네 스케치에 도착해서 받은 첫 그림(첫 여행 짐 꾸러미)이면 true, 명소면 false.
+  /// 첫 그림은 액자 등급·몇 번째 방문·권역 완성이 없다 (newFrame은 늘 나무 액자)
+  final bool isFirstPack;
 
   /// 재방문해서 액자가 올랐는가
   bool get frameUp => prevFrame != null && newFrame.index > prevFrame!.index;
@@ -149,14 +146,14 @@ class OwnedPaintingView {
     required this.bestKm,
     required this.firstArrivedAt,
     required this.lastArrivedAt,
-    this.sketch,
+    this.isFirstPack = false,
   });
 
-  /// 내 동네 스케치면 가짜 명소(id 'sketch')
+  /// 첫 그림이면 가짜 명소 [firstPackLandmark] (id 'sketch')
   final Landmark landmark;
   final int visits;
 
-  /// 내 동네 스케치는 액자가 없다 (필수 열이라 wood로 채운 값이고 화면에 쓰지 않는다)
+  /// 첫 그림은 늘 나무 액자 (화면의 나무 액자와 같고, 등급 계산에는 쓰지 않는다)
   final Frame frame;
 
   /// 가장 멀리서 걸어 온 환산 거리(km)
@@ -164,10 +161,8 @@ class OwnedPaintingView {
   final DateTime firstArrivedAt;
   final DateTime lastArrivedAt;
 
-  /// 내 동네 스케치면 다시 그리는 값, 명소 그림이면 null
-  final Sketch? sketch;
-
-  bool get isSketch => sketch != null;
+  /// 내 동네 스케치에서 받은 첫 그림(첫 여행 짐 꾸러미)이면 true, 명소 그림이면 false
+  final bool isFirstPack;
 }
 
 /// 그림 상세의 방문 한 줄
@@ -510,25 +505,18 @@ class SyncService {
     ));
   }
 
-  /// 내 동네 스케치에 도착: 그림에 다시 그리는 값(도착 시각·후경·그때의 꾸미기)을 적는다.
-  /// 계절과 하늘은 도착 시각으로 다시 계산하니 적지 않는다. 액자 등급·권역은 건드리지 않는다
+  /// 내 동네 스케치에 도착: 고정 그림 '첫 여행 짐 꾸러미'를 소장한다 (visits 1과 도착 시각만 남긴다).
+  /// 액자 등급·권역은 건드리지 않는다
   Future<void> _arriveSketch(JourneyRow active, Landmark dest, int at) async {
-    final sketch = Sketch(
-      point: dest.latLng,
-      arrivedAt: _utc(at),
-      backdrop: dest.backdrop,
-      look: await _lookNow(),
-    );
     await db.into(db.paintingsOwned).insertOnConflictUpdate(PaintingsOwnedCompanion.insert(
           landmarkId: sketchId,
           visits: 1,
-          // 액자 열은 필수라 wood로 채울 뿐, 스케치는 액자 등급이 없고 화면에도 쓰지 않는다
+          // 액자 열은 필수라 wood를 넣는다. 화면의 나무 액자와 같고 등급 계산에는 쓰지 않는다
           frame: Frame.wood,
           bestKm: active.totalEffectiveKm,
           firstArrivedUtc: at,
           lastArrivedUtc: at,
           seen: const Value(false),
-          sketch: Value(sketch.encode()),
         ));
     await (db.update(db.journeys)..where((t) => t.id.equals(active.id))).write(JourneysCompanion(
       status: const Value(JourneyStatus.arrived),
@@ -588,9 +576,7 @@ class SyncService {
           ..where((t) => t.day.equals(kstDayKey(arrivedAt))))
         .getSingleOrNull();
     if (dest.id == sketchId) {
-      final owned = await _ownedRow(sketchId);
-      final sketch = owned == null ? null : _sketchOf(owned);
-      if (sketch == null) throw StateError('스케치 그림이 없어요: $journeyId');
+      if (await _ownedRow(sketchId) == null) throw StateError('첫 그림이 없어요: $journeyId');
       return ArrivalView(
         journeyId: row.id,
         dest: dest,
@@ -602,7 +588,7 @@ class SyncService {
         daySteps: day?.steps ?? 0,
         prevBestKm: null,
         regionProp: null,
-        sketch: sketch,
+        isFirstPack: true,
       );
     }
     // 그때까지 얻은 그림만 본다 (이 도착 뒤에 채운 권역을 이 도착의 일로 치지 않게)
@@ -698,13 +684,11 @@ class SyncService {
     return [for (final r in rows) ?_paintingOf(r)];
   }
 
-  /// 그림 한 행을 화집에서 보는 값으로. 내 동네 스케치는 가짜 명소와 다시 그리는 값을 붙이고,
-  /// 명소 목록에 없는 그림(옛 데이터)이나 값이 깨진 스케치는 null
+  /// 그림 한 행을 화집에서 보는 값으로. 'sketch' 행은 첫 그림이라 가짜 명소 [firstPackLandmark]를 붙이고,
+  /// 명소 목록에 없는 그림(옛 데이터)은 null
   OwnedPaintingView? _paintingOf(PaintingOwnedRow r) {
-    final sketch = r.landmarkId == sketchId ? _sketchOf(r) : null;
-    final landmark = r.landmarkId == sketchId
-        ? (sketch == null ? null : _sketchLandmarkAt(sketch.point))
-        : landmarks[r.landmarkId];
+    final isFirstPack = r.landmarkId == sketchId;
+    final landmark = isFirstPack ? firstPackLandmark : landmarks[r.landmarkId];
     if (landmark == null) return null;
     return OwnedPaintingView(
       landmark: landmark,
@@ -713,7 +697,7 @@ class SyncService {
       bestKm: r.bestKm,
       firstArrivedAt: _utc(r.firstArrivedUtc),
       lastArrivedAt: _utc(r.lastArrivedUtc),
-      sketch: sketch,
+      isFirstPack: isFirstPack,
     );
   }
 
@@ -1121,32 +1105,8 @@ class SyncService {
             r.landmarkId,
       };
 
-  /// 스케치 그림의 다시 그리는 값. 없거나 깨졌으면 null
-  Sketch? _sketchOf(PaintingOwnedRow r) {
-    final text = r.sketch;
-    if (text == null) return null;
-    try {
-      return Sketch.decode(text);
-    } on Object catch (e) {
-      debugPrint('스케치 값을 읽지 못함: $e');
-      return null;
-    }
-  }
-
   Future<ProfileRow?> _profileRow() =>
       (db.select(db.profile)..where((t) => t.id.equals(1))).getSingleOrNull();
-
-  /// 지금 꾸미기 (Profile.look). 없거나 읽지 못하면 기본 모습
-  Future<Look> _lookNow() async {
-    final text = (await _profileRow())?.look;
-    if (text == null) return Look.initial;
-    try {
-      return Look.fromJson(jsonDecode(text) as Map<String, dynamic>);
-    } on Object catch (e) {
-      debugPrint('꾸미기 값을 읽지 못함: $e');
-      return Look.initial;
-    }
-  }
 
   WalkSession _sessionOf(WalkSessionRow r) => WalkSession(
         start: _utc(r.startUtc),

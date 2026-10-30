@@ -7,6 +7,22 @@ import 'package:flutter_test/flutter_test.dart';
 Future<int> _userVersion(AppDb db) async =>
     (await db.customSelect('PRAGMA user_version').getSingle()).read<int>('user_version');
 
+Future<List<String>> _columns(AppDb db, String table) async => [
+      for (final r in await db.customSelect('PRAGMA table_info($table)').get())
+        r.read<String>('name'),
+    ];
+
+/// 그림 표의 열 (스키마 7의 정의. 첫 그림은 고정 그림이라 다시 그리는 값 열이 없다)
+const _paintingColumns = [
+  'landmark_id',
+  'visits',
+  'frame',
+  'best_km',
+  'first_arrived_utc',
+  'last_arrived_utc',
+  'seen',
+];
+
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
@@ -32,8 +48,8 @@ void main() {
     expect((await db.select(db.paintingsOwned).getSingle()).frame, Frame.silver);
     // 그림의 seen 기본값은 true (새 그림 표시는 도착할 때 false로 넣는다), 소품은 false
     expect((await db.select(db.paintingsOwned).getSingle()).seen, isTrue);
-    // 명소 그림은 다시 그리는 값(sketch)이 없고, 스케치 그림은 JSON 글자를 넣는다
-    expect((await db.select(db.paintingsOwned).getSingle()).sketch, isNull);
+    // 첫 그림(landmarkId 'sketch')은 visits 1과 도착 시각만 넣는다 (다시 그리는 값 열은 없다)
+    expect(await _columns(db, 'paintings_owned'), _paintingColumns);
     await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
           landmarkId: 'sketch',
           visits: 1,
@@ -41,13 +57,12 @@ void main() {
           bestKm: 2.5,
           firstArrivedUtc: 1,
           lastArrivedUtc: 1,
-          sketch: const Value('{"lat":37.5}'),
+          seen: const Value(false),
         ));
-    expect(
-        (await (db.select(db.paintingsOwned)..where((t) => t.landmarkId.equals('sketch')))
-                .getSingle())
-            .sketch,
-        '{"lat":37.5}');
+    final firstPack = await (db.select(db.paintingsOwned)
+          ..where((t) => t.landmarkId.equals('sketch')))
+        .getSingle();
+    expect((firstPack.visits, firstPack.frame, firstPack.seen), (1, Frame.wood, false));
     // 여정의 가상 목적지 좌표는 비워 둘 수 있다
     await db.into(db.journeys).insert(JourneysCompanion.insert(
           id: 'j1',
@@ -179,17 +194,8 @@ void main() {
           seen: const Value(false),
         ));
     expect((await db.select(db.paintingsOwned).getSingle()).seen, isFalse);
-    // 1에서 올라오면 그림 표는 처음부터 sketch 열도 있다 (열을 또 더하다 실패하지 않는다)
-    await db.into(db.paintingsOwned).insertOnConflictUpdate(PaintingsOwnedCompanion.insert(
-          landmarkId: 'kr001',
-          visits: 1,
-          frame: Frame.wood,
-          bestKm: 5,
-          firstArrivedUtc: 1,
-          lastArrivedUtc: 1,
-          sketch: const Value('{}'),
-        ));
-    expect((await db.select(db.paintingsOwned).getSingle()).sketch, '{}');
+    // 그림 표는 지금 정의 그대로다 (다시 그리는 값 열은 어디서 올라와도 없다)
+    expect(await _columns(db, 'paintings_owned'), _paintingColumns);
   });
 
   test('스키마 2(프로필 표가 없던 때)에서 열면 7로 올라가고 옛 행이 그대로 남는다', () async {
@@ -253,8 +259,8 @@ void main() {
     final painting = await db.select(db.paintingsOwned).getSingle();
     expect((painting.landmarkId, painting.visits, painting.frame), ('kr001', 2, Frame.silver));
     expect(painting.seen, isTrue);
-    // 그림 표에 sketch 열이 생겼고 옛 그림은 비어 있다. 여정 표에는 가상 목적지 열이 생겼다
-    expect(painting.sketch, isNull);
+    // 그림 표에는 열이 더해지지 않았다. 여정 표에는 가상 목적지 열이 생겼다
+    expect(await _columns(db, 'paintings_owned'), _paintingColumns);
     expect(rows['j1']!.destLat, isNull);
     expect((await db.select(db.propsOwned).getSingle()).seen, isTrue);
     // 벽 표도 새로 생겼고 비어 있다
@@ -307,7 +313,7 @@ void main() {
     final painting = await db.select(db.paintingsOwned).getSingle();
     expect((painting.landmarkId, painting.visits, painting.frame), ('kr001', 1, Frame.wood));
     expect(painting.seen, isTrue);
-    expect(painting.sketch, isNull);
+    expect(await _columns(db, 'paintings_owned'), _paintingColumns);
     expect(j.destLng, isNull);
     expect((await db.select(db.propsOwned).getSingle()).propId, 'hat_01');
     // 프로필의 옛 열은 그대로고 시작 흐름 열이 새로 생겨 비어 있다
@@ -379,7 +385,7 @@ void main() {
     expect(paintings.values.every((r) => r.seen), isTrue);
     expect((paintings['kr002']!.visits, paintings['kr002']!.frame, paintings['kr002']!.bestKm),
         (3, Frame.gold, 60));
-    expect(paintings.values.map((r) => r.sketch), everyElement(isNull));
+    expect(await _columns(db, 'paintings_owned'), _paintingColumns);
     // 다른 표의 옛 행도 그대로 (소품은 안 본 채)
     expect((await db.select(db.journeys).getSingle()).newFrame, Frame.wood);
     expect((await db.select(db.propsOwned).getSingle()).seen, isFalse);
@@ -461,10 +467,10 @@ void main() {
       profile.linkConsentAt,
       profile.guestbookConsentAt,
     ], everyElement(isNull));
-    // 다른 표의 옛 행도 그대로 (그림 표에는 sketch 열, 여정 표에는 가상 목적지 열이 생겨 비어 있다)
+    // 다른 표의 옛 행도 그대로 (여정 표에는 가상 목적지 열이 생겨 비어 있다)
     expect((await db.select(db.journeys).getSingle()).destLat, isNull);
     expect((await db.select(db.paintingsOwned).getSingle()).seen, isFalse);
-    expect((await db.select(db.paintingsOwned).getSingle()).sketch, isNull);
+    expect(await _columns(db, 'paintings_owned'), _paintingColumns);
     expect((await db.select(db.wallSlots).getSingle()).landmarkId, 'kr001');
 
     // 새 열을 쓸 수 있고, 일부 열만 넣어도 다른 열은 그대로다
@@ -534,11 +540,12 @@ void main() {
     var painting = await db.select(db.paintingsOwned).getSingle();
     expect((painting.landmarkId, painting.visits, painting.frame, painting.seen),
         ('kr001', 2, Frame.silver, false));
-    expect(painting.sketch, isNull);
+    // 그림 표는 v6 그대로 (v7은 여정 표에만 열을 더한다)
+    expect(await _columns(db, 'paintings_owned'), _paintingColumns);
     final profile = await db.select(db.profile).getSingle();
     expect((profile.homeName, profile.installId, profile.nickname), ('종로구', 'c' * 32, '화가'));
 
-    // 새 열을 쓸 수 있다: 가상 목적지 좌표와 스케치 JSON
+    // 새 열을 쓸 수 있다: 가상 목적지 좌표. 첫 그림 행은 다시 그리는 값 없이 들어간다
     await (db.update(db.journeys)..where((t) => t.id.equals('j1')))
         .write(const JourneysCompanion(destLat: Value(37.6), destLng: Value(127.01)));
     await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
@@ -549,12 +556,11 @@ void main() {
           firstArrivedUtc: 30,
           lastArrivedUtc: 30,
           seen: const Value(false),
-          sketch: const Value('{"lat":37.6}'),
         ));
     journey = await db.select(db.journeys).getSingle();
     expect((journey.destLat, journey.destLng), (37.6, 127.01));
     painting = await (db.select(db.paintingsOwned)..where((t) => t.landmarkId.equals('sketch')))
         .getSingle();
-    expect((painting.sketch, painting.seen), ('{"lat":37.6}', false));
+    expect((painting.visits, painting.frame, painting.seen), (1, Frame.wood, false));
   });
 }

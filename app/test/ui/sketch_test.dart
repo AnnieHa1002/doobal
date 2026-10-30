@@ -1,10 +1,5 @@
-import 'dart:async';
-
-import 'package:doobal/app/providers.dart';
 import 'package:doobal/domain/geo.dart';
-import 'package:doobal/domain/look.dart';
-import 'package:doobal/domain/rules.dart';
-import 'package:doobal/domain/scene.dart';
+import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/album/album_screen.dart';
@@ -12,18 +7,15 @@ import 'package:doobal/ui/album/album_widgets.dart';
 import 'package:doobal/ui/album/painting_detail_screen.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/common/format.dart';
+import 'package:doobal/ui/common/frame_style.dart';
 import 'package:doobal/ui/common/framed_painting.dart';
 import 'package:doobal/ui/common/notice_dot.dart';
 import 'package:doobal/ui/common/palette.dart';
-import 'package:doobal/ui/common/sketch_painting.dart';
 import 'package:doobal/ui/map/landmark_card.dart';
 import 'package:doobal/ui/map/map_painter.dart';
 import 'package:doobal/ui/map/map_screen.dart';
-import 'package:doobal/ui/scene/scene_painter.dart';
-import 'package:doobal/ui/scene/scene_view.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../app/helpers.dart';
@@ -35,8 +27,12 @@ final _dot = find.byKey(const ValueKey('depart-dot'));
 final _card = find.byKey(const ValueKey('arrival-card'));
 Finder _cell(String id) => find.byKey(ValueKey('cell-$id'));
 Finder _wall(int i) => find.byKey(ValueKey('wall-$i'));
-Finder _sketchIn(Finder owner) =>
-    find.descendant(of: owner, matching: find.byType(SketchPainting));
+Finder _packIn(Finder owner) => find.descendant(of: owner, matching: find.byType(FirstPackFace));
+
+/// [owner] 안의 첫 그림 액자 (FramedPainting.firstPack)
+Finder _packFrameIn(Finder owner) => find.descendant(
+    of: owner,
+    matching: find.byWidgetPredicate((w) => w is FramedPainting && w.firstPack));
 
 // 설치 직후 도착까지 걸은 스케치의 도착 시각: t1 + 2시간 = 한국 11월 18일 12시
 final _arrivedAt = t1.add(const Duration(hours: 2));
@@ -172,100 +168,43 @@ void main() {
     });
   });
 
-  group('SketchPainting', () {
-    final sketch = Sketch(
-      point: nearGyeongbok,
-      arrivedAt: DateTime.utc(2026, 7, 10, 3),
-      backdrop: 'gyeongsang',
-      look: Look.initial,
-    );
-
-    // 값(Sketch)과 규칙·명소만 있으면 그려진다 (DB·걸음은 필요 없다)
-    Future<void> pump(WidgetTester tester, Sketch s, {double w = 200, double h = 150}) async {
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          rulesProvider.overrideWith((ref) => rules),
-          landmarksProvider.overrideWith((ref) => landmarks),
-        ],
-        child: Directionality(
+  group('FirstPackFace · FramedPainting.firstPack', () {
+    Future<void> pump(WidgetTester tester, Widget child, {double w = 200, double h = 150}) =>
+        tester.pumpWidget(Directionality(
           textDirection: TextDirection.ltr,
-          child: Center(child: SizedBox(width: w, height: h, child: SketchPainting(sketch: s))),
-        ),
-      ));
-      await tester.pump();
-      await tester.pump();
-    }
+          child: Center(child: SizedBox(width: w, height: h, child: child)),
+        ));
 
-    ScenePainter painter(WidgetTester tester) => tester
-        .widgetList<CustomPaint>(find.descendant(
-            of: find.byType(SketchPainting), matching: find.byType(CustomPaint)))
-        .map((c) => c.painter)
-        .whereType<ScenePainter>()
-        .single;
-
-    testWidgets('값만 넣으면 걷는 중과 같은 장면을 도착 시각·적어 둔 후경으로 그린다', (tester) async {
-      await pump(tester, sketch);
-      expect(tester.takeException(), isNull);
-
-      final view = tester.widget<SceneView>(find.byType(SceneView));
-      expect(view.mode, SceneMode.walking);
-      expect(view.distanceM, 0);
-      expect(view.nowUtc, sketch.arrivedAt);
-      expect(view.position, sketch.point);
-      expect(view.onSea, isFalse);
-      expect(view.running, isFalse);
-
-      // 후경은 위치(경복궁 옆 = capital)가 아니라 적어 둔 값, 계절은 도착한 날(7월)로 다시 계산
-      final look = painter(tester).look;
-      expect(look.backdrop, 'gyeongsang');
-      expect(look.season, Season.summer);
-      expect(painter(tester).distanceM, 0);
+    testWidgets('에셋 이름은 painting_first_pack_v01 (그림이 나오면 Image.asset으로 바꾼다)', (tester) async {
+      expect(firstPackAsset, 'painting_first_pack_v01');
     });
 
-    testWidgets('하늘은 도착 시각으로 다시 계산한다: 밤에 도착한 그림은 별이 뜬다', (tester) async {
-      await pump(tester, sketch); // 한국 7월 10일 12시
-      expect(painter(tester).look.sky.stars, 0);
-
-      final night = Sketch(
-        point: sketch.point,
-        arrivedAt: DateTime.utc(2026, 12, 20, 14), // 한국 23시, 겨울
-        backdrop: sketch.backdrop,
-        look: sketch.look,
-      );
-      await pump(tester, night);
-      expect(painter(tester).look.sky.stars, greaterThan(0));
-      expect(painter(tester).look.season, Season.winter);
-    });
-
-    testWidgets('부모 상자를 꽉 채우고 넘치는 곳은 자른다 (가로·세로·정사각 상자)', (tester) async {
-      for (final (w, h) in [(200.0, 150.0), (78.0, 100.0), (120.0, 120.0), (300.0, 60.0)]) {
-        await pump(tester, sketch, w: w, h: h);
+    testWidgets('종이색 바탕에 짐 꾸러미 아이콘, 부모 상자를 꽉 채운다', (tester) async {
+      for (final (w, h) in [(200.0, 150.0), (78.0, 100.0), (30.0, 30.0)]) {
+        await pump(tester, const FirstPackFace(), w: w, h: h);
         expect(tester.takeException(), isNull, reason: '$w×$h');
-        expect(tester.getSize(find.byType(SketchPainting)), Size(w, h));
-        expect(find.descendant(of: find.byType(SketchPainting), matching: find.byType(ClipRect)),
-            findsOneWidget);
-        // 장면은 기준 화면(폰 비율)으로 그려서 cover로 맞춘다
-        final scene = tester.getSize(find.byType(SceneView));
-        expect(scene.width / scene.height, closeTo(390 / 844, 1e-9));
+        expect(tester.getSize(find.byType(FirstPackFace)), Size(w, h));
+        expect(find.byIcon(Icons.backpack_outlined), findsOneWidget);
+        expect(tester.widget<ColoredBox>(find.byType(ColoredBox)).color, Palette.paper);
       }
     });
 
-    testWidgets('규칙·명소가 오기 전에는 빈 자리', (tester) async {
-      await tester.pumpWidget(ProviderScope(
-        // 아직 못 읽은 상태 (끝나지 않는 Future)
-        overrides: [
-          rulesProvider.overrideWith((ref) => Completer<Rules>().future),
-          landmarksProvider.overrideWith((ref) => landmarks),
-        ],
-        child: Directionality(
-          textDirection: TextDirection.ltr,
-          child: SizedBox(width: 100, height: 100, child: SketchPainting(sketch: sketch)),
-        ),
-      ));
-      await tester.pump();
-      expect(find.byType(SceneView), findsNothing);
-      expect(find.descendant(of: find.byType(SketchPainting), matching: find.byType(CustomPaint)),
-          findsNothing);
+    testWidgets('나무 액자에 끼운다: 액자 띠는 나무색이고 그림은 짐 꾸러미 자리표시', (tester) async {
+      await pump(tester, const FramedPainting.firstPack());
+      expect(tester.takeException(), isNull);
+      final framed = tester.widget<FramedPainting>(find.byType(FramedPainting));
+      expect((framed.firstPack, framed.frame, framed.landmark), (true, Frame.wood, null));
+      expect(find.byType(FirstPackFace), findsOneWidget);
+      final border = tester.widget<FrameBorder>(find.byType(FrameBorder));
+      expect((border.color, border.lineColor), (frameColors[Frame.wood], Palette.ink));
+      // 명소 그림(PaintingFace)이 아니다
+      expect(find.byType(PaintingFace), findsNothing);
+    });
+
+    testWidgets('빈 액자(FramedPainting.empty)는 첫 그림이 아니다', (tester) async {
+      await pump(tester, const FramedPainting.empty());
+      expect(find.byType(FirstPackFace), findsNothing);
+      expect(tester.widget<FramedPainting>(find.byType(FramedPainting)).firstPack, isFalse);
     });
   });
 
@@ -274,7 +213,7 @@ void main() {
         tester, e, ArrivalScreen(journeyId: _journeyId),
         ready: () => _card.evaluate().isNotEmpty);
 
-    testWidgets('이름·거리·날짜·그날 걸음만 보이고, 액자·n번째 방문·재방문·권역 소품은 없다', (tester) async {
+    testWidgets('카드 제목은 "첫 그림", 이름 줄은 첫 여행 짐 꾸러미, 거리·날짜·그날 걸음은 그대로', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.arriveAtSketch);
       await openArrival(tester, e);
@@ -283,13 +222,32 @@ void main() {
       final row = (await tester.runAsync(() => e.db.select(e.db.journeys).getSingle()))!;
       final day = (await tester.runAsync(() => e.db.select(e.db.daySummaries).getSingle()))!;
       Finder inCard(String text) => find.descendant(of: _card, matching: find.text(text));
-      expect(inCard('내 동네 스케치'), findsOneWidget);
+      expect(inCard('첫 그림'), findsOneWidget);
+      expect(inCard('첫 여행 짐 꾸러미'), findsOneWidget);
       expect(inCard('이번 여정 ${formatKm(row.totalEffectiveKm)}'), findsOneWidget);
       expect(inCard('11월 18일'), findsOneWidget);
       expect(inCard('그날 걸음 ${formatInt(day.steps)}보'), findsOneWidget);
+      // 여정 이름은 카드에 나오지 않는다
+      expect(find.text('내 동네 스케치'), findsNothing);
+      // 제목이 이름보다 위
+      expect(tester.getTopLeft(inCard('첫 그림')).dy,
+          lessThan(tester.getTopLeft(inCard('첫 여행 짐 꾸러미')).dy));
+      await end(tester, e);
+    });
 
+    testWidgets('등급 라벨·n번째 방문·재방문·권역 소품은 없고, 액자 단계도 없다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, e.arriveAtSketch);
+      await openArrival(tester, e);
+
+      // 번지기 시작할 때부터 나무 액자가 있다 (나중에 붙는 액자 단계가 없다)
+      expect(find.byKey(const ValueKey('arrival-first-pack-frame')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 2));
+
+      for (final f in Frame.values) {
+        expect(find.text(frameLabel(f)), findsNothing);
+      }
       expect(find.textContaining('번째 방문'), findsNothing);
-      expect(find.text('나무 액자'), findsNothing);
       expect(find.textContaining('액자는'), findsNothing);
       expect(find.byKey(const ValueKey('arrival-frame')), findsNothing);
       expect(find.byKey(const ValueKey('arrival-frame-label')), findsNothing);
@@ -297,10 +255,12 @@ void main() {
       expect(find.byKey(const ValueKey('arrival-prop')), findsNothing);
       expect(find.textContaining('완성'), findsNothing);
 
-      // 그림 자리에는 스케치, 버튼은 명소 도착과 같다
-      expect(find.byType(SketchPainting), findsOneWidget);
-      expect(find.byType(FramedPainting), findsNothing);
+      // 그림 자리에는 짐 꾸러미 자리표시, 액자는 나무색, 버튼은 명소 도착과 같다
+      expect(find.byType(FirstPackFace), findsOneWidget);
+      expect(find.byType(PaintingFace), findsNothing);
       expect(find.byKey(const ValueKey('arrival-painting')), findsOneWidget);
+      final frame = tester.widget<FrameBorder>(find.byType(FrameBorder));
+      expect(frame.color, frameColors[Frame.wood]);
       expect(find.text('화집에 걸기'), findsOneWidget);
       expect(find.text('다음 목적지'), findsOneWidget);
       await end(tester, e);
@@ -313,6 +273,8 @@ void main() {
       double opacity() =>
           tester.widget<Opacity>(find.byKey(const ValueKey('arrival-painting'))).opacity;
       expect(opacity(), lessThan(0.5));
+      expect(find.descendant(of: find.byKey(const ValueKey('arrival-painting')),
+          matching: find.byType(ImageFiltered)), findsOneWidget);
       await tester.pump(const Duration(seconds: 2));
       expect(opacity(), 1);
       await end(tester, e);
@@ -325,7 +287,7 @@ void main() {
       await settle(tester, () => _card.evaluate().isNotEmpty);
       await tester.pump(const Duration(seconds: 2));
       expect(find.byType(ArrivalScreen), findsOneWidget);
-      expect(find.byType(SketchPainting), findsOneWidget);
+      expect(find.byType(FirstPackFace), findsOneWidget);
 
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
@@ -336,7 +298,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('화집에 걸기: 스케치가 벽 첫 칸에 걸린다', (tester) async {
+    testWidgets('화집에 걸기: 첫 그림이 벽 첫 칸에 걸린다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.arriveAtSketch);
       await openArrival(tester, e);
@@ -345,36 +307,35 @@ void main() {
       await tester.tap(find.text('화집에 걸기'));
       await transition(tester);
       await settle(tester, () => _wall(0).evaluate().isNotEmpty);
-      await settle(tester, () => _sketchIn(_wall(0)).evaluate().isNotEmpty);
+      await settle(tester, () => _packIn(_wall(0)).evaluate().isNotEmpty);
 
       expect(find.byType(AlbumScreen), findsOneWidget);
-      expect(_sketchIn(_wall(0)), findsOneWidget);
+      expect(_packIn(_wall(0)), findsOneWidget);
       expect((await tester.runAsync(e.svc.wall))!, [sketchId, null, null, null]);
       await end(tester, e);
     });
   });
 
   group('화집', () {
-    testWidgets('그림 탭 맨 앞에 내 동네 스케치 칸 (101칸 + 1), 못 얻었으면 빈 액자와 흐린 이름', (tester) async {
+    testWidgets('그림 탭 맨 앞에 첫 그림 칸 (1 + 101칸), 못 얻었으면 빈 액자와 흐린 "첫 그림"', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _openAlbum(tester, e, height: 6000);
 
       expect(find.byType(PaintingCell), findsNWidgets(101));
-      expect(find.byType(SketchCell), findsOneWidget);
-      // 스케치 칸이 격자의 맨 앞 (첫 명소 칸의 앞)
-      final sketch = tester.getTopLeft(_cell(sketchId));
+      expect(find.byType(FirstPackCell), findsOneWidget);
+      // 첫 그림 칸이 격자의 맨 앞 (첫 명소 칸의 앞)
+      final pack = tester.getTopLeft(_cell(sketchId));
       final first = tester.getTopLeft(_cell('kr001'));
-      expect(sketch.dy, first.dy);
-      expect(sketch.dx, lessThan(first.dx));
+      expect(pack.dy, first.dy);
+      expect(pack.dx, lessThan(first.dx));
 
-      expect(find.descendant(of: _cell(sketchId), matching: find.byType(FramedPainting)),
-          findsOneWidget);
-      expect(tester.widget<FramedPainting>(find.descendant(
-              of: _cell(sketchId), matching: find.byType(FramedPainting)))
-          .frame, isNull);
-      expect(_sketchIn(_cell(sketchId)), findsNothing);
-      expect(_name(tester, _cell(sketchId), '내 동네 스케치').style?.color, Palette.subInk);
+      final framed = find.descendant(of: _cell(sketchId), matching: find.byType(FramedPainting));
+      expect(framed, findsOneWidget);
+      expect(tester.widget<FramedPainting>(framed).frame, isNull);
+      expect(tester.widget<FramedPainting>(framed).firstPack, isFalse);
+      expect(_packIn(_cell(sketchId)), findsNothing);
+      expect(_name(tester, _cell(sketchId), '첫 그림').style?.color, Palette.subInk);
       expect(find.byKey(const ValueKey('new-painting-sketch')), findsNothing);
 
       // 못 얻은 칸은 눌러도 아무 일도 없다
@@ -384,7 +345,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('권역 칩을 고르면 스케치 칸이 사라지고, 전체를 누르면 돌아온다', (tester) async {
+    testWidgets('권역 칩을 고르면 첫 그림 칸이 사라지고, 전체를 누르면 돌아온다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _openAlbum(tester, e, height: 6000);
@@ -392,7 +353,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('album-chip-capital')));
       await tester.pump();
       expect(_cell(sketchId), findsNothing);
-      expect(find.byType(SketchCell), findsNothing);
+      expect(find.byType(FirstPackCell), findsNothing);
       final capital = landmarks.where((l) => l.region == 'capital').length;
       expect(find.byType(PaintingCell), findsNWidgets(capital));
 
@@ -403,23 +364,22 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('얻으면 썸네일과 새 그림 점, 이름은 잉크색 (명소 그림은 아직 없다)', (tester) async {
+    testWidgets('얻으면 짐 꾸러미가 나무 액자에 끼고, 새 그림 점이 붙고, 이름은 잉크색', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.arriveAtSketch);
       await _openAlbum(tester, e, height: 6000);
-      await settle(tester, () => _sketchIn(_cell(sketchId)).evaluate().isNotEmpty);
+      await settle(tester, () => _packIn(_cell(sketchId)).evaluate().isNotEmpty);
 
-      expect(_sketchIn(_cell(sketchId)), findsOneWidget);
-      expect(find.descendant(of: _cell(sketchId), matching: find.byType(FramedPainting)),
-          findsNothing);
-      expect(_name(tester, _cell(sketchId), '내 동네 스케치').style?.color, Palette.ink);
+      expect(_packIn(_cell(sketchId)), findsOneWidget);
+      final framed = tester.widget<FramedPainting>(_packFrameIn(_cell(sketchId)));
+      expect((framed.frame, framed.landmark), (Frame.wood, null));
+      expect(_name(tester, _cell(sketchId), '첫 그림').style?.color, Palette.ink);
       expect(find.byKey(const ValueKey('new-painting-sketch')), findsOneWidget);
       expect(find.byType(NoticeDot), findsOneWidget);
 
-      // 썸네일은 도착 시각·후경으로 그린 값
-      final thumb = tester.widget<SketchPainting>(_sketchIn(_cell(sketchId)));
-      expect(thumb.sketch.arrivedAt, _arrivedAt);
-      expect(thumb.sketch.backdrop, 'capital');
+      // 도착한 시각(한국 11월 18일 12시)만 남은 그림이다
+      final owned = (await tester.runAsync(e.svc.paintings))!.single;
+      expect((owned.isFirstPack, owned.visits, owned.firstArrivedAt), (true, 1, _arrivedAt));
       // 열었으니 새 그림 표시는 지워졌다
       final snap = (await tester.runAsync(() => e.svc.snapshot(e.now)))!;
       expect(snap.unseenPaintings, 0);
@@ -434,29 +394,35 @@ void main() {
         await e.svc.markPaintingsSeen();
       });
       await _openAlbum(tester, e, height: 6000);
-      await settle(tester, () => _sketchIn(_cell(sketchId)).evaluate().isNotEmpty);
-      expect(_sketchIn(_cell(sketchId)), findsOneWidget);
+      await settle(tester, () => _packIn(_cell(sketchId)).evaluate().isNotEmpty);
+      expect(_packIn(_cell(sketchId)), findsOneWidget);
       expect(find.byKey(const ValueKey('new-painting-sketch')), findsNothing);
       await end(tester, e);
     });
 
-    testWidgets('눌러서 상세: 큰 그림, 이름, 날짜만 (액자·방문 기록·시도는 없다)', (tester) async {
+    testWidgets('눌러서 상세: 큰 그림, "첫 그림 · 첫 여행 짐 꾸러미", 받은 날짜만', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.arriveAtSketch);
       await _openAlbum(tester, e);
-      await settle(tester, () => _sketchIn(_cell(sketchId)).evaluate().isNotEmpty);
+      await settle(tester, () => _packIn(_cell(sketchId)).evaluate().isNotEmpty);
 
       await tester.tap(_cell(sketchId));
       await transition(tester);
-      await settle(tester, () => find.byKey(const ValueKey('detail-sketch')).evaluate().isNotEmpty);
+      await settle(
+          tester, () => find.byKey(const ValueKey('detail-first-pack')).evaluate().isNotEmpty);
 
       expect(find.byType(PaintingDetailScreen), findsOneWidget);
-      expect(find.byKey(const ValueKey('detail-sketch')), findsOneWidget);
-      expect(_sketchIn(find.byKey(const ValueKey('detail-sketch'))), findsOneWidget);
-      expect(find.text('내 동네 스케치'), findsOneWidget);
+      final detail = find.byKey(const ValueKey('detail-first-pack'));
+      expect(detail, findsOneWidget);
+      expect(_packIn(detail), findsOneWidget);
+      final framed = tester.widget<FramedPainting>(detail);
+      expect((framed.firstPack, framed.frame, framed.thickness), (true, Frame.wood, 12));
+      expect(find.text('첫 그림 · 첫 여행 짐 꾸러미'), findsOneWidget);
       expect(find.text('11월 18일'), findsOneWidget);
       expect(find.byKey(const ValueKey('detail-painting')), findsNothing);
-      expect(find.textContaining('액자'), findsNothing);
+      for (final f in Frame.values) {
+        expect(find.text(frameLabel(f)), findsNothing);
+      }
       expect(find.textContaining('번째 방문'), findsNothing);
       expect(find.textContaining('km'), findsNothing);
 
@@ -466,31 +432,33 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('벽 칸을 길게 눌러 시트에서 스케치를 고르면 그 칸에 걸린다', (tester) async {
+    testWidgets('벽 칸을 길게 눌러 시트에서 첫 그림을 고르면 그 칸에 걸린다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.arriveAtSketch);
       await _openAlbum(tester, e);
-      await settle(tester, () => _sketchIn(_cell(sketchId)).evaluate().isNotEmpty);
+      await settle(tester, () => _packIn(_cell(sketchId)).evaluate().isNotEmpty);
 
       await tester.longPress(_wall(2));
       await transition(tester);
       final pick = find.byKey(const ValueKey('pick-sketch'));
       expect(pick, findsOneWidget);
-      expect(_sketchIn(pick), findsOneWidget);
+      expect(_packIn(pick), findsOneWidget);
+      expect(find.descendant(of: pick, matching: find.text('첫 그림')), findsOneWidget);
 
       await tester.tap(pick);
       await transition(tester);
-      await settle(tester, () => _sketchIn(_wall(2)).evaluate().isNotEmpty);
+      await settle(tester, () => _packIn(_wall(2)).evaluate().isNotEmpty);
       expect(find.byKey(const ValueKey('pick-sketch')), findsNothing);
-      expect(_sketchIn(_wall(2)), findsOneWidget);
-      expect(find.descendant(of: _wall(2), matching: find.byType(FramedPainting)), findsNothing);
+      expect(_packIn(_wall(2)), findsOneWidget);
+      // 벽에서도 나무 액자
+      expect(tester.widget<FramedPainting>(_packFrameIn(_wall(2))).frame, Frame.wood);
       expect((await tester.runAsync(e.svc.wall))!, [null, null, sketchId, null]);
       // 다른 칸은 그대로 빈 액자
-      expect(_sketchIn(_wall(0)), findsNothing);
+      expect(_packIn(_wall(0)), findsNothing);
       await end(tester, e);
     });
 
-    testWidgets('소품 탭의 권역 진행에는 스케치가 세지 않는다', (tester) async {
+    testWidgets('소품 탭의 권역 진행에는 첫 그림이 세지 않는다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         await e.arriveAtSketch();
@@ -500,7 +468,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('tab-props')));
       await tester.pump();
       await settle(tester, () => find.byKey(const ValueKey('prop-hat_01')).evaluate().isNotEmpty);
-      // 수도권 소품(해치)은 잠긴 채, 얻는 방법의 진행 숫자는 0곳 (스케치는 서울이어도 세지 않는다)
+      // 수도권 소품(해치)은 잠긴 채, 얻는 방법의 진행 숫자는 0곳 (첫 그림은 서울이어도 세지 않는다)
       final capital = landmarks.where((l) => l.region == 'capital').length;
       expect(find.text('수도권 0/$capital'), findsOneWidget);
       expect(find.textContaining('수도권 1/'), findsNothing);

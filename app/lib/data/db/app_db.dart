@@ -6,7 +6,7 @@ part 'app_db.g.dart';
 
 // M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝) + 스키마 3 (프로필: 출발 동네)
 // + 스키마 4 (화집 벽) + 스키마 5 (새 그림 표시) + 스키마 6 (프로필: 시작 흐름)
-// + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지·그림 다시 그리기 값). 시각은 모두 UTC 정수
+// + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지). 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
 
@@ -83,7 +83,9 @@ class Journeys extends Table {
 }
 
 /// 얻은 그림. 명소마다 한 점 (MVP는 첫 방문). 다시 도착하면 방문 수와 액자만 바뀐다.
-/// seen이 false면 배낭에 새 그림 표시 (처음 얻을 때만 false, 옛 행은 본 것으로 둔다)
+/// seen이 false면 배낭에 새 그림 표시 (처음 얻을 때만 false, 옛 행은 본 것으로 둔다).
+/// landmarkId가 'sketch'인 행은 첫 그림(첫 여행 짐 꾸러미): visits 1과 도착 시각만 뜻이 있다.
+/// frame은 필수 열이라 wood를 넣는다 (화면의 나무 액자와 같고, 등급 계산에는 쓰지 않는다)
 @DataClassName('PaintingOwnedRow')
 class PaintingsOwned extends Table {
   TextColumn get landmarkId => text()();
@@ -95,9 +97,6 @@ class PaintingsOwned extends Table {
   IntColumn get firstArrivedUtc => integer()();
   IntColumn get lastArrivedUtc => integer()();
   BoolColumn get seen => boolean().withDefault(const Constant(true))();
-
-  /// 다시 그리는 값 JSON (domain/sketch.dart의 Sketch). landmarkId가 'sketch'인 그림만, 명소 그림은 null
-  TextColumn get sketch => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {landmarkId};
@@ -245,9 +244,6 @@ class AppDb extends _$AppDb {
             await m.addColumn(journeys, journeys.destLat);
             await m.addColumn(journeys, journeys.destLng);
           }
-          // 1에서 올라올 때는 위 createTable(paintingsOwned)이 지금 정의라 sketch 열이 이미 있다.
-          // 2~6에서 올라올 때만 더한다
-          if (from >= 2 && from < 7) await m.addColumn(paintingsOwned, paintingsOwned.sketch);
         },
       );
 }

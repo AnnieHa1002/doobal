@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:doobal/domain/geo.dart';
-import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -143,32 +140,17 @@ void main() {
     });
   });
 
-  group('Sketch', () {
-    final sketch = Sketch(
-      point: const LatLng(37.58, 126.99),
-      arrivedAt: DateTime.utc(2026, 11, 18, 3, 20),
-      backdrop: 'capital',
-      look: const Look(hair: 3, hairColor: SwatchHairColor(5)),
-    );
-
-    test('JSON은 lat·lng·arrivedUtc·backdrop·look', () {
-      expect(sketch.toJson(), {
-        'lat': 37.58,
-        'lng': 126.99,
-        'arrivedUtc': DateTime.utc(2026, 11, 18, 3, 20).millisecondsSinceEpoch,
-        'backdrop': 'capital',
-        'look': {'hair': 3, 'hairColor': {'kind': 'swatch', 'i': 5}},
-      });
+  group('firstPackLandmark', () {
+    test('첫 그림을 그림 자리에 끼우는 가짜 명소: id sketch, 이름은 첫 여행 짐 꾸러미', () {
+      expect((firstPackLandmark.id, firstPackLandmark.name), (sketchId, '첫 여행 짐 꾸러미'));
+      expect(firstPackName, '첫 여행 짐 꾸러미');
+      expect(firstPackLabel, '첫 그림');
+      expect(firstPackLandmark.types, isEmpty);
     });
 
-    test('글자로 바꿨다 되돌려도 같다', () {
-      expect(Sketch.decode(sketch.encode()), sketch);
-      expect(jsonDecode(sketch.encode()), sketch.toJson());
-    });
-
-    test('깨진 값은 FormatException', () {
-      const bad = '{"lat":1,"lng":2,"arrivedUtc":3,"backdrop":"x","look":{"hair":9}}';
-      expect(() => Sketch.decode(bad), throwsFormatException);
+    test('명소 목록에는 없다 (권역·액자 판정에 끼지 않는다)', () {
+      expect(landmarks.map((l) => l.id), isNot(contains(firstPackLandmark.id)));
+      expect(landmarks.map((l) => l.region), isNot(contains(firstPackLandmark.region)));
     });
   });
 }
