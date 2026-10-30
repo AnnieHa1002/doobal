@@ -15,6 +15,10 @@ void main() {
     expect(campTheme.character.footY, 0.845);
     expect(campTheme.companion.footY, 0.80);
     expect(campTheme.signpost.x, 0.12);
+    // 방명록 표지판은 이정표 옆(오른쪽), 발 높이는 이정표보다 조금 위
+    expect(campTheme.guestbookSign.x, 0.27);
+    expect(campTheme.guestbookSign.footY, 0.60);
+    expect(campTheme.guestbookSign.x, greaterThan(campTheme.signpost.x));
   });
 
   test('위치는 모두 화면 비율(0~1)이고 물건은 누르기 쉬운 크기(44pt 이상)', () {
@@ -23,7 +27,12 @@ void main() {
       expect(o.y, inInclusiveRange(0, 1));
       expect(o.size, greaterThanOrEqualTo(44));
     }
-    for (final s in [campTheme.character, campTheme.companion, campTheme.signpost]) {
+    for (final s in [
+      campTheme.character,
+      campTheme.companion,
+      campTheme.signpost,
+      campTheme.guestbookSign,
+    ]) {
       expect(s.x, inInclusiveRange(0, 1));
       expect(s.footY, inInclusiveRange(0, 1));
     }
@@ -39,5 +48,28 @@ void main() {
     });
     expect(t.approx, isFalse);
     expect(() => t.object('map'), throwsStateError);
+  });
+
+  test('guestbookSign이 없으면 이정표에서 오른쪽으로 guestbookSignGapX만큼 떨어진 기본값', () {
+    final t = CampTheme.fromJson({
+      'id': 'x',
+      'objects': const [],
+      'character': {'x': 0.5, 'footY': 0.8},
+      'companion': {'x': 0.5, 'footY': 0.8},
+      'signpost': {'x': 0.3, 'footY': 0.6},
+    });
+    expect(t.guestbookSign.x, closeTo(0.3 + guestbookSignGapX, 1e-9));
+    expect(t.guestbookSign.footY, 0.6);
+
+    // 있으면 그 값
+    final u = CampTheme.fromJson({
+      'id': 'x',
+      'objects': const [],
+      'character': {'x': 0.5, 'footY': 0.8},
+      'companion': {'x': 0.5, 'footY': 0.8},
+      'signpost': {'x': 0.3, 'footY': 0.6},
+      'guestbookSign': {'x': 0.7, 'footY': 0.55},
+    });
+    expect((u.guestbookSign.x, u.guestbookSign.footY), (0.7, 0.55));
   });
 }

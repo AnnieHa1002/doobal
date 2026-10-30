@@ -23,7 +23,7 @@ class CampObject {
       );
 }
 
-/// 캐릭터·동료·이정표가 서는 자리. x는 가로 비율(중심), footY는 발 높이 비율
+/// 캐릭터·동료·이정표·방명록 표지판이 서는 자리. x는 가로 비율(중심), footY는 발 높이 비율
 class FootSpot {
   const FootSpot(this.x, this.footY);
 
@@ -42,6 +42,7 @@ class CampTheme {
     required this.character,
     required this.companion,
     required this.signpost,
+    required this.guestbookSign,
   });
 
   final String id;
@@ -51,18 +52,32 @@ class CampTheme {
   final FootSpot companion;
   final FootSpot signpost;
 
+  /// 방명록 표지판(쓸 기회가 있을 때만 선다)이 서는 자리. 이정표 옆이다.
+  /// themes/camp.json에 guestbookSign이 없으면 이정표에서 오른쪽으로 [guestbookSignGapX]만큼
+  final FootSpot guestbookSign;
+
   CampObject object(String id) => objects.firstWhere((o) => o.id == id);
 
-  factory CampTheme.fromJson(Map<String, dynamic> j) => CampTheme(
-        id: j['id'] as String,
-        approx: j['approx'] as bool? ?? false,
-        objects: [
-          for (final o in j['objects'] as List) CampObject.fromJson(o as Map<String, dynamic>),
-        ],
-        character: FootSpot.fromJson(j['character'] as Map<String, dynamic>),
-        companion: FootSpot.fromJson(j['companion'] as Map<String, dynamic>),
-        signpost: FootSpot.fromJson(j['signpost'] as Map<String, dynamic>),
-      );
+  factory CampTheme.fromJson(Map<String, dynamic> j) {
+    final signpost = FootSpot.fromJson(j['signpost'] as Map<String, dynamic>);
+    final sign = j['guestbookSign'] as Map<String, dynamic>?;
+    return CampTheme(
+      id: j['id'] as String,
+      approx: j['approx'] as bool? ?? false,
+      objects: [
+        for (final o in j['objects'] as List) CampObject.fromJson(o as Map<String, dynamic>),
+      ],
+      character: FootSpot.fromJson(j['character'] as Map<String, dynamic>),
+      companion: FootSpot.fromJson(j['companion'] as Map<String, dynamic>),
+      signpost: signpost,
+      guestbookSign: sign == null
+          ? FootSpot(signpost.x + guestbookSignGapX, signpost.footY)
+          : FootSpot.fromJson(sign),
+    );
+  }
 }
+
+/// guestbookSign이 없을 때 방명록 표지판을 이정표에서 얼마나 오른쪽에 둘지 (화면 가로 비율)
+const guestbookSignGapX = 0.15;
 
 double _d(dynamic v) => (v as num).toDouble();

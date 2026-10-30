@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/guestbook.dart';
 import '../../domain/journey.dart' show Frame;
 import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
@@ -16,6 +17,7 @@ import '../common/framed_painting.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
+import '../guestbook/guestbook_write_screen.dart';
 import '../map/map_screen.dart';
 
 /// 그림이 번지는 시간, 그다음 액자가 나타나는 시간
@@ -29,6 +31,7 @@ const _frameThickness = 12.0;
 /// 도착: 그림이 종이에 먹이 번지듯 나타나고, 이어서 액자와 이름이 붙고, 방문·거리·날짜·걸음 카드가 나온다.
 /// 내 동네 스케치는 '첫 그림'(첫 여행 짐 꾸러미)이 나무 액자에 낀 채로 번지고(액자 단계·등급 라벨 없음),
 /// 카드에는 제목·이름·거리·날짜·걸음만 나온다.
+/// 버튼은 주 "방명록 쓰기"(이 도착의 기회가 열려 있을 때만 켜진다)와 보조 "화집에 걸기"·"다음 목적지".
 /// 닫은 뒤 본 것으로 적는 건 AutoSync가 한다
 class ArrivalScreen extends ConsumerWidget {
   const ArrivalScreen({super.key, required this.journeyId});
@@ -123,12 +126,18 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
     }
   }
 
+  /// 이 도착의 방명록 기회로 쓰기 화면을 연다
+  void _write(GuestbookTicket ticket) => Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => GuestbookWriteScreen(ticketId: ticket.id)));
+
   void _next() => Navigator.of(context)
       .pushReplacement(MaterialPageRoute<void>(builder: (_) => const MapScreen()));
 
   @override
   Widget build(BuildContext context) {
     final v = widget.view;
+    // 이 도착의 기회가 열려 있을 때만 켠다 (이미 썼거나 다음 여정을 시작해 닫혔으면 흐리게)
+    final ticket = ref.watch(guestbookTicketProvider(arrivalTicketId(v.journeyId))).value;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -150,7 +159,8 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
           ),
         ),
         const SizedBox(height: 16),
-        // 방명록 쓰기(주 버튼)는 M5에서 이 자리에 더한다
+        GameButton(label: '방명록 쓰기', onPressed: ticket == null ? null : () => _write(ticket)),
+        const SizedBox(height: 8),
         GameButton(label: '화집에 걸기', kind: GameButtonKind.secondary, onPressed: _hang),
         const SizedBox(height: 8),
         GameButton(label: '다음 목적지', kind: GameButtonKind.secondary, onPressed: _next),

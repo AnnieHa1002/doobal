@@ -70,10 +70,10 @@ void main() {
       expect(_inCard('11월 18일'), findsOneWidget);
       expect(_inCard('그날 걸음 3,000보'), findsOneWidget);
       expect(find.text('나무 액자'), findsOneWidget);
-      // 첫 방문이라 재방문 줄·권역 소품이 없고, 방명록 쓰기는 아직 없다
+      // 첫 방문이라 재방문 줄·권역 소품이 없다. 버튼은 주 방명록 쓰기, 보조 둘
       expect(find.byKey(const ValueKey('arrival-revisit')), findsNothing);
       expect(find.byKey(const ValueKey('arrival-prop')), findsNothing);
-      expect(find.text('방명록 쓰기'), findsNothing);
+      expect(find.text('방명록 쓰기'), findsOneWidget);
       expect(find.text('화집에 걸기'), findsOneWidget);
       expect(find.text('다음 목적지'), findsOneWidget);
 

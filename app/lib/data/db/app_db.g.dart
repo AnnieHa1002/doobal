@@ -4258,6 +4258,793 @@ class WallSlotsCompanion extends UpdateCompanion<WallSlotRow> {
   }
 }
 
+class $GuestbookTicketsTable extends GuestbookTickets
+    with TableInfo<$GuestbookTicketsTable, GuestbookTicketRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GuestbookTicketsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<TicketKind, String> kind =
+      GeneratedColumn<String>(
+        'kind',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<TicketKind>($GuestbookTicketsTable.$converterkind);
+  static const VerificationMeta _scopeMeta = const VerificationMeta('scope');
+  @override
+  late final GeneratedColumn<String> scope = GeneratedColumn<String>(
+    'scope',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _openedUtcMeta = const VerificationMeta(
+    'openedUtc',
+  );
+  @override
+  late final GeneratedColumn<int> openedUtc = GeneratedColumn<int>(
+    'opened_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _usedUtcMeta = const VerificationMeta(
+    'usedUtc',
+  );
+  @override
+  late final GeneratedColumn<int> usedUtc = GeneratedColumn<int>(
+    'used_utc',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _closedUtcMeta = const VerificationMeta(
+    'closedUtc',
+  );
+  @override
+  late final GeneratedColumn<int> closedUtc = GeneratedColumn<int>(
+    'closed_utc',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    kind,
+    scope,
+    openedUtc,
+    usedUtc,
+    closedUtc,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'guestbook_tickets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GuestbookTicketRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('scope')) {
+      context.handle(
+        _scopeMeta,
+        scope.isAcceptableOrUnknown(data['scope']!, _scopeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scopeMeta);
+    }
+    if (data.containsKey('opened_utc')) {
+      context.handle(
+        _openedUtcMeta,
+        openedUtc.isAcceptableOrUnknown(data['opened_utc']!, _openedUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_openedUtcMeta);
+    }
+    if (data.containsKey('used_utc')) {
+      context.handle(
+        _usedUtcMeta,
+        usedUtc.isAcceptableOrUnknown(data['used_utc']!, _usedUtcMeta),
+      );
+    }
+    if (data.containsKey('closed_utc')) {
+      context.handle(
+        _closedUtcMeta,
+        closedUtc.isAcceptableOrUnknown(data['closed_utc']!, _closedUtcMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GuestbookTicketRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GuestbookTicketRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      kind: $GuestbookTicketsTable.$converterkind.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}kind'],
+        )!,
+      ),
+      scope: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope'],
+      )!,
+      openedUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}opened_utc'],
+      )!,
+      usedUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}used_utc'],
+      ),
+      closedUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}closed_utc'],
+      ),
+    );
+  }
+
+  @override
+  $GuestbookTicketsTable createAlias(String alias) {
+    return $GuestbookTicketsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<TicketKind, String, String> $converterkind =
+      const EnumNameConverter<TicketKind>(TicketKind.values);
+}
+
+class GuestbookTicketRow extends DataClass
+    implements Insertable<GuestbookTicketRow> {
+  final String id;
+  final TicketKind kind;
+  final String scope;
+  final int openedUtc;
+  final int? usedUtc;
+  final int? closedUtc;
+  const GuestbookTicketRow({
+    required this.id,
+    required this.kind,
+    required this.scope,
+    required this.openedUtc,
+    this.usedUtc,
+    this.closedUtc,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    {
+      map['kind'] = Variable<String>(
+        $GuestbookTicketsTable.$converterkind.toSql(kind),
+      );
+    }
+    map['scope'] = Variable<String>(scope);
+    map['opened_utc'] = Variable<int>(openedUtc);
+    if (!nullToAbsent || usedUtc != null) {
+      map['used_utc'] = Variable<int>(usedUtc);
+    }
+    if (!nullToAbsent || closedUtc != null) {
+      map['closed_utc'] = Variable<int>(closedUtc);
+    }
+    return map;
+  }
+
+  GuestbookTicketsCompanion toCompanion(bool nullToAbsent) {
+    return GuestbookTicketsCompanion(
+      id: Value(id),
+      kind: Value(kind),
+      scope: Value(scope),
+      openedUtc: Value(openedUtc),
+      usedUtc: usedUtc == null && nullToAbsent
+          ? const Value.absent()
+          : Value(usedUtc),
+      closedUtc: closedUtc == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedUtc),
+    );
+  }
+
+  factory GuestbookTicketRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GuestbookTicketRow(
+      id: serializer.fromJson<String>(json['id']),
+      kind: $GuestbookTicketsTable.$converterkind.fromJson(
+        serializer.fromJson<String>(json['kind']),
+      ),
+      scope: serializer.fromJson<String>(json['scope']),
+      openedUtc: serializer.fromJson<int>(json['openedUtc']),
+      usedUtc: serializer.fromJson<int?>(json['usedUtc']),
+      closedUtc: serializer.fromJson<int?>(json['closedUtc']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'kind': serializer.toJson<String>(
+        $GuestbookTicketsTable.$converterkind.toJson(kind),
+      ),
+      'scope': serializer.toJson<String>(scope),
+      'openedUtc': serializer.toJson<int>(openedUtc),
+      'usedUtc': serializer.toJson<int?>(usedUtc),
+      'closedUtc': serializer.toJson<int?>(closedUtc),
+    };
+  }
+
+  GuestbookTicketRow copyWith({
+    String? id,
+    TicketKind? kind,
+    String? scope,
+    int? openedUtc,
+    Value<int?> usedUtc = const Value.absent(),
+    Value<int?> closedUtc = const Value.absent(),
+  }) => GuestbookTicketRow(
+    id: id ?? this.id,
+    kind: kind ?? this.kind,
+    scope: scope ?? this.scope,
+    openedUtc: openedUtc ?? this.openedUtc,
+    usedUtc: usedUtc.present ? usedUtc.value : this.usedUtc,
+    closedUtc: closedUtc.present ? closedUtc.value : this.closedUtc,
+  );
+  GuestbookTicketRow copyWithCompanion(GuestbookTicketsCompanion data) {
+    return GuestbookTicketRow(
+      id: data.id.present ? data.id.value : this.id,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      scope: data.scope.present ? data.scope.value : this.scope,
+      openedUtc: data.openedUtc.present ? data.openedUtc.value : this.openedUtc,
+      usedUtc: data.usedUtc.present ? data.usedUtc.value : this.usedUtc,
+      closedUtc: data.closedUtc.present ? data.closedUtc.value : this.closedUtc,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GuestbookTicketRow(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('scope: $scope, ')
+          ..write('openedUtc: $openedUtc, ')
+          ..write('usedUtc: $usedUtc, ')
+          ..write('closedUtc: $closedUtc')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, kind, scope, openedUtc, usedUtc, closedUtc);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GuestbookTicketRow &&
+          other.id == this.id &&
+          other.kind == this.kind &&
+          other.scope == this.scope &&
+          other.openedUtc == this.openedUtc &&
+          other.usedUtc == this.usedUtc &&
+          other.closedUtc == this.closedUtc);
+}
+
+class GuestbookTicketsCompanion extends UpdateCompanion<GuestbookTicketRow> {
+  final Value<String> id;
+  final Value<TicketKind> kind;
+  final Value<String> scope;
+  final Value<int> openedUtc;
+  final Value<int?> usedUtc;
+  final Value<int?> closedUtc;
+  final Value<int> rowid;
+  const GuestbookTicketsCompanion({
+    this.id = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.scope = const Value.absent(),
+    this.openedUtc = const Value.absent(),
+    this.usedUtc = const Value.absent(),
+    this.closedUtc = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GuestbookTicketsCompanion.insert({
+    required String id,
+    required TicketKind kind,
+    required String scope,
+    required int openedUtc,
+    this.usedUtc = const Value.absent(),
+    this.closedUtc = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       kind = Value(kind),
+       scope = Value(scope),
+       openedUtc = Value(openedUtc);
+  static Insertable<GuestbookTicketRow> custom({
+    Expression<String>? id,
+    Expression<String>? kind,
+    Expression<String>? scope,
+    Expression<int>? openedUtc,
+    Expression<int>? usedUtc,
+    Expression<int>? closedUtc,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kind != null) 'kind': kind,
+      if (scope != null) 'scope': scope,
+      if (openedUtc != null) 'opened_utc': openedUtc,
+      if (usedUtc != null) 'used_utc': usedUtc,
+      if (closedUtc != null) 'closed_utc': closedUtc,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GuestbookTicketsCompanion copyWith({
+    Value<String>? id,
+    Value<TicketKind>? kind,
+    Value<String>? scope,
+    Value<int>? openedUtc,
+    Value<int?>? usedUtc,
+    Value<int?>? closedUtc,
+    Value<int>? rowid,
+  }) {
+    return GuestbookTicketsCompanion(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      scope: scope ?? this.scope,
+      openedUtc: openedUtc ?? this.openedUtc,
+      usedUtc: usedUtc ?? this.usedUtc,
+      closedUtc: closedUtc ?? this.closedUtc,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(
+        $GuestbookTicketsTable.$converterkind.toSql(kind.value),
+      );
+    }
+    if (scope.present) {
+      map['scope'] = Variable<String>(scope.value);
+    }
+    if (openedUtc.present) {
+      map['opened_utc'] = Variable<int>(openedUtc.value);
+    }
+    if (usedUtc.present) {
+      map['used_utc'] = Variable<int>(usedUtc.value);
+    }
+    if (closedUtc.present) {
+      map['closed_utc'] = Variable<int>(closedUtc.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GuestbookTicketsCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('scope: $scope, ')
+          ..write('openedUtc: $openedUtc, ')
+          ..write('usedUtc: $usedUtc, ')
+          ..write('closedUtc: $closedUtc, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GuestbookPostsTable extends GuestbookPosts
+    with TableInfo<$GuestbookPostsTable, GuestbookPostRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GuestbookPostsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ticketIdMeta = const VerificationMeta(
+    'ticketId',
+  );
+  @override
+  late final GeneratedColumn<String> ticketId = GeneratedColumn<String>(
+    'ticket_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scopeMeta = const VerificationMeta('scope');
+  @override
+  late final GeneratedColumn<String> scope = GeneratedColumn<String>(
+    'scope',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdUtcMeta = const VerificationMeta(
+    'createdUtc',
+  );
+  @override
+  late final GeneratedColumn<int> createdUtc = GeneratedColumn<int>(
+    'created_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<PostStatus, String> status =
+      GeneratedColumn<String>(
+        'status',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<PostStatus>($GuestbookPostsTable.$converterstatus);
+  @override
+  List<GeneratedColumn> get $columns => [
+    ticketId,
+    scope,
+    body,
+    createdUtc,
+    status,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'guestbook_posts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GuestbookPostRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('ticket_id')) {
+      context.handle(
+        _ticketIdMeta,
+        ticketId.isAcceptableOrUnknown(data['ticket_id']!, _ticketIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ticketIdMeta);
+    }
+    if (data.containsKey('scope')) {
+      context.handle(
+        _scopeMeta,
+        scope.isAcceptableOrUnknown(data['scope']!, _scopeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scopeMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('created_utc')) {
+      context.handle(
+        _createdUtcMeta,
+        createdUtc.isAcceptableOrUnknown(data['created_utc']!, _createdUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdUtcMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ticketId};
+  @override
+  GuestbookPostRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GuestbookPostRow(
+      ticketId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ticket_id'],
+      )!,
+      scope: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      createdUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_utc'],
+      )!,
+      status: $GuestbookPostsTable.$converterstatus.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}status'],
+        )!,
+      ),
+    );
+  }
+
+  @override
+  $GuestbookPostsTable createAlias(String alias) {
+    return $GuestbookPostsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<PostStatus, String, String> $converterstatus =
+      const EnumNameConverter<PostStatus>(PostStatus.values);
+}
+
+class GuestbookPostRow extends DataClass
+    implements Insertable<GuestbookPostRow> {
+  final String ticketId;
+  final String scope;
+  final String body;
+  final int createdUtc;
+  final PostStatus status;
+  const GuestbookPostRow({
+    required this.ticketId,
+    required this.scope,
+    required this.body,
+    required this.createdUtc,
+    required this.status,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['ticket_id'] = Variable<String>(ticketId);
+    map['scope'] = Variable<String>(scope);
+    map['body'] = Variable<String>(body);
+    map['created_utc'] = Variable<int>(createdUtc);
+    {
+      map['status'] = Variable<String>(
+        $GuestbookPostsTable.$converterstatus.toSql(status),
+      );
+    }
+    return map;
+  }
+
+  GuestbookPostsCompanion toCompanion(bool nullToAbsent) {
+    return GuestbookPostsCompanion(
+      ticketId: Value(ticketId),
+      scope: Value(scope),
+      body: Value(body),
+      createdUtc: Value(createdUtc),
+      status: Value(status),
+    );
+  }
+
+  factory GuestbookPostRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GuestbookPostRow(
+      ticketId: serializer.fromJson<String>(json['ticketId']),
+      scope: serializer.fromJson<String>(json['scope']),
+      body: serializer.fromJson<String>(json['body']),
+      createdUtc: serializer.fromJson<int>(json['createdUtc']),
+      status: $GuestbookPostsTable.$converterstatus.fromJson(
+        serializer.fromJson<String>(json['status']),
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ticketId': serializer.toJson<String>(ticketId),
+      'scope': serializer.toJson<String>(scope),
+      'body': serializer.toJson<String>(body),
+      'createdUtc': serializer.toJson<int>(createdUtc),
+      'status': serializer.toJson<String>(
+        $GuestbookPostsTable.$converterstatus.toJson(status),
+      ),
+    };
+  }
+
+  GuestbookPostRow copyWith({
+    String? ticketId,
+    String? scope,
+    String? body,
+    int? createdUtc,
+    PostStatus? status,
+  }) => GuestbookPostRow(
+    ticketId: ticketId ?? this.ticketId,
+    scope: scope ?? this.scope,
+    body: body ?? this.body,
+    createdUtc: createdUtc ?? this.createdUtc,
+    status: status ?? this.status,
+  );
+  GuestbookPostRow copyWithCompanion(GuestbookPostsCompanion data) {
+    return GuestbookPostRow(
+      ticketId: data.ticketId.present ? data.ticketId.value : this.ticketId,
+      scope: data.scope.present ? data.scope.value : this.scope,
+      body: data.body.present ? data.body.value : this.body,
+      createdUtc: data.createdUtc.present
+          ? data.createdUtc.value
+          : this.createdUtc,
+      status: data.status.present ? data.status.value : this.status,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GuestbookPostRow(')
+          ..write('ticketId: $ticketId, ')
+          ..write('scope: $scope, ')
+          ..write('body: $body, ')
+          ..write('createdUtc: $createdUtc, ')
+          ..write('status: $status')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(ticketId, scope, body, createdUtc, status);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GuestbookPostRow &&
+          other.ticketId == this.ticketId &&
+          other.scope == this.scope &&
+          other.body == this.body &&
+          other.createdUtc == this.createdUtc &&
+          other.status == this.status);
+}
+
+class GuestbookPostsCompanion extends UpdateCompanion<GuestbookPostRow> {
+  final Value<String> ticketId;
+  final Value<String> scope;
+  final Value<String> body;
+  final Value<int> createdUtc;
+  final Value<PostStatus> status;
+  final Value<int> rowid;
+  const GuestbookPostsCompanion({
+    this.ticketId = const Value.absent(),
+    this.scope = const Value.absent(),
+    this.body = const Value.absent(),
+    this.createdUtc = const Value.absent(),
+    this.status = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GuestbookPostsCompanion.insert({
+    required String ticketId,
+    required String scope,
+    required String body,
+    required int createdUtc,
+    required PostStatus status,
+    this.rowid = const Value.absent(),
+  }) : ticketId = Value(ticketId),
+       scope = Value(scope),
+       body = Value(body),
+       createdUtc = Value(createdUtc),
+       status = Value(status);
+  static Insertable<GuestbookPostRow> custom({
+    Expression<String>? ticketId,
+    Expression<String>? scope,
+    Expression<String>? body,
+    Expression<int>? createdUtc,
+    Expression<String>? status,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ticketId != null) 'ticket_id': ticketId,
+      if (scope != null) 'scope': scope,
+      if (body != null) 'body': body,
+      if (createdUtc != null) 'created_utc': createdUtc,
+      if (status != null) 'status': status,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GuestbookPostsCompanion copyWith({
+    Value<String>? ticketId,
+    Value<String>? scope,
+    Value<String>? body,
+    Value<int>? createdUtc,
+    Value<PostStatus>? status,
+    Value<int>? rowid,
+  }) {
+    return GuestbookPostsCompanion(
+      ticketId: ticketId ?? this.ticketId,
+      scope: scope ?? this.scope,
+      body: body ?? this.body,
+      createdUtc: createdUtc ?? this.createdUtc,
+      status: status ?? this.status,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ticketId.present) {
+      map['ticket_id'] = Variable<String>(ticketId.value);
+    }
+    if (scope.present) {
+      map['scope'] = Variable<String>(scope.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (createdUtc.present) {
+      map['created_utc'] = Variable<int>(createdUtc.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(
+        $GuestbookPostsTable.$converterstatus.toSql(status.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GuestbookPostsCompanion(')
+          ..write('ticketId: $ticketId, ')
+          ..write('scope: $scope, ')
+          ..write('body: $body, ')
+          ..write('createdUtc: $createdUtc, ')
+          ..write('status: $status, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -4271,6 +5058,10 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $PropsOwnedTable propsOwned = $PropsOwnedTable(this);
   late final $ProfileTable profile = $ProfileTable(this);
   late final $WallSlotsTable wallSlots = $WallSlotsTable(this);
+  late final $GuestbookTicketsTable guestbookTickets = $GuestbookTicketsTable(
+    this,
+  );
+  late final $GuestbookPostsTable guestbookPosts = $GuestbookPostsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4286,6 +5077,8 @@ abstract class _$AppDb extends GeneratedDatabase {
     propsOwned,
     profile,
     wallSlots,
+    guestbookTickets,
+    guestbookPosts,
   ];
 }
 
@@ -6545,6 +7338,449 @@ typedef $$WallSlotsTableProcessedTableManager =
       WallSlotRow,
       PrefetchHooks Function()
     >;
+typedef $$GuestbookTicketsTableCreateCompanionBuilder =
+    GuestbookTicketsCompanion Function({
+      required String id,
+      required TicketKind kind,
+      required String scope,
+      required int openedUtc,
+      Value<int?> usedUtc,
+      Value<int?> closedUtc,
+      Value<int> rowid,
+    });
+typedef $$GuestbookTicketsTableUpdateCompanionBuilder =
+    GuestbookTicketsCompanion Function({
+      Value<String> id,
+      Value<TicketKind> kind,
+      Value<String> scope,
+      Value<int> openedUtc,
+      Value<int?> usedUtc,
+      Value<int?> closedUtc,
+      Value<int> rowid,
+    });
+
+class $$GuestbookTicketsTableFilterComposer
+    extends Composer<_$AppDb, $GuestbookTicketsTable> {
+  $$GuestbookTicketsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<TicketKind, TicketKind, String> get kind =>
+      $composableBuilder(
+        column: $table.kind,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get scope => $composableBuilder(
+    column: $table.scope,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get openedUtc => $composableBuilder(
+    column: $table.openedUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get usedUtc => $composableBuilder(
+    column: $table.usedUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get closedUtc => $composableBuilder(
+    column: $table.closedUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GuestbookTicketsTableOrderingComposer
+    extends Composer<_$AppDb, $GuestbookTicketsTable> {
+  $$GuestbookTicketsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scope => $composableBuilder(
+    column: $table.scope,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get openedUtc => $composableBuilder(
+    column: $table.openedUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get usedUtc => $composableBuilder(
+    column: $table.usedUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get closedUtc => $composableBuilder(
+    column: $table.closedUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GuestbookTicketsTableAnnotationComposer
+    extends Composer<_$AppDb, $GuestbookTicketsTable> {
+  $$GuestbookTicketsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<TicketKind, String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get scope =>
+      $composableBuilder(column: $table.scope, builder: (column) => column);
+
+  GeneratedColumn<int> get openedUtc =>
+      $composableBuilder(column: $table.openedUtc, builder: (column) => column);
+
+  GeneratedColumn<int> get usedUtc =>
+      $composableBuilder(column: $table.usedUtc, builder: (column) => column);
+
+  GeneratedColumn<int> get closedUtc =>
+      $composableBuilder(column: $table.closedUtc, builder: (column) => column);
+}
+
+class $$GuestbookTicketsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $GuestbookTicketsTable,
+          GuestbookTicketRow,
+          $$GuestbookTicketsTableFilterComposer,
+          $$GuestbookTicketsTableOrderingComposer,
+          $$GuestbookTicketsTableAnnotationComposer,
+          $$GuestbookTicketsTableCreateCompanionBuilder,
+          $$GuestbookTicketsTableUpdateCompanionBuilder,
+          (
+            GuestbookTicketRow,
+            BaseReferences<_$AppDb, $GuestbookTicketsTable, GuestbookTicketRow>,
+          ),
+          GuestbookTicketRow,
+          PrefetchHooks Function()
+        > {
+  $$GuestbookTicketsTableTableManager(_$AppDb db, $GuestbookTicketsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GuestbookTicketsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GuestbookTicketsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GuestbookTicketsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<TicketKind> kind = const Value.absent(),
+                Value<String> scope = const Value.absent(),
+                Value<int> openedUtc = const Value.absent(),
+                Value<int?> usedUtc = const Value.absent(),
+                Value<int?> closedUtc = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GuestbookTicketsCompanion(
+                id: id,
+                kind: kind,
+                scope: scope,
+                openedUtc: openedUtc,
+                usedUtc: usedUtc,
+                closedUtc: closedUtc,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required TicketKind kind,
+                required String scope,
+                required int openedUtc,
+                Value<int?> usedUtc = const Value.absent(),
+                Value<int?> closedUtc = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GuestbookTicketsCompanion.insert(
+                id: id,
+                kind: kind,
+                scope: scope,
+                openedUtc: openedUtc,
+                usedUtc: usedUtc,
+                closedUtc: closedUtc,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$GuestbookTicketsTable, GuestbookTicketRow>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDb,
+                    $GuestbookTicketsTable,
+                    GuestbookTicketRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GuestbookTicketsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $GuestbookTicketsTable,
+      GuestbookTicketRow,
+      $$GuestbookTicketsTableFilterComposer,
+      $$GuestbookTicketsTableOrderingComposer,
+      $$GuestbookTicketsTableAnnotationComposer,
+      $$GuestbookTicketsTableCreateCompanionBuilder,
+      $$GuestbookTicketsTableUpdateCompanionBuilder,
+      (
+        GuestbookTicketRow,
+        BaseReferences<_$AppDb, $GuestbookTicketsTable, GuestbookTicketRow>,
+      ),
+      GuestbookTicketRow,
+      PrefetchHooks Function()
+    >;
+typedef $$GuestbookPostsTableCreateCompanionBuilder =
+    GuestbookPostsCompanion Function({
+      required String ticketId,
+      required String scope,
+      required String body,
+      required int createdUtc,
+      required PostStatus status,
+      Value<int> rowid,
+    });
+typedef $$GuestbookPostsTableUpdateCompanionBuilder =
+    GuestbookPostsCompanion Function({
+      Value<String> ticketId,
+      Value<String> scope,
+      Value<String> body,
+      Value<int> createdUtc,
+      Value<PostStatus> status,
+      Value<int> rowid,
+    });
+
+class $$GuestbookPostsTableFilterComposer
+    extends Composer<_$AppDb, $GuestbookPostsTable> {
+  $$GuestbookPostsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ticketId => $composableBuilder(
+    column: $table.ticketId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scope => $composableBuilder(
+    column: $table.scope,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdUtc => $composableBuilder(
+    column: $table.createdUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<PostStatus, PostStatus, String> get status =>
+      $composableBuilder(
+        column: $table.status,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+}
+
+class $$GuestbookPostsTableOrderingComposer
+    extends Composer<_$AppDb, $GuestbookPostsTable> {
+  $$GuestbookPostsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ticketId => $composableBuilder(
+    column: $table.ticketId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scope => $composableBuilder(
+    column: $table.scope,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdUtc => $composableBuilder(
+    column: $table.createdUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GuestbookPostsTableAnnotationComposer
+    extends Composer<_$AppDb, $GuestbookPostsTable> {
+  $$GuestbookPostsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ticketId =>
+      $composableBuilder(column: $table.ticketId, builder: (column) => column);
+
+  GeneratedColumn<String> get scope =>
+      $composableBuilder(column: $table.scope, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<int> get createdUtc => $composableBuilder(
+    column: $table.createdUtc,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<PostStatus, String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+}
+
+class $$GuestbookPostsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $GuestbookPostsTable,
+          GuestbookPostRow,
+          $$GuestbookPostsTableFilterComposer,
+          $$GuestbookPostsTableOrderingComposer,
+          $$GuestbookPostsTableAnnotationComposer,
+          $$GuestbookPostsTableCreateCompanionBuilder,
+          $$GuestbookPostsTableUpdateCompanionBuilder,
+          (
+            GuestbookPostRow,
+            BaseReferences<_$AppDb, $GuestbookPostsTable, GuestbookPostRow>,
+          ),
+          GuestbookPostRow,
+          PrefetchHooks Function()
+        > {
+  $$GuestbookPostsTableTableManager(_$AppDb db, $GuestbookPostsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GuestbookPostsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GuestbookPostsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GuestbookPostsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> ticketId = const Value.absent(),
+                Value<String> scope = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<int> createdUtc = const Value.absent(),
+                Value<PostStatus> status = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GuestbookPostsCompanion(
+                ticketId: ticketId,
+                scope: scope,
+                body: body,
+                createdUtc: createdUtc,
+                status: status,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ticketId,
+                required String scope,
+                required String body,
+                required int createdUtc,
+                required PostStatus status,
+                Value<int> rowid = const Value.absent(),
+              }) => GuestbookPostsCompanion.insert(
+                ticketId: ticketId,
+                scope: scope,
+                body: body,
+                createdUtc: createdUtc,
+                status: status,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$GuestbookPostsTable, GuestbookPostRow>(table),
+                  BaseReferences<
+                    _$AppDb,
+                    $GuestbookPostsTable,
+                    GuestbookPostRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GuestbookPostsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $GuestbookPostsTable,
+      GuestbookPostRow,
+      $$GuestbookPostsTableFilterComposer,
+      $$GuestbookPostsTableOrderingComposer,
+      $$GuestbookPostsTableAnnotationComposer,
+      $$GuestbookPostsTableCreateCompanionBuilder,
+      $$GuestbookPostsTableUpdateCompanionBuilder,
+      (
+        GuestbookPostRow,
+        BaseReferences<_$AppDb, $GuestbookPostsTable, GuestbookPostRow>,
+      ),
+      GuestbookPostRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -6569,4 +7805,8 @@ class $AppDbManager {
       $$ProfileTableTableManager(_db, _db.profile);
   $$WallSlotsTableTableManager get wallSlots =>
       $$WallSlotsTableTableManager(_db, _db.wallSlots);
+  $$GuestbookTicketsTableTableManager get guestbookTickets =>
+      $$GuestbookTicketsTableTableManager(_db, _db.guestbookTickets);
+  $$GuestbookPostsTableTableManager get guestbookPosts =>
+      $$GuestbookPostsTableTableManager(_db, _db.guestbookPosts);
 }

@@ -126,6 +126,8 @@ class Rules {
     required this.nicknameMin,
     required this.nicknameMax,
     required this.notificationDailyMax,
+    required this.guestbookMaxChars,
+    required this.guestbookWindowSteps,
     required this.allowedSourcesIos,
     required this.allowedSourcesAndroid,
   });
@@ -220,6 +222,11 @@ class Rules {
   /// 알림은 하루 이만큼까지만 (config notifications.dailyMax). 시작 화면의 알림 권한 설명에도 쓴다
   final int notificationDailyMax;
 
+  /// 방명록 글 길이 상한(글자 수)과, 걸음 숫자 기회가 열린 뒤 쓸 수 있는 걸음 수
+  /// (config guestbook.maxChars·milestoneWindowSteps)
+  final int guestbookMaxChars;
+  final int guestbookWindowSteps;
+
   /// 비어 있으면 출처로 거르지 않는다 (M1 초기 수집용)
   final List<String> allowedSourcesIos;
   final List<String> allowedSourcesAndroid;
@@ -246,6 +253,7 @@ class Rules {
     final arc = sky['arc'] as Map<String, dynamic>;
     final profile = j['profile'] as Map<String, dynamic>;
     final notifications = j['notifications'] as Map<String, dynamic>;
+    final guestbook = j['guestbook'] as Map<String, dynamic>;
     final sources = j['allowedSources'] as Map<String, dynamic>;
 
     LatLng latLng(dynamic v) => LatLng(_d(v['lat']), _d(v['lng']));
@@ -340,6 +348,8 @@ class Rules {
       nicknameMin: profile['nicknameMin'] as int,
       nicknameMax: profile['nicknameMax'] as int,
       notificationDailyMax: notifications['dailyMax'] as int,
+      guestbookMaxChars: guestbook['maxChars'] as int,
+      guestbookWindowSteps: guestbook['milestoneWindowSteps'] as int,
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),
       allowedSourcesAndroid: (sources['android'] as List).cast<String>(),
     );

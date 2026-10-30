@@ -53,6 +53,7 @@ class _Env {
       allowedSources: const [],
       landmarks: _landmarks,
       props: props,
+      milestones: milestones,
       onLand: onLand ?? (p, island) => true,
     );
   }
@@ -69,6 +70,7 @@ class _Env {
         'journeys': await db.select(db.journeys).get(),
         'paintings': await db.select(db.paintingsOwned).get(),
         'props': await db.select(db.propsOwned).get(),
+        'tickets': await db.select(db.guestbookTickets).get(),
         'fundKm': (await db.select(db.travelFund).getSingle()).km,
       };
 }

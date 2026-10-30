@@ -85,6 +85,7 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
   final rules = await ref.watch(rulesProvider.future);
   final landmarks = await ref.watch(landmarksProvider.future);
   final props = await ref.watch(propsProvider.future);
+  final milestones = await ref.watch(milestonesProvider.future);
   // 첫 여정 '내 동네 스케치'의 목적지가 바다에 떨어지지 않게 지도 경계로 땅을 판정한다
   final projection = await ref.watch(mapProjectionProvider.future);
   final regions = await ref.watch(mapRegionsProvider.future);
@@ -95,6 +96,7 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
     allowedSources: Platform.isIOS ? rules.allowedSourcesIos : rules.allowedSourcesAndroid,
     landmarks: {for (final l in landmarks) l.id: l},
     props: props,
+    milestones: milestones,
     onLand: (p, island) => onIsland(p, island, projection, regions),
   );
 });
@@ -154,4 +156,18 @@ final visitsProvider =
   final svc = await ref.watch(syncServiceProvider.future);
   await ref.watch(snapshotProvider.future);
   return svc.visits(landmarkId);
+});
+
+/// 방명록 기회 하나 (쓰기 화면, 도착 화면의 방명록 쓰기 버튼). 열려 있지 않으면 null.
+/// 글을 쓴 뒤에는 invalidate 해서 다시 읽는다
+final guestbookTicketProvider =
+    FutureProvider.autoDispose.family<GuestbookTicket?, String>((ref, ticketId) async {
+  final svc = await ref.watch(syncServiceProvider.future);
+  return svc.guestbookTicket(ticketId, ref.read(clockProvider)());
+});
+
+/// 방명록 동의를 이미 했는가. 쓰기 화면의 동의 줄을 처음에만 보여 주려고 읽는다
+final guestbookConsentProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final svc = await ref.watch(syncServiceProvider.future);
+  return svc.guestbookConsented();
 });

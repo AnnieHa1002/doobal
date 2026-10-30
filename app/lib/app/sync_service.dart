@@ -9,6 +9,7 @@ import '../domain/bucket.dart';
 import '../domain/eta.dart';
 import '../domain/gait.dart';
 import '../domain/geo.dart';
+import '../domain/guestbook.dart';
 import '../domain/journey.dart';
 import '../domain/landmark.dart';
 import '../domain/prop.dart';
@@ -184,6 +185,59 @@ class Home {
   final LatLng latLng;
 }
 
+/// 방명록에 쓸 수 있는 열린 기회 하나 (쓰기 화면·쉼터 표지판)
+class GuestbookTicket {
+  const GuestbookTicket({
+    required this.id,
+    required this.kind,
+    required this.scope,
+    required this.placeName,
+    required this.milestone,
+    required this.stepsLeft,
+    required this.openedAt,
+  });
+
+  final String id;
+  final TicketKind kind;
+
+  /// 어디서 쓰는 글인지: 명소 id, 첫 여정이면 'sketch', 걸음이면 'steps:<숫자>'
+  final String scope;
+
+  /// 도착 기회의 자리 이름: 명소 이름, 첫 여정이면 '내 동네 스케치'. 걸음 기회는 null
+  final String? placeName;
+
+  /// 걸음 숫자 기회의 숫자. 도착 기회는 null
+  final int? milestone;
+
+  /// 걸음 숫자 기회의 남은 걸음 (1 이상: 0이면 기회가 닫힌 것이라 이 값으로 나오지 않는다).
+  /// 도착 기회는 null
+  final int? stepsLeft;
+
+  /// 기회가 열린 시각. 알림(M6)이 아직 없어서 기회를 발견한 동기화 시각이다
+  final DateTime openedAt;
+}
+
+/// 내가 쓴 방명록 글 하나
+class GuestbookPostView {
+  const GuestbookPostView({
+    required this.ticketId,
+    required this.scope,
+    required this.text,
+    required this.createdAt,
+    required this.status,
+  });
+
+  final String ticketId;
+
+  /// 어디서 쓴 글인지 (기회의 scope)
+  final String scope;
+  final String text;
+  final DateTime createdAt;
+
+  /// 서버 전송 상태. 전송은 M5에서 붙여서 지금은 늘 pending
+  final PostStatus status;
+}
+
 /// 화면에 보여 줄 지금 상태
 class Snapshot {
   const Snapshot({
@@ -203,6 +257,7 @@ class Snapshot {
     required this.unseenPaintings,
     required this.paintingsCount,
     required this.totalKm,
+    required this.guestbookTicket,
   });
 
   final String today;
@@ -241,6 +296,12 @@ class Snapshot {
 
   /// 설치 이후 실제로 걸은 거리(km). 하루 거리의 합이라 배 환산이 아니다 (소품 거리 기준)
   final double totalKm;
+
+  /// 쉼터 표지판용 열린 방명록 기회 하나. 도착 기회가 먼저, 그다음 남은 걸음이 적은 걸음 숫자 기회.
+  /// 없으면 null (표지판이 서지 않는다).
+  /// TODO: 걷는 중 화면의 표지판과 "방명록 쓰기 · 남은 n보" 줄은 이 값으로 붙인다
+  /// (lib/ui/walking은 다른 작업이 고치는 중이라 이번에는 안 한다)
+  final GuestbookTicket? guestbookTicket;
 }
 
 /// 지도 화면에 쓸 값
@@ -291,6 +352,7 @@ class SyncService {
     required this.allowedSources,
     required this.landmarks,
     required this.props,
+    this.milestones = const [],
     this.onLand = _anywhere,
   });
 
@@ -308,6 +370,10 @@ class SyncService {
 
   /// MVP 소품 (props.json의 mvp)
   final List<Prop> props;
+
+  /// 방명록 걸음 숫자 (milestones.json의 stepMilestones, 오름차순).
+  /// 비어 있으면 걸음 숫자 기회가 생기지 않는다
+  final List<int> milestones;
 
   Future<SyncReport> sync(DateTime now) async {
     final state = await _ensureState(now);
@@ -340,6 +406,7 @@ class SyncService {
       await _recomputeDays(kstDayKey(from), kstDayKey(to));
       await _advanceJourney(to);
       await _unlockProps(to);
+      await _updateGuestbookTickets(to);
       await (db.update(db.syncState)..where((t) => t.id.equals(1)))
           .write(SyncStateCompanion(lastFetchedUtc: Value(to.millisecondsSinceEpoch)));
       // 도착한 여정은 더 이상 active가 아니라서 id로 다시 읽는다
@@ -425,6 +492,8 @@ class SyncService {
     final fund = await _fund();
     final used = useFund ? fund.km : 0.0;
     final at = now.toUtc().millisecondsSinceEpoch;
+    // 도착 방명록은 다음 여정을 시작하기 전까지만 쓸 수 있다
+    await _closeArrivalTickets(at);
     await db.into(db.journeys).insert(JourneysCompanion.insert(
           id: 'j$at',
           originLat: origin.lat,
@@ -503,6 +572,7 @@ class SyncService {
       prevFrame: Value(out.prevFrame),
       newFrame: Value(p.frame),
     ));
+    await _openArrivalTicket(active.id, dest.id, at);
   }
 
   /// 내 동네 스케치에 도착: 고정 그림 '첫 여행 짐 꾸러미'를 소장한다 (visits 1과 도착 시각만 남긴다).
@@ -526,6 +596,7 @@ class SyncService {
       visitNo: const Value(1),
       newFrame: const Value(Frame.wood),
     ));
+    await _openArrivalTicket(active.id, sketchId, at);
   }
 
   /// 새로 얻은 소품을 더한다 (한 번 얻은 소품은 없어지지 않는다).
@@ -549,6 +620,98 @@ class SyncService {
               PropsOwnedCompanion.insert(
                   propId: id, unlockedUtc: at, seen: Value(initial.contains(id))),
         ]));
+  }
+
+  /// 도착한 여정의 방명록 기회를 연다. 열린 시각은 도착을 감지한 시각이다. 이미 있으면 그대로
+  Future<void> _openArrivalTicket(String journeyId, String scope, int at) =>
+      db.into(db.guestbookTickets).insert(
+            GuestbookTicketsCompanion.insert(
+              id: arrivalTicketId(journeyId),
+              kind: TicketKind.arrival,
+              scope: scope,
+              openedUtc: at,
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+
+  /// 새 여정을 시작하면 쓰지 않은 도착 기회는 닫힌다 (이월은 없다)
+  Future<void> _closeArrivalTickets(int at) => (db.update(db.guestbookTickets)
+        ..where((t) =>
+            t.kind.equalsValue(TicketKind.arrival) & t.usedUtc.isNull() & t.closedUtc.isNull()))
+      .write(GuestbookTicketsCompanion(closedUtc: Value(at)));
+
+  Future<void> _closeTicket(String id, int at) => (db.update(db.guestbookTickets)
+        ..where((t) => t.id.equals(id)))
+      .write(GuestbookTicketsCompanion(closedUtc: Value(at)));
+
+  /// 걸음 숫자 기회를 닫고 연다 (같은 기록으로 또 돌려도 결과가 같다).
+  /// 닫기: 열린 뒤 [to]까지 저장된 걸음이 창(guestbook.milestoneWindowSteps) 이상이면 닫는다.
+  /// 열기: 설치 이후 걸음(하루 요약의 합)이 넘은 걸음 숫자인데 기회가 없으면 만든다.
+  /// 한 번에 여러 개를 넘으면 각각 만든다. 열린 시각은 이번 동기화 시각이다 (알림이 있으면
+  /// 알림이 뜬 시각이지만 알림이 꺼진 경우와 같게 본다).
+  /// TODO(M6): 알림이 뜬 시각을 열린 시각으로 쓴다
+  Future<void> _updateGuestbookTickets(DateTime to) async {
+    final at = to.toUtc().millisecondsSinceEpoch;
+    final rows = await db.select(db.guestbookTickets).get();
+    for (final r in rows) {
+      if (r.kind != TicketKind.milestone || r.usedUtc != null || r.closedUtc != null) continue;
+      if (stepsLeft(rules.guestbookWindowSteps, await _stepsAfter(r.openedUtc, to)) == 0) {
+        await _closeTicket(r.id, at);
+      }
+    }
+    final total = (await db.select(db.daySummaries).get()).fold(0, (sum, d) => sum + d.steps);
+    final have = {for (final r in rows) r.id};
+    await db.batch((b) => b.insertAll(db.guestbookTickets, [
+          for (final m in milestonesReached(total, milestones))
+            if (!have.contains(milestoneTicketId(m)))
+              GuestbookTicketsCompanion.insert(
+                id: milestoneTicketId(m),
+                kind: TicketKind.milestone,
+                scope: milestoneScope(m),
+                openedUtc: at,
+              ),
+        ]));
+  }
+
+  /// [openedUtc] 다음 분부터 [upTo]가 속한 분까지 저장된 걸음의 합 (기회가 열린 분은 세지 않는다.
+  /// 그 분의 걸음이 열리기 전인지 뒤인지 알 수 없어서 경비처럼 다음 분부터 센다)
+  Future<int> _stepsAfter(int openedUtc, DateTime upTo) async {
+    final minutes =
+        await _minutesFrom(_minuteOf(openedUtc) + 1, beforeMinute: epochMinute(upTo) + 1);
+    return minutes.fold<int>(0, (sum, m) => sum + m.steps);
+  }
+
+  Future<GuestbookTicketRow?> _ticketRow(String id) =>
+      (db.select(db.guestbookTickets)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  /// 열린 기회의 화면용 값. 이미 썼거나 닫혔거나, 걸음 숫자 기회의 남은 걸음이 0이면 null
+  Future<GuestbookTicket?> _ticketOf(GuestbookTicketRow r, DateTime now) async {
+    if (r.usedUtc != null || r.closedUtc != null) return null;
+    final opened = _utc(r.openedUtc);
+    if (r.kind == TicketKind.arrival) {
+      return GuestbookTicket(
+        id: r.id,
+        kind: r.kind,
+        scope: r.scope,
+        placeName: r.scope == sketchId ? sketchName : landmarks[r.scope]?.name ?? r.scope,
+        milestone: null,
+        stepsLeft: null,
+        openedAt: opened,
+      );
+    }
+    final milestone = milestoneOfScope(r.scope);
+    if (milestone == null) return null;
+    final left = stepsLeft(rules.guestbookWindowSteps, await _stepsAfter(r.openedUtc, now));
+    if (left == 0) return null;
+    return GuestbookTicket(
+      id: r.id,
+      kind: r.kind,
+      scope: r.scope,
+      placeName: null,
+      milestone: milestone,
+      stepsLeft: left,
+      openedAt: opened,
+    );
   }
 
   /// 도착 화면을 보여 줬다고 적는다
@@ -735,6 +898,91 @@ class SyncService {
       (db.update(db.paintingsOwned)..where((t) => t.seen.equals(false)))
           .write(const PaintingsOwnedCompanion(seen: Value(true)));
 
+  /// 지금 쓸 수 있는 방명록 기회. 도착 기회가 먼저(나중에 도착한 것부터), 그다음 걸음 숫자 기회를
+  /// 남은 걸음이 적은 순서로. 남은 걸음은 기회가 열린 뒤 [now]까지 저장된 걸음으로 센다
+  /// (동기화는 하지 않는다. 부른 쪽이 먼저 sync 한다)
+  Future<List<GuestbookTicket>> openTickets(DateTime now) async {
+    final rows = await (db.select(db.guestbookTickets)
+          ..where((t) => t.usedUtc.isNull() & t.closedUtc.isNull()))
+        .get();
+    final tickets = [for (final r in rows) ?await _ticketOf(r, now)];
+    tickets.sort((a, b) {
+      if (a.kind != b.kind) return a.kind == TicketKind.arrival ? -1 : 1;
+      if (a.kind == TicketKind.arrival) return b.openedAt.compareTo(a.openedAt);
+      final byLeft = a.stepsLeft!.compareTo(b.stepsLeft!);
+      return byLeft != 0 ? byLeft : a.milestone!.compareTo(b.milestone!);
+    });
+    return tickets;
+  }
+
+  /// 기회 하나. 없거나 이미 썼거나 닫혔으면 null (쓰기 화면과 도착 화면 버튼이 읽는다)
+  Future<GuestbookTicket?> guestbookTicket(String ticketId, DateTime now) async {
+    final row = await _ticketRow(ticketId);
+    return row == null ? null : _ticketOf(row, now);
+  }
+
+  /// 방명록 글을 쓴다: 글을 저장하고 기회를 쓴 것으로 바꾸고, 처음이면 동의 시각
+  /// (Profile.guestbookConsentAt)을 적는다. 서버 전송은 M5에서 붙여서 글은 pending으로 남는다.
+  /// StateError(메시지는 화면에 그대로 보여 줄 수 있다)를 던지고 아무것도 쓰지 않는 경우:
+  /// 기회가 없다 · 이미 썼다 · 닫혔다 · 글이 비었거나 길다.
+  /// 걸음 숫자 기회는 동기화가 닫기 전이라도 열린 뒤 [now]까지 저장된 걸음이 창을 채웠으면
+  /// 닫힌 것으로 본다 (이때는 닫힘 시각만 적어 둔다).
+  /// TODO(M5): 올리기 전에 금칙어를 검사한다 (config/moderation, korean_profanity_filter)
+  Future<void> writeGuestbook(String ticketId, String text, DateTime now) async {
+    final error = await db.transaction<String?>(() async {
+      final row = await _ticketRow(ticketId);
+      if (row == null) return '방명록을 남길 수 있는 때가 아니에요';
+      if (row.usedUtc != null) return '이미 방명록을 남겼어요';
+      final at = now.toUtc().millisecondsSinceEpoch;
+      if (row.closedUtc != null || await _ticketOf(row, now) == null) {
+        if (row.closedUtc == null) await _closeTicket(row.id, at);
+        return '방명록을 남길 수 있는 때가 지났어요';
+      }
+      final body = cleanPost(text, rules.guestbookMaxChars);
+      if (body == null) {
+        return text.trim().isEmpty ? '글을 써 주세요' : '${rules.guestbookMaxChars}자까지 쓸 수 있어요';
+      }
+      await db.into(db.guestbookPosts).insert(GuestbookPostsCompanion.insert(
+            ticketId: row.id,
+            scope: row.scope,
+            body: body,
+            createdUtc: at,
+            status: PostStatus.pending,
+          ));
+      await (db.update(db.guestbookTickets)..where((t) => t.id.equals(row.id)))
+          .write(GuestbookTicketsCompanion(usedUtc: Value(at)));
+      if (!await guestbookConsented()) {
+        await db.into(db.profile).insertOnConflictUpdate(
+            ProfileCompanion(id: const Value(1), guestbookConsentAt: Value(at)));
+      }
+      return null;
+    });
+    if (error != null) throw StateError(error);
+  }
+
+  /// 방명록 동의를 이미 했는가 (처음 쓸 때만 동의 줄을 보여 준다)
+  Future<bool> guestbookConsented() async => (await _profileRow())?.guestbookConsentAt != null;
+
+  /// 내가 쓴 방명록 글, 최근에 쓴 순서
+  Future<List<GuestbookPostView>> myPosts() async {
+    final rows = await (db.select(db.guestbookPosts)
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.createdUtc),
+            (t) => OrderingTerm.desc(t.ticketId),
+          ]))
+        .get();
+    return [
+      for (final r in rows)
+        GuestbookPostView(
+          ticketId: r.ticketId,
+          scope: r.scope,
+          text: r.body,
+          createdAt: _utc(r.createdUtc),
+          status: r.status,
+        ),
+    ];
+  }
+
   /// 걷기 기록: [fromUtc, toUtc)와 겹치는 분의 걸음·거리·걷기/달리기와 걷기 1번 인정 여부.
   /// 동기화는 하지 않는다. 부른 쪽이 먼저 sync 한다.
   /// 하루 계산(_recomputeDays)처럼 전날 0시부터 불러 걷기/뛰기 상태를 이어 판정한다
@@ -798,6 +1046,7 @@ class SyncService {
           (await (db.select(db.paintingsOwned)..where((t) => t.seen.equals(false))).get()).length,
       paintingsCount: (await db.select(db.paintingsOwned).get()).length,
       totalKm: days.fold(0.0, (sum, d) => sum + d.distanceM) / 1000,
+      guestbookTicket: (await openTickets(now)).firstOrNull,
     );
   }
 

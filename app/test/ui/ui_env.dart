@@ -47,6 +47,7 @@ class UiEnv {
       allowedSources: const [],
       landmarks: byId,
       props: props,
+      milestones: milestones,
     );
   }
 

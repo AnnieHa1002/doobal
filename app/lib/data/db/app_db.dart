@@ -1,12 +1,14 @@
 import 'package:drift/drift.dart';
 
+import '../../domain/guestbook.dart' show TicketKind;
 import '../../domain/journey.dart' show Frame;
 
 part 'app_db.g.dart';
 
 // M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝) + 스키마 3 (프로필: 출발 동네)
 // + 스키마 4 (화집 벽) + 스키마 5 (새 그림 표시) + 스키마 6 (프로필: 시작 흐름)
-// + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지). 시각은 모두 UTC 정수
+// + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지) + 스키마 8 (방명록 쓸 기회·쓴 글).
+// 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
 
@@ -181,6 +183,41 @@ class Profile extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// 방명록 쓸 기회. 도착(id 'a:<여정 id>')은 여정마다, 걸음 숫자(id 'm:<숫자>')는 숫자마다 하나다.
+/// scope는 쓰는 자리: 명소 id, 첫 여정이면 'sketch', 걸음이면 'steps:<숫자>'.
+/// 열린 기회 = usedUtc·closedUtc가 둘 다 null. 글을 쓰면 usedUtc, 때가 지나면(다음 여정 시작·
+/// 걸음 숫자 기회의 500보) closedUtc. openedUtc는 알림이 뜬 시각인데 알림(M6)이 아직 없어서
+/// 기회를 발견한 동기화 시각이다
+@DataClassName('GuestbookTicketRow')
+class GuestbookTickets extends Table {
+  TextColumn get id => text()();
+  TextColumn get kind => textEnum<TicketKind>()();
+  TextColumn get scope => text()();
+  IntColumn get openedUtc => integer()();
+  IntColumn get usedUtc => integer().nullable()();
+  IntColumn get closedUtc => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// 방명록 전송 상태. 쓰기만 하는 지금은 늘 pending이고, 서버로 보내는 건 M5에서 한다
+enum PostStatus { pending, sent, rejected }
+
+/// 내가 쓴 방명록 글. 기회 하나에 글 하나(ticketId가 키). 글 본문 열 이름은 Table의 text()와
+/// 겹치지 않게 body다
+@DataClassName('GuestbookPostRow')
+class GuestbookPosts extends Table {
+  TextColumn get ticketId => text()();
+  TextColumn get scope => text()();
+  TextColumn get body => text()();
+  IntColumn get createdUtc => integer()();
+  TextColumn get status => textEnum<PostStatus>()();
+
+  @override
+  Set<Column> get primaryKey => {ticketId};
+}
+
 @DriftDatabase(
   tables: [
     StepMinutes,
@@ -193,13 +230,15 @@ class Profile extends Table {
     PropsOwned,
     Profile,
     WallSlots,
+    GuestbookTickets,
+    GuestbookPosts,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -243,6 +282,10 @@ class AppDb extends _$AppDb {
           if (from < 7) {
             await m.addColumn(journeys, journeys.destLat);
             await m.addColumn(journeys, journeys.destLng);
+          }
+          if (from < 8) {
+            await m.createTable(guestbookTickets);
+            await m.createTable(guestbookPosts);
           }
         },
       );

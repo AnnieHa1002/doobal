@@ -14,6 +14,7 @@ import '../common/name_tag.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
 import '../debug/debug_screen.dart';
+import '../guestbook/guestbook_write_screen.dart';
 import '../map/map_screen.dart';
 import '../placeholder/placeholder_screens.dart';
 import '../scene/scene_view.dart';
@@ -63,6 +64,9 @@ class RestScreen extends ConsumerWidget {
                 o,
                 hasNew: snap.unseenProps > 0 || snap.unseenPaintings > 0,
               ),
+            // 방명록 표지판은 쓸 기회가 있을 때만 선다
+            if (snap.guestbookTicket != null)
+              _guestbookSign(context, box.biggest, camp.guestbookSign, snap.guestbookTicket!),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -214,6 +218,44 @@ class RestScreen extends ConsumerWidget {
         '약 ${formatInt(sketchSteps(km, rules))}보';
   }
 
+  /// 방명록 표지판 (이정표 옆): 물건과 같은 모양의 자리표시에 이름표 "방명록".
+  /// 테마의 footY에 표지판 아래 가장자리가 오고, 누르면 그 기회의 쓰기 화면으로 간다.
+  /// TODO: 그림(ui_signpost)이 나오면 자리표시를 바꾼다
+  Widget _guestbookSign(BuildContext context, Size screen, FootSpot spot, GuestbookTicket ticket) {
+    const size = 56.0;
+    const tagRoom = 40.0;
+    return Positioned(
+      left: spot.x * screen.width - size / 2 - tagRoom,
+      top: spot.footY * screen.height - size,
+      width: size + tagRoom * 2,
+      child: GestureDetector(
+        key: const ValueKey('signpost'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _push(context, GuestbookWriteScreen(ticketId: ticket.id)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _objectBox(size, Icons.edit_note_outlined),
+            const SizedBox(height: 2),
+            const NameTag('방명록'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 물건의 몸통: 카드색 바탕, 잉크 테두리, 가운데 아이콘
+  Widget _objectBox(double size, IconData icon) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Palette.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Palette.ink, width: 2.5),
+        ),
+        child: Icon(icon, size: size * 0.5, color: Palette.ink),
+      );
+
   /// 물건: 테마가 정한 비율 위치에 중심을 두고, 아래에 이름표를 붙인다.
   /// 배낭은 [hasNew]이면(아직 안 본 소품이나 그림이 있으면) 오른쪽 위에 알림 점이 붙는다
   Widget _campObject(BuildContext context, Size screen, CampObject o, {required bool hasNew}) {
@@ -231,16 +273,7 @@ class RestScreen extends ConsumerWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Container(
-                  width: o.size,
-                  height: o.size,
-                  decoration: BoxDecoration(
-                    color: Palette.card,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Palette.ink, width: 2.5),
-                  ),
-                  child: Icon(_iconOf(o.id), size: o.size * 0.5, color: Palette.ink),
-                ),
+                _objectBox(o.size, _iconOf(o.id)),
                 if (o.id == 'backpack' && hasNew)
                   const Positioned(
                     top: -4,
