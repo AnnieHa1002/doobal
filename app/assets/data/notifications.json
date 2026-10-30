@@ -1,0 +1,93 @@
+{
+ "version": 2,
+ "source": "기획/알림_문구.md v01 (2026-10-29), v2: 동행 이름 확정에 맞춘 조사 토큰",
+ "vars": [
+  "companion",
+  "dest",
+  "milestone",
+  "remainingKm"
+ ],
+ "note": "{companion}은 companions.json의 이름(폐이·휴·심 박사)으로 채운다. 조사는 {이/가}처럼 쓰고 앱이 앞 글자 받침으로 고른다(지금 세 이름은 모두 받침 없음 → 가)",
+ "kinds": [
+  {
+   "id": "N1",
+   "priority": 1,
+   "type": "guestbookMilestone",
+   "when": "방명록 걸음 숫자를 지났을 때",
+   "texts": [
+    {
+     "title": "{milestone}보 표지판",
+     "body": "길가에 표지판이 섰어. 500보 안에 한 줄 남겨 볼까?"
+    },
+    {
+     "title": "방명록을 쓸 시간",
+     "body": "{milestone}보째! 이 숫자를 지난 여행자들의 글이 기다리고 있어."
+    }
+   ]
+  },
+  {
+   "id": "N2",
+   "priority": 2,
+   "type": "arrived",
+   "when": "목적지에 도착했을 때",
+   "texts": [
+    {
+     "title": "{dest} 도착!",
+     "body": "드디어 왔어. 그림 한 장이 완성됐어."
+    },
+    {
+     "title": "여기가 {dest}구나",
+     "body": "걸어서 여기까지 왔다. 액자에 담아 볼까?"
+    }
+   ]
+  },
+  {
+   "id": "N3",
+   "priority": 3,
+   "type": "storyChapter",
+   "when": "동행 이야기 새 장이 열렸을 때",
+   "texts": [
+    {
+     "title": "{companion}의 이야기",
+     "body": "함께 걸은 길만큼, 이야기가 한 장 열렸어."
+    },
+    {
+     "title": "새 이야기 한 장",
+     "body": "{companion}{이/가} 할 말이 있대."
+    }
+   ]
+  },
+  {
+   "id": "N4",
+   "priority": 4,
+   "type": "nearDestination",
+   "when": "목적지까지 10km 안으로 들어왔을 때",
+   "texts": [
+    {
+     "title": "{dest}까지 {remainingKm}km",
+     "body": "목적지가 보이는 것 같아. 조금만 더."
+    },
+    {
+     "title": "거의 다 왔어",
+     "body": "저 너머가 {dest}야. 붓을 챙겨 둘게."
+    }
+   ]
+  },
+  {
+   "id": "N5",
+   "priority": 5,
+   "type": "inactive",
+   "when": "3일 동안 앱을 열지 않았을 때",
+   "texts": [
+    {
+     "title": "길은 그대로 있어",
+     "body": "쉬어도 괜찮아. 다시 걷고 싶을 때 이어서 가자."
+    },
+    {
+     "title": "쉼터에 불을 피워 뒀어",
+     "body": "언제든 와. 다음 여행지는 천천히 정해도 돼."
+    }
+   ]
+  }
+ ]
+}

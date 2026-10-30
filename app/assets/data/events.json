@@ -1,7 +1,20 @@
 {
- "version": 1,
+ "version": 2,
+ "source": "기획/이벤트_문구.md v01 (2026-10-29)",
  "propChance": 0.0,
  "propChanceAfterLaunch": 0.1,
+ "vars": [
+  "dest",
+  "etaGainDays",
+  "progressPct",
+  "remainingKm",
+  "runKm",
+  "sessionKm",
+  "stepsToNext",
+  "todayOverAvgKm",
+  "todaySteps",
+  "totalKm"
+ ],
  "scenes": [
   {
    "id": "mountain_spring_day",
@@ -9,9 +22,18 @@
    "season": "spring",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "MTN_SPR_DAY_A",
+     "text": "산비탈마다 연둣빛이 번져 간다. 물을 많이 탄 초록 같다."
+    },
+    {
+     "id": "MTN_SPR_DAY_B",
+     "text": "흙냄새에 꽃 냄새가 조금 섞였다. 숨을 한 번 더 들이쉰다."
+    },
+    {
+     "id": "MTN_SPR_DAY_C",
+     "text": "이 연둣빛은 오늘만 이 색이겠지. 서둘러 눈에 담자."
+    }
    ],
    "art": "event_mountain_spring_day"
   },
@@ -21,9 +43,18 @@
    "season": "spring",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "MTN_SPR_NIG_A",
+     "text": "와, 별이 이렇게 많았나. 능선 위로 별이 쏟아진다."
+    },
+    {
+     "id": "MTN_SPR_NIG_B",
+     "text": "개구리 소리가 산 아래에서부터 천천히 차오른다."
+    },
+    {
+     "id": "MTN_SPR_NIG_C",
+     "text": "밤 산은 색이 없어서 좋다. 선만 따라 그리면 되니까."
+    }
    ],
    "art": "event_mountain_spring_night"
   },
@@ -33,9 +64,18 @@
    "season": "summer",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "MTN_SUM_DAY_A",
+     "text": "나뭇잎 사이로 햇빛이 동전처럼 떨어져 있다."
+    },
+    {
+     "id": "MTN_SUM_DAY_B",
+     "text": "매미 소리가 산을 덮었다. 내 발소리가 묻힌다."
+    },
+    {
+     "id": "MTN_SUM_DAY_C",
+     "text": "초록에 이렇게 많은 색이 있었나. 물감이 모자라겠어."
+    }
    ],
    "art": "event_mountain_summer_day"
   },
@@ -45,9 +85,18 @@
    "season": "summer",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "MTN_SUM_NIG_A",
+     "text": "어두운 숲 끝에서 작은 빛이 깜빡였다 사라진다."
+    },
+    {
+     "id": "MTN_SUM_NIG_B",
+     "text": "낮의 열기가 빠진 바람이 목덜미를 지나간다."
+    },
+    {
+     "id": "MTN_SUM_NIG_C",
+     "text": "오늘 밤 공기는 짙은 파랑으로 칠하고 싶다."
+    }
    ],
    "art": "event_mountain_summer_night"
   },
@@ -57,9 +106,18 @@
    "season": "autumn",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "MTN_AUT_DAY_A",
+     "text": "와, 산 전체가 물들었다. 붓을 씻은 물 같은 단풍."
+    },
+    {
+     "id": "MTN_AUT_DAY_B",
+     "text": "낙엽 밟는 소리가 걸음보다 반 박자 늦게 따라온다."
+    },
+    {
+     "id": "MTN_AUT_DAY_C",
+     "text": "이 빨강은 물감으로는 안 나오겠지. 눈에 담아 두자."
+    }
    ],
    "art": "event_mountain_autumn_day"
   },
@@ -69,9 +127,18 @@
    "season": "autumn",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "MTN_AUT_NIG_A",
+     "text": "산 아래 마을 불빛이 하나둘 켜진다."
+    },
+    {
+     "id": "MTN_AUT_NIG_B",
+     "text": "바스락. 내 발소리에 나도 놀랐다."
+    },
+    {
+     "id": "MTN_AUT_NIG_C",
+     "text": "가을밤은 갈색 잉크 한 병이면 다 그릴 수 있겠다."
+    }
    ],
    "art": "event_mountain_autumn_night"
   },
@@ -81,9 +148,18 @@
    "season": "winter",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "MTN_WIN_DAY_A",
+     "text": "눈 덮인 비탈이 종이처럼 하얗다. 뭐든지 그려낼 수 있을 것 같다."
+    },
+    {
+     "id": "MTN_WIN_DAY_B",
+     "text": "발밑에서 눈이 뽀드득 운다. 한 걸음, 또 한 걸음."
+    },
+    {
+     "id": "MTN_WIN_DAY_C",
+     "text": "빈 종이 같은 산. 여백을 남기는 것도 그림이지."
+    }
    ],
    "art": "event_mountain_winter_day"
   },
@@ -93,9 +169,18 @@
    "season": "winter",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "MTN_WIN_NIG_A",
+     "text": "나뭇가지가 밤하늘에 잉크로 그은 잔금 같다."
+    },
+    {
+     "id": "MTN_WIN_NIG_B",
+     "text": "숨이 하얗게 피어올랐다 사라진다."
+    },
+    {
+     "id": "MTN_WIN_NIG_C",
+     "text": "이렇게 고요한 밤은 소리 대신 선으로 남겨야지."
+    }
    ],
    "art": "event_mountain_winter_night"
   },
@@ -105,9 +190,18 @@
    "season": "spring",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "COA_SPR_DAY_A",
+     "text": "물빛이 아직 차가운 청록이다. 파도 끝만 하얗게 부서진다."
+    },
+    {
+     "id": "COA_SPR_DAY_B",
+     "text": "짠 바람에 어디선가 꽃 냄새가 실려 온다."
+    },
+    {
+     "id": "COA_SPR_DAY_C",
+     "text": "봄 바다는 물감을 덜 섞어야겠다. 맑은 그대로."
+    }
    ],
    "art": "event_coast_spring_day"
   },
@@ -117,9 +211,18 @@
    "season": "spring",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "COA_SPR_NIG_A",
+     "text": "수평선이 사라지고 등대 불빛만 천천히 돈다."
+    },
+    {
+     "id": "COA_SPR_NIG_B",
+     "text": "파도 소리가 숨소리처럼 들어왔다 나간다."
+    },
+    {
+     "id": "COA_SPR_NIG_C",
+     "text": "밤바다는 검정이 아니라 아주 깊은 남색이야."
+    }
    ],
    "art": "event_coast_spring_night"
   },
@@ -129,9 +232,18 @@
    "season": "summer",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "COA_SUM_DAY_A",
+     "text": "탁 트인 바다다! 모래 위로 햇빛이 쏟아진다."
+    },
+    {
+     "id": "COA_SUM_DAY_B",
+     "text": "신발 속으로 모래알이 들어왔다. 그것도 여름이지."
+    },
+    {
+     "id": "COA_SUM_DAY_C",
+     "text": "하늘과 바다가 같은 파랑으로 이어져 있다."
+    }
    ],
    "art": "event_coast_summer_day"
   },
@@ -141,9 +253,18 @@
    "season": "summer",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "COA_SUM_NIG_A",
+     "text": "멀리 고깃배 불빛이 점점이 떠 있다."
+    },
+    {
+     "id": "COA_SUM_NIG_B",
+     "text": "바람에 낮의 소금기가 아직 남아 있다."
+    },
+    {
+     "id": "COA_SUM_NIG_C",
+     "text": "저 불빛들은 금색 점 몇 개면 충분하겠다."
+    }
    ],
    "art": "event_coast_summer_night"
   },
@@ -153,9 +274,18 @@
    "season": "autumn",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "COA_AUT_DAY_A",
+     "text": "하늘이 이렇게 높았던가. 바다도 한층 짙어졌다."
+    },
+    {
+     "id": "COA_AUT_DAY_B",
+     "text": "갈매기 소리가 바람을 타고 멀어진다."
+    },
+    {
+     "id": "COA_AUT_DAY_C",
+     "text": "가을 바다는 군청 한 번, 물 한 번. 그거면 돼."
+    }
    ],
    "art": "event_coast_autumn_day"
   },
@@ -165,9 +295,18 @@
    "season": "autumn",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "COA_AUT_NIG_A",
+     "text": "물결 위에 불빛이 길게 늘어져 흔들린다."
+    },
+    {
+     "id": "COA_AUT_NIG_B",
+     "text": "선선한 바닷바람에 옷깃을 여민다."
+    },
+    {
+     "id": "COA_AUT_NIG_C",
+     "text": "흔들리는 빛은 붓을 떨듯이 그려야지."
+    }
    ],
    "art": "event_coast_autumn_night"
   },
@@ -177,9 +316,18 @@
    "season": "winter",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "COA_WIN_DAY_A",
+     "text": "회색 바다 위로 파도가 하얀 선을 긋는다."
+    },
+    {
+     "id": "COA_WIN_DAY_B",
+     "text": "바람이 매섭다. 그래도 걸음은 앞으로."
+    },
+    {
+     "id": "COA_WIN_DAY_C",
+     "text": "겨울 바다의 역동성은 색이 아닌 선으로 표현하고 싶다."
+    }
    ],
    "art": "event_coast_winter_day"
   },
@@ -189,9 +337,18 @@
    "season": "winter",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "COA_WIN_NIG_A",
+     "text": "어둠 속에서 파도만 하얗게 다가왔다 물러난다."
+    },
+    {
+     "id": "COA_WIN_NIG_B",
+     "text": "차가운 공기에 바다 냄새가 더 또렷하다."
+    },
+    {
+     "id": "COA_WIN_NIG_C",
+     "text": "고요한 겨울 바다. 오늘은 여백이 주인공이다."
+    }
    ],
    "art": "event_coast_winter_night"
   },
@@ -201,9 +358,18 @@
    "season": "spring",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "FLD_SPR_DAY_A",
+     "text": "논둑을 따라 새싹이 초록 점선처럼 이어진다."
+    },
+    {
+     "id": "FLD_SPR_DAY_B",
+     "text": "어디선가 새가 높게 운다. 걸음이 가벼워진다."
+    },
+    {
+     "id": "FLD_SPR_DAY_C",
+     "text": "연두와 노랑을 반씩. 봄 들판은 그걸로 시작하자."
+    }
    ],
    "art": "event_field_spring_day"
   },
@@ -213,9 +379,18 @@
    "season": "spring",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "FLD_SPR_NIG_A",
+     "text": "들 위로 하늘이 끝없다. 이런 밤하늘은 처음이야."
+    },
+    {
+     "id": "FLD_SPR_NIG_B",
+     "text": "밤이슬에 젖은 흙냄새가 더 진하다."
+    },
+    {
+     "id": "FLD_SPR_NIG_C",
+     "text": "지평선 한 줄만 긋고 나머지는 별에게 맡기자."
+    }
    ],
    "art": "event_field_spring_night"
   },
@@ -225,9 +400,18 @@
    "season": "summer",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "FLD_SUM_DAY_A",
+     "text": "초록 벼가 바람 따라 물결처럼 눕는다."
+    },
+    {
+     "id": "FLD_SUM_DAY_B",
+     "text": "풀 냄새가 뜨거운 바람에 실려 온다."
+    },
+    {
+     "id": "FLD_SUM_DAY_C",
+     "text": "바람이 지나간 자리를 붓질 방향으로 그려 볼까."
+    }
    ],
    "art": "event_field_summer_day"
   },
@@ -237,9 +421,18 @@
    "season": "summer",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "FLD_SUM_NIG_A",
+     "text": "들판 끝 마을에 창문 불빛이 몇 개 남았다."
+    },
+    {
+     "id": "FLD_SUM_NIG_B",
+     "text": "풀벌레 소리가 들판 가득 깔렸다."
+    },
+    {
+     "id": "FLD_SUM_NIG_C",
+     "text": "소리가 많은 밤, 솔솔 잠이 올 것만 같다."
+    }
    ],
    "art": "event_field_summer_night"
   },
@@ -249,9 +442,18 @@
    "season": "autumn",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "FLD_AUT_DAY_A",
+     "text": "끝이 안 보이는 황금 들판. 여기까지 걸어오길 잘했다."
+    },
+    {
+     "id": "FLD_AUT_DAY_B",
+     "text": "마른 풀 냄새가 고소하다. 배가 조금 고파진다."
+    },
+    {
+     "id": "FLD_AUT_DAY_C",
+     "text": "황금색은 노랑에 갈색 한 방울. 햇빛과 같은 느낌이다."
+    }
    ],
    "art": "event_field_autumn_day"
   },
@@ -261,9 +463,18 @@
    "season": "autumn",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "FLD_AUT_NIG_A",
+     "text": "추수 끝난 들판이 어둠 속에 조용히 누워 있다."
+    },
+    {
+     "id": "FLD_AUT_NIG_B",
+     "text": "귀뚜라미 소리가 걸음에 박자를 맞춘다."
+    },
+    {
+     "id": "FLD_AUT_NIG_C",
+     "text": "가을밤 들판은 따뜻한 회색으로 칠하고 싶어."
+    }
    ],
    "art": "event_field_autumn_night"
   },
@@ -273,9 +484,18 @@
    "season": "winter",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "FLD_WIN_DAY_A",
+     "text": "빈 논 위에 서리가 하얗게 앉았다."
+    },
+    {
+     "id": "FLD_WIN_DAY_B",
+     "text": "언 흙이 발밑에서 사각거린다."
+    },
+    {
+     "id": "FLD_WIN_DAY_C",
+     "text": "아무것도 없는 들판. 그래서 하늘이 더 잘 보인다."
+    }
    ],
    "art": "event_field_winter_day"
   },
@@ -285,9 +505,18 @@
    "season": "winter",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "FLD_WIN_NIG_A",
+     "text": "멀리 비닐하우스가 희미하게 빛난다."
+    },
+    {
+     "id": "FLD_WIN_NIG_B",
+     "text": "바람 소리 말고는 아무것도 들리지 않는다."
+    },
+    {
+     "id": "FLD_WIN_NIG_C",
+     "text": "오늘 밤은 꼭 물감이 번져 내린 것만 같아."
+    }
    ],
    "art": "event_field_winter_night"
   },
@@ -297,9 +526,18 @@
    "season": "spring",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "CTY_SPR_DAY_A",
+     "text": "꽃잎이 눈처럼 흩날린다. 이 길, 오래 기억할 것 같아."
+    },
+    {
+     "id": "CTY_SPR_DAY_B",
+     "text": "빵집 앞을 지나니 고소한 냄새가 따라온다."
+    },
+    {
+     "id": "CTY_SPR_DAY_C",
+     "text": "회색 건물 사이 분홍 한 점. 그게 봄이다."
+    }
    ],
    "art": "event_city_spring_day"
   },
@@ -309,9 +547,18 @@
    "season": "spring",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "CTY_SPR_NIG_A",
+     "text": "가로등 아래 꽃잎이 하얗게 빛난다."
+    },
+    {
+     "id": "CTY_SPR_NIG_B",
+     "text": "멀리서 웃음소리가 들렸다 사라진다."
+    },
+    {
+     "id": "CTY_SPR_NIG_C",
+     "text": "도시의 밤은 노란 불빛부터 칠해야겠다."
+    }
    ],
    "art": "event_city_spring_night"
   },
@@ -321,9 +568,18 @@
    "season": "summer",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "CTY_SUM_DAY_A",
+     "text": "건물 유리창마다 하늘이 한 조각씩 들어 있다."
+    },
+    {
+     "id": "CTY_SUM_DAY_B",
+     "text": "그늘에 들어서니 공기가 한결 시원하다."
+    },
+    {
+     "id": "CTY_SUM_DAY_C",
+     "text": "유리창에 비친 하늘. 하늘을 두 번 그리는 셈이네."
+    }
    ],
    "art": "event_city_summer_day"
   },
@@ -333,9 +589,18 @@
    "season": "summer",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "CTY_SUM_NIG_A",
+     "text": "편의점 불빛이 골목을 환하게 밝힌다."
+    },
+    {
+     "id": "CTY_SUM_NIG_B",
+     "text": "데워진 길바닥에서 낮의 열기가 올라온다."
+    },
+    {
+     "id": "CTY_SUM_NIG_C",
+     "text": "네온 색은 내 물감통에 없는데. 섞어 보자."
+    }
    ],
    "art": "event_city_summer_night"
   },
@@ -345,9 +610,18 @@
    "season": "autumn",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "CTY_AUT_DAY_A",
+     "text": "은행잎이 보도를 온통 덮었다. 와, 황금 길이다."
+    },
+    {
+     "id": "CTY_AUT_DAY_B",
+     "text": "낙엽 소리 사이로 자동차 소리가 섞인다."
+    },
+    {
+     "id": "CTY_AUT_DAY_C",
+     "text": "노란 길. 오늘은 이 색 하나만 챙겨도 되겠다."
+    }
    ],
    "art": "event_city_autumn_day"
   },
@@ -357,9 +631,18 @@
    "season": "autumn",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "CTY_AUT_NIG_A",
+     "text": "창문마다 다른 색 불이 켜져 있다."
+    },
+    {
+     "id": "CTY_AUT_NIG_B",
+     "text": "어디선가 군고구마 냄새가 난다."
+    },
+    {
+     "id": "CTY_AUT_NIG_C",
+     "text": "불 켜진 창 하나하나에 이야기가 있겠지."
+    }
    ],
    "art": "event_city_autumn_night"
   },
@@ -369,9 +652,18 @@
    "season": "winter",
    "dayNight": "day",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "CTY_WIN_DAY_A",
+     "text": "입김 너머로 빌딩이 조금 흐릿하다."
+    },
+    {
+     "id": "CTY_WIN_DAY_B",
+     "text": "찬 바람에 볼이 얼얼하다. 걸으면 금방 데워진다."
+    },
+    {
+     "id": "CTY_WIN_DAY_C",
+     "text": "겨울 도시는 파란 회색. 차갑지만 깨끗하다."
+    }
    ],
    "art": "event_city_winter_day"
   },
@@ -381,11 +673,221 @@
    "season": "winter",
    "dayNight": "night",
    "texts": [
-    "",
-    "",
-    ""
+    {
+     "id": "CTY_WIN_NIG_A",
+     "text": "거리마다 작은 전구가 반짝인다. 꼭 별이 내려앉은 것 같아."
+    },
+    {
+     "id": "CTY_WIN_NIG_B",
+     "text": "가게 문이 열릴 때마다 온기가 새어 나온다."
+    },
+    {
+     "id": "CTY_WIN_NIG_C",
+     "text": "이 반짝임은 흰 점을 콕콕 찍어서 남겨야지."
+    }
    ],
    "art": "event_city_winter_night"
+  }
+ ],
+ "praise": {
+  "conditional": [
+   {
+    "id": "R01",
+    "priority": 1,
+    "cond": "remainingKmLte",
+    "text": "{dest}까지 {remainingKm}km. 목적지가 보이는 것 같아.",
+    "value": 10
+   },
+   {
+    "id": "R02",
+    "priority": 2,
+    "cond": "progressPctCross",
+    "text": "여정의 {progressPct}%를 지났어. 출발지는 벌써 저 뒤야.",
+    "value": [
+     25,
+     50,
+     75
+    ]
+   },
+   {
+    "id": "R03",
+    "priority": 3,
+    "cond": "etaGainDaysGte",
+    "text": "이 걸음이면 {dest}에 {etaGainDays}일 일찍 닿겠어.",
+    "value": 1
+   },
+   {
+    "id": "R04",
+    "priority": 4,
+    "cond": "todayOverAvg",
+    "text": "최근 하루 평균보다 {todayOverAvgKm}km 더 걸었어."
+   },
+   {
+    "id": "R05",
+    "priority": 5,
+    "cond": "runKmGte",
+    "text": "이번엔 {runKm}km를 달렸네. 숨이 좋다.",
+    "value": 0.5
+   },
+   {
+    "id": "R06",
+    "priority": 6,
+    "cond": "todayStepsGte",
+    "text": "오늘 {todaySteps}보째. 하루를 꽉 채우는 중이야.",
+    "value": 7000
+   },
+   {
+    "id": "R07",
+    "priority": 7,
+    "cond": "sessionKmGte",
+    "text": "벌써 {sessionKm}km. 오늘의 나는 꽤 멀리 왔다.",
+    "value": 4
+   },
+   {
+    "id": "R08",
+    "priority": 8,
+    "cond": "isNight",
+    "text": "늦은 시간까지 {sessionKm}km. 오늘을 잘 마무리하고 있어."
+   },
+   {
+    "id": "R09",
+    "priority": 9,
+    "cond": "totalKmGte",
+    "text": "지금까지 걸은 길을 이으면 {totalKm}km.",
+    "value": 10
+   }
+  ],
+  "default": [
+   {
+    "id": "R10",
+    "text": "발이 길을 기억하기 시작했어."
+   },
+   {
+    "id": "R11",
+    "text": "어제보다 덜 힘든 거 같아."
+   },
+   {
+    "id": "R12",
+    "text": "매일 조금씩 자라는 기분이야."
+   },
+   {
+    "id": "R13",
+    "text": "오늘도 잘 해냈다."
+   },
+   {
+    "id": "R14",
+    "text": "이번 걷기 {sessionKm}km째. 한 걸음씩 쌓이고 있어."
+   },
+   {
+    "id": "R15",
+    "text": "오늘 걸은 길이 내일의 길이 된다."
+   },
+   {
+    "id": "R16",
+    "text": "걷고 나서 후회한 날은 없었어."
+   },
+   {
+    "id": "R17",
+    "text": "{sessionKm}km. 생각보다 멀리 왔네."
+   }
+  ]
+ },
+ "suggestions": [
+  {
+   "id": "S1",
+   "type": "brisk",
+   "label": "빠르게 걷기",
+   "check": {
+    "kind": "spmAtLeast",
+    "spm": 110,
+    "min": 5
+   },
+   "offers": [
+    "다음 5분은 조금 빠르게 걸어 볼까?",
+    "바람을 앞질러 볼까? 5분만 걸음을 재촉해 보자."
+   ],
+   "done": "좋아, 5분 동안 바람보다 빨랐어.",
+   "allowNight": true,
+   "needsSolo": false
+  },
+  {
+   "id": "S2",
+   "type": "run1min",
+   "label": "1분 뛰기",
+   "check": {
+    "kind": "runMinutes",
+    "min": 1
+   },
+   "offers": [
+    "1분만 가볍게 뛰어 볼까? 힘들면 바로 걸어도 돼.",
+    "저 앞까지 1분만 달려 보자."
+   ],
+   "done": "1분 완주. 다리가 신났나 봐.",
+   "allowNight": false,
+   "needsSolo": false
+  },
+  {
+   "id": "S3",
+   "type": "noStop",
+   "label": "쉬지 않고 2km",
+   "check": {
+    "kind": "noStop",
+    "maxStopMin": 1
+   },
+   "offers": [
+    "다음 이정표까지 멈추지 않고 가 볼까?",
+    "다음 2km는 한 호흡으로 걸어 보자."
+   ],
+   "done": "한 번도 안 멈추고 도착. 길이 이어졌어.",
+   "allowNight": true,
+   "needsSolo": false
+  },
+  {
+   "id": "S4",
+   "type": "countdown",
+   "label": "걸음 세기",
+   "check": {
+    "kind": "countdown"
+   },
+   "offers": [
+    "다음 이정표까지 약 {stepsToNext}보. 같이 세어 보자.",
+    "{stepsToNext}보만 더 가면 다음 이정표야."
+   ],
+   "done": "카운트다운 끝. 딱 맞춰 왔어.",
+   "allowNight": true,
+   "needsSolo": false
+  },
+  {
+   "id": "S5",
+   "type": "slow",
+   "label": "천천히 걷기",
+   "check": {
+    "kind": "spmAtMost",
+    "spm": 100,
+    "min": 5
+   },
+   "offers": [
+    "다음 5분은 천천히, 주변을 보면서 걸어 볼까?",
+    "서두르지 않아도 돼. 5분만 느긋하게 걷자."
+   ],
+   "done": "천천히 걸으니 보이는 게 많았지?",
+   "allowNight": true,
+   "needsSolo": false
+  },
+  {
+   "id": "S6",
+   "type": "withCompanion",
+   "label": "동행과 함께",
+   "check": {
+    "kind": "withCompanion"
+   },
+   "offers": [
+    "다음 2km는 동행과 함께 걸어 볼까?",
+    "혼자도 좋지만, 다음 길은 누구랑 걸어 볼까?"
+   ],
+   "done": "함께 걸으니 길이 짧게 느껴졌어.",
+   "allowNight": true,
+   "needsSolo": true
   }
  ]
 }

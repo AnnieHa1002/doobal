@@ -4,15 +4,15 @@
     python data/build_static.py
 
 - landmarks.json, props.json, milestones.json 은 매번 새로 만든다.
-- events.json 은 파일이 없을 때만 만든다(문구 96개를 손으로 채우므로 덮어쓰지 않음).
-  장면 구성을 바꿔 다시 만들려면 --events 를 붙인다(기존 문구는 같은 id면 유지).
+- 시도 이름은 2026-07-01 행정구역(광주·전남 → 전남광주통합특별시, 인천 중구 → 제물포구).
+  옛 이름이 CSV에 남아 있으면 멈춘다. 권역(region)은 그대로.
+- events.json 은 만들지 않는다: data/build_events.py 가 기획/이벤트_문구.md 에서 만든다(v2).
 - config.json 은 손으로 고치는 파일이라 이 스크립트가 건드리지 않는다.
 """
 import collections
 import csv
 import json
 import os
-import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, '명소_한국101.csv')
@@ -21,7 +21,7 @@ OUT = os.path.normpath(os.path.join(HERE, '..', 'app', 'assets', 'data'))
 T = {'산길': 'mountain', '바닷가': 'coast', '들판': 'field', '도시': 'city'}
 REGION = {'서울특별시': 'capital', '인천광역시': 'capital', '경기도': 'capital', '강원특별자치도': 'gangwon',
           '대전광역시': 'chungcheong', '세종특별자치시': 'chungcheong', '충청북도': 'chungcheong', '충청남도': 'chungcheong',
-          '광주광역시': 'jeolla', '전북특별자치도': 'jeolla', '전라남도': 'jeolla',
+          '전남광주통합특별시': 'jeolla', '전북특별자치도': 'jeolla',
           '부산광역시': 'gyeongsang', '대구광역시': 'gyeongsang', '울산광역시': 'gyeongsang', '경상북도': 'gyeongsang', '경상남도': 'gyeongsang',
           '제주특별자치도': 'jeju'}
 TYPE = {'역사': 'history', '자연': 'nature', '도시': 'city'}
@@ -36,6 +36,8 @@ def dump(name, obj, ascii_ok=False):
 def build_landmarks():
     with open(SRC, encoding='utf-8-sig') as f:
         rows = list(csv.DictReader(f))
+    unknown = sorted({r['시도'] for r in rows} - set(REGION))
+    assert not unknown, f'모르는 시도 이름(2026-07-01 행정구역인지 확인): {unknown}'
     lms = []
     for r in rows:
         region = 'ulleung' if r['시군구'] == '울릉군' else REGION[r['시도']]
@@ -48,7 +50,7 @@ def build_landmarks():
     cnt = collections.Counter(l['region'] for l in lms)
     assert dict(cnt) == {'capital': 12, 'gangwon': 17, 'chungcheong': 17, 'jeolla': 21,
                          'gyeongsang': 31, 'jeju': 2, 'ulleung': 1}, cnt
-    dump('landmarks.json', {'version': 1, 'landmarks': lms})
+    dump('landmarks.json', {'version': 2, 'asOf': '2026-07-01', 'landmarks': lms})
     return lms
 
 
@@ -101,26 +103,6 @@ def build_props():
     return props
 
 
-def build_events(force):
-    path = os.path.join(OUT, 'events.json')
-    old = {}
-    if os.path.exists(path):
-        if not force:
-            print('events.json 있음: 건너뜀 (--events 로 다시 만들기)')
-            return
-        with open(path, encoding='utf-8') as f:
-            old = {s['id']: s['texts'] for s in json.load(f)['scenes']}
-    scenes = []
-    for t in T.values():
-        for s in ['spring', 'summer', 'autumn', 'winter']:
-            for d in ['day', 'night']:
-                sid = f'{t}_{s}_{d}'
-                scenes.append({'id': sid, 'terrain': t, 'season': s, 'dayNight': d,
-                               'texts': old.get(sid, ['', '', '']), 'art': f'event_{sid}'})
-    assert len(scenes) == 32
-    dump('events.json', {'version': 1, 'propChance': 0.0, 'propChanceAfterLaunch': 0.1, 'scenes': scenes})
-
-
 def build_milestones():
     ms = [100, 1000, 5000, 7777, 10000, 12345, 30000, 50000, 77777, 100000, 123456, 200000, 300000, 333333,
           400000, 500000, 600000, 700000, 777777, 800000, 900000, 1000000, 1234567]
@@ -132,6 +114,5 @@ if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     build_landmarks()
     build_props()
-    build_events('--events' in sys.argv)
     build_milestones()
     print(f'완료 → {OUT}')

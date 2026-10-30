@@ -1,5 +1,6 @@
 {
- "version": 1,
+ "version": 2,
+ "asOf": "2026-07-01",
  "landmarks": [
   {
    "id": "kr001",
@@ -21,7 +22,7 @@
    "id": "kr002",
    "name": "인천 차이나타운·월미도",
    "sido": "인천광역시",
-   "sigungu": "중구",
+   "sigungu": "제물포구",
    "region": "capital",
    "backdrop": "capital",
    "terrain": "coast",
@@ -68,7 +69,7 @@
   {
    "id": "kr005",
    "name": "무등산 서석대",
-   "sido": "광주광역시",
+   "sido": "전남광주통합특별시",
    "sigungu": "동구",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -970,7 +971,7 @@
   {
    "id": "kr061",
    "name": "유달산",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "목포시",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -987,7 +988,7 @@
   {
    "id": "kr062",
    "name": "퍼플섬",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "신안군",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -1003,7 +1004,7 @@
   {
    "id": "kr063",
    "name": "땅끝마을",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "해남군",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -1019,7 +1020,7 @@
   {
    "id": "kr064",
    "name": "완도타워·청해포구",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "완도군",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -1035,7 +1036,7 @@
   {
    "id": "kr065",
    "name": "다산초당",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "강진군",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -1051,7 +1052,7 @@
   {
    "id": "kr066",
    "name": "보성 녹차밭",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "보성군",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -1067,7 +1068,7 @@
   {
    "id": "kr067",
    "name": "순천만 습지",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "순천시",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -1083,7 +1084,7 @@
   {
    "id": "kr068",
    "name": "오동도",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "여수시",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -1099,7 +1100,7 @@
   {
    "id": "kr069",
    "name": "죽녹원",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "담양군",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -1115,7 +1116,7 @@
   {
    "id": "kr070",
    "name": "불갑사",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "영광군",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -1131,7 +1132,7 @@
   {
    "id": "kr071",
    "name": "화엄사",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "구례군",
    "region": "jeolla",
    "backdrop": "jeolla",
@@ -1147,7 +1148,7 @@
   {
    "id": "kr072",
    "name": "나로우주센터",
-   "sido": "전라남도",
+   "sido": "전남광주통합특별시",
    "sigungu": "고흥군",
    "region": "jeolla",
    "backdrop": "jeolla",

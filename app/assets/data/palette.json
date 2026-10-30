@@ -1,0 +1,48 @@
+{
+ "version": 1,
+ "source": "디자인기획/색_견본.md(10/29 확정), 아트 디렉션 v2 5장",
+ "formula": "출력 RGB = 견본 RGB × L ÷ base, L = 0.299R + 0.587G + 0.114B, 알파 그대로",
+ "hair": {
+  "base": 182,
+  "swatches": [
+   { "id": 1, "name": "흑발", "hex": "#2B2522" },
+   { "id": 2, "name": "짙은 갈색", "hex": "#4A3226" },
+   { "id": 3, "name": "갈색", "hex": "#6E4A32" },
+   { "id": 4, "name": "적갈색", "hex": "#8C3E2A" },
+   { "id": 5, "name": "진저", "hex": "#C2703A" },
+   { "id": 6, "name": "금발", "hex": "#D6B26E" },
+   { "id": 7, "name": "애쉬그레이", "hex": "#849AA9" },
+   { "id": 8, "name": "백발", "hex": "#E3E0DA" },
+   { "id": 9, "name": "푸른색", "hex": "#4F6F9E" },
+   { "id": 10, "name": "분홍색", "hex": "#E39AB0" }
+  ],
+  "custom": { "lightMin": 15, "lightMax": 90 },
+  "gradient": { "rootUntil": 0.3, "tipFrom": 0.85, "browsUse": "root" },
+  "parts": ["hair_front", "hair_back", "brows"]
+ },
+ "skin": {
+  "base": 196,
+  "swatches": [
+   { "id": 1, "name": "피부 1", "hex": "#F6E1D3" },
+   { "id": 2, "name": "피부 2", "hex": "#F4D7D7" },
+   { "id": 3, "name": "피부 3", "hex": "#EECBB2" },
+   { "id": 4, "name": "피부 4", "hex": "#E2B48F" },
+   { "id": 5, "name": "피부 5", "hex": "#CF9A72" },
+   { "id": 6, "name": "피부 6", "hex": "#B57E57" },
+   { "id": 7, "name": "피부 7", "hex": "#966242" }
+  ],
+  "custom": { "lightMin": 35, "lightMax": 95 },
+  "parts": ["face_shape", "ears", "body_skin"]
+ },
+ "grass": {
+  "base": 150,
+  "approx": true,
+  "seasons": {
+   "spring": "#B5C98A",
+   "summer": "#6F8F4E",
+   "autumn": "#C79A5B",
+   "winter": "#D8D6CC"
+  },
+  "layers": ["ground_grass", "camp_back_grass", "camp_front_grass"]
+ }
+}
