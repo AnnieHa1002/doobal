@@ -13,6 +13,7 @@ import 'package:doobal/ui/map/map_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/scene/scene_view.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
+import 'package:doobal/ui/walking/walking_hud.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -215,7 +216,7 @@ void main() {
       await tester.tap(find.text('출발하기'));
       await _transition(tester);
       expect(find.text('걷기 마치기'), findsOneWidget);
-      expect(find.text('걷는 중'), findsOneWidget);
+      expect(find.byType(StepPill), findsOneWidget);
       await _end(tester, e);
     });
 
@@ -302,12 +303,23 @@ void main() {
       await _wait(tester);
     }
 
+    /// 걸음 알약 안의 글자
+    Finder pillText(String text) =>
+        find.descendant(of: find.byType(StepPill), matching: find.text(text));
+
+    /// 걸음 알약을 눌러 숫자 카드를 펼치거나 접는다
+    Future<void> tapPill(WidgetTester tester) async {
+      await tester.tap(find.byKey(const Key('walk-pill')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
     /// 걷기를 시작한 뒤 [minutes]분 × [spm]보 걸은 기록이 들어오고 갱신 주기가 지난 상태.
     /// 가짜 시간을 0.1초씩 보내며 프레임을 그려서, 갱신 직후에 거리가 한꺼번에 뛰지 않는지도 볼 수 있다
     Future<void> walkAndRefresh(WidgetTester tester, _Env e, int minutes, int spm) async {
       e.source.records.add(_walk(_t1, minutes, spm));
       e.now = _t1.add(Duration(minutes: minutes));
-      final done = find.text('${formatInt(minutes * spm)}보');
+      final done = pillText(formatInt(minutes * spm));
       for (var i = 0; i < 600 && done.evaluate().isEmpty; i++) {
         await tester.pump(const Duration(milliseconds: 100));
         if (i % 10 == 0) {
@@ -316,55 +328,72 @@ void main() {
       }
     }
 
-    testWidgets('갱신 주기가 지나면 가짜 기록의 걸음이 뜨고, 패널을 누르면 자세한 숫자와 혼자 걷는 중', (tester) async {
+    testWidgets('위에는 진행 줄과 걸음 알약만, 알약을 누르면 자세한 숫자와 혼자 걷는 중', (tester) async {
       final e = _Env();
       await e.seed(tester, dest: 'kr003');
       await openWalking(tester, e);
-      expect(find.text('0보'), findsOneWidget);
+      expect(find.byType(ProgressLine), findsOneWidget);
+      expect(pillText('0'), findsOneWidget);
+      expect(find.byIcon(Icons.directions_walk), findsOneWidget);
+      expect(find.byKey(const Key('walk-detail')), findsNothing);
       expect(find.text('혼자 걷는 중'), findsNothing);
 
       await walkAndRefresh(tester, e, 10, 100);
-      expect(find.text('1,000보'), findsOneWidget);
-      expect(find.text('걷는 중'), findsOneWidget);
-      // 여정 막대와 남은 거리
-      final remaining = _totalKm('kr003') - 0.7;
-      expect(find.text('${_byId['kr003']!.name}까지 ${formatKm(remaining)}'), findsOneWidget);
+      expect(pillText('1,000'), findsOneWidget);
+      // 진행 줄: 출발 전 0 → 0.7km만큼
+      final ratio = (await tester.runAsync(() => e.svc.snapshot(e.now)))!.journey!.progress.ratio;
+      expect(tester.widget<ProgressLine>(find.byType(ProgressLine)).ratio, closeTo(ratio, 1e-9));
+      expect(ratio, greaterThan(0));
 
-      await tester.tap(find.text('걷는 중'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tapPill(tester);
+      expect(find.byKey(const Key('walk-detail')), findsOneWidget);
       expect(find.text('혼자 걷는 중'), findsOneWidget);
+      expect(find.text('걷기 시간'), findsOneWidget);
       expect(find.text('분당 걸음'), findsOneWidget);
       expect(find.text('100보'), findsOneWidget);
       expect(find.text('4.2 km/h'), findsOneWidget);
       expect(find.text('0.70 m'), findsOneWidget);
       expect(find.text('오늘 걸음'), findsOneWidget);
-      // 걸음 숫자와 오늘 걸음 둘
-      expect(find.text('1,000보'), findsNWidgets(2));
+      expect(find.text('1,000보'), findsOneWidget);
+      final remaining = _totalKm('kr003') - 0.7;
+      expect(find.text('${_byId['kr003']!.name}까지'), findsOneWidget);
+      expect(find.text(formatKm(remaining)), findsOneWidget);
       final eta = (await tester.runAsync(() => e.svc.snapshot(e.now)))!.journey!.eta;
       expect(find.text(formatMonthDay(eta)), findsOneWidget);
       // 누적 1,000보 → 다음 방명록 5,000까지 4,000보
       expect(find.text('다음 방명록 지점까지 4,000보'), findsOneWidget);
 
-      await tester.tap(find.text('걷는 중'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tapPill(tester);
       expect(find.text('혼자 걷는 중'), findsNothing);
       await _end(tester, e);
     });
 
-    testWidgets('분당 140보 이상이면 달리는 중', (tester) async {
+    testWidgets('펼친 숫자 카드는 8초 뒤 저절로 접힌다', (tester) async {
       final e = _Env();
       await e.seed(tester, dest: 'kr003');
       await openWalking(tester, e);
-      expect(find.text('걷는 중'), findsOneWidget);
+      await tapPill(tester);
+      expect(find.byKey(const Key('walk-detail')), findsOneWidget);
+      for (var i = 0; i < 7; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      expect(find.byKey(const Key('walk-detail')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byKey(const Key('walk-detail')), findsNothing);
+      await _end(tester, e);
+    });
+
+    testWidgets('분당 140보 이상이면 뛰기 아이콘과 달리기 숫자', (tester) async {
+      final e = _Env();
+      await e.seed(tester, dest: 'kr003');
+      await openWalking(tester, e);
+      expect(find.byIcon(Icons.directions_walk), findsOneWidget);
 
       await walkAndRefresh(tester, e, 10, 150);
-      expect(find.text('달리는 중'), findsOneWidget);
-      expect(find.text('걷는 중'), findsNothing);
-      await tester.tap(find.text('달리는 중'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byIcon(Icons.directions_run), findsOneWidget);
+      expect(find.byIcon(Icons.directions_walk), findsNothing);
+      await tapPill(tester);
       expect(find.text('9.0 km/h'), findsOneWidget);
       expect(find.text('1.00 m'), findsOneWidget);
       await _end(tester, e);
@@ -377,10 +406,11 @@ void main() {
       await walkAndRefresh(tester, e, 10, 100);
 
       // 갱신이 끝난 직후엔 아직 0km 근처에서 출발한다 (한꺼번에 뛰지 않는다)
+      final pattern = RegExp(r'^걸음 · (\d+\.\d\d) km$');
       double shown() {
-        final t = tester.widgetList<Text>(find.byWidgetPredicate(
-            (w) => w is Text && RegExp(r'^\d+\.\d\d km$').hasMatch(w.data ?? '')));
-        return double.parse(t.single.data!.split(' ').first);
+        final t = tester.widgetList<Text>(
+            find.byWidgetPredicate((w) => w is Text && pattern.hasMatch(w.data ?? '')));
+        return double.parse(pattern.firstMatch(t.single.data!)!.group(1)!);
       }
 
       expect(shown(), lessThan(0.1));
@@ -393,14 +423,15 @@ void main() {
         prev = shown();
         if (i == rules.walkingRefreshSec * 2 - 4) expect(shown(), greaterThanOrEqualTo(0.65));
       }
-      expect(find.text('0.70 km'), findsOneWidget);
+      expect(find.text('걸음 · 0.70 km'), findsOneWidget);
       await _end(tester, e);
     });
 
-    testWidgets('걷는 시간은 시계를 따라 흐른다', (tester) async {
+    testWidgets('걷는 시간은 시계를 따라 흐른다 (숫자 카드)', (tester) async {
       final e = _Env();
       await e.seed(tester, dest: 'kr003');
       await openWalking(tester, e);
+      await tapPill(tester);
       expect(find.text('0:00'), findsOneWidget);
 
       e.now = _t1.add(const Duration(minutes: 3, seconds: 7));
@@ -424,7 +455,7 @@ void main() {
       expect(find.text('배를 타고 건너요 (3배 빠르게)'), findsNothing);
       await walkAndRefresh(tester, e, 10, 100);
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('1,000보'), findsOneWidget);
+      expect(pillText('1,000'), findsOneWidget);
       expect(find.text('배를 타고 건너요 (3배 빠르게)'), findsNothing);
       await _end(tester, e);
     });
@@ -450,7 +481,13 @@ void main() {
       // 15분 × 100보 = 1,500보, 1.05km
       e.source.records.add(_walk(_t1, 15, 100));
       e.now = _t1.add(const Duration(minutes: 15));
-      for (var i = 0; i < 600 && find.text('1,500보').evaluate().isEmpty; i++) {
+      for (var i = 0;
+          i < 600 &&
+              find
+                  .descendant(of: find.byType(StepPill), matching: find.text('1,500'))
+                  .evaluate()
+                  .isEmpty;
+          i++) {
         await tester.pump(const Duration(milliseconds: 100));
         if (i % 10 == 0) {
           await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
@@ -459,7 +496,9 @@ void main() {
 
       await tester.tap(find.text('걷기 마치기'));
       await _transition(tester);
-      await _settle(tester, () => find.text('1,500').evaluate().isNotEmpty);
+      // 걸음 알약에도 1,500이 있으니 걷는 중이 사라진 뒤를 기다린다
+      await _settle(tester,
+          () => find.byType(StepPill).evaluate().isEmpty && find.text('1,500').evaluate().isNotEmpty);
 
       expect(find.text('걷기 기록'), findsOneWidget);
       expect(find.text('1,500'), findsOneWidget);

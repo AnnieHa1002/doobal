@@ -11,15 +11,10 @@ import '../../domain/follow.dart';
 import '../../domain/gait.dart';
 import '../../domain/journey.dart';
 import '../../domain/milestones.dart';
-import '../../domain/rules.dart';
-import '../../domain/walk_record.dart';
-import '../common/format.dart';
-import '../common/game_button.dart';
-import '../common/ink_bar.dart';
-import '../common/palette.dart';
 import '../common/toast.dart';
 import '../scene/scene_view.dart';
 import '../walk_record/walk_record_screen.dart';
+import 'walking_hud.dart';
 
 /// 걷는 중. 열 때 걷기 시작 시각을 적고, rules.walkingRefreshSec마다 동기화해서
 /// 이번 걷기의 걸음·거리를 새로 받는다. 보이는 거리는 새 값을 향해 부드럽게 따라간다.
@@ -50,7 +45,6 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   /// 걷기를 시작하기 전의 여정 진행 비율. 여정이 없으면 null
   double? _ratioBefore;
 
-  var _expanded = false;
   var _refreshing = false;
   var _wasOnSea = false;
 
@@ -191,34 +185,15 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             landmarks: landmarks,
             running: running,
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => setState(() => _expanded = !_expanded),
-                    child: _Panel(
-                      expanded: _expanded,
-                      rules: rules,
-                      snap: snap,
-                      summary: summary,
-                      shownM: _shownM,
-                      walkingTime: _now.difference(_start),
-                      running: running,
-                      nextMilestone: _nextMilestone(snap),
-                    ),
-                  ),
-                  const Spacer(),
-                  GameButton(
-                    label: '걷기 마치기',
-                    kind: GameButtonKind.secondary,
-                    onPressed: _finish,
-                  ),
-                ],
-              ),
-            ),
+          WalkingHud(
+            rules: rules,
+            snap: snap,
+            summary: summary,
+            shownM: _shownM,
+            walkingTime: _now.difference(_start),
+            running: running,
+            nextMilestone: _nextMilestone(snap),
+            onFinish: _finish,
           ),
         ],
       ),
@@ -231,138 +206,5 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     if (milestones == null) return null;
     final next = nextMilestone(snap.totalSteps, milestones);
     return next == null ? null : next - snap.totalSteps;
-  }
-}
-
-/// 위쪽 패널. 접으면 상태·걸음·거리·시간·여정 진행, 누르면 자세한 숫자까지
-class _Panel extends StatelessWidget {
-  const _Panel({
-    required this.expanded,
-    required this.rules,
-    required this.snap,
-    required this.summary,
-    required this.shownM,
-    required this.walkingTime,
-    required this.running,
-    required this.nextMilestone,
-  });
-
-  final bool expanded;
-  final Rules rules;
-  final Snapshot snap;
-  final WalkSummary? summary;
-  final double shownM;
-  final Duration walkingTime;
-  final bool running;
-  final int? nextMilestone;
-
-  @override
-  Widget build(BuildContext context) {
-    final j = snap.journey;
-    final spm = summary?.lastSteps ?? 0;
-    final gait = summary?.lastGait ?? Gait.walk;
-    const small = TextStyle(fontSize: 14, color: Palette.subInk);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Palette.card.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Palette.ink, width: 2.5),
-      ),
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 150),
-        alignment: Alignment.topCenter,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  running ? '달리는 중' : '걷는 중',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Palette.terracotta,
-                  ),
-                ),
-                const Spacer(),
-                Text(formatDuration(walkingTime), style: small),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '${formatInt(summary?.steps ?? 0)}보',
-                      style: const TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w800,
-                        color: Palette.ink,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(formatKm(shownM / 1000, digits: 2), style: small),
-              ],
-            ),
-            if (j != null) ...[
-              const SizedBox(height: 8),
-              InkBar(segments: [BarSegment(j.progress.ratio, Palette.moss)]),
-              const SizedBox(height: 4),
-              Text('${j.dest.name}까지 ${formatKm(j.progress.remainingKm)}', style: small),
-            ],
-            if (expanded) ...[
-              const Divider(height: 24, color: Palette.ink),
-              _Line('분당 걸음', '$spm보'),
-              _Line('속도', '${speedKmh(spm, gait, rules).toStringAsFixed(1)} km/h'),
-              _Line('보폭', '${strideM(gait, rules).toStringAsFixed(2)} m'),
-              _Line('오늘 걸음', '${formatInt(snap.todaySteps)}보'),
-              if (j != null) _Line('도착 예정일', formatMonthDay(j.eta)),
-              if (nextMilestone != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text('다음 방명록 지점까지 ${formatInt(nextMilestone!)}보', style: small),
-                ),
-              const Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: Text('혼자 걷는 중', style: small),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Line extends StatelessWidget {
-  const _Line(this.label, this.value);
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    const style = TextStyle(fontSize: 14, color: Palette.subInk);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Text(label, style: style),
-          const Spacer(),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w600, color: Palette.ink)),
-        ],
-      ),
-    );
   }
 }
