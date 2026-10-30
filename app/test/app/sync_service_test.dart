@@ -856,9 +856,19 @@ void main() {
 
     test('진행 중인 여정이 없을 때 멈추기는 동기화만 한다', () async {
       final e = await _env();
-      await e.svc.stopJourney(t1);
+      expect(await e.svc.stopJourney(t1), isFalse);
       expect(await e.db.select(e.db.journeys).get(), isEmpty);
       expect((await e.svc.snapshot(t1)).position, testHome);
+    });
+
+    test('멈추기 직전 동기화에서 도착하면 멈추지 않고 false', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      await placeAt(e.db, _nearGyeongbok, _t0);
+      await e.svc.startJourney('kr001', t1);
+      e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 30, 100));
+      expect(await e.svc.stopJourney(t2), isFalse);
+      expect((await _startedAt(e.db, t1)).status, JourneyStatus.arrived);
     });
 
     test('쉬는 자리에서 출발하면 그 자리가 출발지 (멈춘 곳, 도착한 곳 중 나중 것)', () async {
@@ -866,7 +876,7 @@ void main() {
       await e.svc.sync(_t0);
       await e.svc.startJourney('kr003', t1);
       e.source.records.add(_walk(t1.add(const Duration(minutes: 5)), 30, 100));
-      await e.svc.stopJourney(t2);
+      expect(await e.svc.stopJourney(t2), isTrue);
       final stop = await _startedAt(e.db, t1);
 
       await e.svc.startJourney('kr001', t3);
@@ -1036,6 +1046,118 @@ void main() {
       await e.svc.markArrivalShown(pending.journeyId);
       expect((await e.svc.snapshot(end)).pendingArrival, isNull);
       expect((await _startedAt(e.db, t1)).arrivalShown, isTrue);
+    });
+  });
+
+  group('새 그림 표시', () {
+    final t1 = _t0.add(const Duration(hours: 1));
+    const hour = Duration(hours: 1);
+
+    Future<bool> seenOf(_Env e, String id) async => (await (e.db.select(e.db.paintingsOwned)
+              ..where((t) => t.landmarkId.equals(id)))
+            .getSingle())
+        .seen;
+
+    test('처음 도착하면 새 그림 1개, markPaintingsSeen 뒤에는 0', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      expect((await e.svc.snapshot(_t0)).unseenPaintings, 0);
+      expect(await e.svc.unseenPaintingIds(), isEmpty);
+
+      final dest = _destFor(testHome, Frame.wood);
+      final end = await _trip(e, dest.id, t1);
+      expect((await e.svc.snapshot(end)).unseenPaintings, 1);
+      expect(await e.svc.unseenPaintingIds(), [dest.id]);
+      expect(await seenOf(e, dest.id), isFalse);
+      // 읽기만으로는 지워지지 않는다
+      expect((await e.svc.snapshot(end)).unseenPaintings, 1);
+
+      await e.svc.markPaintingsSeen();
+      expect((await e.svc.snapshot(end)).unseenPaintings, 0);
+      expect(await e.svc.unseenPaintingIds(), isEmpty);
+      expect(await seenOf(e, dest.id), isTrue);
+      // 또 불러도 그대로, 그림은 그대로 남는다
+      await e.svc.markPaintingsSeen();
+      expect((await e.svc.snapshot(end)).paintingsCount, 1);
+    });
+
+    test('본 뒤에 새 명소에 도착하면 그 그림만 다시 새 그림', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final a = _destFor(testHome, Frame.wood);
+      final b = _destFor(a.latLng, Frame.silver, not: a.id);
+      final end1 = await _trip(e, a.id, t1);
+      await e.svc.markPaintingsSeen();
+      final end2 = await _trip(e, b.id, end1.add(hour));
+
+      expect(await e.svc.unseenPaintingIds(), [b.id]);
+      expect((await e.svc.snapshot(end2)).unseenPaintings, 1);
+      expect(await seenOf(e, a.id), isTrue);
+    });
+
+    test('본 뒤에 같은 명소를 다시 방문해도 0 (액자가 그대로여도)', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      // 출발 동네에서는 금 액자이면서, 가까이에 다른 명소가 있는 곳 (재방문은 더 가까워서 액자 그대로)
+      final a = _landmarks.values.firstWhere((l) =>
+          l.island == Island.mainland &&
+          frameFor(_routeKm(testHome, l.id), rules) == Frame.gold &&
+          _findDest(l.latLng, Frame.wood, not: l.id) != null);
+      final b = _destFor(a.latLng, Frame.wood, not: a.id);
+      final end1 = await _trip(e, a.id, t1);
+      final end2 = await _trip(e, b.id, end1.add(hour));
+      expect((await e.svc.snapshot(end2)).unseenPaintings, 2);
+      await e.svc.markPaintingsSeen();
+
+      final end3 = await _trip(e, a.id, end2.add(hour));
+      final pa = await (e.db.select(e.db.paintingsOwned)..where((t) => t.landmarkId.equals(a.id)))
+          .getSingle();
+      expect((pa.visits, pa.frame), (2, Frame.gold));
+      expect((await e.svc.snapshot(end3)).unseenPaintings, 0);
+      expect(await e.svc.unseenPaintingIds(), isEmpty);
+      expect(pa.seen, isTrue);
+    });
+
+    test('본 뒤에 같은 명소를 다시 방문해도 0 (액자가 오르는 재방문도)', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final a = _destFor(testHome, Frame.wood);
+      final b = _destFor(a.latLng, Frame.silver, not: a.id);
+      final end1 = await _trip(e, a.id, t1);
+      final end2 = await _trip(e, b.id, end1.add(hour));
+      await e.svc.markPaintingsSeen();
+
+      final end3 = await _trip(e, a.id, end2.add(hour));
+      final pa = await (e.db.select(e.db.paintingsOwned)..where((t) => t.landmarkId.equals(a.id)))
+          .getSingle();
+      expect((pa.visits, pa.frame), (2, Frame.silver));
+      expect((await e.svc.snapshot(end3)).pendingArrival!.frameUp, isTrue);
+      expect((await e.svc.snapshot(end3)).unseenPaintings, 0);
+      expect(await e.svc.unseenPaintingIds(), isEmpty);
+      expect(pa.seen, isTrue);
+    });
+
+    test('못 본 그림을 다시 방문해도 새 그림이 늘지도 꺼지지도 않는다', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      final a = _destFor(testHome, Frame.wood);
+      final b = _destFor(a.latLng, Frame.silver, not: a.id);
+      final end1 = await _trip(e, a.id, t1);
+      final end2 = await _trip(e, b.id, end1.add(hour));
+      final end3 = await _trip(e, a.id, end2.add(hour));
+
+      // a는 방문 2에 액자가 올랐지만 여전히 처음 얻은 그림 그대로 안 본 상태, 한 점이다
+      expect((await e.svc.snapshot(end3)).unseenPaintings, 2);
+      expect((await e.svc.unseenPaintingIds()).toSet(), {a.id, b.id});
+      expect(await seenOf(e, a.id), isFalse);
+      expect((await e.svc.snapshot(end3)).paintingsCount, 2);
+    });
+
+    test('옛 그림(seen 기본값 true)은 새 그림이 아니다', () async {
+      final e = await _env();
+      await _seedPaintings(e.db, ['kr001', 'kr002']);
+      expect((await e.svc.snapshot(_t0)).unseenPaintings, 0);
+      expect(await e.svc.unseenPaintingIds(), isEmpty);
     });
   });
 

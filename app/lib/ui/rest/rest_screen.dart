@@ -9,6 +9,7 @@ import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
 import '../common/name_tag.dart';
+import '../common/notice_dot.dart';
 import '../common/palette.dart';
 import '../debug/debug_screen.dart';
 import '../map/map_screen.dart';
@@ -53,7 +54,12 @@ class RestScreen extends ConsumerWidget {
               camp: camp,
             ),
             for (final o in camp.objects)
-              _campObject(context, box.biggest, o, newProps: snap.unseenProps > 0),
+              _campObject(
+                context,
+                box.biggest,
+                o,
+                hasNew: snap.unseenProps > 0 || snap.unseenPaintings > 0,
+              ),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -169,8 +175,8 @@ class RestScreen extends ConsumerWidget {
   }
 
   /// 물건: 테마가 정한 비율 위치에 중심을 두고, 아래에 이름표를 붙인다.
-  /// 배낭은 [newProps]이면(아직 안 본 소품이 있으면) 오른쪽 위에 알림 점이 붙는다
-  Widget _campObject(BuildContext context, Size screen, CampObject o, {required bool newProps}) {
+  /// 배낭은 [hasNew]이면(아직 안 본 소품이나 그림이 있으면) 오른쪽 위에 알림 점이 붙는다
+  Widget _campObject(BuildContext context, Size screen, CampObject o, {required bool hasNew}) {
     const tagRoom = 40.0;
     return Positioned(
       left: o.x * screen.width - o.size / 2 - tagRoom,
@@ -195,20 +201,11 @@ class RestScreen extends ConsumerWidget {
                   ),
                   child: Icon(_iconOf(o.id), size: o.size * 0.5, color: Palette.ink),
                 ),
-                if (o.id == 'backpack' && newProps)
-                  Positioned(
+                if (o.id == 'backpack' && hasNew)
+                  const Positioned(
                     top: -4,
                     right: -4,
-                    child: Container(
-                      key: const ValueKey('backpack-dot'),
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: Palette.terracotta,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Palette.ink, width: 1.5),
-                      ),
-                    ),
+                    child: NoticeDot(key: ValueKey('backpack-dot')),
                   ),
               ],
             ),

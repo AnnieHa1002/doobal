@@ -7,6 +7,7 @@ import 'package:doobal/ui/album/painting_detail_screen.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/common/frame_style.dart';
 import 'package:doobal/ui/common/framed_painting.dart';
+import 'package:doobal/ui/common/notice_dot.dart';
 import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -404,6 +405,115 @@ void main() {
     });
   });
 
+  group('화집의 알림 점', () {
+    Finder newDot(String id) => find.byKey(ValueKey('new-painting-$id'));
+    Finder tabDot() => find.byKey(const ValueKey('props-tab-dot'));
+
+    Future<int> unseenPaintings(WidgetTester tester, UiEnv e) async =>
+        (await tester.runAsync(() => e.svc.snapshot(e.now)))!.unseenPaintings;
+
+    testWidgets('열면 새 그림 칸에만 점이 붙고 배낭의 새 그림 표시는 바로 꺼진다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await e.ownPaintings({'kr001': Frame.gold});
+        await e.ownPaintings({'kr002': Frame.wood}, seen: false);
+      });
+      expect(await unseenPaintings(tester, e), 1);
+      await _openAlbum(tester, e);
+      await settle(tester, () => newDot('kr002').evaluate().isNotEmpty);
+
+      expect(newDot('kr002'), findsOneWidget);
+      expect(newDot('kr001'), findsNothing);
+      expect(newDot('kr003'), findsNothing);
+      // 칸의 오른쪽 위 모서리에 걸친 10pt 점
+      expect(tester.getSize(newDot('kr002')), const Size(10, 10));
+      final corner = tester.getTopRight(_cell('kr002'));
+      expect((tester.getCenter(newDot('kr002')) - corner).distance, lessThan(8));
+      // 열자마자 읽어 둔 값이라, 표시가 꺼진 뒤에도 이번 방문 동안은 남는다
+      expect(await unseenPaintings(tester, e), 0);
+      expect(await tester.runAsync(e.svc.unseenPaintingIds), isEmpty);
+      await settle(tester, () => false, tries: 6);
+      expect(newDot('kr002'), findsOneWidget);
+
+      // 나갔다 다시 열면 이미 본 그림이라 점이 없다
+      await tester.tap(find.byTooltip('뒤로'));
+      await transition(tester);
+      await tester.tap(find.text('열기'));
+      await transition(tester);
+      await settle(tester, () => _cell('kr002').evaluate().isNotEmpty);
+      await settle(tester, () => false, tries: 6);
+      expect(_cell('kr002'), findsOneWidget);
+      expect(newDot('kr002'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('새 그림이 없으면 점이 없고, 아무것도 바꾸지 않는다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.ownPaintings({'kr001': Frame.gold}));
+      await _openAlbum(tester, e);
+      await settle(tester, () => false, tries: 6);
+
+      expect(find.byType(NoticeDot), findsNothing);
+      expect(await unseenPaintings(tester, e), 0);
+      await end(tester, e);
+    });
+
+    testWidgets('도착해서 연 화집(거는 모드)에서도 방금 얻은 그림 칸에 점이 붙는다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await e.ownPaintings({'kr001': Frame.gold, 'kr002': Frame.wood}, seen: false);
+        await e.svc.setWall(0, 'kr001');
+        await e.svc.setWall(1, 'kr002');
+      });
+      await _openAlbum(tester, e, screen: const AlbumScreen(hangLandmarkId: 'kr002'));
+      await settle(tester, () => newDot('kr002').evaluate().isNotEmpty);
+
+      expect(find.text('바꿀 액자를 누르세요'), findsOneWidget);
+      expect(newDot('kr001'), findsOneWidget);
+      expect(newDot('kr002'), findsOneWidget);
+      expect(await unseenPaintings(tester, e), 0);
+      await end(tester, e);
+    });
+
+    testWidgets('안 본 소품이 있으면 `소품` 탭 라벨 오른쪽 위에 점이 붙고, 탭을 열면 사라진다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _walk11km(e));
+      await _openAlbum(tester, e);
+      await settle(tester, () => tabDot().evaluate().isNotEmpty);
+
+      expect(tabDot(), findsOneWidget);
+      expect(tester.getSize(tabDot()), const Size(10, 10));
+      // 라벨 글자의 오른쪽 위에 걸쳐 있다 (글자 위치는 그대로)
+      final label = find.descendant(
+          of: find.byKey(const ValueKey('tab-props')), matching: find.text('소품'));
+      final corner = tester.getTopRight(label);
+      final center = tester.getCenter(tabDot());
+      expect(center.dx, greaterThan(corner.dx));
+      expect(center.dy, lessThan(tester.getCenter(label).dy));
+      expect((center - corner).distance, lessThan(10));
+      // 새 그림은 없어서 그림 칸 점은 없고 탭 점뿐이다
+      expect(find.byType(NoticeDot), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('tab-props')));
+      await tester.pump();
+      await settle(tester, () => tabDot().evaluate().isEmpty);
+      expect(tabDot(), findsNothing);
+      expect((await tester.runAsync(() => e.svc.snapshot(e.now)))!.unseenProps, 0);
+      await end(tester, e);
+    });
+
+    testWidgets('새 소품이 없으면 `소품` 탭에 점이 없다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _openAlbum(tester, e);
+      await settle(tester, () => false, tries: 6);
+
+      expect(find.byKey(const ValueKey('tab-props')), findsOneWidget);
+      expect(tabDot(), findsNothing);
+      await end(tester, e);
+    });
+  });
+
   group('쉼터 배낭의 알림 점', () {
     Finder dot() => find.byKey(const ValueKey('backpack-dot'));
 
@@ -418,6 +528,37 @@ void main() {
       await end(tester, e);
     });
 
+    testWidgets('새 그림만 있어도 점이 붙고, 화집을 열었다 돌아오면 사라진다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.ownPaintings({'kr001': Frame.wood}, seen: false));
+      expect((await tester.runAsync(() => e.svc.snapshot(e.now)))!.unseenProps, 0);
+      await pumpDoobal(tester, e, const DoobalApp());
+      await settle(tester, () => dot().evaluate().isNotEmpty);
+      expect(find.byType(RestScreen), findsOneWidget);
+      expect(dot(), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.backpack_outlined));
+      await transition(tester);
+      await settle(
+          tester, () => find.byKey(const ValueKey('new-painting-kr001')).evaluate().isNotEmpty);
+      await tester.tap(find.byTooltip('뒤로'));
+      await transition(tester);
+      await settle(tester, () => dot().evaluate().isEmpty);
+      expect(find.byType(RestScreen), findsOneWidget);
+      expect(dot(), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('본 그림과 본 소품뿐이면 점이 없다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.ownPaintings({'kr001': Frame.wood}));
+      await pumpDoobal(tester, e, const DoobalApp());
+      await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
+      await settle(tester, () => false, tries: 6);
+      expect(dot(), findsNothing);
+      await end(tester, e);
+    });
+
     testWidgets('안 본 소품이 있으면 배낭에 점(10pt 테라코타, 잉크 1.5 테두리)이 붙고, 소품 탭을 보면 사라진다',
         (tester) async {
       final e = UiEnv();
@@ -426,7 +567,8 @@ void main() {
       await settle(tester, () => dot().evaluate().isNotEmpty);
 
       expect(dot(), findsOneWidget);
-      final box = tester.widget<Container>(dot());
+      final box = tester.widget<Container>(
+          find.descendant(of: dot(), matching: find.byType(Container)));
       final deco = box.decoration! as BoxDecoration;
       expect(deco.color, Palette.terracotta);
       expect(deco.shape, BoxShape.circle);

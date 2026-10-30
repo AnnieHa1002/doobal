@@ -53,3 +53,12 @@ Future<bool?> showFundSheet(BuildContext context, double fundKm) => _showSheet(
       '더하기',
       '아껴 두기',
     );
+
+/// 여정 멈추기 확인. 멈추기 = true, 취소 = false. [capKm]는 여행 경비 상한
+Future<bool?> showStopSheet(BuildContext context, double capKm) => _showSheet(
+      context,
+      '여기서 멈춰요. 다음 여정은 멈춘 자리에서 출발하고, 그동안 걸은 거리는 여행 경비로 모아 둬요 '
+      '(최대 ${formatKm(capKm, digits: capKm % 1 == 0 ? 0 : 1)}).',
+      '멈추기',
+      '취소',
+    );

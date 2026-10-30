@@ -2542,6 +2542,19 @@ class $PaintingsOwnedTable extends PaintingsOwned
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _seenMeta = const VerificationMeta('seen');
+  @override
+  late final GeneratedColumn<bool> seen = GeneratedColumn<bool>(
+    'seen',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("seen" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     landmarkId,
@@ -2550,6 +2563,7 @@ class $PaintingsOwnedTable extends PaintingsOwned
     bestKm,
     firstArrivedUtc,
     lastArrivedUtc,
+    seen,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2609,6 +2623,12 @@ class $PaintingsOwnedTable extends PaintingsOwned
     } else if (isInserting) {
       context.missing(_lastArrivedUtcMeta);
     }
+    if (data.containsKey('seen')) {
+      context.handle(
+        _seenMeta,
+        seen.isAcceptableOrUnknown(data['seen']!, _seenMeta),
+      );
+    }
     return context;
   }
 
@@ -2644,6 +2664,10 @@ class $PaintingsOwnedTable extends PaintingsOwned
         DriftSqlType.int,
         data['${effectivePrefix}last_arrived_utc'],
       )!,
+      seen: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}seen'],
+      )!,
     );
   }
 
@@ -2666,6 +2690,7 @@ class PaintingOwnedRow extends DataClass
   final double bestKm;
   final int firstArrivedUtc;
   final int lastArrivedUtc;
+  final bool seen;
   const PaintingOwnedRow({
     required this.landmarkId,
     required this.visits,
@@ -2673,6 +2698,7 @@ class PaintingOwnedRow extends DataClass
     required this.bestKm,
     required this.firstArrivedUtc,
     required this.lastArrivedUtc,
+    required this.seen,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2687,6 +2713,7 @@ class PaintingOwnedRow extends DataClass
     map['best_km'] = Variable<double>(bestKm);
     map['first_arrived_utc'] = Variable<int>(firstArrivedUtc);
     map['last_arrived_utc'] = Variable<int>(lastArrivedUtc);
+    map['seen'] = Variable<bool>(seen);
     return map;
   }
 
@@ -2698,6 +2725,7 @@ class PaintingOwnedRow extends DataClass
       bestKm: Value(bestKm),
       firstArrivedUtc: Value(firstArrivedUtc),
       lastArrivedUtc: Value(lastArrivedUtc),
+      seen: Value(seen),
     );
   }
 
@@ -2715,6 +2743,7 @@ class PaintingOwnedRow extends DataClass
       bestKm: serializer.fromJson<double>(json['bestKm']),
       firstArrivedUtc: serializer.fromJson<int>(json['firstArrivedUtc']),
       lastArrivedUtc: serializer.fromJson<int>(json['lastArrivedUtc']),
+      seen: serializer.fromJson<bool>(json['seen']),
     );
   }
   @override
@@ -2729,6 +2758,7 @@ class PaintingOwnedRow extends DataClass
       'bestKm': serializer.toJson<double>(bestKm),
       'firstArrivedUtc': serializer.toJson<int>(firstArrivedUtc),
       'lastArrivedUtc': serializer.toJson<int>(lastArrivedUtc),
+      'seen': serializer.toJson<bool>(seen),
     };
   }
 
@@ -2739,6 +2769,7 @@ class PaintingOwnedRow extends DataClass
     double? bestKm,
     int? firstArrivedUtc,
     int? lastArrivedUtc,
+    bool? seen,
   }) => PaintingOwnedRow(
     landmarkId: landmarkId ?? this.landmarkId,
     visits: visits ?? this.visits,
@@ -2746,6 +2777,7 @@ class PaintingOwnedRow extends DataClass
     bestKm: bestKm ?? this.bestKm,
     firstArrivedUtc: firstArrivedUtc ?? this.firstArrivedUtc,
     lastArrivedUtc: lastArrivedUtc ?? this.lastArrivedUtc,
+    seen: seen ?? this.seen,
   );
   PaintingOwnedRow copyWithCompanion(PaintingsOwnedCompanion data) {
     return PaintingOwnedRow(
@@ -2761,6 +2793,7 @@ class PaintingOwnedRow extends DataClass
       lastArrivedUtc: data.lastArrivedUtc.present
           ? data.lastArrivedUtc.value
           : this.lastArrivedUtc,
+      seen: data.seen.present ? data.seen.value : this.seen,
     );
   }
 
@@ -2772,7 +2805,8 @@ class PaintingOwnedRow extends DataClass
           ..write('frame: $frame, ')
           ..write('bestKm: $bestKm, ')
           ..write('firstArrivedUtc: $firstArrivedUtc, ')
-          ..write('lastArrivedUtc: $lastArrivedUtc')
+          ..write('lastArrivedUtc: $lastArrivedUtc, ')
+          ..write('seen: $seen')
           ..write(')'))
         .toString();
   }
@@ -2785,6 +2819,7 @@ class PaintingOwnedRow extends DataClass
     bestKm,
     firstArrivedUtc,
     lastArrivedUtc,
+    seen,
   );
   @override
   bool operator ==(Object other) =>
@@ -2795,7 +2830,8 @@ class PaintingOwnedRow extends DataClass
           other.frame == this.frame &&
           other.bestKm == this.bestKm &&
           other.firstArrivedUtc == this.firstArrivedUtc &&
-          other.lastArrivedUtc == this.lastArrivedUtc);
+          other.lastArrivedUtc == this.lastArrivedUtc &&
+          other.seen == this.seen);
 }
 
 class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
@@ -2805,6 +2841,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
   final Value<double> bestKm;
   final Value<int> firstArrivedUtc;
   final Value<int> lastArrivedUtc;
+  final Value<bool> seen;
   final Value<int> rowid;
   const PaintingsOwnedCompanion({
     this.landmarkId = const Value.absent(),
@@ -2813,6 +2850,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     this.bestKm = const Value.absent(),
     this.firstArrivedUtc = const Value.absent(),
     this.lastArrivedUtc = const Value.absent(),
+    this.seen = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PaintingsOwnedCompanion.insert({
@@ -2822,6 +2860,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     required double bestKm,
     required int firstArrivedUtc,
     required int lastArrivedUtc,
+    this.seen = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : landmarkId = Value(landmarkId),
        visits = Value(visits),
@@ -2836,6 +2875,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     Expression<double>? bestKm,
     Expression<int>? firstArrivedUtc,
     Expression<int>? lastArrivedUtc,
+    Expression<bool>? seen,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2845,6 +2885,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
       if (bestKm != null) 'best_km': bestKm,
       if (firstArrivedUtc != null) 'first_arrived_utc': firstArrivedUtc,
       if (lastArrivedUtc != null) 'last_arrived_utc': lastArrivedUtc,
+      if (seen != null) 'seen': seen,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2856,6 +2897,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     Value<double>? bestKm,
     Value<int>? firstArrivedUtc,
     Value<int>? lastArrivedUtc,
+    Value<bool>? seen,
     Value<int>? rowid,
   }) {
     return PaintingsOwnedCompanion(
@@ -2865,6 +2907,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
       bestKm: bestKm ?? this.bestKm,
       firstArrivedUtc: firstArrivedUtc ?? this.firstArrivedUtc,
       lastArrivedUtc: lastArrivedUtc ?? this.lastArrivedUtc,
+      seen: seen ?? this.seen,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2892,6 +2935,9 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     if (lastArrivedUtc.present) {
       map['last_arrived_utc'] = Variable<int>(lastArrivedUtc.value);
     }
+    if (seen.present) {
+      map['seen'] = Variable<bool>(seen.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2907,6 +2953,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
           ..write('bestKm: $bestKm, ')
           ..write('firstArrivedUtc: $firstArrivedUtc, ')
           ..write('lastArrivedUtc: $lastArrivedUtc, ')
+          ..write('seen: $seen, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5046,6 +5093,7 @@ typedef $$PaintingsOwnedTableCreateCompanionBuilder =
       required double bestKm,
       required int firstArrivedUtc,
       required int lastArrivedUtc,
+      Value<bool> seen,
       Value<int> rowid,
     });
 typedef $$PaintingsOwnedTableUpdateCompanionBuilder =
@@ -5056,6 +5104,7 @@ typedef $$PaintingsOwnedTableUpdateCompanionBuilder =
       Value<double> bestKm,
       Value<int> firstArrivedUtc,
       Value<int> lastArrivedUtc,
+      Value<bool> seen,
       Value<int> rowid,
     });
 
@@ -5098,6 +5147,11 @@ class $$PaintingsOwnedTableFilterComposer
     column: $table.lastArrivedUtc,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<bool> get seen => $composableBuilder(
+    column: $table.seen,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$PaintingsOwnedTableOrderingComposer
@@ -5138,6 +5192,11 @@ class $$PaintingsOwnedTableOrderingComposer
     column: $table.lastArrivedUtc,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get seen => $composableBuilder(
+    column: $table.seen,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PaintingsOwnedTableAnnotationComposer
@@ -5172,6 +5231,9 @@ class $$PaintingsOwnedTableAnnotationComposer
     column: $table.lastArrivedUtc,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get seen =>
+      $composableBuilder(column: $table.seen, builder: (column) => column);
 }
 
 class $$PaintingsOwnedTableTableManager
@@ -5211,6 +5273,7 @@ class $$PaintingsOwnedTableTableManager
                 Value<double> bestKm = const Value.absent(),
                 Value<int> firstArrivedUtc = const Value.absent(),
                 Value<int> lastArrivedUtc = const Value.absent(),
+                Value<bool> seen = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaintingsOwnedCompanion(
                 landmarkId: landmarkId,
@@ -5219,6 +5282,7 @@ class $$PaintingsOwnedTableTableManager
                 bestKm: bestKm,
                 firstArrivedUtc: firstArrivedUtc,
                 lastArrivedUtc: lastArrivedUtc,
+                seen: seen,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5229,6 +5293,7 @@ class $$PaintingsOwnedTableTableManager
                 required double bestKm,
                 required int firstArrivedUtc,
                 required int lastArrivedUtc,
+                Value<bool> seen = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaintingsOwnedCompanion.insert(
                 landmarkId: landmarkId,
@@ -5237,6 +5302,7 @@ class $$PaintingsOwnedTableTableManager
                 bestKm: bestKm,
                 firstArrivedUtc: firstArrivedUtc,
                 lastArrivedUtc: lastArrivedUtc,
+                seen: seen,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

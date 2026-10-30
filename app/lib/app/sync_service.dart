@@ -184,6 +184,7 @@ class Snapshot {
     required this.onSea,
     required this.pendingArrival,
     required this.unseenProps,
+    required this.unseenPaintings,
     required this.paintingsCount,
     required this.totalKm,
   });
@@ -215,6 +216,9 @@ class Snapshot {
 
   /// 배낭에 새 소품 표시를 띄울 개수 (아직 안 본 소품)
   final int unseenProps;
+
+  /// 배낭에 새 그림 표시를 띄울 개수 (처음 얻고 화집에서 아직 안 본 그림)
+  final int unseenPaintings;
 
   /// 얻은 그림 수
   final int paintingsCount;
@@ -366,12 +370,15 @@ class SyncService {
   }
 
   /// 그때까지의 거리를 반영한 뒤, 진행 중인 여정을 지금 지점에서 멈춘다.
-  /// 이후 걸음은 여행 경비로 간다. 진행 중인 여정이 없으면 동기화만 한다
-  Future<void> stopJourney(DateTime now) async {
+  /// 이후 걸음은 여행 경비로 간다. 멈췄으면 true. 진행 중인 여정이 없으면
+  /// (그 동기화에서 도착한 경우도) 동기화만 하고 false
+  Future<bool> stopJourney(DateTime now) async {
     await sync(now);
-    await db.transaction(() async {
+    return db.transaction(() async {
       final active = await _activeJourney();
-      if (active != null) await _stop(active, now);
+      if (active == null) return false;
+      await _stop(active, now);
+      return true;
     });
   }
 
@@ -405,6 +412,7 @@ class SyncService {
     );
     final at = to.toUtc().millisecondsSinceEpoch;
     final p = out.painting;
+    // 새 그림 표시는 처음 얻을 때만 켠다. 재방문은 seen을 안 넣어서 충돌 갱신이 건드리지 않는다
     await db.into(db.paintingsOwned).insertOnConflictUpdate(PaintingsOwnedCompanion.insert(
           landmarkId: dest.id,
           visits: p.visits,
@@ -412,6 +420,7 @@ class SyncService {
           bestKm: p.bestKm,
           firstArrivedUtc: owned?.firstArrivedUtc ?? at,
           lastArrivedUtc: at,
+          seen: owned == null ? const Value(false) : const Value.absent(),
         ));
     await (db.update(db.journeys)..where((t) => t.id.equals(active.id))).write(JourneysCompanion(
       status: const Value(JourneyStatus.arrived),
@@ -600,6 +609,18 @@ class SyncService {
   Future<void> markPropsSeen() => (db.update(db.propsOwned)..where((t) => t.seen.equals(false)))
       .write(const PropsOwnedCompanion(seen: Value(true)));
 
+  /// 아직 안 본 그림의 명소 id (화집 그림 탭의 새 그림 칸)
+  Future<List<String>> unseenPaintingIds() async => [
+        for (final r in await (db.select(db.paintingsOwned)..where((t) => t.seen.equals(false)))
+            .get())
+          r.landmarkId,
+      ];
+
+  /// 배낭의 새 그림 표시를 지운다
+  Future<void> markPaintingsSeen() =>
+      (db.update(db.paintingsOwned)..where((t) => t.seen.equals(false)))
+          .write(const PaintingsOwnedCompanion(seen: Value(true)));
+
   /// 걷기 기록: [fromUtc, toUtc)와 겹치는 분의 걸음·거리·걷기/달리기와 걷기 1번 인정 여부.
   /// 동기화는 하지 않는다. 부른 쪽이 먼저 sync 한다.
   /// 하루 계산(_recomputeDays)처럼 전날 0시부터 불러 걷기/뛰기 상태를 이어 판정한다
@@ -659,6 +680,8 @@ class SyncService {
       pendingArrival: await _pendingArrival(),
       unseenProps: (await (db.select(db.propsOwned)..where((t) => t.seen.equals(false))).get())
           .length,
+      unseenPaintings:
+          (await (db.select(db.paintingsOwned)..where((t) => t.seen.equals(false))).get()).length,
       paintingsCount: (await db.select(db.paintingsOwned).get()).length,
       totalKm: days.fold(0.0, (sum, d) => sum + d.distanceM) / 1000,
     );

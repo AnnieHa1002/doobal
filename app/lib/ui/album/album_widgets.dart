@@ -4,6 +4,7 @@ import '../../app/sync_service.dart';
 import '../../domain/landmark.dart';
 import '../../domain/prop.dart';
 import '../common/framed_painting.dart';
+import '../common/notice_dot.dart';
 import '../common/palette.dart';
 
 /// 벽 한 칸의 크기 비율 (너비 : 높이 = 4 : 5)
@@ -68,12 +69,18 @@ class WallRow extends StatelessWidget {
   }
 }
 
-/// `그림` / `소품` 탭 두 개
+/// `그림` / `소품` 탭 두 개. [propsDot]이면 `소품` 라벨 오른쪽 위에 알림 점이 붙는다
 class AlbumTabs extends StatelessWidget {
-  const AlbumTabs({super.key, required this.selected, required this.onSelect});
+  const AlbumTabs({
+    super.key,
+    required this.selected,
+    required this.onSelect,
+    this.propsDot = false,
+  });
 
   final int selected;
   final ValueChanged<int> onSelect;
+  final bool propsDot;
 
   @override
   Widget build(BuildContext context) {
@@ -81,12 +88,12 @@ class AlbumTabs extends StatelessWidget {
       children: [
         Expanded(child: _tab(0, '그림', const ValueKey('tab-paintings'))),
         const SizedBox(width: 8),
-        Expanded(child: _tab(1, '소품', const ValueKey('tab-props'))),
+        Expanded(child: _tab(1, '소품', const ValueKey('tab-props'), dot: propsDot)),
       ],
     );
   }
 
-  Widget _tab(int index, String label, Key key) {
+  Widget _tab(int index, String label, Key key, {bool dot = false}) {
     final on = selected == index;
     return Semantics(
       button: true,
@@ -103,13 +110,25 @@ class AlbumTabs extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Palette.ink, width: 2.5),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: on ? Palette.paper : Palette.ink,
-            ),
+          // 점은 글자 칸 바깥 오른쪽 위에 걸친다 (글자 위치는 그대로)
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: on ? Palette.paper : Palette.ink,
+                ),
+              ),
+              if (dot)
+                const Positioned(
+                  top: -4,
+                  right: -12,
+                  child: NoticeDot(key: ValueKey('props-tab-dot')),
+                ),
+            ],
           ),
         ),
       ),
@@ -204,13 +223,21 @@ class _Chip extends StatelessWidget {
 }
 
 /// 명소 하나의 칸: 그림 자리 + 이름. 얻은 그림은 색 액자와 잉크색 이름,
-/// 못 얻은 그림은 빈 밝은 액자와 흐린 이름. 누르는 동작은 얻은 그림만 [onTap]이 있다
+/// 못 얻은 그림은 빈 밝은 액자와 흐린 이름. 누르는 동작은 얻은 그림만 [onTap]이 있다.
+/// [isNew]이면(이번에 화집을 열기 전에 얻은 그림) 오른쪽 위에 알림 점이 붙는다
 class PaintingCell extends StatelessWidget {
-  const PaintingCell({super.key, required this.landmark, required this.owned, this.onTap});
+  const PaintingCell({
+    super.key,
+    required this.landmark,
+    required this.owned,
+    this.onTap,
+    this.isNew = false,
+  });
 
   final Landmark landmark;
   final OwnedPaintingView? owned;
   final VoidCallback? onTap;
+  final bool isNew;
 
   @override
   Widget build(BuildContext context) {
@@ -218,29 +245,41 @@ class PaintingCell extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Column(
+      child: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
         children: [
-          Expanded(
-            child: p == null
-                ? const FramedPainting.empty()
-                : FramedPainting(landmark: landmark, frame: p.frame),
-          ),
-          const SizedBox(height: 4),
-          SizedBox(
-            height: 32,
-            child: Text(
-              landmark.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 1.25,
-                color: p == null ? Palette.subInk : Palette.ink,
+          Column(
+            children: [
+              Expanded(
+                child: p == null
+                    ? const FramedPainting.empty()
+                    : FramedPainting(landmark: landmark, frame: p.frame),
               ),
-            ),
+              const SizedBox(height: 4),
+              SizedBox(
+                height: 32,
+                child: Text(
+                  landmark.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                    color: p == null ? Palette.subInk : Palette.ink,
+                  ),
+                ),
+              ),
+            ],
           ),
+          if (isNew)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: NoticeDot(key: ValueKey('new-painting-${landmark.id}')),
+            ),
         ],
       ),
     );

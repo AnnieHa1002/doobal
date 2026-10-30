@@ -116,8 +116,8 @@ class UiEnv {
         ));
   }
 
-  /// 얻은 그림만 넣는다 (도착 기록 없음)
-  Future<void> ownPaintings(Map<String, Frame> frames) =>
+  /// 얻은 그림만 넣는다 (도착 기록 없음). [seen]이 false면 새 그림 표시가 켜진 채로
+  Future<void> ownPaintings(Map<String, Frame> frames, {bool seen = true}) =>
       db.batch((b) => b.insertAll(db.paintingsOwned, [
             for (final (i, e) in frames.entries.indexed)
               PaintingsOwnedCompanion.insert(
@@ -127,6 +127,7 @@ class UiEnv {
                 bestKm: 1,
                 firstArrivedUtc: 1000 + i,
                 lastArrivedUtc: 1000 + i,
+                seen: Value(seen),
               ),
           ]));
 }

@@ -31,10 +31,14 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   /// 그림 탭의 권역 거르기. null이면 전체
   String? _region;
 
+  /// 이번에 연 화집에서 새 그림으로 보이는 명소 id (열 때 한 번 정하고, 나갈 때까지 그대로)
+  var _newIds = const <String>{};
+
   @override
   void initState() {
     super.initState();
     _hangId = widget.hangLandmarkId;
+    _seePaintings();
   }
 
   Future<void> _setWall(int slot, String landmarkId) async {
@@ -61,6 +65,16 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   void _openTab(int i) {
     setState(() => _tab = i);
     if (i == 1) _seeProps();
+  }
+
+  /// 화집을 열면 안 본 그림을 이번 방문의 새 그림 칸으로 담고, 새 그림 표시(배낭의 점)를 지운다
+  Future<void> _seePaintings() async {
+    final svc = await ref.read(syncServiceProvider.future);
+    final ids = await svc.unseenPaintingIds();
+    if (ids.isEmpty) return;
+    if (mounted) setState(() => _newIds = ids.toSet());
+    await svc.markPaintingsSeen();
+    if (mounted) ref.invalidate(snapshotProvider);
   }
 
   /// 소품 탭을 열면 새 소품 표시(배낭의 점)를 지운다
@@ -109,6 +123,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
 
   Widget _content(List<OwnedPaintingView> paintings, List<String?> wall, List<Landmark> landmarks) {
     final owned = {for (final p in paintings) p.landmark.id: p};
+    final propsDot = (ref.watch(snapshotProvider).value?.unseenProps ?? 0) > 0;
     const gutter = EdgeInsets.symmetric(horizontal: 16);
     return CustomScrollView(
       slivers: [
@@ -138,7 +153,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
                   onLongPress: (slot) => _onSlotLongPress(slot, paintings),
                 ),
                 const SizedBox(height: 16),
-                AlbumTabs(selected: _tab, onSelect: _openTab),
+                AlbumTabs(selected: _tab, onSelect: _openTab, propsDot: propsDot),
                 const SizedBox(height: 4),
               ],
             ),
@@ -180,6 +195,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
               key: ValueKey('cell-${l.id}'),
               landmark: l,
               owned: p,
+              isNew: _newIds.contains(l.id),
               onTap: p == null
                   ? null
                   : () => Navigator.of(context).push(MaterialPageRoute<void>(

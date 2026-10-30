@@ -9,7 +9,8 @@ import '../common/palette.dart';
 
 /// 지도 아래 카드: 이름, 시도·지형, 남은 거리, 그림 칸 3개, 버튼.
 /// [frame]은 그 명소의 그림을 얻었으면 지금 액자, 아니면 null.
-/// [distance]는 `남은 거리 …` 줄 (아직 계산 중이면 null). [buttonLabel]이 null이면 버튼이 없다
+/// [distance]는 `남은 거리 …` 줄 (아직 계산 중이면 null). [buttonLabel]이 null이면 버튼이 없고,
+/// [secondary]이면 버튼을 보조 버튼(카드색)으로 그린다
 class LandmarkCard extends StatelessWidget {
   const LandmarkCard({
     super.key,
@@ -18,6 +19,7 @@ class LandmarkCard extends StatelessWidget {
     required this.distance,
     required this.buttonLabel,
     required this.onPressed,
+    this.secondary = false,
   });
 
   final Landmark landmark;
@@ -25,6 +27,7 @@ class LandmarkCard extends StatelessWidget {
   final String? distance;
   final String? buttonLabel;
   final VoidCallback onPressed;
+  final bool secondary;
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +87,11 @@ class LandmarkCard extends StatelessWidget {
           ),
           if (buttonLabel != null) ...[
             const SizedBox(height: 16),
-            GameButton(label: buttonLabel!, onPressed: onPressed),
+            GameButton(
+              label: buttonLabel!,
+              kind: secondary ? GameButtonKind.secondary : GameButtonKind.primary,
+              onPressed: onPressed,
+            ),
           ],
         ],
       ),

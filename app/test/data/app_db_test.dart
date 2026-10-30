@@ -10,7 +10,7 @@ Future<int> _userVersion(AppDb db) async =>
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
-  test('새 DB는 스키마 4로 열리고 새 표를 바로 쓸 수 있다', () async {
+  test('새 DB는 스키마 5로 열리고 새 표를 바로 쓸 수 있다', () async {
     final db = AppDb(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -18,7 +18,7 @@ void main() {
     expect(await db.select(db.propsOwned).get(), isEmpty);
     expect(await db.select(db.profile).get(), isEmpty);
     expect(await db.select(db.wallSlots).get(), isEmpty);
-    expect(await _userVersion(db), 4);
+    expect(await _userVersion(db), 5);
 
     await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
           landmarkId: 'kr001',
@@ -30,6 +30,8 @@ void main() {
         ));
     await db.into(db.propsOwned).insert(PropsOwnedCompanion.insert(propId: 'hat_01', unlockedUtc: 1));
     expect((await db.select(db.paintingsOwned).getSingle()).frame, Frame.silver);
+    // 그림의 seen 기본값은 true (새 그림 표시는 도착할 때 false로 넣는다), 소품은 false
+    expect((await db.select(db.paintingsOwned).getSingle()).seen, isTrue);
     expect((await db.select(db.propsOwned).getSingle()).seen, isFalse);
 
     // 프로필은 1행: 출발 동네 열은 비워 둘 수 있고, 같은 id로 다시 넣으면 바뀐다
@@ -54,7 +56,37 @@ void main() {
     expect((await db.select(db.wallSlots).getSingle()).landmarkId, 'kr002');
   });
 
-  test('스키마 1(여정 표만 있던 때)에서 열면 4로 올라가고 옛 행이 남는다', () async {
+  test('insertOnConflictUpdate는 companion에 없는 열(seen)을 갱신하지 않는다', () async {
+    final db = AppDb(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    PaintingsOwnedCompanion painting(int visits, {Value<bool> seen = const Value.absent()}) =>
+        PaintingsOwnedCompanion.insert(
+          landmarkId: 'kr001',
+          visits: visits,
+          frame: Frame.wood,
+          bestKm: 5,
+          firstArrivedUtc: 1,
+          lastArrivedUtc: visits,
+          seen: seen,
+        );
+    Future<(int, bool)> row() async {
+      final r = await db.select(db.paintingsOwned).getSingle();
+      return (r.visits, r.seen);
+    }
+
+    // seen을 빼고 충돌 갱신하면 다른 열만 바뀌고, 안 본 그림은 안 본 채, 본 그림은 본 채
+    await db.into(db.paintingsOwned).insert(painting(1, seen: const Value(false)));
+    await db.into(db.paintingsOwned).insertOnConflictUpdate(painting(2));
+    expect(await row(), (2, false));
+
+    await db.into(db.paintingsOwned).insertOnConflictUpdate(painting(3, seen: const Value(true)));
+    expect(await row(), (3, true));
+    await db.into(db.paintingsOwned).insertOnConflictUpdate(painting(4));
+    expect(await row(), (4, true));
+  });
+
+  test('스키마 1(여정 표만 있던 때)에서 열면 5로 올라가고 옛 행이 남는다', () async {
     // 스키마 1의 journeys 표와 행 둘(도착, 멈춤)을 직접 만들어 두고 user_version = 1로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -71,7 +103,7 @@ void main() {
     addTearDown(db.close);
 
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
-    expect(await _userVersion(db), 4);
+    expect(await _userVersion(db), 5);
     expect(rows.keys, {'j1', 'j2'});
     // 새 열은 비어 있고, 옛 도착 여정은 도착 화면을 이미 본 것으로 둔다
     expect(rows['j1']!.endLat, isNull);
@@ -90,9 +122,20 @@ void main() {
     expect(await db.select(db.propsOwned).get(), isEmpty);
     expect(await db.select(db.profile).get(), isEmpty);
     expect(await db.select(db.wallSlots).get(), isEmpty);
+    // 1에서 올라오면 그림 표는 처음부터 seen 열이 있다 (열을 또 더하다 실패하지 않는다)
+    await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
+          landmarkId: 'kr001',
+          visits: 1,
+          frame: Frame.wood,
+          bestKm: 5,
+          firstArrivedUtc: 1,
+          lastArrivedUtc: 1,
+          seen: const Value(false),
+        ));
+    expect((await db.select(db.paintingsOwned).getSingle()).seen, isFalse);
   });
 
-  test('스키마 2(프로필 표가 없던 때)에서 열면 4로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 2(프로필 표가 없던 때)에서 열면 5로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 2의 journeys 표(새 열 포함)·그림·소품 표와 행을 직접 만들어 두고 user_version = 2로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -128,7 +171,7 @@ void main() {
     addTearDown(db.close);
 
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
-    expect(await _userVersion(db), 4);
+    expect(await _userVersion(db), 5);
     expect(rows.keys, {'j1', 'j2'});
     expect(rows['j1']!.status, JourneyStatus.arrived);
     expect(rows['j1']!.newFrame, Frame.wood);
@@ -147,12 +190,13 @@ void main() {
     // 스키마 2의 그림·소품도 그대로
     final painting = await db.select(db.paintingsOwned).getSingle();
     expect((painting.landmarkId, painting.visits, painting.frame), ('kr001', 2, Frame.silver));
+    expect(painting.seen, isTrue);
     expect((await db.select(db.propsOwned).getSingle()).seen, isTrue);
     // 벽 표도 새로 생겼고 비어 있다
     expect(await db.select(db.wallSlots).get(), isEmpty);
   });
 
-  test('스키마 3(화집 벽 표가 없던 때)에서 열면 4로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 3(화집 벽 표가 없던 때)에서 열면 5로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 3의 journeys·그림·소품·프로필 표와 행을 직접 만들어 두고 user_version = 3으로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -191,12 +235,13 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 4);
+    expect(await _userVersion(db), 5);
     final j = await db.select(db.journeys).getSingle();
     expect((j.id, j.status, j.visitNo, j.newFrame, j.arrivalShown),
         ('j1', JourneyStatus.arrived, 1, Frame.wood, false));
     final painting = await db.select(db.paintingsOwned).getSingle();
     expect((painting.landmarkId, painting.visits, painting.frame), ('kr001', 1, Frame.wood));
+    expect(painting.seen, isTrue);
     expect((await db.select(db.propsOwned).getSingle()).propId, 'hat_01');
     expect((await db.select(db.profile).getSingle()).homeName, '종로구');
 
@@ -210,5 +255,84 @@ void main() {
         WallSlotsCompanion.insert(slot: const Value(1), landmarkId: 'kr003'));
     final wall = {for (final r in await db.select(db.wallSlots).get()) r.slot: r.landmarkId};
     expect(wall, {1: 'kr003', 3: 'kr002'});
+  });
+
+  test('스키마 4(그림 표에 seen 열이 없던 때)에서 열면 5로 올라가고 옛 그림은 본 것이다', () async {
+    // 스키마 4의 journeys·그림·소품·프로필·벽 표와 행을 직접 만들어 두고 user_version = 4로 연다
+    final db = AppDb(NativeDatabase.memory(setup: (raw) {
+      raw.execute('''
+        CREATE TABLE journeys (
+          id TEXT NOT NULL, origin_lat REAL NOT NULL, origin_lng REAL NOT NULL,
+          dest_id TEXT NOT NULL, start_utc INTEGER NOT NULL, fund_km REAL NOT NULL,
+          total_effective_km REAL NOT NULL, status TEXT NOT NULL, arrived_utc INTEGER NULL,
+          end_lat REAL NULL, end_lng REAL NULL, ended_utc INTEGER NULL,
+          visit_no INTEGER NULL, prev_frame TEXT NULL, new_frame TEXT NULL,
+          arrival_shown INTEGER NOT NULL DEFAULT 0 CHECK (arrival_shown IN (0, 1)),
+          PRIMARY KEY (id))
+      ''');
+      raw.execute("INSERT INTO journeys VALUES ('j1', 38.0, 128.0, 'kr001', 10, 0, 5, 'arrived', "
+          "20, 37.5, 127.0, NULL, 1, NULL, 'wood', 0)");
+      raw.execute('''
+        CREATE TABLE paintings_owned (
+          landmark_id TEXT NOT NULL, visits INTEGER NOT NULL, frame TEXT NOT NULL,
+          best_km REAL NOT NULL, first_arrived_utc INTEGER NOT NULL,
+          last_arrived_utc INTEGER NOT NULL, PRIMARY KEY (landmark_id))
+      ''');
+      raw.execute("INSERT INTO paintings_owned VALUES ('kr001', 1, 'wood', 5, 20, 20)");
+      raw.execute("INSERT INTO paintings_owned VALUES ('kr002', 3, 'gold', 60, 30, 90)");
+      raw.execute('''
+        CREATE TABLE props_owned (
+          prop_id TEXT NOT NULL, unlocked_utc INTEGER NOT NULL,
+          seen INTEGER NOT NULL DEFAULT 0 CHECK (seen IN (0, 1)), PRIMARY KEY (prop_id))
+      ''');
+      raw.execute("INSERT INTO props_owned VALUES ('hat_01', 5, 0)");
+      raw.execute('''
+        CREATE TABLE profile (
+          id INTEGER NOT NULL, home_name TEXT NULL, home_lat REAL NULL, home_lng REAL NULL,
+          PRIMARY KEY (id))
+      ''');
+      raw.execute("INSERT INTO profile VALUES (1, '종로구', 37.57, 126.98)");
+      raw.execute('''
+        CREATE TABLE wall_slots (
+          slot INTEGER NOT NULL, landmark_id TEXT NOT NULL, PRIMARY KEY (slot))
+      ''');
+      raw.execute("INSERT INTO wall_slots VALUES (0, 'kr002')");
+      raw.execute('PRAGMA user_version = 4');
+    }));
+    addTearDown(db.close);
+
+    expect(await _userVersion(db), 5);
+    // 옛 그림은 모두 본 것으로 두고, 다른 열은 그대로
+    final paintings = {for (final r in await db.select(db.paintingsOwned).get()) r.landmarkId: r};
+    expect(paintings.keys, {'kr001', 'kr002'});
+    expect(paintings.values.every((r) => r.seen), isTrue);
+    expect((paintings['kr002']!.visits, paintings['kr002']!.frame, paintings['kr002']!.bestKm),
+        (3, Frame.gold, 60));
+    // 다른 표의 옛 행도 그대로 (소품은 안 본 채)
+    expect((await db.select(db.journeys).getSingle()).newFrame, Frame.wood);
+    expect((await db.select(db.propsOwned).getSingle()).seen, isFalse);
+    expect((await db.select(db.profile).getSingle()).homeName, '종로구');
+    expect((await db.select(db.wallSlots).getSingle()).landmarkId, 'kr002');
+
+    // 새 열을 쓸 수 있다: 새로 넣는 그림은 seen을 false로 둘 수 있고, 안 넣으면 true
+    await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
+          landmarkId: 'kr003',
+          visits: 1,
+          frame: Frame.silver,
+          bestKm: 22,
+          firstArrivedUtc: 100,
+          lastArrivedUtc: 100,
+          seen: const Value(false),
+        ));
+    await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
+          landmarkId: 'kr004',
+          visits: 1,
+          frame: Frame.wood,
+          bestKm: 3,
+          firstArrivedUtc: 100,
+          lastArrivedUtc: 100,
+        ));
+    final all = {for (final r in await db.select(db.paintingsOwned).get()) r.landmarkId: r.seen};
+    expect(all, {'kr001': true, 'kr002': true, 'kr003': false, 'kr004': true});
   });
 }

@@ -5,7 +5,7 @@ import '../../domain/journey.dart' show Frame;
 part 'app_db.g.dart';
 
 // M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝) + 스키마 3 (프로필: 출발 동네)
-// + 스키마 4 (화집 벽). 시각은 모두 UTC 정수
+// + 스키마 4 (화집 벽) + 스키마 5 (새 그림 표시). 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
 
@@ -77,7 +77,8 @@ class Journeys extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// 얻은 그림. 명소마다 한 점 (MVP는 첫 방문). 다시 도착하면 방문 수와 액자만 바뀐다
+/// 얻은 그림. 명소마다 한 점 (MVP는 첫 방문). 다시 도착하면 방문 수와 액자만 바뀐다.
+/// seen이 false면 배낭에 새 그림 표시 (처음 얻을 때만 false, 옛 행은 본 것으로 둔다)
 @DataClassName('PaintingOwnedRow')
 class PaintingsOwned extends Table {
   TextColumn get landmarkId => text()();
@@ -88,6 +89,7 @@ class PaintingsOwned extends Table {
   RealColumn get bestKm => real()();
   IntColumn get firstArrivedUtc => integer()();
   IntColumn get lastArrivedUtc => integer()();
+  BoolColumn get seen => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column> get primaryKey => {landmarkId};
@@ -169,7 +171,7 @@ class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -194,6 +196,9 @@ class AppDb extends _$AppDb {
           if (from < 4) {
             await m.createTable(wallSlots);
           }
+          // 2에서 새로 만든 그림 표는 지금 정의라 seen 열이 이미 있다. 2~4에서 올라올 때만 더한다
+          // (옛 행은 기본값 true, 곧 본 것)
+          if (from >= 2 && from < 5) await m.addColumn(paintingsOwned, paintingsOwned.seen);
         },
       );
 }

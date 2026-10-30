@@ -8,6 +8,7 @@ import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/map_regions.dart';
 import 'package:doobal/domain/route.dart';
 import 'package:doobal/ui/common/format.dart';
+import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/map/landmark_card.dart';
 import 'package:doobal/ui/map/map_geometry.dart';
@@ -389,7 +390,8 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('여정이 있으면 목적지가 처음부터 골라져 있고 버튼이 없다. 남은 거리·일수는 스냅숏과 같다', (tester) async {
+    testWidgets('여정이 있으면 목적지가 처음부터 골라져 있고 `여정 멈추기`뿐이다. 남은 거리·일수는 스냅숏과 같다',
+        (tester) async {
       final e = _Env();
       await e.seed(tester, () async => e.svc.startJourney('kr003', _t1));
       await _openMap(tester, e);
@@ -397,6 +399,7 @@ void main() {
       expect(_card(_byId['kr003']!.name), findsOneWidget);
       expect(find.text('여기로 가기'), findsNothing);
       expect(find.text('목적지 바꾸기'), findsNothing);
+      expect(find.text('여정 멈추기'), findsOneWidget);
       final snap = (await tester.runAsync(() => e.svc.snapshot(e.now)))!;
       final days = snap.journey!.eta.difference(DateTime.utc(2026, 11, 18)).inDays;
       expect(_card('남은 거리 ${formatKm(snap.journey!.progress.remainingKm)} · 약 $days일'),
@@ -418,9 +421,10 @@ void main() {
 
       final rows = await e.journeys(tester);
       expect(rows.where((r) => r.status == JourneyStatus.active).single.destId, 'kr001');
-      // 카드는 그대로 경복궁이고, 이제 현재 목적지라 버튼이 없다
+      // 카드는 그대로 경복궁이고, 이제 현재 목적지라 `여정 멈추기`뿐이다
       expect(_card('경복궁'), findsOneWidget);
       expect(find.text('목적지 바꾸기'), findsNothing);
+      expect(find.text('여정 멈추기'), findsOneWidget);
       await _end(tester, e);
     });
 
@@ -586,6 +590,142 @@ void main() {
       final active = rows.singleWhere((r) => r.status == JourneyStatus.active);
       expect(active.destId, 'kr001');
       expect(active.fundKm, closeTo(2.1, 1e-9));
+      await _end(tester, e);
+    });
+  });
+
+  group('여정 멈추기', () {
+    // config 상한 15km는 정수라 소수점 없이
+    const stopText = '여기서 멈춰요. 다음 여정은 멈춘 자리에서 출발하고, '
+        '그동안 걸은 거리는 여행 경비로 모아 둬요 (최대 15 km).';
+
+    Future<JourneyRow> kr003(WidgetTester tester, _Env e) async =>
+        (await e.journeys(tester)).singleWhere((r) => r.destId == 'kr003');
+
+    testWidgets('진행 중인 여정의 목적지 카드에 보조 버튼 `여정 멈추기`, 다른 명소에는 없다', (tester) async {
+      final e = _Env();
+      await e.seed(tester, () async => e.svc.startJourney('kr003', _t1, useFund: false));
+      await _openMap(tester, e);
+
+      expect(_card(_byId['kr003']!.name), findsOneWidget);
+      expect(find.text('여정 멈추기'), findsOneWidget);
+      expect(tester.widget<GameButton>(find.widgetWithText(GameButton, '여정 멈추기')).kind,
+          GameButtonKind.secondary);
+
+      // 다른 명소는 `목적지 바꾸기` (primary)
+      await _searchAndPick(tester, '경복궁', 'kr001');
+      expect(_card('경복궁'), findsOneWidget);
+      expect(find.text('여정 멈추기'), findsNothing);
+      expect(tester.widget<GameButton>(find.widgetWithText(GameButton, '목적지 바꾸기')).kind,
+          GameButtonKind.primary);
+      await _end(tester, e);
+    });
+
+    testWidgets('여정이 없으면 `여정 멈추기`가 없다', (tester) async {
+      final e = _Env();
+      await e.seed(tester);
+      await _openMap(tester, e);
+      await _searchAndPick(tester, '경복궁', 'kr001');
+
+      expect(find.text('여기로 가기'), findsOneWidget);
+      expect(find.text('여정 멈추기'), findsNothing);
+      await _end(tester, e);
+    });
+
+    testWidgets('누르면 확인 시트가 뜨고, 멈추기를 고르면 여정이 멈추고 토스트, 카드는 `여기로 가기`',
+        (tester) async {
+      final e = _Env();
+      await e.seed(tester, () async => e.svc.startJourney('kr003', _t1, useFund: false));
+      await _openMap(tester, e);
+
+      await tester.tap(find.text('여정 멈추기'));
+      await _transition(tester);
+      expect(find.text(stopText), findsOneWidget);
+      expect(find.text('멈추기'), findsOneWidget);
+      expect(find.text('취소'), findsOneWidget);
+      // 확인하기 전에는 아무것도 바뀌지 않았다
+      expect((await kr003(tester, e)).status, JourneyStatus.active);
+
+      await tester.tap(find.text('멈추기'));
+      await _settle(tester, () => find.text('여정 멈추기').evaluate().isEmpty);
+      await _settle(tester, () => find.text('여정을 멈췄어요').evaluate().isNotEmpty);
+      // 시트가 내려가는 애니메이션이 끝날 때까지 (토스트는 2.5초라 아직 떠 있다)
+      await _transition(tester);
+
+      final row = await kr003(tester, e);
+      expect(row.status, JourneyStatus.stopped);
+      expect(row.endedUtc, e.now.millisecondsSinceEpoch);
+      final snap = (await tester.runAsync(() => e.svc.snapshot(e.now)))!;
+      expect(snap.journey, isNull);
+      expect(find.text('여정을 멈췄어요'), findsOneWidget);
+      // 시트는 닫혔고, 같은 카드에서 멈춘 자리로부터 다시 출발할 수 있다
+      expect(find.text(stopText), findsNothing);
+      expect(_card(_byId['kr003']!.name), findsOneWidget);
+      expect(find.text('여기로 가기'), findsOneWidget);
+      expect(find.text('여정 멈추기'), findsNothing);
+      await _end(tester, e);
+    });
+
+    testWidgets('멈춘 뒤 `여기로 가기`는 멈춘 자리에서 출발한다', (tester) async {
+      final e = _Env();
+      await e.seed(tester, () async {
+        await e.svc.startJourney('kr003', _t1, useFund: false);
+        e.source.records.add(_walk(_t1.add(const Duration(minutes: 5)), 20, 100));
+      });
+      await _openMap(tester, e);
+      await tester.tap(find.text('여정 멈추기'));
+      await _transition(tester);
+      await tester.tap(find.text('멈추기'));
+      await _settle(tester, () => find.text('여기로 가기').evaluate().isNotEmpty);
+
+      final stopped = await kr003(tester, e);
+      expect(stopped.status, JourneyStatus.stopped);
+      await tester.tap(find.text('여기로 가기'));
+      await _settle(tester, () => find.text('여정 멈추기').evaluate().isNotEmpty);
+      final rows = await e.journeys(tester);
+      final started = rows.singleWhere((r) => r.status == JourneyStatus.active);
+      expect(started.destId, 'kr003');
+      expect((started.originLat, started.originLng), (stopped.endLat, stopped.endLng));
+      await _end(tester, e);
+    });
+
+    testWidgets('취소하면 그대로', (tester) async {
+      final e = _Env();
+      await e.seed(tester, () async => e.svc.startJourney('kr003', _t1, useFund: false));
+      await _openMap(tester, e);
+
+      await tester.tap(find.text('여정 멈추기'));
+      await _transition(tester);
+      await tester.tap(find.text('취소'));
+      await _transition(tester);
+
+      expect(find.text(stopText), findsNothing);
+      expect(find.text('여정 멈추기'), findsOneWidget);
+      expect(find.text('여정을 멈췄어요'), findsNothing);
+      expect((await kr003(tester, e)).status, JourneyStatus.active);
+      expect((await tester.runAsync(() => e.svc.snapshot(e.now)))!.journey, isNotNull);
+      await _end(tester, e);
+    });
+
+    testWidgets('시트 밖을 눌러 닫아도 그대로, 다시 누를 수 있다', (tester) async {
+      final e = _Env();
+      await e.seed(tester, () async => e.svc.startJourney('kr003', _t1, useFund: false));
+      await _openMap(tester, e);
+
+      await tester.tap(find.text('여정 멈추기'));
+      await _transition(tester);
+      expect(find.text('멈추기'), findsOneWidget);
+      // 시트 위쪽 뒷배경
+      await tester.tapAt(const Offset(195, 40));
+      await _transition(tester);
+
+      expect(find.text('멈추기'), findsNothing);
+      expect(find.text('여정을 멈췄어요'), findsNothing);
+      expect((await kr003(tester, e)).status, JourneyStatus.active);
+      // 겹침을 막는 잠금이 풀려 다시 열린다
+      await tester.tap(find.text('여정 멈추기'));
+      await _transition(tester);
+      expect(find.text('멈추기'), findsOneWidget);
       await _end(tester, e);
     });
   });

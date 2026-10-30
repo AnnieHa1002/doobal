@@ -191,7 +191,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
             : '남은 ${j.progress.remainingKm.toStringAsFixed(2)}km · 도착 예정 ${_date(j.eta)}',
       ],
       '누적 ${s.totalKm.toStringAsFixed(2)}km · 그림 ${s.paintingsCount}점 · '
-          '새 소품 ${s.unseenProps}개',
+          '새 소품 ${s.unseenProps}개 · 새 그림 ${s.unseenPaintings}점',
       if (s.pendingArrival case final a?)
         '도착 화면 대기: ${a.dest.name} ${a.visitNo}번째 · 액자 ${a.prevFrame?.name ?? '-'} → '
             '${a.newFrame.name}',

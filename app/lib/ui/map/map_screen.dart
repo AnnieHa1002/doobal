@@ -195,6 +195,27 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
         .pushReplacement(MaterialPageRoute<void>(builder: (_) => const WalkingScreen()));
   }
 
+  /// 여정 멈추기: 먼저 확인하고, 멈춘 자리에서 다시 출발하게 둔다. 시트를 밖에서 눌러 닫으면 아무 일도 없다
+  Future<void> _onStop() async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      final capKm = (await ref.read(rulesProvider.future)).travelFundCapKm;
+      if (!mounted) return;
+      final ok = await showStopSheet(context, capKm);
+      if (ok != true || !mounted) return;
+      final svc = await ref.read(syncServiceProvider.future);
+      // 확인하는 사이 도착했으면 멈춘 게 아니다 (도착 화면은 하던 대로 뜬다)
+      final stopped = await svc.stopJourney(ref.read(clockProvider)());
+      if (!mounted) return;
+      ref.invalidate(mapDataProvider);
+      ref.invalidate(snapshotProvider);
+      if (stopped) showToast(context, '여정을 멈췄어요');
+    } finally {
+      _busy = false;
+    }
+  }
+
   String _distanceLine(double km, int days) => '남은 거리 ${formatKm(km)} · 약 ${math.max(1, days)}일';
 
   @override
@@ -335,7 +356,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     ];
   }
 
-  /// 고른 명소가 있으면 아래 카드. 현재 목적지는 버튼이 없고,
+  /// 고른 명소가 있으면 아래 카드. 현재 목적지는 보조 버튼 `여정 멈추기`,
   /// 여정이 없으면 `여기로 가기`, 있으면 다른 명소에 `목적지 바꾸기`
   List<Widget> _selectedCard(MapGeometry g, MapData data, Snapshot snap) {
     final id = _selectedId;
@@ -346,7 +367,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     // 현재 목적지는 쉼터와 같은 남은 거리·도착 예정일, 다른 명소는 지금 자리에서 가는 거리
     String? distance;
     final j = snap.journey;
-    if (j != null && j.dest.id == id) {
+    final isJourneyDest = j != null && j.dest.id == id;
+    if (isJourneyDest) {
       distance = _distanceLine(
         j.progress.remainingKm,
         j.eta.difference(dayFromKey(snap.today)).inDays,
@@ -370,8 +392,11 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
               landmark: l,
               frame: data.visited[id],
               distance: distance,
-              buttonLabel: isDest ? null : (change ? '목적지 바꾸기' : '여기로 가기'),
-              onPressed: () => _onGo(l, snap, change: change),
+              buttonLabel: isJourneyDest
+                  ? '여정 멈추기'
+                  : (isDest ? null : (change ? '목적지 바꾸기' : '여기로 가기')),
+              secondary: isJourneyDest,
+              onPressed: isJourneyDest ? _onStop : () => _onGo(l, snap, change: change),
             ),
           ),
         ),
