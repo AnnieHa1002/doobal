@@ -6,3 +6,9 @@ int? nextMilestone(int totalSteps, List<int> milestones) {
   }
   return null;
 }
+
+/// 다음 방명록 지점까지 남은 걸음 (걷기 기록 화면). 마지막 숫자를 넘었으면 null
+int? stepsToNextMilestone(int totalSteps, List<int> milestones) {
+  final next = nextMilestone(totalSteps, milestones);
+  return next == null ? null : next - totalSteps;
+}

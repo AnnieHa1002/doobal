@@ -1,5 +1,6 @@
 import '../../domain/arrival.dart';
 import '../../domain/journey.dart' show Frame;
+import '../../domain/time_kst.dart';
 
 /// 1234567 → '1,234,567'
 String formatInt(int n) {
@@ -28,6 +29,12 @@ String formatDuration(Duration d) {
 
 /// 날짜만 쓴다: '11월 24일'
 String formatMonthDay(DateTime d) => '${d.month}월 ${d.day}일';
+
+/// 한국 시간 시각만 쓴다 (24시간): '14:05'
+String formatKstClock(DateTime utc) {
+  final k = kstDateTime(utc);
+  return '${k.hour.toString().padLeft(2, '0')}:${k.minute.toString().padLeft(2, '0')}';
+}
 
 /// 권역 7의 짧은 이름. 지도 칩 순서 그대로다 (수도권부터 울릉까지)
 const regionLabels = {

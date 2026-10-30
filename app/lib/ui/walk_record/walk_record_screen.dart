@@ -5,28 +5,37 @@ import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/milestones.dart';
 import '../../domain/rules.dart';
+import '../../domain/time_kst.dart';
+import '../common/app_text.dart';
+import '../common/big_number.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
 import '../common/ink_bar.dart';
+import '../common/ink_card.dart';
 import '../common/palette.dart';
+import '../common/screen_header.dart';
 import 'session_line.dart';
 
 /// 진행 막대가 걷기 전 비율에서 지금 비율까지 차오르는 시간
 const _barDuration = Duration(milliseconds: 1200);
 
 /// 걷기 기록 (걷기 마치기 직후). 열자마자 동기화를 한 번 하고 [start, end)의 기록을 계산한다.
-/// [ratioBefore]는 걷기 전 여정 진행 비율 (여정이 없으면 null)
+/// [ratioBefore]는 걷기 전 여정 진행 비율 (여정이 없으면 null).
+/// [review]는 노트에서 지난 걷기를 다시 보는 모드: 동기화하지 않고(마지막 동기화 시각이 과거로
+/// 돌아가지 않게), 진행 막대 연출과 `쉼터로` 대신 뒤로 가기만 둔다
 class WalkRecordScreen extends ConsumerStatefulWidget {
   const WalkRecordScreen({
     super.key,
     required this.start,
     required this.end,
     required this.ratioBefore,
+    this.review = false,
   });
 
   final DateTime start;
   final DateTime end;
   final double? ratioBefore;
+  final bool review;
 
   @override
   ConsumerState<WalkRecordScreen> createState() => _WalkRecordScreenState();
@@ -35,6 +44,9 @@ class WalkRecordScreen extends ConsumerStatefulWidget {
 class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
   WalkRecord? _record;
   Snapshot? _snapshot;
+
+  /// 다시 볼 때만: 그날 인정된 걷기 1번 중 이 걷기가 몇 번째인지
+  int? _nth;
   Object? _error;
 
   @override
@@ -46,15 +58,20 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
   Future<void> _load() async {
     try {
       final svc = await ref.read(syncServiceProvider.future);
-      await svc.sync(widget.end);
+      if (!widget.review) await svc.sync(widget.end);
       final record = await svc.walkRecord(widget.start, widget.end);
+      final nth =
+          widget.review ? await ref.read(statsServiceProvider).countedNth(widget.start) : null;
       // 기다리는 동안 화면을 떠났으면 ref를 더 쓰지 않는다
       if (!mounted) return;
-      final snap = await ref.refresh(snapshotProvider.future);
+      final snap = widget.review
+          ? await ref.read(snapshotProvider.future)
+          : await ref.refresh(snapshotProvider.future);
       if (!mounted) return;
       setState(() {
         _record = record;
         _snapshot = snap;
+        _nth = nth;
       });
     } catch (e) {
       debugPrint('걷기 기록 실패: $e');
@@ -71,54 +88,77 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
 
     final Widget card;
     if (_error != null) {
-      card = const _Card(child: Text('기록을 불러오지 못했어요'));
+      card = const InkCard(child: Text('기록을 불러오지 못했어요', style: AppText.body));
     } else if (record == null || snap == null || rules == null) {
-      card = const _Card(child: Text('기록을 정리하는 중'));
+      card = const InkCard(child: Text('기록을 정리하는 중', style: AppText.body));
     } else {
-      card = _Card(child: _content(rules, record, snap, milestones));
+      card = InkCard(child: _content(rules, record, snap, milestones));
     }
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                '걷기 기록',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Palette.ink),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.review)
+              const ScreenHeader('걷기 기록')
+            else
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Text('걷기 기록', style: AppText.title),
               ),
-              const SizedBox(height: 16),
-              Expanded(child: SingleChildScrollView(child: card)),
-              const SizedBox(height: 16),
-              GameButton(
-                label: '쉼터로',
-                onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
+            Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: card)),
+            if (!widget.review)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: GameButton(
+                  label: '쉼터로',
+                  onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
+                ),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );
   }
 
+  /// 다시 볼 때 맨 위에 보이는 그 걷기의 날짜와 시각: '11월 18일 14:05 ~ 14:35'
+  String get _whenText =>
+      '${formatMonthDay(kstDate(widget.start))} ${formatKstClock(widget.start)} ~ '
+      '${formatKstClock(widget.end)}';
+
+  /// 걷기 1번 줄. 다시 볼 때 그날이 오늘이 아니면 오늘 대신 날짜로 부르고, 그날 몇 번째인지를 쓴다
+  String _sessionText(Rules rules, WalkRecord record) {
+    if (!widget.review) return sessionLine(record, rules);
+    final today = kstDayKey(ref.read(clockProvider)());
+    final day = kstDayKey(widget.start);
+    return sessionLine(
+      record,
+      rules,
+      dayLabel: day == today ? '오늘' : formatMonthDay(kstDate(widget.start)),
+      nth: _nth,
+    );
+  }
+
   Widget _content(Rules rules, WalkRecord record, Snapshot snap, List<int>? milestones) {
-    const small = TextStyle(fontSize: 14, color: Palette.subInk);
     final s = record.summary;
     final run = s.runRatio;
     final j = snap.journey;
-    final next = milestones == null ? null : nextMilestone(snap.totalSteps, milestones);
+    final left = milestones == null ? null : stepsToNextMilestone(snap.totalSteps, milestones);
     final before = widget.ratioBefore;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.review) ...[
+          Text(_whenText, style: AppText.bodySub),
+          const SizedBox(height: 12),
+        ],
         Row(
           children: [
-            _Big(formatInt(s.steps), '걸음'),
-            _Big(formatKm(s.distanceM / 1000, digits: 2), '거리'),
-            _Big(formatDuration(widget.end.difference(widget.start)), '시간'),
+            _Big(BigNumber(formatInt(s.steps)), '걸음'),
+            _Big(BigNumber((s.distanceM / 1000).toStringAsFixed(2), unit: 'km'), '거리'),
+            _Big(BigNumber(formatDuration(widget.end.difference(widget.start))), '시간'),
           ],
         ),
         const SizedBox(height: 16),
@@ -127,13 +167,17 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
           BarSegment(run, Palette.terracotta),
         ]),
         const SizedBox(height: 4),
-        Text('걷기 ${((1 - run) * 100).round()}% · 달리기 ${(run * 100).round()}%', style: small),
+        Text(
+          '걷기 ${((1 - run) * 100).round()}% · 달리기 ${(run * 100).round()}%',
+          style: AppText.label,
+        ),
         const SizedBox(height: 16),
         Text(
-          sessionLine(record, rules),
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Palette.ink),
+          _sessionText(rules, record),
+          style: AppText.body.copyWith(fontWeight: FontWeight.w700),
         ),
-        if (j != null && before != null) ...[
+        // 다시 볼 때는 걷기 전 비율을 몰라서 진행 막대 연출이 없다
+        if (!widget.review && j != null && before != null) ...[
           const SizedBox(height: 16),
           TweenAnimationBuilder<double>(
             tween: Tween(begin: before, end: j.progress.ratio),
@@ -144,45 +188,25 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
               children: [
                 InkBar(segments: [BarSegment(v, Palette.moss)]),
                 const SizedBox(height: 4),
-                Text('${j.dest.name}까지 ${(v * 100).round()}% 왔어요', style: small),
+                Text('${j.dest.name}까지 ${(v * 100).round()}% 왔어요', style: AppText.bodySub),
               ],
             ),
           ),
         ],
-        if (next != null) ...[
+        if (left != null) ...[
           const SizedBox(height: 12),
-          Text('다음 방명록 지점까지 ${formatInt(next - snap.totalSteps)}보', style: small),
+          Text('다음 방명록 지점까지 ${formatInt(left)}보', style: AppText.bodySub),
         ],
       ],
     );
   }
 }
 
-class _Card extends StatelessWidget {
-  const _Card({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Palette.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Palette.ink, width: 2.5),
-      ),
-      child: child,
-    );
-  }
-}
-
-/// 큰 숫자 + 이름
+/// 큰 숫자 + 이름 (라벨 12)
 class _Big extends StatelessWidget {
-  const _Big(this.value, this.label);
+  const _Big(this.number, this.label);
 
-  final String value;
+  final Widget number;
   final String label;
 
   @override
@@ -190,14 +214,8 @@ class _Big extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Palette.ink),
-            ),
-          ),
-          Text(label, style: const TextStyle(fontSize: 14, color: Palette.subInk)),
+          number,
+          Text(label, style: AppText.label),
         ],
       ),
     );

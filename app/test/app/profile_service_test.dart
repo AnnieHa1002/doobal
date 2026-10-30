@@ -5,9 +5,10 @@ import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/domain/geo.dart';
+import 'package:doobal/domain/journey.dart' show Frame;
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/onboarding.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -168,5 +169,74 @@ void main() {
     await svc.finishOnboarding(_later);
     final r = (await svc.row())!;
     expect((r.linkConsentAt, r.guestbookConsentAt), (null, null));
+  });
+
+  group('me', () {
+    test('저장한 닉네임과 모습을 돌려준다', () async {
+      const look = Look(hair: 3, hairColor: SwatchHairColor(5));
+      await svc.saveMe('나그네', look);
+      final me = await svc.me();
+      expect(me.nickname, '나그네');
+      expect(me.look, look);
+    });
+
+    test('아직 없거나 모습이 깨졌으면 기본값', () async {
+      var me = await svc.me();
+      expect((me.nickname, me.look), ('화가', Look.initial));
+      await db.into(db.profile).insert(ProfileCompanion.insert(
+            id: const Value(1),
+            nickname: const Value('둘'),
+            look: const Value('{깨진 값'),
+          ));
+      me = await svc.me();
+      expect((me.nickname, me.look), ('둘', Look.initial));
+    });
+  });
+
+  group('deleteAllLocal', () {
+    test('모든 표의 행을 지우고 시작 단계는 처음(환영)으로 돌아간다', () async {
+      await svc.confirmAge(_at);
+      await svc.saveMe('화가', Look.initial);
+      await svc.saveHome(sigungu.first);
+      await svc.finishOnboarding(_later);
+      final sync = SyncService(
+        db: db,
+        source: FakeStepSource(),
+        rules: rules,
+        allowedSources: const [],
+        landmarks: const {},
+        props: props,
+      );
+      await sync.sync(_at);
+      await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
+            landmarkId: 'kr001',
+            visits: 1,
+            frame: Frame.wood,
+            bestKm: 1,
+            firstArrivedUtc: 1,
+            lastArrivedUtc: 1,
+          ));
+      await db.into(db.wallSlots)
+          .insert(WallSlotsCompanion.insert(slot: const Value(0), landmarkId: 'kr001'));
+      expect(await svc.step(), OnboardingStep.done);
+
+      await svc.deleteAllLocal();
+
+      for (final t in db.allTables) {
+        expect(await db.select(t).get(), isEmpty, reason: t.actualTableName);
+      }
+      expect(await svc.row(), isNull);
+      expect(await svc.step(), OnboardingStep.welcome);
+    });
+
+    test('지운 뒤에도 처음처럼 다시 쓸 수 있다', () async {
+      await svc.confirmAge(_at);
+      await svc.deleteAllLocal();
+      await svc.confirmAge(_later);
+      final r = (await svc.row())!;
+      expect(r.ageConfirmedAt, _later.millisecondsSinceEpoch);
+      // 설치 번호도 새로 만든다
+      expect(r.installId, 'b' * 32);
+    });
   });
 }

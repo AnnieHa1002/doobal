@@ -33,12 +33,12 @@ WalkRecord _record(List<WalkSession> sessions, int countedToday) => WalkRecord(
     );
 
 void main() {
-  test('인정된 구간이 있으면 오늘 n/3번째 걷기 1번 (3은 config)', () {
+  test('인정된 구간이 있으면 오늘 n/3번째 함께 걷기 (3은 config)', () {
     expect(rules.sessionMaxPerDay, 3);
     expect(sessionLine(_record([_session(qualified: true, counted: true)], 1), rules),
-        '오늘 1/3번째 걷기 1번');
+        '오늘 1/3번째 함께 걷기');
     expect(sessionLine(_record([_session(qualified: true, counted: true)], 3), rules),
-        '오늘 3/3번째 걷기 1번');
+        '오늘 3/3번째 함께 걷기');
   });
 
   test('기준을 넘은 구간이 없으면 기준을 알려 준다 (10분, 1,000보는 config)', () {
@@ -57,6 +57,17 @@ void main() {
       _session(qualified: true, counted: false),
       _session(qualified: true, counted: true),
     ], 3);
-    expect(sessionLine(r, rules), '오늘 3/3번째 걷기 1번');
+    expect(sessionLine(r, rules), '오늘 3/3번째 함께 걷기');
+  });
+
+  test('다시 볼 때는 그날을 부르는 말과 그날의 몇 번째인지를 넘긴다', () {
+    final counted = _record([_session(qualified: true, counted: true)], 3);
+    // 하루에 3번 인정된 날의 첫 걷기를 지난 날에 다시 본다
+    expect(sessionLine(counted, rules, dayLabel: '11월 18일', nth: 1), '11월 18일 1/3번째 함께 걷기');
+    final capped = _record([_session(qualified: true, counted: false)], 3);
+    expect(sessionLine(capped, rules, dayLabel: '11월 18일'), '11월 18일은 3/3번을 다 채웠어요');
+    // 기준을 넘지 못한 걷기는 날짜와 상관없이 기준 안내
+    expect(sessionLine(_record(const [], 0), rules, dayLabel: '11월 18일'),
+        '10분 이상, 1,000보 이상 이어 걸으면 1번으로 쳐요');
   });
 }

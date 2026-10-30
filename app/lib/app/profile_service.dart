@@ -8,8 +8,19 @@ import '../domain/onboarding.dart';
 import '../domain/profile.dart';
 import '../domain/sigungu.dart';
 
+/// 나의 정보에 보이는 닉네임과 모습
+class Me {
+  const Me(this.nickname, this.look);
+
+  final String nickname;
+  final Look look;
+}
+
+/// 닉네임이 비어 있을 때(시작 흐름을 끝내면 늘 있어서 거의 안 쓴다) 보이는 이름
+const _fallbackNickname = '화가';
+
 /// 프로필(1행)의 시작 흐름 값을 읽고 쓴다. 걸음·여정은 SyncService, 이쪽은 사용자 자신의 정보.
-/// 모든 쓰기는 id = 1 행에 넣거나 갱신하고, 건드리지 않는 열은 그대로 둔다
+/// 쓰기는 id = 1 행에 넣거나 갱신하고 건드리지 않는 열은 그대로 둔다 (기기 기록 전체 삭제만 예외)
 class ProfileService {
   ProfileService(this.db, {String Function()? makeInstallId})
       : _makeInstallId = makeInstallId ?? newInstallId;
@@ -19,6 +30,21 @@ class ProfileService {
 
   Future<ProfileRow?> row() =>
       (db.select(db.profile)..where((t) => t.id.equals(1))).getSingleOrNull();
+
+  /// 닉네임과 모습 (나의 정보). 비었거나 읽을 수 없으면 기본값
+  Future<Me> me() async {
+    final r = await row();
+    var look = Look.initial;
+    final raw = r?.look;
+    if (raw != null) {
+      try {
+        look = Look.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      } catch (_) {
+        // 깨진 값은 기본 모습으로 보여 준다
+      }
+    }
+    return Me(r?.nickname ?? _fallbackNickname, look);
+  }
 
   /// 지금 보여 줄 시작 단계
   Future<OnboardingStep> step() async {
@@ -63,6 +89,15 @@ class ProfileService {
         id: const Value(1),
         onboardedAt: Value(now.toUtc().millisecondsSinceEpoch),
       ));
+
+  /// 이 기기의 기록을 모두 지운다 (계정 삭제의 기기 쪽). 표는 그대로 두고 행만 비워서
+  /// 시작 흐름이 처음부터 다시 돈다. 표를 하나하나 적지 않고 allTables를 돌아서 새 표도 따라 지운다.
+  /// TODO(M5·M6): 서버(Auth·Firestore)의 계정·방명록과 알림 구독 삭제는 서버가 생기면 여기서 함께 부른다
+  Future<void> deleteAllLocal() => db.transaction(() async {
+        for (final t in db.allTables) {
+          await db.delete(t).go();
+        }
+      });
 
   Future<void> _write(ProfileCompanion c) => db.into(db.profile).insertOnConflictUpdate(c);
 }

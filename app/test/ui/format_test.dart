@@ -26,6 +26,13 @@ void main() {
     expect(formatDuration(const Duration(seconds: -4)), '0:00');
   });
 
+  test('formatKstClock: 한국 시간 24시간 시각 (자정 넘김 포함)', () {
+    expect(formatKstClock(DateTime.utc(2026, 10, 31, 5, 5)), '14:05');
+    expect(formatKstClock(DateTime.utc(2026, 10, 31, 15, 0)), '00:00');
+    expect(formatKstClock(DateTime.utc(2026, 10, 31, 14, 59)), '23:59');
+    expect(formatKstClock(DateTime.utc(2026, 10, 31, 0, 7)), '09:07');
+  });
+
   test('formatMonthDay', () {
     expect(formatMonthDay(DateTime.utc(2026, 11, 8)), '11월 8일');
   });

@@ -16,8 +16,10 @@ import '../common/palette.dart';
 import '../debug/debug_screen.dart';
 import '../guestbook/guestbook_write_screen.dart';
 import '../map/map_screen.dart';
-import '../placeholder/placeholder_screens.dart';
+import '../note/note_screen.dart';
+import '../profile/profile_screen.dart';
 import '../scene/scene_view.dart';
+import '../settings/settings_screen.dart';
 import '../walking/walking_screen.dart';
 
 /// 쉼터 (홈, 루트 화면). 하늘 → 후경 → 캠프 → 캐릭터 → 물건·버튼 → 상태 알약

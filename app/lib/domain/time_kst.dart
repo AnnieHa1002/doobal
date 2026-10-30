@@ -12,6 +12,9 @@ DateTime dayFromKey(String key) {
 /// [utc]의 한국 날짜 (화면에 날짜만 보일 때). UTC 0시로 나타내서 month·day를 바로 쓴다
 DateTime kstDate(DateTime utc) => dayFromKey(kstDayKey(utc));
 
+/// [utc]를 한국 시각으로 옮긴 값 (UTC로 표시되는 값이라 hour·minute만 바로 쓴다)
+DateTime kstDateTime(DateTime utc) => utc.toUtc().add(_kstOffset);
+
 /// 그 한국 날짜가 시작하는 시각(UTC)
 DateTime kstDayStartUtc(String key) => dayFromKey(key).subtract(_kstOffset);
 

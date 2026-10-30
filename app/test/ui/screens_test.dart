@@ -64,6 +64,7 @@ class _Env {
         campThemeProvider.overrideWith((ref) => campTheme),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),
+        hairSwatchesProvider.overrideWith((ref) => hairSwatches),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
         clockProvider.overrideWithValue(() => now),
@@ -243,9 +244,9 @@ void main() {
       await tester.tap(find.byIcon(Icons.menu_book_outlined));
       await _transition(tester);
       expect(find.text('노트'), findsOneWidget);
-      expect(find.text('준비 중'), findsOneWidget);
-      await tester.pageBack();
-      await _transition(tester);
+      expect(find.text('내 방명록'), findsOneWidget);
+      expect(find.text('걷기 기록'), findsOneWidget);
+      await _tapIcon(tester, Icons.arrow_back);
 
       expect(find.byType(RestScreen), findsOneWidget);
       expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
@@ -259,9 +260,9 @@ void main() {
 
       await _tapIcon(tester, Icons.person);
       expect(find.text('나의 정보'), findsOneWidget);
-      expect(find.text('준비 중'), findsOneWidget);
-      await tester.pageBack();
-      await _transition(tester);
+      await _settle(tester, () => find.text('동행 도감').evaluate().isNotEmpty);
+      expect(find.text('동행 도감'), findsOneWidget);
+      await _tapIcon(tester, Icons.arrow_back);
 
       await _tapIcon(tester, Icons.settings);
       expect(find.text('설정'), findsOneWidget);
@@ -469,7 +470,7 @@ void main() {
       expect(find.text('거리'), findsOneWidget);
       expect(find.text('시간'), findsOneWidget);
       expect(find.text('걷기 100% · 달리기 0%'), findsOneWidget);
-      expect(find.text('오늘 1/3번째 걷기 1번'), findsOneWidget);
+      expect(find.text('오늘 1/3번째 함께 걷기'), findsOneWidget);
       expect(find.text('다음 방명록 지점까지 3,500보'), findsOneWidget);
 
       // 진행 막대: 걷기 전 0%에서 지금 %까지
@@ -497,11 +498,14 @@ void main() {
       required DateTime start,
       required DateTime end,
       double? ratioBefore,
+      bool review = false,
     }) async {
       _phone(tester);
       await tester.pumpWidget(ProviderScope(
         overrides: e.overrides,
-        child: MaterialApp(home: WalkRecordScreen(start: start, end: end, ratioBefore: ratioBefore)),
+        child: MaterialApp(
+          home: WalkRecordScreen(start: start, end: end, ratioBefore: ratioBefore, review: review),
+        ),
       ));
       await _settle(tester, () => find.text('기록을 정리하는 중').evaluate().isEmpty);
     }
@@ -518,6 +522,59 @@ void main() {
       expect(find.text('5:00'), findsOneWidget);
       expect(find.text('10분 이상, 1,000보 이상 이어 걸으면 1번으로 쳐요'), findsOneWidget);
       expect(find.textContaining('왔어요'), findsNothing);
+      await _end(tester, e);
+    });
+
+    testWidgets('인정된 걷기는 오늘 n/3번째 함께 걷기 (그날 둘째 걷기면 2/3)', (tester) async {
+      final e = _Env();
+      await e.seed(tester);
+      // 15분 × 100보를 15분 비우고 두 번: 둘 다 기준(10분·1,000보) 이상
+      e.source.records
+          .addAll([_walk(_t1, 15, 100), _walk(_t1.add(const Duration(minutes: 30)), 15, 100)]);
+      final start = _t1.add(const Duration(minutes: 30));
+      await openRecord(tester, e, start: start, end: start.add(const Duration(minutes: 15)));
+
+      expect(find.text('오늘 2/3번째 함께 걷기'), findsOneWidget);
+      expect(find.textContaining('이어 걸으면'), findsNothing);
+      await _end(tester, e);
+    });
+
+    testWidgets('큰 숫자 40·라벨 12, 쉼터로 버튼이 있다', (tester) async {
+      final e = _Env();
+      await e.seed(tester);
+      e.source.records.add(_walk(_t1, 15, 100));
+      await openRecord(tester, e, start: _t1, end: _t1.add(const Duration(minutes: 15)));
+
+      expect(tester.widget<Text>(find.text('1,500')).textSpan!.style!.fontSize, 40);
+      expect(tester.widget<Text>(find.text('1.05 km')).textSpan!.style!.fontSize, 40);
+      expect(tester.widget<Text>(find.text('15:00')).textSpan!.style!.fontSize, 40);
+      expect(tester.widget<Text>(find.text('걸음')).style!.fontSize, 12);
+      expect(tester.widget<Text>(find.text('걷기 기록')).style!.fontSize, 22);
+      expect(find.text('쉼터로'), findsOneWidget);
+      expect(find.byTooltip('뒤로'), findsNothing);
+      await _end(tester, e);
+    });
+
+    testWidgets('다시 보기(review)는 진행 막대 연출과 쉼터로 없이 뒤로 가기만 있다', (tester) async {
+      final e = _Env();
+      await e.seed(tester, dest: 'kr003');
+      e.source.records.add(_walk(_t1, 15, 100));
+      // 다시 보기는 동기화하지 않으니 저장돼 있어야 한다
+      await tester.runAsync(() => e.svc.sync(_t1.add(const Duration(minutes: 30))));
+      // 걷기 전 비율을 넘겨도 다시 볼 때는 막대를 그리지 않는다
+      await openRecord(
+        tester,
+        e,
+        start: _t1,
+        end: _t1.add(const Duration(minutes: 15)),
+        ratioBefore: 0,
+        review: true,
+      );
+
+      expect(find.text('1,500'), findsOneWidget);
+      expect(find.textContaining('왔어요'), findsNothing);
+      expect(find.text('쉼터로'), findsNothing);
+      expect(find.byTooltip('뒤로'), findsOneWidget);
       await _end(tester, e);
     });
 

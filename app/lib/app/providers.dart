@@ -23,8 +23,11 @@ import '../domain/map_regions.dart';
 import '../domain/onboarding.dart';
 import '../domain/prop.dart';
 import '../domain/rules.dart';
+import '../domain/session.dart';
 import '../domain/sigungu.dart';
+import '../domain/walk_history.dart';
 import 'profile_service.dart';
+import 'stats_service.dart';
 import 'sync_service.dart';
 
 final rulesProvider = FutureProvider<Rules>((ref) => loadRules());
@@ -80,6 +83,24 @@ final profileServiceProvider =
 /// 시작 흐름에서 지금 보여 줄 단계. 단계를 마칠 때마다 invalidate 해서 다음 단계를 읽는다
 final onboardingStepProvider =
     FutureProvider<OnboardingStep>((ref) => ref.watch(profileServiceProvider).step());
+
+/// 나의 정보·노트가 읽는 모음 쿼리 (읽기만)
+final statsServiceProvider = Provider<StatsService>((ref) => StatsService(ref.watch(dbProvider)));
+
+/// 나의 정보의 닉네임·모습. 화면을 열 때마다 다시 읽는다
+final meProvider = FutureProvider.autoDispose<Me>((ref) => ref.watch(profileServiceProvider).me());
+
+/// 최근 14일의 하루 걸음 (나의 정보 막대). 동기화·삭제로 상태가 바뀌면 snapshotProvider와 함께 새로 읽는다
+final recentDaysProvider = FutureProvider.autoDispose<List<DayBar>>((ref) async {
+  final snap = await ref.watch(snapshotProvider.future);
+  return ref.watch(statsServiceProvider).recentDays(snap.today);
+});
+
+/// 감지된 걷기 전부, 최신순 (노트의 걷기 기록)
+final walkSessionsProvider = FutureProvider.autoDispose<List<WalkSession>>((ref) async {
+  await ref.watch(snapshotProvider.future);
+  return ref.watch(statsServiceProvider).walkSessions();
+});
 
 final syncServiceProvider = FutureProvider<SyncService>((ref) async {
   final rules = await ref.watch(rulesProvider.future);
