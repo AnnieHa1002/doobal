@@ -33,5 +33,7 @@ flutter:
   assets:
     - assets/data/
     - assets/data/themes/
+    # Rive 시험 파일 (Drive 두발/rive_test_v01.riv 사본)
+    - assets/rive/
     # 지도 경계 SVG와 위경도 투영 (Drive Assets 폴더의 ui_map_*_v01)
     - assets/map/

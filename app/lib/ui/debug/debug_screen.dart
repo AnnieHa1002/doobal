@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import 'rive_preview_screen.dart';
 
 /// M1 디버그 화면: 오늘 걸음·거리·걷기 1번·여정 진행·도착 예정일, 걸음 출처 확인
 class DebugScreen extends ConsumerStatefulWidget {
@@ -133,6 +134,12 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
               OutlinedButton(
                 onPressed: _busy ? null : () => _run('여정', _stop),
                 child: const Text('멈추기'),
+              ),
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const RivePreviewScreen()),
+                ),
+                child: const Text('Rive 시험'),
               ),
             ],
           ),

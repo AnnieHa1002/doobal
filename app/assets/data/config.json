@@ -81,6 +81,9 @@
   "banAfterDeletes": 3,
   "banDays": 7
  },
+ "character": {
+  "blink": { "approx": true, "minGapSec": 3, "maxGapSec": 6, "doubleChance": 0.15, "doubleGapSec": 0.3 }
+ },
  "notifications": { "quietFromHour": 22, "quietToHour": 8, "dailyMax": 2, "nearDestKm": 10, "inactiveHours": 72 },
  "allowedSources": { "ios": [], "android": [] }
 }
