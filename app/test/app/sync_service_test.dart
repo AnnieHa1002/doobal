@@ -8,8 +8,12 @@ import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/landmark.dart';
+import 'package:doobal/domain/look.dart';
+import 'package:doobal/domain/map_land.dart';
 import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/route.dart';
+import 'package:doobal/domain/scene.dart';
+import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/domain/time_kst.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -40,7 +44,9 @@ StepRecord _walk(DateTime start, int minutes, int spm, {String source = 'iphone'
     );
 
 class _Env {
-  _Env() : db = AppDb(NativeDatabase.memory()), source = FakeStepSource() {
+  _Env({bool Function(LatLng p, Island island)? onLand})
+      : db = AppDb(NativeDatabase.memory()),
+        source = FakeStepSource() {
     svc = SyncService(
       db: db,
       source: source,
@@ -48,6 +54,7 @@ class _Env {
       allowedSources: const [],
       landmarks: _landmarks,
       props: props,
+      onLand: onLand ?? (p, island) => true,
     );
   }
 
@@ -1859,6 +1866,398 @@ void main() {
       e.source.records.add(_walkKm(_t0.add(const Duration(hours: 1)), 11));
       await e.svc.sync(_t0.add(const Duration(hours: 5)));
       expect(await e.svc.ownedPropIds(), {...defaults, 'hand_02'});
+    });
+  });
+
+  group('내 동네 스케치 (첫 여정)', () {
+    final t1 = _t0.add(const Duration(hours: 1));
+    const minute = Duration(minutes: 1);
+
+    /// 시작 흐름을 끝낸 프로필(설치 번호·꾸미기·출발 동네 = 서울시청)이 있는 환경.
+    /// 동기화는 아직 안 했다 (시작 흐름 직후와 같다)
+    Future<_Env> sketchEnv({bool Function(LatLng, Island)? onLand, bool profile = true}) async {
+      final e = _Env(onLand: onLand);
+      addTearDown(e.db.close);
+      if (profile) await completeOnboarding(e.db);
+      return e;
+    }
+
+    Future<JourneyRow> journeyRow(_Env e) => e.db.select(e.db.journeys).getSingle();
+
+    LatLng destOf(JourneyRow r) => LatLng(r.destLat!, r.destLng!);
+
+    double km(LatLng a, LatLng b) => haversineKm(a, b, rules.earthRadiusKm);
+
+    /// 스케치 여정을 [start]에 시작하고 도착할 때까지 걸어서 동기화한다. 도착을 동기화한 시각
+    Future<DateTime> walkToSketch(_Env e, DateTime start) async {
+      expect(await e.svc.startSketch(start), isTrue);
+      final totalKm = (await e.svc.snapshot(start)).journey!.totalKm;
+      final record = _walkKm(start.add(minute * 5), totalKm);
+      e.source.records.add(record);
+      final end = record.end.add(minute * 30);
+      await e.svc.sync(end);
+      return end;
+    }
+
+    test('startSketch: 출발 동네에서 2~3km 떨어진 가상 목적지로 가는 여정을 만든다', () async {
+      final e = await sketchEnv();
+      // 시작 흐름 직후라 동기화도 안 했다 (경비 없이 시작)
+      expect(await e.svc.startSketch(t1), isTrue);
+
+      final j = await journeyRow(e);
+      expect(j.id, 'j${_ms(t1)}');
+      expect(j.destId, sketchId);
+      expect((j.originLat, j.originLng), (testHome.lat, testHome.lng));
+      expect(km(testHome, destOf(j)), inInclusiveRange(2 - 1e-6, 3 + 1e-6));
+      expect(j.totalEffectiveKm, closeTo(km(testHome, destOf(j)), 1e-9));
+      expect(j.status, JourneyStatus.active);
+      expect(j.fundKm, 0);
+      expect(j.startUtc, _ms(t1));
+      expect((j.endLat, j.arrivedUtc, j.visitNo), (null, null, null));
+
+      // 상태에서는 이름이 '내 동네 스케치'인 목적지, 진행은 0km
+      final snap = await e.svc.snapshot(t1);
+      expect(snap.journey!.dest.name, '내 동네 스케치');
+      expect(snap.journey!.dest.id, sketchId);
+      expect(snap.journey!.dest.latLng, destOf(j));
+      expect(snap.journey!.totalKm, closeTo(j.totalEffectiveKm, 1e-9));
+      expect(snap.journey!.progress.progressKm, 0);
+      expect(snap.journey!.progress.remainingKm, closeTo(j.totalEffectiveKm, 1e-9));
+      expect(snap.position, testHome);
+      expect(snap.home!.name, testHomeName);
+    });
+
+    test('목적지의 지역 값은 가장 가까운 명소에서 온다', () async {
+      final e = await sketchEnv();
+      await e.svc.startSketch(t1);
+      final dest = (await e.svc.snapshot(t1)).journey!.dest;
+      final nearest = nearestLandmark(dest.latLng, _landmarks.values.toList(), rules.earthRadiusKm);
+      // 서울시청 2~3km 안의 가장 가까운 명소는 경복궁(capital)
+      expect(nearest.id, 'kr001');
+      expect((dest.sido, dest.sigungu, dest.region, dest.backdrop, dest.terrain),
+          (nearest.sido, nearest.sigungu, nearest.region, nearest.backdrop, nearest.terrain));
+      expect(dest.types, isEmpty);
+    });
+
+    test('같은 설치 번호면 같은 목적지, 다른 설치 번호면 다른 목적지', () async {
+      final a = await sketchEnv();
+      final b = await sketchEnv();
+      final c = await sketchEnv();
+      await c.db.into(c.db.profile).insertOnConflictUpdate(
+          ProfileCompanion(id: const Value(1), installId: Value('f' * 32)));
+      await a.svc.startSketch(t1);
+      await b.svc.startSketch(t1.add(minute * 9));
+      await c.svc.startSketch(t1);
+      expect(destOf(await journeyRow(a)), destOf(await journeyRow(b)));
+      expect(destOf(await journeyRow(a)), isNot(destOf(await journeyRow(c))));
+    });
+
+    test('두 번째 호출은 아무것도 바꾸지 않고 false', () async {
+      final e = await sketchEnv();
+      expect(await e.svc.startSketch(t1), isTrue);
+      final before = await journeyRow(e);
+      expect(await e.svc.startSketch(t1.add(minute * 5)), isFalse);
+      expect(await e.db.select(e.db.journeys).getSingle(), before);
+    });
+
+    test('여정이 이미 있으면(멈춘 것도) false', () async {
+      final e = await sketchEnv();
+      await placeAt(e.db, testHome, _t0);
+      expect(await e.svc.startSketch(t1), isFalse);
+      expect(await e.db.select(e.db.journeys).get(), hasLength(1));
+    });
+
+    test('스케치 그림이 이미 있으면 false', () async {
+      final e = await sketchEnv();
+      await _seedPaintings(e.db, [sketchId]);
+      expect(await e.svc.startSketch(t1), isFalse);
+      expect(await e.db.select(e.db.journeys).get(), isEmpty);
+    });
+
+    test('설치 번호나 출발 동네가 없으면 false (여정도 동기화 상태도 안 만든다)', () async {
+      final noProfile = await sketchEnv(profile: false);
+      expect(await noProfile.svc.startSketch(t1), isFalse);
+      expect(await noProfile.db.select(noProfile.db.journeys).get(), isEmpty);
+      expect(await noProfile.db.select(noProfile.db.syncState).get(), isEmpty);
+
+      final noHome = await sketchEnv(profile: false);
+      await completeOnboarding(noHome.db, home: false);
+      expect(await noHome.svc.startSketch(t1), isFalse);
+
+      final noInstall = await sketchEnv(profile: false);
+      await noInstall.svc.setHome(testHomeName, testHome);
+      expect(await noInstall.svc.startSketch(t1), isFalse);
+      expect(await noInstall.db.select(noInstall.db.journeys).get(), isEmpty);
+    });
+
+    test('땅 판정(onLand)이 거절하면 방향을 90°씩 돌려 같은 거리에 둔다', () async {
+      final free = await sketchEnv();
+      await free.svc.startSketch(t1);
+      final first = destOf(await journeyRow(free));
+
+      final islands = <Island>[];
+      final turned = await sketchEnv(onLand: (p, island) {
+        islands.add(island);
+        return p != first;
+      });
+      await turned.svc.startSketch(t1);
+      final p = destOf(await journeyRow(turned));
+      expect(p, isNot(first));
+      expect(km(testHome, p), closeTo(km(testHome, first), 1e-6));
+      expect(km(first, p), closeTo(km(testHome, first) * 1.41421, 0.01));
+      // 첫 후보, 둘째 후보 둘을 물었고 모두 출발 동네의 섬(본토)으로 물었다
+      expect(islands, [Island.mainland, Island.mainland]);
+
+      // 다 거절하면 첫 후보
+      final none = await sketchEnv(onLand: (p, island) => false);
+      await none.svc.startSketch(t1);
+      expect(destOf(await journeyRow(none)), first);
+    });
+
+    test('경계 상자 밖(다른 섬으로 치는) 후보는 onLand를 묻기 전에 거절한다', () async {
+      // 제주 동쪽 끝(경도 127.0 상자 가장자리)에서는 동쪽 후보가 상자 밖이다.
+      // 첫 후보가 상자 밖이 되는 설치 번호를 찾는다
+      const home = LatLng(33.4, 126.99);
+      LatLng first(String id) => sketchDestination(
+            home: home,
+            installId: id,
+            minKm: rules.firstSketchMinKm,
+            maxKm: rules.firstSketchMaxKm,
+            earthRadiusKm: rules.earthRadiusKm,
+            ok: (_) => true,
+          );
+      final id = [for (var i = 0; i < 200; i++) i.toRadixString(16).padLeft(32, '0')]
+          .firstWhere((id) => islandOf(first(id), rules.islands) != Island.jeju);
+
+      final asked = <LatLng>[];
+      final e = await sketchEnv(onLand: (p, island) {
+        asked.add(p);
+        return true;
+      });
+      await e.db.into(e.db.profile).insertOnConflictUpdate(ProfileCompanion(
+          id: const Value(1),
+          installId: Value(id),
+          homeLat: Value(home.lat),
+          homeLng: Value(home.lng)));
+      await e.svc.startSketch(t1);
+
+      final dest = destOf(await journeyRow(e));
+      expect(islandOf(dest, rules.islands), Island.jeju);
+      expect(dest, isNot(first(id)));
+      // 거절된 첫 후보는 묻지도 않았고, 물은 후보는 모두 제주 상자 안이다
+      expect(asked, isNot(contains(first(id))));
+      expect(asked.last, dest);
+      for (final p in asked) {
+        expect(islandOf(p, rules.islands), Island.jeju);
+      }
+    });
+
+    test('제주에서 시작하면 실제 지도로 제주 땅 안, 배 구간 없이 걷는 길 하나', () async {
+      final jejuSi = sigungu.firstWhere((s) => s.label == '제주 제주시');
+      for (var i = 0; i < 8; i++) {
+        final e = await sketchEnv(
+            onLand: (p, island) => onIsland(p, island, mapProjection, mapRegions));
+        await e.db.into(e.db.profile).insertOnConflictUpdate(ProfileCompanion(
+              id: const Value(1),
+              installId: Value(i.toRadixString(16).padLeft(32, '0')),
+              homeLat: Value(jejuSi.lat),
+              homeLng: Value(jejuSi.lng),
+            ));
+        await e.svc.startSketch(t1);
+        final j = await journeyRow(e);
+        final dest = destOf(j);
+        expect(onIsland(dest, Island.jeju, mapProjection, mapRegions), isTrue, reason: 'i=$i');
+        final route = buildRoute(jejuSi.latLng, dest, rules);
+        expect(route.legs, hasLength(1), reason: 'i=$i');
+        expect(route.legs.single.kind, LegKind.land);
+        expect(j.totalEffectiveKm, closeTo(km(jejuSi.latLng, dest), 1e-9));
+      }
+    });
+
+    test('걸어서 도착하면 sketch 그림이 생기고, 다시 그리는 값에 도착 시각·후경·꾸미기가 들어간다', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      // 도착 전에 꾸미기를 바꿔도 도착했을 때의 꾸미기가 남는다
+      const look = Look(hair: 3, hairColor: SwatchHairColor(5));
+      await e.db.into(e.db.profile).insertOnConflictUpdate(
+          ProfileCompanion(id: const Value(1), look: Value(jsonEncode(look.toJson()))));
+      final end = await walkToSketch(e, t1);
+      await e.db.into(e.db.profile).insertOnConflictUpdate(ProfileCompanion(
+          id: const Value(1), look: Value(jsonEncode(Look.initial.toJson()))));
+
+      final p = await e.db.select(e.db.paintingsOwned).getSingle();
+      final j = await journeyRow(e);
+      expect(p.landmarkId, sketchId);
+      expect(p.visits, 1);
+      expect(p.frame, Frame.wood);
+      expect(p.bestKm, closeTo(j.totalEffectiveKm, 1e-9));
+      expect((p.firstArrivedUtc, p.lastArrivedUtc), (_ms(end), _ms(end)));
+      expect(p.seen, isFalse);
+
+      final sketch = Sketch.decode(p.sketch!);
+      expect(sketch.point, destOf(j));
+      expect(sketch.arrivedAt, end);
+      expect(sketch.backdrop, 'capital');
+      expect(sketch.look, look);
+      // 값은 이 다섯 가지뿐 (하늘·계절은 도착 시각으로 다시 계산한다)
+      expect((jsonDecode(p.sketch!) as Map).keys, {'lat', 'lng', 'arrivedUtc', 'backdrop', 'look'});
+
+      expect(j.status, JourneyStatus.arrived);
+      expect(j.arrivedUtc, _ms(end));
+      expect((j.endLat, j.endLng), (destOf(j).lat, destOf(j).lng));
+      expect((j.visitNo, j.prevFrame, j.newFrame), (1, null, Frame.wood));
+      expect(j.arrivalShown, isFalse);
+    });
+
+    test('도착해도 소품·권역은 그대로, 새 그림 표시와 그림 수에는 센다', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      await walkToSketch(e, t1);
+
+      // 소품은 기본 소품뿐 (권역을 채운 소품이 없다)
+      final defaults = {for (final p in props) if (p.kind == PropUnlockKind.initial) p.id};
+      expect(await _propIds(e.db), defaults);
+
+      final snap = await e.svc.snapshot(_t0.add(const Duration(hours: 3)));
+      expect(snap.unseenPaintings, 1);
+      expect(snap.paintingsCount, 1);
+      expect(snap.journey, isNull);
+      // 쉬는 자리는 스케치 목적지
+      final j = await journeyRow(e);
+      expect(snap.position, destOf(j));
+      expect(await e.svc.unseenPaintingIds(), [sketchId]);
+      await e.svc.markPaintingsSeen();
+      expect((await e.svc.snapshot(_t0.add(const Duration(hours: 3)))).unseenPaintings, 0);
+    });
+
+    test('도착 화면 값: 스케치 값과 가짜 명소, 액자·권역 소품·지난번 거리는 없다', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      final end = await walkToSketch(e, t1);
+      final j = await journeyRow(e);
+
+      final snap = await e.svc.snapshot(end);
+      final pending = snap.pendingArrival!;
+      expect((pending.journeyId, pending.dest.id, pending.dest.name, pending.visitNo),
+          (j.id, sketchId, '내 동네 스케치', 1));
+
+      final v = await e.svc.arrivalView(j.id);
+      expect(v.dest.id, sketchId);
+      expect(v.dest.name, '내 동네 스케치');
+      expect(v.sketch, isNotNull);
+      expect(v.sketch!.point, destOf(j));
+      expect(v.sketch!.arrivedAt, end);
+      expect(v.journeyKm, closeTo(j.totalEffectiveKm, 1e-9));
+      expect(v.daySteps, greaterThan(0));
+      expect((v.regionProp, v.prevBestKm, v.prevFrame), (null, null, null));
+      expect(v.visitNo, 1);
+    });
+
+    test('명소 도착의 도착 화면 값에는 스케치가 없다', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      await _insertArrival(e.db, 'j9', 'kr001', _t0.add(const Duration(hours: 1)));
+      expect((await e.svc.arrivalView('j9')).sketch, isNull);
+    });
+
+    test('paintings: 스케치도 그림 목록에 있고 명소가 아니라 지도·권역 진행에서는 뺀다', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      // 도착 전에는 가상 목적지 좌표와 'sketch' 목적지
+      await e.svc.startSketch(t1);
+      var map = await e.svc.mapData(t1);
+      final j = await journeyRow(e);
+      expect(map.destId, sketchId);
+      expect(map.destPoint, destOf(j));
+      expect(map.visited, isEmpty);
+
+      final walkKm = (await e.svc.snapshot(t1)).journey!.totalKm;
+      final record = _walkKm(t1.add(minute * 5), walkKm);
+      e.source.records.add(record);
+      final end = record.end.add(minute * 30);
+      await e.svc.sync(end);
+
+      final list = await e.svc.paintings();
+      expect(list, hasLength(1));
+      final p = list.single;
+      expect((p.landmark.id, p.landmark.name, p.isSketch), (sketchId, '내 동네 스케치', true));
+      expect(p.sketch!.arrivedAt, end);
+      expect((p.visits, p.firstArrivedAt, p.lastArrivedAt), (1, end, end));
+
+      map = await e.svc.mapData(end);
+      expect(map.destId, isNull);
+      expect(map.destPoint, isNull);
+      // 방문한 명소 마커·권역 진행에는 스케치가 없다
+      expect(map.visited, isEmpty);
+      // 지나온 길은 출발 동네에서 스케치 목적지까지 그려진다
+      expect(map.paths, hasLength(1));
+      expect(map.paths.single.first, testHome);
+      expect(map.paths.single.last, destOf(j));
+    });
+
+    test('스케치와 명소 그림이 섞이면 도착 순서대로 나오고, 명소만 방문한 곳에 센다', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      final end = await walkToSketch(e, t1);
+      final dest = _destFor(destOf(await journeyRow(e)), Frame.wood);
+      final end2 = await _trip(e, dest.id, end.add(const Duration(hours: 1)));
+
+      final list = await e.svc.paintings();
+      expect([for (final p in list) p.landmark.id], [sketchId, dest.id]);
+      expect(list.last.isSketch, isFalse);
+      expect((await e.svc.mapData(end2)).visited.keys, [dest.id]);
+      expect((await e.svc.snapshot(end2)).paintingsCount, 2);
+    });
+
+    test('스케치도 화집 벽에 걸 수 있다', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      expect(() => e.svc.setWall(0, sketchId), throwsStateError);
+      await walkToSketch(e, t1);
+      expect(await e.svc.hangOnWall(sketchId), 0);
+      expect(await e.svc.wall(), [sketchId, null, null, null]);
+    });
+
+    test('스케치 중 목적지를 바꾸면 스케치 여정은 멈추고 다시 정할 길은 없다', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      await e.svc.startSketch(t1);
+      final stopAt = t1.add(minute * 10);
+      await e.svc.startJourney('kr001', stopAt, useFund: false);
+
+      final rows = {for (final r in await e.db.select(e.db.journeys).get()) r.id: r};
+      final sketchJourney = rows['j${_ms(t1)}']!;
+      expect(sketchJourney.destId, sketchId);
+      expect(sketchJourney.status, JourneyStatus.stopped);
+      expect(sketchJourney.endLat, isNotNull);
+      expect(sketchJourney.endedUtc, _ms(stopAt));
+      final next = rows['j${_ms(stopAt)}']!;
+      expect((next.destId, next.status), ('kr001', JourneyStatus.active));
+      // 새 여정의 출발지는 스케치를 멈춘 지점
+      expect((next.originLat, next.originLng), (sketchJourney.endLat, sketchJourney.endLng));
+      expect(next.destLat, isNull);
+      expect(await e.db.select(e.db.paintingsOwned).get(), isEmpty);
+      expect((await e.svc.snapshot(stopAt)).journey!.dest.id, 'kr001');
+      // 이미 여정이 있어서 스케치는 다시 못 정한다
+      expect(await e.svc.startSketch(stopAt.add(minute)), isFalse);
+    });
+
+    test('여정을 멈춰도(stopJourney) 스케치 그림은 생기지 않는다', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      await e.svc.startSketch(t1);
+      expect(await e.svc.stopJourney(t1.add(minute * 3)), isTrue);
+      expect(await e.db.select(e.db.paintingsOwned).get(), isEmpty);
+      expect((await e.svc.snapshot(t1.add(minute * 4))).journey, isNull);
+    });
+
+    test('멱등: 도착한 뒤 같은 기록으로 또 동기화해도 그림 값이 그대로', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      final end = await walkToSketch(e, t1);
+      final before = await e.db.select(e.db.paintingsOwned).getSingle();
+      await e.svc.sync(end.add(minute * 20));
+      expect(await e.db.select(e.db.paintingsOwned).getSingle(), before);
     });
   });
 }

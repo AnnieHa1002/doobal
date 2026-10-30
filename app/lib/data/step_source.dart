@@ -66,8 +66,17 @@ class FakeStepSource implements StepSource {
 
   final List<StepRecord> records;
 
+  /// requestPermission이 돌려줄 답. 테스트가 권한 거부를 흉내 낼 때 바꾼다
+  bool granted = true;
+
+  /// requestPermission을 부른 횟수
+  int permissionRequests = 0;
+
   @override
-  Future<bool> requestPermission() async => true;
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    return granted;
+  }
 
   /// 구간과 겹치는 기록을 돌려준다
   @override

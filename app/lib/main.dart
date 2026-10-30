@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/auto_sync.dart';
 import 'ui/common/palette.dart';
-import 'ui/rest/rest_screen.dart';
+import 'ui/start/start_gate.dart';
 
 void main() {
   runApp(const ProviderScope(child: DoobalApp()));
@@ -27,7 +27,7 @@ class DoobalApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: Palette.paper,
       ),
-      home: const AutoSync(child: RestScreen()),
+      home: const StartGate(),
     );
   }
 }

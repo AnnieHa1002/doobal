@@ -23,6 +23,7 @@ class SceneView extends StatelessWidget {
     required this.landmarks,
     this.camp,
     this.running = false,
+    this.backdrop,
   });
 
   final SceneMode mode;
@@ -41,12 +42,15 @@ class SceneView extends StatelessWidget {
   /// 달리는 중이면 true (캐릭터 모습이 달라진다)
   final bool running;
 
+  /// 후경 지역을 위치 대신 이 값으로 (적어 둔 값으로 다시 그리는 그림에서만)
+  final String? backdrop;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox.expand(
       child: CustomPaint(
         painter: ScenePainter(
-          look: sceneLook(nowUtc, position, onSea, landmarks, rules),
+          look: sceneLook(nowUtc, position, onSea, landmarks, rules, backdrop: backdrop),
           mode: mode,
           distanceM: distanceM,
           rules: rules,

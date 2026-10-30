@@ -10,7 +10,7 @@ Future<int> _userVersion(AppDb db) async =>
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
-  test('새 DB는 스키마 5로 열리고 새 표를 바로 쓸 수 있다', () async {
+  test('새 DB는 스키마 7로 열리고 새 표를 바로 쓸 수 있다', () async {
     final db = AppDb(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -18,7 +18,7 @@ void main() {
     expect(await db.select(db.propsOwned).get(), isEmpty);
     expect(await db.select(db.profile).get(), isEmpty);
     expect(await db.select(db.wallSlots).get(), isEmpty);
-    expect(await _userVersion(db), 5);
+    expect(await _userVersion(db), 7);
 
     await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
           landmarkId: 'kr001',
@@ -32,6 +32,35 @@ void main() {
     expect((await db.select(db.paintingsOwned).getSingle()).frame, Frame.silver);
     // 그림의 seen 기본값은 true (새 그림 표시는 도착할 때 false로 넣는다), 소품은 false
     expect((await db.select(db.paintingsOwned).getSingle()).seen, isTrue);
+    // 명소 그림은 다시 그리는 값(sketch)이 없고, 스케치 그림은 JSON 글자를 넣는다
+    expect((await db.select(db.paintingsOwned).getSingle()).sketch, isNull);
+    await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
+          landmarkId: 'sketch',
+          visits: 1,
+          frame: Frame.wood,
+          bestKm: 2.5,
+          firstArrivedUtc: 1,
+          lastArrivedUtc: 1,
+          sketch: const Value('{"lat":37.5}'),
+        ));
+    expect(
+        (await (db.select(db.paintingsOwned)..where((t) => t.landmarkId.equals('sketch')))
+                .getSingle())
+            .sketch,
+        '{"lat":37.5}');
+    // 여정의 가상 목적지 좌표는 비워 둘 수 있다
+    await db.into(db.journeys).insert(JourneysCompanion.insert(
+          id: 'j1',
+          originLat: 37.5,
+          originLng: 127,
+          destId: 'kr001',
+          startUtc: 1,
+          fundKm: 0,
+          totalEffectiveKm: 5,
+          status: JourneyStatus.active,
+        ));
+    expect(await db.select(db.journeys).getSingle().then((r) => (r.destLat, r.destLng)),
+        (null, null));
     expect((await db.select(db.propsOwned).getSingle()).seen, isFalse);
 
     // 프로필은 1행: 출발 동네 열은 비워 둘 수 있고, 같은 id로 다시 넣으면 바뀐다
@@ -40,6 +69,17 @@ void main() {
     expect(profile.homeName, isNull);
     expect(profile.homeLat, isNull);
     expect(profile.homeLng, isNull);
+    // 시작 흐름·동의 열도 모두 비어 있다
+    expect([
+      profile.homeId,
+      profile.ageConfirmedAt,
+      profile.installId,
+      profile.nickname,
+      profile.look,
+      profile.onboardedAt,
+      profile.linkConsentAt,
+      profile.guestbookConsentAt,
+    ], everyElement(isNull));
     await db.into(db.profile).insertOnConflictUpdate(ProfileCompanion(
         id: const Value(1),
         homeName: const Value('중구'),
@@ -86,7 +126,7 @@ void main() {
     expect(await row(), (4, true));
   });
 
-  test('스키마 1(여정 표만 있던 때)에서 열면 5로 올라가고 옛 행이 남는다', () async {
+  test('스키마 1(여정 표만 있던 때)에서 열면 7로 올라가고 옛 행이 남는다', () async {
     // 스키마 1의 journeys 표와 행 둘(도착, 멈춤)을 직접 만들어 두고 user_version = 1로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -103,7 +143,7 @@ void main() {
     addTearDown(db.close);
 
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
-    expect(await _userVersion(db), 5);
+    expect(await _userVersion(db), 7);
     expect(rows.keys, {'j1', 'j2'});
     // 새 열은 비어 있고, 옛 도착 여정은 도착 화면을 이미 본 것으로 둔다
     expect(rows['j1']!.endLat, isNull);
@@ -112,6 +152,8 @@ void main() {
     expect(rows['j2']!.arrivalShown, isFalse);
     expect(rows['j2']!.status, JourneyStatus.stopped);
     expect(rows['j2']!.fundKm, 1);
+    // 가상 목적지 열도 생겼고 비어 있다
+    expect((rows['j1']!.destLat, rows['j1']!.destLng), (null, null));
 
     // 새 열·새 표를 쓸 수 있다
     await (db.update(db.journeys)..where((t) => t.id.equals('j2'))).write(
@@ -122,6 +164,10 @@ void main() {
     expect(await db.select(db.propsOwned).get(), isEmpty);
     expect(await db.select(db.profile).get(), isEmpty);
     expect(await db.select(db.wallSlots).get(), isEmpty);
+    // 1에서 올라오면 프로필 표도 처음부터 시작 흐름 열이 있다 (열을 또 더하다 실패하지 않는다)
+    await db.into(db.profile).insert(ProfileCompanion.insert(
+        id: const Value(1), nickname: const Value('화가'), onboardedAt: const Value(7)));
+    expect((await db.select(db.profile).getSingle()).nickname, '화가');
     // 1에서 올라오면 그림 표는 처음부터 seen 열이 있다 (열을 또 더하다 실패하지 않는다)
     await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
           landmarkId: 'kr001',
@@ -133,9 +179,20 @@ void main() {
           seen: const Value(false),
         ));
     expect((await db.select(db.paintingsOwned).getSingle()).seen, isFalse);
+    // 1에서 올라오면 그림 표는 처음부터 sketch 열도 있다 (열을 또 더하다 실패하지 않는다)
+    await db.into(db.paintingsOwned).insertOnConflictUpdate(PaintingsOwnedCompanion.insert(
+          landmarkId: 'kr001',
+          visits: 1,
+          frame: Frame.wood,
+          bestKm: 5,
+          firstArrivedUtc: 1,
+          lastArrivedUtc: 1,
+          sketch: const Value('{}'),
+        ));
+    expect((await db.select(db.paintingsOwned).getSingle()).sketch, '{}');
   });
 
-  test('스키마 2(프로필 표가 없던 때)에서 열면 5로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 2(프로필 표가 없던 때)에서 열면 7로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 2의 journeys 표(새 열 포함)·그림·소품 표와 행을 직접 만들어 두고 user_version = 2로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -171,7 +228,7 @@ void main() {
     addTearDown(db.close);
 
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
-    expect(await _userVersion(db), 5);
+    expect(await _userVersion(db), 7);
     expect(rows.keys, {'j1', 'j2'});
     expect(rows['j1']!.status, JourneyStatus.arrived);
     expect(rows['j1']!.newFrame, Frame.wood);
@@ -187,16 +244,24 @@ void main() {
         homeLat: const Value(37.57),
         homeLng: const Value(126.98)));
     expect((await db.select(db.profile).getSingle()).homeName, '종로구');
+    // 2에서 올라오면 프로필 표는 처음부터 시작 흐름 열이 있다 (열을 또 더하다 실패하지 않는다)
+    await db.into(db.profile).insertOnConflictUpdate(ProfileCompanion(
+        id: const Value(1), installId: Value('a' * 32), ageConfirmedAt: const Value(9)));
+    final profile = await db.select(db.profile).getSingle();
+    expect((profile.homeName, profile.installId, profile.ageConfirmedAt), ('종로구', 'a' * 32, 9));
     // 스키마 2의 그림·소품도 그대로
     final painting = await db.select(db.paintingsOwned).getSingle();
     expect((painting.landmarkId, painting.visits, painting.frame), ('kr001', 2, Frame.silver));
     expect(painting.seen, isTrue);
+    // 그림 표에 sketch 열이 생겼고 옛 그림은 비어 있다. 여정 표에는 가상 목적지 열이 생겼다
+    expect(painting.sketch, isNull);
+    expect(rows['j1']!.destLat, isNull);
     expect((await db.select(db.propsOwned).getSingle()).seen, isTrue);
     // 벽 표도 새로 생겼고 비어 있다
     expect(await db.select(db.wallSlots).get(), isEmpty);
   });
 
-  test('스키마 3(화집 벽 표가 없던 때)에서 열면 5로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 3(화집 벽 표가 없던 때)에서 열면 7로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 3의 journeys·그림·소품·프로필 표와 행을 직접 만들어 두고 user_version = 3으로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -235,15 +300,21 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 5);
+    expect(await _userVersion(db), 7);
     final j = await db.select(db.journeys).getSingle();
     expect((j.id, j.status, j.visitNo, j.newFrame, j.arrivalShown),
         ('j1', JourneyStatus.arrived, 1, Frame.wood, false));
     final painting = await db.select(db.paintingsOwned).getSingle();
     expect((painting.landmarkId, painting.visits, painting.frame), ('kr001', 1, Frame.wood));
     expect(painting.seen, isTrue);
+    expect(painting.sketch, isNull);
+    expect(j.destLng, isNull);
     expect((await db.select(db.propsOwned).getSingle()).propId, 'hat_01');
-    expect((await db.select(db.profile).getSingle()).homeName, '종로구');
+    // 프로필의 옛 열은 그대로고 시작 흐름 열이 새로 생겨 비어 있다
+    final profile = await db.select(db.profile).getSingle();
+    expect((profile.homeName, profile.homeLat, profile.homeLng), ('종로구', 37.57, 126.98));
+    expect([profile.homeId, profile.ageConfirmedAt, profile.nickname, profile.onboardedAt],
+        everyElement(isNull));
 
     // 벽 표가 새로 생겼고 비어 있다. 칸마다 한 행이라 같은 칸은 바뀐다
     expect(await db.select(db.wallSlots).get(), isEmpty);
@@ -257,7 +328,7 @@ void main() {
     expect(wall, {1: 'kr003', 3: 'kr002'});
   });
 
-  test('스키마 4(그림 표에 seen 열이 없던 때)에서 열면 5로 올라가고 옛 그림은 본 것이다', () async {
+  test('스키마 4(그림 표에 seen 열이 없던 때)에서 열면 7로 올라가고 옛 그림은 본 것이다', () async {
     // 스키마 4의 journeys·그림·소품·프로필·벽 표와 행을 직접 만들어 두고 user_version = 4로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -301,13 +372,14 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 5);
+    expect(await _userVersion(db), 7);
     // 옛 그림은 모두 본 것으로 두고, 다른 열은 그대로
     final paintings = {for (final r in await db.select(db.paintingsOwned).get()) r.landmarkId: r};
     expect(paintings.keys, {'kr001', 'kr002'});
     expect(paintings.values.every((r) => r.seen), isTrue);
     expect((paintings['kr002']!.visits, paintings['kr002']!.frame, paintings['kr002']!.bestKm),
         (3, Frame.gold, 60));
+    expect(paintings.values.map((r) => r.sketch), everyElement(isNull));
     // 다른 표의 옛 행도 그대로 (소품은 안 본 채)
     expect((await db.select(db.journeys).getSingle()).newFrame, Frame.wood);
     expect((await db.select(db.propsOwned).getSingle()).seen, isFalse);
@@ -334,5 +406,155 @@ void main() {
         ));
     final all = {for (final r in await db.select(db.paintingsOwned).get()) r.landmarkId: r.seen};
     expect(all, {'kr001': true, 'kr002': true, 'kr003': false, 'kr004': true});
+  });
+
+  test('스키마 5(프로필에 시작 흐름 열이 없던 때)에서 열면 7로 올라가고 옛 행이 그대로 남는다', () async {
+    // 스키마 5의 여정·그림·프로필·벽 표와 행을 직접 만들어 두고 user_version = 5로 연다
+    final db = AppDb(NativeDatabase.memory(setup: (raw) {
+      raw.execute('''
+        CREATE TABLE journeys (
+          id TEXT NOT NULL, origin_lat REAL NOT NULL, origin_lng REAL NOT NULL,
+          dest_id TEXT NOT NULL, start_utc INTEGER NOT NULL, fund_km REAL NOT NULL,
+          total_effective_km REAL NOT NULL, status TEXT NOT NULL, arrived_utc INTEGER NULL,
+          end_lat REAL NULL, end_lng REAL NULL, ended_utc INTEGER NULL,
+          visit_no INTEGER NULL, prev_frame TEXT NULL, new_frame TEXT NULL,
+          arrival_shown INTEGER NOT NULL DEFAULT 0 CHECK (arrival_shown IN (0, 1)),
+          PRIMARY KEY (id))
+      ''');
+      raw.execute("INSERT INTO journeys VALUES ('j1', 38.0, 128.0, 'kr001', 10, 0, 5, 'arrived', "
+          "20, 37.5, 127.0, NULL, 1, NULL, 'wood', 1)");
+      raw.execute('''
+        CREATE TABLE paintings_owned (
+          landmark_id TEXT NOT NULL, visits INTEGER NOT NULL, frame TEXT NOT NULL,
+          best_km REAL NOT NULL, first_arrived_utc INTEGER NOT NULL,
+          last_arrived_utc INTEGER NOT NULL,
+          seen INTEGER NOT NULL DEFAULT 1 CHECK (seen IN (0, 1)), PRIMARY KEY (landmark_id))
+      ''');
+      raw.execute("INSERT INTO paintings_owned VALUES ('kr001', 1, 'wood', 5, 20, 20, 0)");
+      raw.execute('''
+        CREATE TABLE profile (
+          id INTEGER NOT NULL, home_name TEXT NULL, home_lat REAL NULL, home_lng REAL NULL,
+          PRIMARY KEY (id))
+      ''');
+      raw.execute("INSERT INTO profile VALUES (1, '종로구', 37.57, 126.98)");
+      raw.execute('''
+        CREATE TABLE wall_slots (
+          slot INTEGER NOT NULL, landmark_id TEXT NOT NULL, PRIMARY KEY (slot))
+      ''');
+      raw.execute("INSERT INTO wall_slots VALUES (0, 'kr001')");
+      raw.execute('PRAGMA user_version = 5');
+    }));
+    addTearDown(db.close);
+
+    expect(await _userVersion(db), 7);
+    // 옛 프로필 행은 그대로고 새 열 여덟 개는 비어 있다
+    var profile = await db.select(db.profile).getSingle();
+    expect((profile.id, profile.homeName, profile.homeLat, profile.homeLng),
+        (1, '종로구', 37.57, 126.98));
+    expect([
+      profile.homeId,
+      profile.ageConfirmedAt,
+      profile.installId,
+      profile.nickname,
+      profile.look,
+      profile.onboardedAt,
+      profile.linkConsentAt,
+      profile.guestbookConsentAt,
+    ], everyElement(isNull));
+    // 다른 표의 옛 행도 그대로 (그림 표에는 sketch 열, 여정 표에는 가상 목적지 열이 생겨 비어 있다)
+    expect((await db.select(db.journeys).getSingle()).destLat, isNull);
+    expect((await db.select(db.paintingsOwned).getSingle()).seen, isFalse);
+    expect((await db.select(db.paintingsOwned).getSingle()).sketch, isNull);
+    expect((await db.select(db.wallSlots).getSingle()).landmarkId, 'kr001');
+
+    // 새 열을 쓸 수 있고, 일부 열만 넣어도 다른 열은 그대로다
+    await db.into(db.profile).insertOnConflictUpdate(ProfileCompanion(
+      id: const Value(1),
+      ageConfirmedAt: const Value(100),
+      installId: Value('b' * 32),
+      nickname: const Value('화가'),
+      look: const Value('{"hair":1}'),
+      homeId: const Value('11140'),
+      onboardedAt: const Value(200),
+      linkConsentAt: const Value(300),
+      guestbookConsentAt: const Value(400),
+    ));
+    await db.into(db.profile).insertOnConflictUpdate(
+        const ProfileCompanion(id: Value(1), nickname: Value('나그네')));
+    profile = await db.select(db.profile).getSingle();
+    expect((profile.homeName, profile.nickname, profile.installId), ('종로구', '나그네', 'b' * 32));
+    expect((profile.ageConfirmedAt, profile.onboardedAt, profile.homeId), (100, 200, '11140'));
+    expect((profile.linkConsentAt, profile.guestbookConsentAt), (300, 400));
+    expect(profile.look, '{"hair":1}');
+  });
+
+  test('스키마 6(가상 목적지·스케치 열이 없던 때)에서 열면 7로 올라가고 옛 행이 그대로 남는다', () async {
+    // 스키마 6의 여정·그림·프로필 표와 행을 직접 만들어 두고 user_version = 6으로 연다
+    final db = AppDb(NativeDatabase.memory(setup: (raw) {
+      raw.execute('''
+        CREATE TABLE journeys (
+          id TEXT NOT NULL, origin_lat REAL NOT NULL, origin_lng REAL NOT NULL,
+          dest_id TEXT NOT NULL, start_utc INTEGER NOT NULL, fund_km REAL NOT NULL,
+          total_effective_km REAL NOT NULL, status TEXT NOT NULL, arrived_utc INTEGER NULL,
+          end_lat REAL NULL, end_lng REAL NULL, ended_utc INTEGER NULL,
+          visit_no INTEGER NULL, prev_frame TEXT NULL, new_frame TEXT NULL,
+          arrival_shown INTEGER NOT NULL DEFAULT 0 CHECK (arrival_shown IN (0, 1)),
+          PRIMARY KEY (id))
+      ''');
+      raw.execute("INSERT INTO journeys VALUES ('j1', 38.0, 128.0, 'kr001', 10, 0, 5, 'arrived', "
+          "20, 37.5, 127.0, NULL, 1, NULL, 'wood', 1)");
+      raw.execute('''
+        CREATE TABLE paintings_owned (
+          landmark_id TEXT NOT NULL, visits INTEGER NOT NULL, frame TEXT NOT NULL,
+          best_km REAL NOT NULL, first_arrived_utc INTEGER NOT NULL,
+          last_arrived_utc INTEGER NOT NULL,
+          seen INTEGER NOT NULL DEFAULT 1 CHECK (seen IN (0, 1)), PRIMARY KEY (landmark_id))
+      ''');
+      raw.execute("INSERT INTO paintings_owned VALUES ('kr001', 2, 'silver', 22.5, 20, 50, 0)");
+      raw.execute('''
+        CREATE TABLE profile (
+          id INTEGER NOT NULL, home_name TEXT NULL, home_lat REAL NULL, home_lng REAL NULL,
+          home_id TEXT NULL, age_confirmed_at INTEGER NULL, install_id TEXT NULL,
+          nickname TEXT NULL, look TEXT NULL, onboarded_at INTEGER NULL,
+          link_consent_at INTEGER NULL, guestbook_consent_at INTEGER NULL,
+          PRIMARY KEY (id))
+      ''');
+      raw.execute("INSERT INTO profile VALUES (1, '종로구', 37.57, 126.98, '11110', 1, '"
+          "${'c' * 32}', '화가', NULL, 2, NULL, NULL)");
+      raw.execute('PRAGMA user_version = 6');
+    }));
+    addTearDown(db.close);
+
+    expect(await _userVersion(db), 7);
+    // 옛 행은 그대로고 새 열은 비어 있다
+    var journey = await db.select(db.journeys).getSingle();
+    expect((journey.id, journey.destId, journey.status, journey.visitNo, journey.arrivalShown),
+        ('j1', 'kr001', JourneyStatus.arrived, 1, true));
+    expect((journey.destLat, journey.destLng), (null, null));
+    var painting = await db.select(db.paintingsOwned).getSingle();
+    expect((painting.landmarkId, painting.visits, painting.frame, painting.seen),
+        ('kr001', 2, Frame.silver, false));
+    expect(painting.sketch, isNull);
+    final profile = await db.select(db.profile).getSingle();
+    expect((profile.homeName, profile.installId, profile.nickname), ('종로구', 'c' * 32, '화가'));
+
+    // 새 열을 쓸 수 있다: 가상 목적지 좌표와 스케치 JSON
+    await (db.update(db.journeys)..where((t) => t.id.equals('j1')))
+        .write(const JourneysCompanion(destLat: Value(37.6), destLng: Value(127.01)));
+    await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
+          landmarkId: 'sketch',
+          visits: 1,
+          frame: Frame.wood,
+          bestKm: 2.5,
+          firstArrivedUtc: 30,
+          lastArrivedUtc: 30,
+          seen: const Value(false),
+          sketch: const Value('{"lat":37.6}'),
+        ));
+    journey = await db.select(db.journeys).getSingle();
+    expect((journey.destLat, journey.destLng), (37.6, 127.01));
+    painting = await (db.select(db.paintingsOwned)..where((t) => t.landmarkId.equals('sketch')))
+        .getSingle();
+    expect((painting.sketch, painting.seen), ('{"lat":37.6}', false));
   });
 }

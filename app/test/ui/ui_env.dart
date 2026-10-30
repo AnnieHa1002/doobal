@@ -5,6 +5,7 @@ import 'package:doobal/data/step_source.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
+import 'package:doobal/domain/sketch.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -32,13 +33,16 @@ StepRecord walkRecord(DateTime start, int minutes, int spm) => StepRecord(
       method: RecordingMethod.automatic,
     );
 
-/// 메모리 DB + 가짜 걸음 + 바꿀 수 있는 시계. 에셋은 모두 직접 넣는다
+/// 메모리 DB + 가짜 걸음(원하면 [source]를 넣는다) + 바꿀 수 있는 시계. 에셋은 모두 직접 넣는다
 /// (두 번째 testWidgets부터는 rootBundle 에셋이 로드되지 않는다)
 class UiEnv {
-  UiEnv() : db = AppDb(NativeDatabase.memory()), source = FakeStepSource(), now = t1 {
+  UiEnv({FakeStepSource? source})
+      : db = AppDb(NativeDatabase.memory()),
+        source = source ?? FakeStepSource(),
+        now = t1 {
     svc = SyncService(
       db: db,
-      source: source,
+      source: this.source,
       rules: rules,
       allowedSources: const [],
       landmarks: byId,
@@ -59,16 +63,20 @@ class UiEnv {
         campThemeProvider.overrideWith((ref) => campTheme),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),
+        sigunguProvider.overrideWith((ref) => sigungu),
+        hairSwatchesProvider.overrideWith((ref) => hairSwatches),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
         clockProvider.overrideWithValue(() => now),
       ];
 
-  /// 설치(= t0)하고 출발 동네를 testHome으로 골라 둔다. [body]로 더 채울 수 있다
+  /// 설치(= t0)하고 출발 동네를 testHome으로 골라 둔다. 시작 흐름도 끝낸 것으로 둔다
+  /// (그래야 DoobalApp이 시작 화면 대신 쉼터를 띄운다). [body]로 더 채울 수 있다
   Future<void> seed(WidgetTester tester, [Future<void> Function()? body]) =>
       tester.runAsync(() async {
         await svc.sync(t0);
         await svc.setHome(testHomeName, testHome);
+        await completeOnboarding(db);
         await body?.call();
       }) as Future<void>;
 
@@ -78,6 +86,42 @@ class UiEnv {
     await placeAt(db, nearGyeongbok, t0);
     await svc.startJourney('kr001', t1, useFund: false);
     source.records.add(walkRecord(t1.add(const Duration(minutes: 5)), 30, 100));
+    now = t1.add(const Duration(hours: 2));
+    await svc.sync(now);
+  }
+
+  /// 첫 여정 '내 동네 스케치'를 정하고(t1 시작, 출발 동네 = testHome) 한 걸음도 안 걸은 채로 둔다.
+  /// 시작 흐름을 끝낸 프로필(seed가 심는다)이 있어야 한다
+  Future<void> startSketch() async {
+    expect(await svc.startSketch(t1), isTrue);
+  }
+
+  /// 스케치 여정을 환산 거리 [km]인 가상 목적지로 직접 넣는다 (북동쪽). 말풍선 글처럼 거리가
+  /// 정해진 값이 필요할 때 쓴다 (실제 목적지는 설치 번호로 정해져서 거리를 모른다)
+  Future<void> insertSketchJourney(double km) {
+    final dest = destinationPoint(testHome, 45, km, rules.earthRadiusKm);
+    return db.into(db.journeys).insert(JourneysCompanion.insert(
+          id: 'j${t1.millisecondsSinceEpoch}',
+          originLat: testHome.lat,
+          originLng: testHome.lng,
+          destId: sketchId,
+          startUtc: t1.millisecondsSinceEpoch,
+          fundKm: 0,
+          totalEffectiveKm: km,
+          status: JourneyStatus.active,
+          destLat: Value(dest.lat),
+          destLng: Value(dest.lng),
+        ));
+  }
+
+  /// 스케치 여정을 정하고 걸어서 도착한 상태로 만든다 (도착 화면은 아직 안 봤다).
+  /// 도착 시각은 t1 + 2시간(한국 11월 18일 12시), 그날 걸음은 그 걷기의 걸음
+  Future<void> arriveAtSketch() async {
+    await startSketch();
+    final km = (await svc.snapshot(t1)).journey!.totalKm;
+    // 분당 100보(70m)로 모자라지 않게 한 분 더
+    final minutes = (km * 1000 / (rules.walkStrideM * 100)).ceil() + 1;
+    source.records.add(walkRecord(t1.add(const Duration(minutes: 5)), minutes, 100));
     now = t1.add(const Duration(hours: 2));
     await svc.sync(now);
   }
@@ -159,7 +203,7 @@ Future<void> end(WidgetTester tester, UiEnv e) async {
   await tester.runAsync(e.db.close);
 }
 
-/// 앱 전체(DoobalApp = AutoSync + 쉼터)를 폰 크기로 띄운다
+/// 앱 전체(DoobalApp = 시작 관문 → AutoSync + 쉼터)를 폰 크기로 띄운다
 Future<void> pumpDoobal(WidgetTester tester, UiEnv e, Widget app, {double height = 844}) async {
   phone(tester, height: height);
   await tester.pumpWidget(ProviderScope(overrides: e.overrides, child: app));

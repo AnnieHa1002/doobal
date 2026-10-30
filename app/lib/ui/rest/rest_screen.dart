@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/camp_theme.dart';
+import '../../domain/rules.dart';
+import '../../domain/sketch.dart';
 import '../album/album_screen.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
@@ -38,6 +40,7 @@ class RestScreen extends ConsumerWidget {
     // 출발 동네를 아직 안 골랐으면 장면 대신 고르라는 카드만 (위치가 있어야 장면을 그린다)
     final position = snap.position;
     if (position == null) return _pickHome(context);
+    final firstSketch = _firstSketchBubble(snap, rules);
 
     return Scaffold(
       body: LayoutBuilder(builder: (context, box) {
@@ -91,18 +94,39 @@ class RestScreen extends ConsumerWidget {
                     ),
                     Align(
                       alignment: Alignment.bottomRight,
-                      child: CornerButton(
-                        icon: Icons.directions_walk,
-                        label: '출발하기',
-                        tag: '출발하기',
-                        size: 72,
-                        primary: true,
-                        onPressed: () => _push(
-                          context,
-                          snap.journey == null
-                              ? const MapScreen(walkAfterStart: true)
-                              : const WalkingScreen(),
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (firstSketch != null) ...[
+                            _SpeechBubble(key: const ValueKey('first-sketch-bubble'), firstSketch),
+                            const SizedBox(height: 6),
+                          ],
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              CornerButton(
+                                icon: Icons.directions_walk,
+                                label: '출발하기',
+                                tag: '출발하기',
+                                size: 72,
+                                primary: true,
+                                onPressed: () => _push(
+                                  context,
+                                  snap.journey == null
+                                      ? const MapScreen(walkAfterStart: true)
+                                      : const WalkingScreen(),
+                                ),
+                              ),
+                              if (firstSketch != null)
+                                const Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: NoticeDot(key: ValueKey('depart-dot')),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -171,7 +195,23 @@ class RestScreen extends ConsumerWidget {
   String _statusText(Snapshot snap) {
     final j = snap.journey;
     if (j == null) return '쉬는 중 · 목적지를 골라 보세요';
-    return '쉬는 중 · 목적지까지 ${formatKm(j.progress.remainingKm)}';
+    // 첫 여정은 이름이 있는 목적지가 아니라 내 동네 스케치
+    final dest = j.dest.id == sketchId ? sketchName : '목적지';
+    return '쉬는 중 · $dest까지 ${formatKm(j.progress.remainingKm)}';
+  }
+
+  /// 첫 여정 '내 동네 스케치'를 아직 한 걸음도 안 걸었을 때 출발하기 위에 띄우는 말풍선 글.
+  /// 그 밖에는 null (걷기 시작해서 진행이 생기면 말풍선과 출발하기의 알림 점이 함께 사라진다).
+  /// TODO: 첫날 이정표 "첫 스케치 →"는 쉼터에 이정표 물건이 생기면 붙인다 (UI 명세 2장)
+  String? _firstSketchBubble(Snapshot snap, Rules rules) {
+    final j = snap.journey;
+    final home = snap.home;
+    if (j == null || home == null || j.dest.id != sketchId || j.progress.progressKm > 0) {
+      return null;
+    }
+    final km = j.progress.remainingKm;
+    return '첫 그림을 그리러 가요. ${home.name}에서 ${formatKm(km)} · '
+        '약 ${formatInt(sketchSteps(km, rules))}보';
   }
 
   /// 물건: 테마가 정한 비율 위치에 중심을 두고, 아래에 이름표를 붙인다.
@@ -255,4 +295,65 @@ class _StatusPill extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 출발하기 위의 말풍선: 카드색, 잉크 2px 테두리, 아래 오른쪽(버튼 쪽)으로 작은 꼬리
+class _SpeechBubble extends StatelessWidget {
+  const _SpeechBubble(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Container(
+          constraints: const BoxConstraints(maxWidth: 240),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Palette.card,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Palette.ink, width: 2),
+          ),
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Palette.ink),
+          ),
+        ),
+        // 꼬리는 말풍선 아래 테두리를 살짝 덮어 이어 붙인다
+        Padding(
+          padding: const EdgeInsets.only(right: 28),
+          child: Transform.translate(
+            offset: const Offset(0, -2),
+            child: CustomPaint(size: const Size(16, 9), painter: _TailPainter()),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 아래로 뾰족한 삼각형 꼬리: 카드색으로 채우고 윗변을 뺀 두 변만 잉크선
+class _TailPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..lineTo(size.width, 0);
+    canvas.drawPath(Path.from(path)..close(), Paint()..color = Palette.card);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Palette.ink
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_TailPainter old) => false;
 }

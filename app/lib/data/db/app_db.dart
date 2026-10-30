@@ -5,7 +5,8 @@ import '../../domain/journey.dart' show Frame;
 part 'app_db.g.dart';
 
 // M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝) + 스키마 3 (프로필: 출발 동네)
-// + 스키마 4 (화집 벽) + 스키마 5 (새 그림 표시). 시각은 모두 UTC 정수
+// + 스키마 4 (화집 벽) + 스키마 5 (새 그림 표시) + 스키마 6 (프로필: 시작 흐름)
+// + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지·그림 다시 그리기 값). 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
 
@@ -73,6 +74,10 @@ class Journeys extends Table {
   /// 도착 화면을 보여 줬는지. 앱 밖에서 도착하면 다음 실행 때 먼저 보여 준다
   BoolColumn get arrivalShown => boolean().withDefault(const Constant(false))();
 
+  /// 가상 목적지의 좌표 (destId가 'sketch'인 첫 여정만). 명소 여정은 null
+  RealColumn get destLat => real().nullable()();
+  RealColumn get destLng => real().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -90,6 +95,9 @@ class PaintingsOwned extends Table {
   IntColumn get firstArrivedUtc => integer()();
   IntColumn get lastArrivedUtc => integer()();
   BoolColumn get seen => boolean().withDefault(const Constant(true))();
+
+  /// 다시 그리는 값 JSON (domain/sketch.dart의 Sketch). landmarkId가 'sketch'인 그림만, 명소 그림은 null
+  TextColumn get sketch => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {landmarkId};
@@ -140,14 +148,35 @@ class SyncState extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// 1행(id = 1). 지금은 사용자가 고른 출발 동네(시·군·구 이름과 대표 좌표)만 둔다.
-/// 닉네임·머리 같은 나머지 열은 시작 화면을 만들 때 더한다. 고르기 전에는 행이 없거나 열이 null
+/// 1행(id = 1). 시작 흐름이 채우는 값(만 14세 확인·설치 번호·닉네임·모습·출발 동네·권한 단계 끝)과
+/// 계정 동의 시각. 채우기 전에는 행이 없거나 열이 null (단계는 onboardingStepProvider가 가린다).
+/// 확인·동의 시각은 이 기기에만 두고 서버·백업에 넣지 않는다 (M5 명세)
 @DataClassName('ProfileRow')
 class Profile extends Table {
   IntColumn get id => integer()();
+
+  /// 사용자가 고른 출발 동네: 시·군·구 이름(label)과 대표 좌표, 시·군·구 id
   TextColumn get homeName => text().nullable()();
   RealColumn get homeLat => real().nullable()();
   RealColumn get homeLng => real().nullable()();
+  TextColumn get homeId => text().nullable()();
+
+  /// 만 14세 확인을 누른 시각 (epoch ms). 이게 있어야 설치 번호를 만들고 권한을 묻는다
+  IntColumn get ageConfirmedAt => integer().nullable()();
+
+  /// 설치 번호 (16바이트 hex 32자). 만 14세 확인 때 한 번 만든다
+  TextColumn get installId => text().nullable()();
+  TextColumn get nickname => text().nullable()();
+
+  /// 모습 JSON (domain/look.dart의 Look)
+  TextColumn get look => text().nullable()();
+
+  /// 시작 흐름의 마지막(권한) 단계를 마친 시각 (epoch ms)
+  IntColumn get onboardedAt => integer().nullable()();
+
+  /// 계정 연결·방명록 동의 시각 (epoch ms). 쓰는 곳은 M5에서 붙인다
+  IntColumn get linkConsentAt => integer().nullable()();
+  IntColumn get guestbookConsentAt => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -171,7 +200,7 @@ class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -199,6 +228,26 @@ class AppDb extends _$AppDb {
           // 2에서 새로 만든 그림 표는 지금 정의라 seen 열이 이미 있다. 2~4에서 올라올 때만 더한다
           // (옛 행은 기본값 true, 곧 본 것)
           if (from >= 2 && from < 5) await m.addColumn(paintingsOwned, paintingsOwned.seen);
+          // 2 이하에서 올라올 때는 위 createTable(profile)이 지금 정의라 새 열이 이미 있다.
+          // 3~5에서 올라올 때만 더한다
+          if (from >= 3 && from < 6) {
+            await m.addColumn(profile, profile.homeId);
+            await m.addColumn(profile, profile.ageConfirmedAt);
+            await m.addColumn(profile, profile.installId);
+            await m.addColumn(profile, profile.nickname);
+            await m.addColumn(profile, profile.look);
+            await m.addColumn(profile, profile.onboardedAt);
+            await m.addColumn(profile, profile.linkConsentAt);
+            await m.addColumn(profile, profile.guestbookConsentAt);
+          }
+          // 여정 표는 1부터 있었고 다시 만든 적이 없어서 어디서 올라와도 열을 더한다
+          if (from < 7) {
+            await m.addColumn(journeys, journeys.destLat);
+            await m.addColumn(journeys, journeys.destLng);
+          }
+          // 1에서 올라올 때는 위 createTable(paintingsOwned)이 지금 정의라 sketch 열이 이미 있다.
+          // 2~6에서 올라올 때만 더한다
+          if (from >= 2 && from < 7) await m.addColumn(paintingsOwned, paintingsOwned.sketch);
         },
       );
 }

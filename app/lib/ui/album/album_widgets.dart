@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../app/sync_service.dart';
 import '../../domain/landmark.dart';
 import '../../domain/prop.dart';
+import '../../domain/sketch.dart';
 import '../common/framed_painting.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
+import '../common/sketch_painting.dart';
 
 /// 벽 한 칸의 크기 비율 (너비 : 높이 = 4 : 5)
 const _wallSlotAspect = 0.8;
@@ -42,6 +44,7 @@ class WallRow extends StatelessWidget {
 
   Widget _slot(int i) {
     final p = wall[i] == null ? null : owned[wall[i]];
+    final sketch = p?.sketch;
     return AspectRatio(
       aspectRatio: _wallSlotAspect,
       child: GestureDetector(
@@ -61,7 +64,10 @@ class WallRow extends StatelessWidget {
             padding: const EdgeInsets.all(2),
             child: p == null
                 ? const FramedPainting.empty(thickness: 5)
-                : FramedPainting(landmark: p.landmark, frame: p.frame, thickness: 5),
+                : sketch != null
+                    // 내 동네 스케치는 액자 등급이 없다
+                    ? SketchThumb(sketch: sketch)
+                    : FramedPainting(landmark: p.landmark, frame: p.frame, thickness: 5),
           ),
         ),
       ),
@@ -286,6 +292,63 @@ class PaintingCell extends StatelessWidget {
   }
 }
 
+/// 내 동네 스케치 칸 (그림 격자 맨 앞): 얻었으면 그림 썸네일, 아니면 빈 액자. 아래에 이름.
+/// 액자 등급이 없어서 색 액자 대신 얇은 선만 두른다. 누르는 동작은 얻었을 때만 [onTap]이 있다.
+/// [isNew]이면 오른쪽 위에 알림 점이 붙는다 (명소 칸과 같다)
+class SketchCell extends StatelessWidget {
+  const SketchCell({super.key, required this.owned, this.onTap, this.isNew = false});
+
+  final OwnedPaintingView? owned;
+  final VoidCallback? onTap;
+  final bool isNew;
+
+  @override
+  Widget build(BuildContext context) {
+    final sketch = owned?.sketch;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
+        children: [
+          Column(
+            children: [
+              Expanded(
+                child: sketch == null
+                    ? const FramedPainting.empty()
+                    : SketchThumb(key: const ValueKey('sketch-thumb'), sketch: sketch),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                height: 32,
+                child: Text(
+                  sketchName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                    color: sketch == null ? Palette.subInk : Palette.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (isNew)
+            const Positioned(
+              top: -4,
+              right: -4,
+              child: NoticeDot(key: ValueKey('new-painting-$sketchId')),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 소품 한 줄: 첫 글자 원 + 이름. 잠긴 소품은 흐리게 하고 얻는 방법을 아래에 붙인다
 class PropRow extends StatelessWidget {
   const PropRow({super.key, required this.prop, required this.owned, required this.howTo});
@@ -373,13 +436,12 @@ Future<String?> showPaintingPicker(BuildContext context, List<OwnedPaintingView>
           itemCount: paintings.length,
           itemBuilder: (context, i) {
             final p = paintings[i];
+            void pick() => Navigator.of(context).pop(p.landmark.id);
             return KeyedSubtree(
               key: ValueKey('pick-${p.landmark.id}'),
-              child: PaintingCell(
-                landmark: p.landmark,
-                owned: p,
-                onTap: () => Navigator.of(context).pop(p.landmark.id),
-              ),
+              child: p.isSketch
+                  ? SketchCell(owned: p, onTap: pick)
+                  : PaintingCell(landmark: p.landmark, owned: p, onTap: pick),
             );
           },
         ),

@@ -5,8 +5,12 @@ import 'palette.dart';
 
 enum GameButtonKind { primary, secondary }
 
+/// 비활성일 때 버튼의 불투명도
+const _disabledOpacity = 0.4;
+
 /// 높이 52pt·모서리 12pt 큰 버튼 (UI 명세 공통).
-/// primary = 테라코타 바탕 + 종이색 글자, secondary = 카드색 바탕 + 잉크 글자
+/// primary = 테라코타 바탕 + 종이색 글자, secondary = 카드색 바탕 + 잉크 글자.
+/// [onPressed]가 null이면 흐리게 보이고 눌리지 않는다
 class GameButton extends StatelessWidget {
   const GameButton({
     super.key,
@@ -16,22 +20,25 @@ class GameButton extends StatelessWidget {
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final GameButtonKind kind;
 
   @override
   Widget build(BuildContext context) {
     final primary = kind == GameButtonKind.primary;
-    return InkPress(
-      onPressed: onPressed,
-      fill: primary ? Palette.terracotta : Palette.card,
-      height: 52,
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: primary ? Palette.paper : Palette.ink,
+    return Opacity(
+      opacity: onPressed == null ? _disabledOpacity : 1,
+      child: InkPress(
+        onPressed: onPressed,
+        fill: primary ? Palette.terracotta : Palette.card,
+        height: 52,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: primary ? Palette.paper : Palette.ink,
+          ),
         ),
       ),
     );

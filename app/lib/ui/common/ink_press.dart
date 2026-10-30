@@ -7,7 +7,7 @@ const _shadow = 4.0;
 const _pressDuration = Duration(milliseconds: 80);
 
 /// 잉크 테두리 + 아래로 4pt 그림자. 누르면 그림자가 0이 되고 4pt 내려간다 (0.08초).
-/// 높이는 그림자 자리까지 [height] + 4
+/// 높이는 그림자 자리까지 [height] + 4. [onPressed]가 null이면 눌리지 않는 비활성
 class InkPress extends StatefulWidget {
   const InkPress({
     super.key,
@@ -20,7 +20,7 @@ class InkPress extends StatefulWidget {
     this.circle = false,
   });
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Color fill;
   final Widget child;
   final double height;
@@ -42,12 +42,21 @@ class _InkPressState extends State<InkPress> {
   }
 
   @override
+  void didUpdateWidget(InkPress old) {
+    super.didUpdateWidget(old);
+    // 눌린 채로 비활성이 되면 풀어 준다
+    if (widget.onPressed == null) _pressed = false;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final enabled = widget.onPressed != null;
     return Semantics(
       button: true,
+      enabled: enabled,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _set(true),
+        onTapDown: enabled ? (_) => _set(true) : null,
         onTapUp: (_) => _set(false),
         onTapCancel: () => _set(false),
         onTap: widget.onPressed,

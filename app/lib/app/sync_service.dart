@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../data/db/app_db.dart';
 import '../data/step_source.dart';
@@ -11,10 +13,13 @@ import '../domain/gait.dart';
 import '../domain/geo.dart';
 import '../domain/journey.dart';
 import '../domain/landmark.dart';
+import '../domain/look.dart';
 import '../domain/prop.dart';
 import '../domain/route.dart';
 import '../domain/rules.dart';
+import '../domain/scene.dart' show nearestLandmark;
 import '../domain/session.dart';
+import '../domain/sketch.dart';
 import '../domain/time_kst.dart';
 import '../domain/walk_record.dart';
 import '../domain/wall.dart';
@@ -99,9 +104,12 @@ class ArrivalView {
     required this.daySteps,
     required this.prevBestKm,
     required this.regionProp,
+    this.sketch,
   });
 
   final String journeyId;
+
+  /// 도착지. 내 동네 스케치면 가짜 명소(id 'sketch')
   final Landmark dest;
 
   /// 몇 번째 방문인지. 1이면 새 그림
@@ -124,6 +132,10 @@ class ArrivalView {
   /// 이 도착이 그 권역을 채웠을 때 받는 권역 소품. 아니면 null
   final Prop? regionProp;
 
+  /// 내 동네 스케치에 도착했으면 그 그림을 다시 그리는 값, 명소면 null.
+  /// 스케치는 액자 등급·몇 번째 방문·권역 완성이 없다 (newFrame은 자리만 채운 값)
+  final Sketch? sketch;
+
   /// 재방문해서 액자가 올랐는가
   bool get frameUp => prevFrame != null && newFrame.index > prevFrame!.index;
 }
@@ -137,16 +149,25 @@ class OwnedPaintingView {
     required this.bestKm,
     required this.firstArrivedAt,
     required this.lastArrivedAt,
+    this.sketch,
   });
 
+  /// 내 동네 스케치면 가짜 명소(id 'sketch')
   final Landmark landmark;
   final int visits;
+
+  /// 내 동네 스케치는 액자가 없다 (필수 열이라 wood로 채운 값이고 화면에 쓰지 않는다)
   final Frame frame;
 
   /// 가장 멀리서 걸어 온 환산 거리(km)
   final double bestKm;
   final DateTime firstArrivedAt;
   final DateTime lastArrivedAt;
+
+  /// 내 동네 스케치면 다시 그리는 값, 명소 그림이면 null
+  final Sketch? sketch;
+
+  bool get isSketch => sketch != null;
 }
 
 /// 그림 상세의 방문 한 줄
@@ -235,20 +256,24 @@ class MapData {
     required this.destId,
     required this.position,
     required this.fundKm,
+    this.destPoint,
   });
 
-  /// 그림을 얻은 명소 id → 지금 액자
+  /// 그림을 얻은 명소 id → 지금 액자 (내 동네 스케치는 명소가 아니라 넣지 않는다)
   final Map<String, Frame> visited;
 
   /// 지금까지 지나온 길. 여정마다 한 줄이고, 배 구간은 항구를 거친다
   final List<List<LatLng>> paths;
 
-  /// 진행 중인 여정의 목적지. 여정이 없으면 null
+  /// 진행 중인 여정의 목적지. 여정이 없으면 null (내 동네 스케치면 'sketch')
   final String? destId;
 
   /// 지금 있는 곳 (Snapshot.position과 같다)
   final LatLng? position;
   final double fundKm;
+
+  /// 진행 중인 여정의 목적지가 명소가 아닌 가상 지점(내 동네 스케치)일 때 그 좌표. 명소 목적지면 null
+  final LatLng? destPoint;
 }
 
 /// 지금 자리에서 어떤 명소로 가면 얼마나 걸리는지 (지도 카드용 미리 보기)
@@ -271,6 +296,7 @@ class SyncService {
     required this.allowedSources,
     required this.landmarks,
     required this.props,
+    this.onLand = _anywhere,
   });
 
   final AppDb db;
@@ -278,6 +304,12 @@ class SyncService {
   final Rules rules;
   final List<String> allowedSources;
   final Map<String, Landmark> landmarks;
+
+  /// [p]가 [island]의 땅 위인지 (내 동네 스케치 목적지가 바다에 떨어지지 않게).
+  /// 앱은 지도 경계로 판정하는 함수를 넣고, 기본은 어디든 땅이다
+  final bool Function(LatLng p, Island island) onLand;
+
+  late final List<Landmark> _landmarkList = landmarks.values.toList();
 
   /// MVP 소품 (props.json의 mvp)
   final List<Prop> props;
@@ -335,7 +367,8 @@ class SyncService {
   /// 출발지는 진행 중인 여정이 있으면 그 여정의 지금 지점(그 여정은 멈춘다), 없으면 쉬는 자리.
   /// [useFund]가 true면 여행 경비를 모두 더한다 (더한 만큼 경비는 줄어든다)
   /// 진행 중인 여정도 쉬는 자리도 없으면(출발 동네를 안 골랐고 여행한 적도 없음) StateError를
-  /// 던지고 아무것도 바꾸지 않는다 (동기화도 하지 않는다)
+  /// 던지고 아무것도 바꾸지 않는다 (동기화도 하지 않는다).
+  /// 내 동네 스케치 여정 중에 부르면 그 여정은 멈춘다 (스케치는 다시 정하는 길이 없다)
   Future<void> startJourney(String destId, DateTime now, {bool useFund = true}) async {
     if (await _activeJourney() == null && await _restingPosition() == null) {
       throw StateError(_needHome);
@@ -350,23 +383,68 @@ class SyncService {
       final route = buildRoute(origin, dest.latLng, rules);
       // 지금 있는 명소로는 출발하지 않는다 (거리 0이라 바로 도착해 방문 수만 오른다). 멈춤도 되돌린다
       if (route.totalEffectiveKm == 0) throw StateError('이미 ${dest.name}에 있어요');
-      final fund = await _fund();
-      final used = useFund ? fund.km : 0.0;
-      final at = now.toUtc().millisecondsSinceEpoch;
-      await db.into(db.journeys).insert(JourneysCompanion.insert(
-            id: 'j$at',
-            originLat: origin.lat,
-            originLng: origin.lng,
-            destId: destId,
-            // 앞 여정을 멈춘 분은 그 여정의 걸음이라 새 여정은 다음 분부터 센다
-            startUtc: math.max(at, fund.fundedUntilUtc),
-            fundKm: used,
-            totalEffectiveKm: route.totalEffectiveKm,
-            status: JourneyStatus.active,
-          ));
-      await (db.update(db.travelFund)..where((t) => t.id.equals(1)))
-          .write(TravelFundCompanion(km: Value(fund.km - used)));
+      await _insertJourney(origin, destId, route, now, useFund: useFund);
     });
+  }
+
+  /// 첫 여정 '내 동네 스케치'를 정한다: 출발 동네에서 config firstSketchKm 범위 안의 가상 지점으로
+  /// 가는 여정. 지점은 설치 번호로 정해져서 같은 설치는 늘 같고, 출발 동네와 같은 섬의 땅으로 고른다.
+  /// 여정 기록이 하나라도 있거나 스케치 그림이 이미 있으면, 설치 번호·출발 동네가 아직 없어도
+  /// 아무것도 바꾸지 않고 false. 정했으면 true.
+  /// 걸음 동기화는 하지 않는다 (경비도 쓰지 않는다. 방금 시작한 앱이라 앞선 걸음이 없다)
+  Future<bool> startSketch(DateTime now) => db.transaction(() async {
+        final anyJourney = await (db.select(db.journeys)..limit(1)).get();
+        if (anyJourney.isNotEmpty || await _ownedRow(sketchId) != null) return false;
+        final profile = await _profileRow();
+        final installId = profile?.installId;
+        final lat = profile?.homeLat;
+        final lng = profile?.homeLng;
+        if (installId == null || lat == null || lng == null) return false;
+
+        await _ensureState(now);
+        final home = LatLng(lat, lng);
+        final island = islandOf(home, rules.islands);
+        final dest = sketchDestination(
+          home: home,
+          installId: installId,
+          minKm: rules.firstSketchMinKm,
+          maxKm: rules.firstSketchMaxKm,
+          earthRadiusKm: rules.earthRadiusKm,
+          // 같은 섬이어야 배 구간이 끼지 않는다 (경로·섬 판정과 같은 경계 상자로 본다)
+          ok: (p) => islandOf(p, rules.islands) == island && onLand(p, island),
+        );
+        await _insertJourney(home, sketchId, buildRoute(home, dest, rules), now,
+            useFund: false, destPoint: dest);
+        return true;
+      });
+
+  /// 새 여정 행을 넣고 경비를 줄인다 (경비를 쓰면 모두 더한다). [destPoint]는 가상 목적지의 좌표
+  Future<void> _insertJourney(
+    LatLng origin,
+    String destId,
+    TravelRoute route,
+    DateTime now, {
+    required bool useFund,
+    LatLng? destPoint,
+  }) async {
+    final fund = await _fund();
+    final used = useFund ? fund.km : 0.0;
+    final at = now.toUtc().millisecondsSinceEpoch;
+    await db.into(db.journeys).insert(JourneysCompanion.insert(
+          id: 'j$at',
+          originLat: origin.lat,
+          originLng: origin.lng,
+          destId: destId,
+          // 앞 여정을 멈춘 분은 그 여정의 걸음이라 새 여정은 다음 분부터 센다
+          startUtc: math.max(at, fund.fundedUntilUtc),
+          fundKm: used,
+          totalEffectiveKm: route.totalEffectiveKm,
+          status: JourneyStatus.active,
+          destLat: Value(destPoint?.lat),
+          destLng: Value(destPoint?.lng),
+        ));
+    await (db.update(db.travelFund)..where((t) => t.id.equals(1)))
+        .write(TravelFundCompanion(km: Value(fund.km - used)));
   }
 
   /// 그때까지의 거리를 반영한 뒤, 진행 중인 여정을 지금 지점에서 멈춘다.
@@ -401,16 +479,15 @@ class SyncService {
 
   /// 소장한 그림을 더하고 도착 화면에 쓸 값을 여정에 적는다 (도착 화면은 아직 안 보여 줌)
   Future<void> _arrive(JourneyRow active, DateTime to) async {
-    final dest = landmarks[active.destId]!;
-    final owned = await (db.select(db.paintingsOwned)
-          ..where((t) => t.landmarkId.equals(dest.id)))
-        .getSingleOrNull();
+    final dest = _destOf(active);
+    final at = to.toUtc().millisecondsSinceEpoch;
+    if (dest.id == sketchId) return _arriveSketch(active, dest, at);
+    final owned = await _ownedRow(dest.id);
     final out = paintingAfterArrival(
       owned == null ? null : OwnedPainting(owned.visits, owned.frame, owned.bestKm),
       _toJourney(active).route.totalEffectiveKm,
       rules,
     );
-    final at = to.toUtc().millisecondsSinceEpoch;
     final p = out.painting;
     // 새 그림 표시는 처음 얻을 때만 켠다. 재방문은 seen을 안 넣어서 충돌 갱신이 건드리지 않는다
     await db.into(db.paintingsOwned).insertOnConflictUpdate(PaintingsOwnedCompanion.insert(
@@ -433,11 +510,41 @@ class SyncService {
     ));
   }
 
+  /// 내 동네 스케치에 도착: 그림에 다시 그리는 값(도착 시각·후경·그때의 꾸미기)을 적는다.
+  /// 계절과 하늘은 도착 시각으로 다시 계산하니 적지 않는다. 액자 등급·권역은 건드리지 않는다
+  Future<void> _arriveSketch(JourneyRow active, Landmark dest, int at) async {
+    final sketch = Sketch(
+      point: dest.latLng,
+      arrivedAt: _utc(at),
+      backdrop: dest.backdrop,
+      look: await _lookNow(),
+    );
+    await db.into(db.paintingsOwned).insertOnConflictUpdate(PaintingsOwnedCompanion.insert(
+          landmarkId: sketchId,
+          visits: 1,
+          // 액자 열은 필수라 wood로 채울 뿐, 스케치는 액자 등급이 없고 화면에도 쓰지 않는다
+          frame: Frame.wood,
+          bestKm: active.totalEffectiveKm,
+          firstArrivedUtc: at,
+          lastArrivedUtc: at,
+          seen: const Value(false),
+          sketch: Value(sketch.encode()),
+        ));
+    await (db.update(db.journeys)..where((t) => t.id.equals(active.id))).write(JourneysCompanion(
+      status: const Value(JourneyStatus.arrived),
+      arrivedUtc: Value(at),
+      endLat: Value(dest.latLng.lat),
+      endLng: Value(dest.latLng.lng),
+      visitNo: const Value(1),
+      newFrame: const Value(Frame.wood),
+    ));
+  }
+
   /// 새로 얻은 소품을 더한다 (한 번 얻은 소품은 없어지지 않는다).
   /// 누적 거리·걸음은 하루 요약의 합, 권역은 그림을 얻은 명소로 센다
   Future<void> _unlockProps(DateTime now) async {
     final days = await db.select(db.daySummaries).get();
-    final visited = {for (final r in await db.select(db.paintingsOwned).get()) r.landmarkId};
+    final visited = await _visitedLandmarkIds();
     final earned = earnedPropIds(
       props,
       days.fold(0.0, (sum, d) => sum + d.distanceM) / 1000,
@@ -473,18 +580,33 @@ class SyncService {
         row.newFrame == null) {
       throw StateError('도착한 여정이 아니에요: $journeyId');
     }
-    final dest = landmarks[row.destId]!;
+    final dest = _destOf(row);
     final arrivedAt = _utc(row.arrivedUtc!);
     final visitNo = row.visitNo!;
 
     final day = await (db.select(db.daySummaries)
           ..where((t) => t.day.equals(kstDayKey(arrivedAt))))
         .getSingleOrNull();
+    if (dest.id == sketchId) {
+      final owned = await _ownedRow(sketchId);
+      final sketch = owned == null ? null : _sketchOf(owned);
+      if (sketch == null) throw StateError('스케치 그림이 없어요: $journeyId');
+      return ArrivalView(
+        journeyId: row.id,
+        dest: dest,
+        visitNo: visitNo,
+        prevFrame: null,
+        newFrame: row.newFrame!,
+        journeyKm: row.totalEffectiveKm,
+        arrivedAt: arrivedAt,
+        daySteps: day?.steps ?? 0,
+        prevBestKm: null,
+        regionProp: null,
+        sketch: sketch,
+      );
+    }
     // 그때까지 얻은 그림만 본다 (이 도착 뒤에 채운 권역을 이 도착의 일로 치지 않게)
-    final visited = {
-      for (final r in await db.select(db.paintingsOwned).get())
-        if (r.firstArrivedUtc <= row.arrivedUtc!) r.landmarkId,
-    };
+    final visited = await _visitedLandmarkIds(until: row.arrivedUtc!);
 
     double? prevBestKm;
     if (visitNo > 1) {
@@ -573,18 +695,26 @@ class SyncService {
             (t) => OrderingTerm(expression: t.landmarkId),
           ]))
         .get();
-    return [
-      for (final r in rows)
-        if (landmarks[r.landmarkId] case final l?)
-          OwnedPaintingView(
-            landmark: l,
-            visits: r.visits,
-            frame: r.frame,
-            bestKm: r.bestKm,
-            firstArrivedAt: _utc(r.firstArrivedUtc),
-            lastArrivedAt: _utc(r.lastArrivedUtc),
-          ),
-    ];
+    return [for (final r in rows) ?_paintingOf(r)];
+  }
+
+  /// 그림 한 행을 화집에서 보는 값으로. 내 동네 스케치는 가짜 명소와 다시 그리는 값을 붙이고,
+  /// 명소 목록에 없는 그림(옛 데이터)이나 값이 깨진 스케치는 null
+  OwnedPaintingView? _paintingOf(PaintingOwnedRow r) {
+    final sketch = r.landmarkId == sketchId ? _sketchOf(r) : null;
+    final landmark = r.landmarkId == sketchId
+        ? (sketch == null ? null : _sketchLandmarkAt(sketch.point))
+        : landmarks[r.landmarkId];
+    if (landmark == null) return null;
+    return OwnedPaintingView(
+      landmark: landmark,
+      visits: r.visits,
+      frame: r.frame,
+      bestKm: r.bestKm,
+      firstArrivedAt: _utc(r.firstArrivedUtc),
+      lastArrivedAt: _utc(r.lastArrivedUtc),
+      sketch: sketch,
+    );
   }
 
   /// 그 명소에 도착한 기록을 도착 순서대로. 몇 번째인지는 도착할 때 적어 둔 값
@@ -662,7 +792,7 @@ class SyncService {
     if (active != null) {
       final p = here.progress!;
       final eta = _etaOf(p.remainingKm, days, today, state);
-      view = JourneyView(landmarks[active.destId]!, here.journey!.route.totalEffectiveKm, p, eta);
+      view = JourneyView(_destOf(active), here.journey!.route.totalEffectiveKm, p, eta);
     }
 
     return Snapshot(
@@ -716,7 +846,7 @@ class SyncService {
       if (r.endLat != null && r.endLng != null) {
         end = LatLng(r.endLat!, r.endLng!);
       } else if (r.status == JourneyStatus.arrived) {
-        end = landmarks[r.destId]!.latLng;
+        end = _destOf(r).latLng;
       } else {
         end = null;
       }
@@ -728,12 +858,14 @@ class SyncService {
 
     return MapData(
       visited: {
-        for (final p in await db.select(db.paintingsOwned).get()) p.landmarkId: p.frame,
+        for (final p in await db.select(db.paintingsOwned).get())
+          if (p.landmarkId != sketchId) p.landmarkId: p.frame,
       },
       paths: paths,
       destId: active?.destId,
       position: here.position,
       fundKm: (await _fund()).km,
+      destPoint: active?.destId == sketchId ? _destOf(active!).latLng : null,
     );
   }
 
@@ -761,7 +893,7 @@ class SyncService {
     if (row == null) return null;
     return PendingArrival(
       journeyId: row.id,
-      dest: landmarks[row.destId]!,
+      dest: _destOf(row),
       visitNo: row.visitNo!,
       prevFrame: row.prevFrame,
       newFrame: row.newFrame!,
@@ -782,7 +914,7 @@ class SyncService {
 
   /// 사용자가 고른 출발 동네. 아직 안 골랐으면 null
   Future<Home?> home() async {
-    final row = await (db.select(db.profile)..where((t) => t.id.equals(1))).getSingleOrNull();
+    final row = await _profileRow();
     if (row == null || row.homeName == null || row.homeLat == null || row.homeLng == null) {
       return null;
     }
@@ -824,9 +956,7 @@ class SyncService {
           ..limit(1))
         .getSingleOrNull();
     if (row == null) return (await home())?.latLng;
-    return row.endLat == null
-        ? landmarks[row.destId]!.latLng
-        : LatLng(row.endLat!, row.endLng!);
+    return row.endLat == null ? _destOf(row).latLng : LatLng(row.endLat!, row.endLng!);
   }
 
   Future<SyncStateRow> _ensureState(DateTime now) async {
@@ -968,8 +1098,54 @@ class SyncService {
       destId: r.destId,
       startAt: _utc(r.startUtc),
       fundKm: r.fundKm,
-      route: buildRoute(origin, landmarks[r.destId]!.latLng, rules),
+      route: buildRoute(origin, _destOf(r).latLng, rules),
     );
+  }
+
+  /// 여정의 목적지. 명소 id면 그 명소, 'sketch'면 저장한 가상 좌표와 가장 가까운 명소로 만든 가짜 명소
+  Landmark _destOf(JourneyRow r) => r.destId == sketchId
+      ? _sketchLandmarkAt(LatLng(r.destLat!, r.destLng!))
+      : landmarks[r.destId]!;
+
+  Landmark _sketchLandmarkAt(LatLng p) =>
+      sketchLandmark(p, nearestLandmark(p, _landmarkList, rules.earthRadiusKm));
+
+  Future<PaintingOwnedRow?> _ownedRow(String landmarkId) => (db.select(db.paintingsOwned)
+        ..where((t) => t.landmarkId.equals(landmarkId)))
+      .getSingleOrNull();
+
+  /// 그림을 얻은 명소 id (내 동네 스케치는 명소가 아니라 뺀다). [until]이 있으면 그 시각(epoch ms)까지 얻은 것만
+  Future<Set<String>> _visitedLandmarkIds({int? until}) async => {
+        for (final r in await db.select(db.paintingsOwned).get())
+          if (r.landmarkId != sketchId && (until == null || r.firstArrivedUtc <= until))
+            r.landmarkId,
+      };
+
+  /// 스케치 그림의 다시 그리는 값. 없거나 깨졌으면 null
+  Sketch? _sketchOf(PaintingOwnedRow r) {
+    final text = r.sketch;
+    if (text == null) return null;
+    try {
+      return Sketch.decode(text);
+    } on Object catch (e) {
+      debugPrint('스케치 값을 읽지 못함: $e');
+      return null;
+    }
+  }
+
+  Future<ProfileRow?> _profileRow() =>
+      (db.select(db.profile)..where((t) => t.id.equals(1))).getSingleOrNull();
+
+  /// 지금 꾸미기 (Profile.look). 없거나 읽지 못하면 기본 모습
+  Future<Look> _lookNow() async {
+    final text = (await _profileRow())?.look;
+    if (text == null) return Look.initial;
+    try {
+      return Look.fromJson(jsonDecode(text) as Map<String, dynamic>);
+    } on Object catch (e) {
+      debugPrint('꾸미기 값을 읽지 못함: $e');
+      return Look.initial;
+    }
   }
 
   WalkSession _sessionOf(WalkSessionRow r) => WalkSession(
@@ -992,6 +1168,8 @@ class SyncService {
 }
 
 const _needHome = '출발 동네를 먼저 골라 주세요';
+
+bool _anywhere(LatLng p, Island island) => true;
 
 typedef _Here = ({Journey? journey, JourneyProgress? progress, LatLng? position, bool onSea});
 

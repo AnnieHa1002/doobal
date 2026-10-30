@@ -1149,6 +1149,28 @@ class $JourneysTable extends Journeys
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _destLatMeta = const VerificationMeta(
+    'destLat',
+  );
+  @override
+  late final GeneratedColumn<double> destLat = GeneratedColumn<double>(
+    'dest_lat',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _destLngMeta = const VerificationMeta(
+    'destLng',
+  );
+  @override
+  late final GeneratedColumn<double> destLng = GeneratedColumn<double>(
+    'dest_lng',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1167,6 +1189,8 @@ class $JourneysTable extends Journeys
     prevFrame,
     newFrame,
     arrivalShown,
+    destLat,
+    destLng,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1275,6 +1299,18 @@ class $JourneysTable extends Journeys
         ),
       );
     }
+    if (data.containsKey('dest_lat')) {
+      context.handle(
+        _destLatMeta,
+        destLat.isAcceptableOrUnknown(data['dest_lat']!, _destLatMeta),
+      );
+    }
+    if (data.containsKey('dest_lng')) {
+      context.handle(
+        _destLngMeta,
+        destLng.isAcceptableOrUnknown(data['dest_lng']!, _destLngMeta),
+      );
+    }
     return context;
   }
 
@@ -1354,6 +1390,14 @@ class $JourneysTable extends Journeys
         DriftSqlType.bool,
         data['${effectivePrefix}arrival_shown'],
       )!,
+      destLat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}dest_lat'],
+      ),
+      destLng: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}dest_lng'],
+      ),
     );
   }
 
@@ -1399,6 +1443,10 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
 
   /// 도착 화면을 보여 줬는지. 앱 밖에서 도착하면 다음 실행 때 먼저 보여 준다
   final bool arrivalShown;
+
+  /// 가상 목적지의 좌표 (destId가 'sketch'인 첫 여정만). 명소 여정은 null
+  final double? destLat;
+  final double? destLng;
   const JourneyRow({
     required this.id,
     required this.originLat,
@@ -1416,6 +1464,8 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     this.prevFrame,
     this.newFrame,
     required this.arrivalShown,
+    this.destLat,
+    this.destLng,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1458,6 +1508,12 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
       );
     }
     map['arrival_shown'] = Variable<bool>(arrivalShown);
+    if (!nullToAbsent || destLat != null) {
+      map['dest_lat'] = Variable<double>(destLat);
+    }
+    if (!nullToAbsent || destLng != null) {
+      map['dest_lng'] = Variable<double>(destLng);
+    }
     return map;
   }
 
@@ -1493,6 +1549,12 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
           ? const Value.absent()
           : Value(newFrame),
       arrivalShown: Value(arrivalShown),
+      destLat: destLat == null && nullToAbsent
+          ? const Value.absent()
+          : Value(destLat),
+      destLng: destLng == null && nullToAbsent
+          ? const Value.absent()
+          : Value(destLng),
     );
   }
 
@@ -1524,6 +1586,8 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
         serializer.fromJson<String?>(json['newFrame']),
       ),
       arrivalShown: serializer.fromJson<bool>(json['arrivalShown']),
+      destLat: serializer.fromJson<double?>(json['destLat']),
+      destLng: serializer.fromJson<double?>(json['destLng']),
     );
   }
   @override
@@ -1552,6 +1616,8 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
         $JourneysTable.$converternewFramen.toJson(newFrame),
       ),
       'arrivalShown': serializer.toJson<bool>(arrivalShown),
+      'destLat': serializer.toJson<double?>(destLat),
+      'destLng': serializer.toJson<double?>(destLng),
     };
   }
 
@@ -1572,6 +1638,8 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     Value<Frame?> prevFrame = const Value.absent(),
     Value<Frame?> newFrame = const Value.absent(),
     bool? arrivalShown,
+    Value<double?> destLat = const Value.absent(),
+    Value<double?> destLng = const Value.absent(),
   }) => JourneyRow(
     id: id ?? this.id,
     originLat: originLat ?? this.originLat,
@@ -1589,6 +1657,8 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     prevFrame: prevFrame.present ? prevFrame.value : this.prevFrame,
     newFrame: newFrame.present ? newFrame.value : this.newFrame,
     arrivalShown: arrivalShown ?? this.arrivalShown,
+    destLat: destLat.present ? destLat.value : this.destLat,
+    destLng: destLng.present ? destLng.value : this.destLng,
   );
   JourneyRow copyWithCompanion(JourneysCompanion data) {
     return JourneyRow(
@@ -1614,6 +1684,8 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
       arrivalShown: data.arrivalShown.present
           ? data.arrivalShown.value
           : this.arrivalShown,
+      destLat: data.destLat.present ? data.destLat.value : this.destLat,
+      destLng: data.destLng.present ? data.destLng.value : this.destLng,
     );
   }
 
@@ -1635,7 +1707,9 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
           ..write('visitNo: $visitNo, ')
           ..write('prevFrame: $prevFrame, ')
           ..write('newFrame: $newFrame, ')
-          ..write('arrivalShown: $arrivalShown')
+          ..write('arrivalShown: $arrivalShown, ')
+          ..write('destLat: $destLat, ')
+          ..write('destLng: $destLng')
           ..write(')'))
         .toString();
   }
@@ -1658,6 +1732,8 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     prevFrame,
     newFrame,
     arrivalShown,
+    destLat,
+    destLng,
   );
   @override
   bool operator ==(Object other) =>
@@ -1678,7 +1754,9 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
           other.visitNo == this.visitNo &&
           other.prevFrame == this.prevFrame &&
           other.newFrame == this.newFrame &&
-          other.arrivalShown == this.arrivalShown);
+          other.arrivalShown == this.arrivalShown &&
+          other.destLat == this.destLat &&
+          other.destLng == this.destLng);
 }
 
 class JourneysCompanion extends UpdateCompanion<JourneyRow> {
@@ -1698,6 +1776,8 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
   final Value<Frame?> prevFrame;
   final Value<Frame?> newFrame;
   final Value<bool> arrivalShown;
+  final Value<double?> destLat;
+  final Value<double?> destLng;
   final Value<int> rowid;
   const JourneysCompanion({
     this.id = const Value.absent(),
@@ -1716,6 +1796,8 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     this.prevFrame = const Value.absent(),
     this.newFrame = const Value.absent(),
     this.arrivalShown = const Value.absent(),
+    this.destLat = const Value.absent(),
+    this.destLng = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   JourneysCompanion.insert({
@@ -1735,6 +1817,8 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     this.prevFrame = const Value.absent(),
     this.newFrame = const Value.absent(),
     this.arrivalShown = const Value.absent(),
+    this.destLat = const Value.absent(),
+    this.destLng = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        originLat = Value(originLat),
@@ -1761,6 +1845,8 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     Expression<String>? prevFrame,
     Expression<String>? newFrame,
     Expression<bool>? arrivalShown,
+    Expression<double>? destLat,
+    Expression<double>? destLng,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1780,6 +1866,8 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
       if (prevFrame != null) 'prev_frame': prevFrame,
       if (newFrame != null) 'new_frame': newFrame,
       if (arrivalShown != null) 'arrival_shown': arrivalShown,
+      if (destLat != null) 'dest_lat': destLat,
+      if (destLng != null) 'dest_lng': destLng,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1801,6 +1889,8 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     Value<Frame?>? prevFrame,
     Value<Frame?>? newFrame,
     Value<bool>? arrivalShown,
+    Value<double?>? destLat,
+    Value<double?>? destLng,
     Value<int>? rowid,
   }) {
     return JourneysCompanion(
@@ -1820,6 +1910,8 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
       prevFrame: prevFrame ?? this.prevFrame,
       newFrame: newFrame ?? this.newFrame,
       arrivalShown: arrivalShown ?? this.arrivalShown,
+      destLat: destLat ?? this.destLat,
+      destLng: destLng ?? this.destLng,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1881,6 +1973,12 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     if (arrivalShown.present) {
       map['arrival_shown'] = Variable<bool>(arrivalShown.value);
     }
+    if (destLat.present) {
+      map['dest_lat'] = Variable<double>(destLat.value);
+    }
+    if (destLng.present) {
+      map['dest_lng'] = Variable<double>(destLng.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1906,6 +2004,8 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
           ..write('prevFrame: $prevFrame, ')
           ..write('newFrame: $newFrame, ')
           ..write('arrivalShown: $arrivalShown, ')
+          ..write('destLat: $destLat, ')
+          ..write('destLng: $destLng, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2555,6 +2655,15 @@ class $PaintingsOwnedTable extends PaintingsOwned
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _sketchMeta = const VerificationMeta('sketch');
+  @override
+  late final GeneratedColumn<String> sketch = GeneratedColumn<String>(
+    'sketch',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     landmarkId,
@@ -2564,6 +2673,7 @@ class $PaintingsOwnedTable extends PaintingsOwned
     firstArrivedUtc,
     lastArrivedUtc,
     seen,
+    sketch,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2629,6 +2739,12 @@ class $PaintingsOwnedTable extends PaintingsOwned
         seen.isAcceptableOrUnknown(data['seen']!, _seenMeta),
       );
     }
+    if (data.containsKey('sketch')) {
+      context.handle(
+        _sketchMeta,
+        sketch.isAcceptableOrUnknown(data['sketch']!, _sketchMeta),
+      );
+    }
     return context;
   }
 
@@ -2668,6 +2784,10 @@ class $PaintingsOwnedTable extends PaintingsOwned
         DriftSqlType.bool,
         data['${effectivePrefix}seen'],
       )!,
+      sketch: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sketch'],
+      ),
     );
   }
 
@@ -2691,6 +2811,9 @@ class PaintingOwnedRow extends DataClass
   final int firstArrivedUtc;
   final int lastArrivedUtc;
   final bool seen;
+
+  /// 다시 그리는 값 JSON (domain/sketch.dart의 Sketch). landmarkId가 'sketch'인 그림만, 명소 그림은 null
+  final String? sketch;
   const PaintingOwnedRow({
     required this.landmarkId,
     required this.visits,
@@ -2699,6 +2822,7 @@ class PaintingOwnedRow extends DataClass
     required this.firstArrivedUtc,
     required this.lastArrivedUtc,
     required this.seen,
+    this.sketch,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2714,6 +2838,9 @@ class PaintingOwnedRow extends DataClass
     map['first_arrived_utc'] = Variable<int>(firstArrivedUtc);
     map['last_arrived_utc'] = Variable<int>(lastArrivedUtc);
     map['seen'] = Variable<bool>(seen);
+    if (!nullToAbsent || sketch != null) {
+      map['sketch'] = Variable<String>(sketch);
+    }
     return map;
   }
 
@@ -2726,6 +2853,9 @@ class PaintingOwnedRow extends DataClass
       firstArrivedUtc: Value(firstArrivedUtc),
       lastArrivedUtc: Value(lastArrivedUtc),
       seen: Value(seen),
+      sketch: sketch == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sketch),
     );
   }
 
@@ -2744,6 +2874,7 @@ class PaintingOwnedRow extends DataClass
       firstArrivedUtc: serializer.fromJson<int>(json['firstArrivedUtc']),
       lastArrivedUtc: serializer.fromJson<int>(json['lastArrivedUtc']),
       seen: serializer.fromJson<bool>(json['seen']),
+      sketch: serializer.fromJson<String?>(json['sketch']),
     );
   }
   @override
@@ -2759,6 +2890,7 @@ class PaintingOwnedRow extends DataClass
       'firstArrivedUtc': serializer.toJson<int>(firstArrivedUtc),
       'lastArrivedUtc': serializer.toJson<int>(lastArrivedUtc),
       'seen': serializer.toJson<bool>(seen),
+      'sketch': serializer.toJson<String?>(sketch),
     };
   }
 
@@ -2770,6 +2902,7 @@ class PaintingOwnedRow extends DataClass
     int? firstArrivedUtc,
     int? lastArrivedUtc,
     bool? seen,
+    Value<String?> sketch = const Value.absent(),
   }) => PaintingOwnedRow(
     landmarkId: landmarkId ?? this.landmarkId,
     visits: visits ?? this.visits,
@@ -2778,6 +2911,7 @@ class PaintingOwnedRow extends DataClass
     firstArrivedUtc: firstArrivedUtc ?? this.firstArrivedUtc,
     lastArrivedUtc: lastArrivedUtc ?? this.lastArrivedUtc,
     seen: seen ?? this.seen,
+    sketch: sketch.present ? sketch.value : this.sketch,
   );
   PaintingOwnedRow copyWithCompanion(PaintingsOwnedCompanion data) {
     return PaintingOwnedRow(
@@ -2794,6 +2928,7 @@ class PaintingOwnedRow extends DataClass
           ? data.lastArrivedUtc.value
           : this.lastArrivedUtc,
       seen: data.seen.present ? data.seen.value : this.seen,
+      sketch: data.sketch.present ? data.sketch.value : this.sketch,
     );
   }
 
@@ -2806,7 +2941,8 @@ class PaintingOwnedRow extends DataClass
           ..write('bestKm: $bestKm, ')
           ..write('firstArrivedUtc: $firstArrivedUtc, ')
           ..write('lastArrivedUtc: $lastArrivedUtc, ')
-          ..write('seen: $seen')
+          ..write('seen: $seen, ')
+          ..write('sketch: $sketch')
           ..write(')'))
         .toString();
   }
@@ -2820,6 +2956,7 @@ class PaintingOwnedRow extends DataClass
     firstArrivedUtc,
     lastArrivedUtc,
     seen,
+    sketch,
   );
   @override
   bool operator ==(Object other) =>
@@ -2831,7 +2968,8 @@ class PaintingOwnedRow extends DataClass
           other.bestKm == this.bestKm &&
           other.firstArrivedUtc == this.firstArrivedUtc &&
           other.lastArrivedUtc == this.lastArrivedUtc &&
-          other.seen == this.seen);
+          other.seen == this.seen &&
+          other.sketch == this.sketch);
 }
 
 class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
@@ -2842,6 +2980,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
   final Value<int> firstArrivedUtc;
   final Value<int> lastArrivedUtc;
   final Value<bool> seen;
+  final Value<String?> sketch;
   final Value<int> rowid;
   const PaintingsOwnedCompanion({
     this.landmarkId = const Value.absent(),
@@ -2851,6 +2990,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     this.firstArrivedUtc = const Value.absent(),
     this.lastArrivedUtc = const Value.absent(),
     this.seen = const Value.absent(),
+    this.sketch = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PaintingsOwnedCompanion.insert({
@@ -2861,6 +3001,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     required int firstArrivedUtc,
     required int lastArrivedUtc,
     this.seen = const Value.absent(),
+    this.sketch = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : landmarkId = Value(landmarkId),
        visits = Value(visits),
@@ -2876,6 +3017,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     Expression<int>? firstArrivedUtc,
     Expression<int>? lastArrivedUtc,
     Expression<bool>? seen,
+    Expression<String>? sketch,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2886,6 +3028,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
       if (firstArrivedUtc != null) 'first_arrived_utc': firstArrivedUtc,
       if (lastArrivedUtc != null) 'last_arrived_utc': lastArrivedUtc,
       if (seen != null) 'seen': seen,
+      if (sketch != null) 'sketch': sketch,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2898,6 +3041,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     Value<int>? firstArrivedUtc,
     Value<int>? lastArrivedUtc,
     Value<bool>? seen,
+    Value<String?>? sketch,
     Value<int>? rowid,
   }) {
     return PaintingsOwnedCompanion(
@@ -2908,6 +3052,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
       firstArrivedUtc: firstArrivedUtc ?? this.firstArrivedUtc,
       lastArrivedUtc: lastArrivedUtc ?? this.lastArrivedUtc,
       seen: seen ?? this.seen,
+      sketch: sketch ?? this.sketch,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2938,6 +3083,9 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
     if (seen.present) {
       map['seen'] = Variable<bool>(seen.value);
     }
+    if (sketch.present) {
+      map['sketch'] = Variable<String>(sketch.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2954,6 +3102,7 @@ class PaintingsOwnedCompanion extends UpdateCompanion<PaintingOwnedRow> {
           ..write('firstArrivedUtc: $firstArrivedUtc, ')
           ..write('lastArrivedUtc: $lastArrivedUtc, ')
           ..write('seen: $seen, ')
+          ..write('sketch: $sketch, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3275,8 +3424,104 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _homeIdMeta = const VerificationMeta('homeId');
   @override
-  List<GeneratedColumn> get $columns => [id, homeName, homeLat, homeLng];
+  late final GeneratedColumn<String> homeId = GeneratedColumn<String>(
+    'home_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ageConfirmedAtMeta = const VerificationMeta(
+    'ageConfirmedAt',
+  );
+  @override
+  late final GeneratedColumn<int> ageConfirmedAt = GeneratedColumn<int>(
+    'age_confirmed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _installIdMeta = const VerificationMeta(
+    'installId',
+  );
+  @override
+  late final GeneratedColumn<String> installId = GeneratedColumn<String>(
+    'install_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nicknameMeta = const VerificationMeta(
+    'nickname',
+  );
+  @override
+  late final GeneratedColumn<String> nickname = GeneratedColumn<String>(
+    'nickname',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lookMeta = const VerificationMeta('look');
+  @override
+  late final GeneratedColumn<String> look = GeneratedColumn<String>(
+    'look',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _onboardedAtMeta = const VerificationMeta(
+    'onboardedAt',
+  );
+  @override
+  late final GeneratedColumn<int> onboardedAt = GeneratedColumn<int>(
+    'onboarded_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _linkConsentAtMeta = const VerificationMeta(
+    'linkConsentAt',
+  );
+  @override
+  late final GeneratedColumn<int> linkConsentAt = GeneratedColumn<int>(
+    'link_consent_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _guestbookConsentAtMeta =
+      const VerificationMeta('guestbookConsentAt');
+  @override
+  late final GeneratedColumn<int> guestbookConsentAt = GeneratedColumn<int>(
+    'guestbook_consent_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    homeName,
+    homeLat,
+    homeLng,
+    homeId,
+    ageConfirmedAt,
+    installId,
+    nickname,
+    look,
+    onboardedAt,
+    linkConsentAt,
+    guestbookConsentAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3310,6 +3555,66 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
         homeLng.isAcceptableOrUnknown(data['home_lng']!, _homeLngMeta),
       );
     }
+    if (data.containsKey('home_id')) {
+      context.handle(
+        _homeIdMeta,
+        homeId.isAcceptableOrUnknown(data['home_id']!, _homeIdMeta),
+      );
+    }
+    if (data.containsKey('age_confirmed_at')) {
+      context.handle(
+        _ageConfirmedAtMeta,
+        ageConfirmedAt.isAcceptableOrUnknown(
+          data['age_confirmed_at']!,
+          _ageConfirmedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('install_id')) {
+      context.handle(
+        _installIdMeta,
+        installId.isAcceptableOrUnknown(data['install_id']!, _installIdMeta),
+      );
+    }
+    if (data.containsKey('nickname')) {
+      context.handle(
+        _nicknameMeta,
+        nickname.isAcceptableOrUnknown(data['nickname']!, _nicknameMeta),
+      );
+    }
+    if (data.containsKey('look')) {
+      context.handle(
+        _lookMeta,
+        look.isAcceptableOrUnknown(data['look']!, _lookMeta),
+      );
+    }
+    if (data.containsKey('onboarded_at')) {
+      context.handle(
+        _onboardedAtMeta,
+        onboardedAt.isAcceptableOrUnknown(
+          data['onboarded_at']!,
+          _onboardedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('link_consent_at')) {
+      context.handle(
+        _linkConsentAtMeta,
+        linkConsentAt.isAcceptableOrUnknown(
+          data['link_consent_at']!,
+          _linkConsentAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('guestbook_consent_at')) {
+      context.handle(
+        _guestbookConsentAtMeta,
+        guestbookConsentAt.isAcceptableOrUnknown(
+          data['guestbook_consent_at']!,
+          _guestbookConsentAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3335,6 +3640,38 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
         DriftSqlType.double,
         data['${effectivePrefix}home_lng'],
       ),
+      homeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}home_id'],
+      ),
+      ageConfirmedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}age_confirmed_at'],
+      ),
+      installId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}install_id'],
+      ),
+      nickname: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nickname'],
+      ),
+      look: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}look'],
+      ),
+      onboardedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}onboarded_at'],
+      ),
+      linkConsentAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}link_consent_at'],
+      ),
+      guestbookConsentAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}guestbook_consent_at'],
+      ),
     );
   }
 
@@ -3346,14 +3683,42 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
 
 class ProfileRow extends DataClass implements Insertable<ProfileRow> {
   final int id;
+
+  /// 사용자가 고른 출발 동네: 시·군·구 이름(label)과 대표 좌표, 시·군·구 id
   final String? homeName;
   final double? homeLat;
   final double? homeLng;
+  final String? homeId;
+
+  /// 만 14세 확인을 누른 시각 (epoch ms). 이게 있어야 설치 번호를 만들고 권한을 묻는다
+  final int? ageConfirmedAt;
+
+  /// 설치 번호 (16바이트 hex 32자). 만 14세 확인 때 한 번 만든다
+  final String? installId;
+  final String? nickname;
+
+  /// 모습 JSON (domain/look.dart의 Look)
+  final String? look;
+
+  /// 시작 흐름의 마지막(권한) 단계를 마친 시각 (epoch ms)
+  final int? onboardedAt;
+
+  /// 계정 연결·방명록 동의 시각 (epoch ms). 쓰는 곳은 M5에서 붙인다
+  final int? linkConsentAt;
+  final int? guestbookConsentAt;
   const ProfileRow({
     required this.id,
     this.homeName,
     this.homeLat,
     this.homeLng,
+    this.homeId,
+    this.ageConfirmedAt,
+    this.installId,
+    this.nickname,
+    this.look,
+    this.onboardedAt,
+    this.linkConsentAt,
+    this.guestbookConsentAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3367,6 +3732,30 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     }
     if (!nullToAbsent || homeLng != null) {
       map['home_lng'] = Variable<double>(homeLng);
+    }
+    if (!nullToAbsent || homeId != null) {
+      map['home_id'] = Variable<String>(homeId);
+    }
+    if (!nullToAbsent || ageConfirmedAt != null) {
+      map['age_confirmed_at'] = Variable<int>(ageConfirmedAt);
+    }
+    if (!nullToAbsent || installId != null) {
+      map['install_id'] = Variable<String>(installId);
+    }
+    if (!nullToAbsent || nickname != null) {
+      map['nickname'] = Variable<String>(nickname);
+    }
+    if (!nullToAbsent || look != null) {
+      map['look'] = Variable<String>(look);
+    }
+    if (!nullToAbsent || onboardedAt != null) {
+      map['onboarded_at'] = Variable<int>(onboardedAt);
+    }
+    if (!nullToAbsent || linkConsentAt != null) {
+      map['link_consent_at'] = Variable<int>(linkConsentAt);
+    }
+    if (!nullToAbsent || guestbookConsentAt != null) {
+      map['guestbook_consent_at'] = Variable<int>(guestbookConsentAt);
     }
     return map;
   }
@@ -3383,6 +3772,28 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       homeLng: homeLng == null && nullToAbsent
           ? const Value.absent()
           : Value(homeLng),
+      homeId: homeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(homeId),
+      ageConfirmedAt: ageConfirmedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ageConfirmedAt),
+      installId: installId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(installId),
+      nickname: nickname == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nickname),
+      look: look == null && nullToAbsent ? const Value.absent() : Value(look),
+      onboardedAt: onboardedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(onboardedAt),
+      linkConsentAt: linkConsentAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkConsentAt),
+      guestbookConsentAt: guestbookConsentAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(guestbookConsentAt),
     );
   }
 
@@ -3396,6 +3807,14 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       homeName: serializer.fromJson<String?>(json['homeName']),
       homeLat: serializer.fromJson<double?>(json['homeLat']),
       homeLng: serializer.fromJson<double?>(json['homeLng']),
+      homeId: serializer.fromJson<String?>(json['homeId']),
+      ageConfirmedAt: serializer.fromJson<int?>(json['ageConfirmedAt']),
+      installId: serializer.fromJson<String?>(json['installId']),
+      nickname: serializer.fromJson<String?>(json['nickname']),
+      look: serializer.fromJson<String?>(json['look']),
+      onboardedAt: serializer.fromJson<int?>(json['onboardedAt']),
+      linkConsentAt: serializer.fromJson<int?>(json['linkConsentAt']),
+      guestbookConsentAt: serializer.fromJson<int?>(json['guestbookConsentAt']),
     );
   }
   @override
@@ -3406,6 +3825,14 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       'homeName': serializer.toJson<String?>(homeName),
       'homeLat': serializer.toJson<double?>(homeLat),
       'homeLng': serializer.toJson<double?>(homeLng),
+      'homeId': serializer.toJson<String?>(homeId),
+      'ageConfirmedAt': serializer.toJson<int?>(ageConfirmedAt),
+      'installId': serializer.toJson<String?>(installId),
+      'nickname': serializer.toJson<String?>(nickname),
+      'look': serializer.toJson<String?>(look),
+      'onboardedAt': serializer.toJson<int?>(onboardedAt),
+      'linkConsentAt': serializer.toJson<int?>(linkConsentAt),
+      'guestbookConsentAt': serializer.toJson<int?>(guestbookConsentAt),
     };
   }
 
@@ -3414,11 +3841,33 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     Value<String?> homeName = const Value.absent(),
     Value<double?> homeLat = const Value.absent(),
     Value<double?> homeLng = const Value.absent(),
+    Value<String?> homeId = const Value.absent(),
+    Value<int?> ageConfirmedAt = const Value.absent(),
+    Value<String?> installId = const Value.absent(),
+    Value<String?> nickname = const Value.absent(),
+    Value<String?> look = const Value.absent(),
+    Value<int?> onboardedAt = const Value.absent(),
+    Value<int?> linkConsentAt = const Value.absent(),
+    Value<int?> guestbookConsentAt = const Value.absent(),
   }) => ProfileRow(
     id: id ?? this.id,
     homeName: homeName.present ? homeName.value : this.homeName,
     homeLat: homeLat.present ? homeLat.value : this.homeLat,
     homeLng: homeLng.present ? homeLng.value : this.homeLng,
+    homeId: homeId.present ? homeId.value : this.homeId,
+    ageConfirmedAt: ageConfirmedAt.present
+        ? ageConfirmedAt.value
+        : this.ageConfirmedAt,
+    installId: installId.present ? installId.value : this.installId,
+    nickname: nickname.present ? nickname.value : this.nickname,
+    look: look.present ? look.value : this.look,
+    onboardedAt: onboardedAt.present ? onboardedAt.value : this.onboardedAt,
+    linkConsentAt: linkConsentAt.present
+        ? linkConsentAt.value
+        : this.linkConsentAt,
+    guestbookConsentAt: guestbookConsentAt.present
+        ? guestbookConsentAt.value
+        : this.guestbookConsentAt,
   );
   ProfileRow copyWithCompanion(ProfileCompanion data) {
     return ProfileRow(
@@ -3426,6 +3875,22 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       homeName: data.homeName.present ? data.homeName.value : this.homeName,
       homeLat: data.homeLat.present ? data.homeLat.value : this.homeLat,
       homeLng: data.homeLng.present ? data.homeLng.value : this.homeLng,
+      homeId: data.homeId.present ? data.homeId.value : this.homeId,
+      ageConfirmedAt: data.ageConfirmedAt.present
+          ? data.ageConfirmedAt.value
+          : this.ageConfirmedAt,
+      installId: data.installId.present ? data.installId.value : this.installId,
+      nickname: data.nickname.present ? data.nickname.value : this.nickname,
+      look: data.look.present ? data.look.value : this.look,
+      onboardedAt: data.onboardedAt.present
+          ? data.onboardedAt.value
+          : this.onboardedAt,
+      linkConsentAt: data.linkConsentAt.present
+          ? data.linkConsentAt.value
+          : this.linkConsentAt,
+      guestbookConsentAt: data.guestbookConsentAt.present
+          ? data.guestbookConsentAt.value
+          : this.guestbookConsentAt,
     );
   }
 
@@ -3435,13 +3900,34 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
           ..write('id: $id, ')
           ..write('homeName: $homeName, ')
           ..write('homeLat: $homeLat, ')
-          ..write('homeLng: $homeLng')
+          ..write('homeLng: $homeLng, ')
+          ..write('homeId: $homeId, ')
+          ..write('ageConfirmedAt: $ageConfirmedAt, ')
+          ..write('installId: $installId, ')
+          ..write('nickname: $nickname, ')
+          ..write('look: $look, ')
+          ..write('onboardedAt: $onboardedAt, ')
+          ..write('linkConsentAt: $linkConsentAt, ')
+          ..write('guestbookConsentAt: $guestbookConsentAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, homeName, homeLat, homeLng);
+  int get hashCode => Object.hash(
+    id,
+    homeName,
+    homeLat,
+    homeLng,
+    homeId,
+    ageConfirmedAt,
+    installId,
+    nickname,
+    look,
+    onboardedAt,
+    linkConsentAt,
+    guestbookConsentAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3449,7 +3935,15 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
           other.id == this.id &&
           other.homeName == this.homeName &&
           other.homeLat == this.homeLat &&
-          other.homeLng == this.homeLng);
+          other.homeLng == this.homeLng &&
+          other.homeId == this.homeId &&
+          other.ageConfirmedAt == this.ageConfirmedAt &&
+          other.installId == this.installId &&
+          other.nickname == this.nickname &&
+          other.look == this.look &&
+          other.onboardedAt == this.onboardedAt &&
+          other.linkConsentAt == this.linkConsentAt &&
+          other.guestbookConsentAt == this.guestbookConsentAt);
 }
 
 class ProfileCompanion extends UpdateCompanion<ProfileRow> {
@@ -3457,29 +3951,70 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
   final Value<String?> homeName;
   final Value<double?> homeLat;
   final Value<double?> homeLng;
+  final Value<String?> homeId;
+  final Value<int?> ageConfirmedAt;
+  final Value<String?> installId;
+  final Value<String?> nickname;
+  final Value<String?> look;
+  final Value<int?> onboardedAt;
+  final Value<int?> linkConsentAt;
+  final Value<int?> guestbookConsentAt;
   const ProfileCompanion({
     this.id = const Value.absent(),
     this.homeName = const Value.absent(),
     this.homeLat = const Value.absent(),
     this.homeLng = const Value.absent(),
+    this.homeId = const Value.absent(),
+    this.ageConfirmedAt = const Value.absent(),
+    this.installId = const Value.absent(),
+    this.nickname = const Value.absent(),
+    this.look = const Value.absent(),
+    this.onboardedAt = const Value.absent(),
+    this.linkConsentAt = const Value.absent(),
+    this.guestbookConsentAt = const Value.absent(),
   });
   ProfileCompanion.insert({
     this.id = const Value.absent(),
     this.homeName = const Value.absent(),
     this.homeLat = const Value.absent(),
     this.homeLng = const Value.absent(),
+    this.homeId = const Value.absent(),
+    this.ageConfirmedAt = const Value.absent(),
+    this.installId = const Value.absent(),
+    this.nickname = const Value.absent(),
+    this.look = const Value.absent(),
+    this.onboardedAt = const Value.absent(),
+    this.linkConsentAt = const Value.absent(),
+    this.guestbookConsentAt = const Value.absent(),
   });
   static Insertable<ProfileRow> custom({
     Expression<int>? id,
     Expression<String>? homeName,
     Expression<double>? homeLat,
     Expression<double>? homeLng,
+    Expression<String>? homeId,
+    Expression<int>? ageConfirmedAt,
+    Expression<String>? installId,
+    Expression<String>? nickname,
+    Expression<String>? look,
+    Expression<int>? onboardedAt,
+    Expression<int>? linkConsentAt,
+    Expression<int>? guestbookConsentAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (homeName != null) 'home_name': homeName,
       if (homeLat != null) 'home_lat': homeLat,
       if (homeLng != null) 'home_lng': homeLng,
+      if (homeId != null) 'home_id': homeId,
+      if (ageConfirmedAt != null) 'age_confirmed_at': ageConfirmedAt,
+      if (installId != null) 'install_id': installId,
+      if (nickname != null) 'nickname': nickname,
+      if (look != null) 'look': look,
+      if (onboardedAt != null) 'onboarded_at': onboardedAt,
+      if (linkConsentAt != null) 'link_consent_at': linkConsentAt,
+      if (guestbookConsentAt != null)
+        'guestbook_consent_at': guestbookConsentAt,
     });
   }
 
@@ -3488,12 +4023,28 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     Value<String?>? homeName,
     Value<double?>? homeLat,
     Value<double?>? homeLng,
+    Value<String?>? homeId,
+    Value<int?>? ageConfirmedAt,
+    Value<String?>? installId,
+    Value<String?>? nickname,
+    Value<String?>? look,
+    Value<int?>? onboardedAt,
+    Value<int?>? linkConsentAt,
+    Value<int?>? guestbookConsentAt,
   }) {
     return ProfileCompanion(
       id: id ?? this.id,
       homeName: homeName ?? this.homeName,
       homeLat: homeLat ?? this.homeLat,
       homeLng: homeLng ?? this.homeLng,
+      homeId: homeId ?? this.homeId,
+      ageConfirmedAt: ageConfirmedAt ?? this.ageConfirmedAt,
+      installId: installId ?? this.installId,
+      nickname: nickname ?? this.nickname,
+      look: look ?? this.look,
+      onboardedAt: onboardedAt ?? this.onboardedAt,
+      linkConsentAt: linkConsentAt ?? this.linkConsentAt,
+      guestbookConsentAt: guestbookConsentAt ?? this.guestbookConsentAt,
     );
   }
 
@@ -3512,6 +4063,30 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     if (homeLng.present) {
       map['home_lng'] = Variable<double>(homeLng.value);
     }
+    if (homeId.present) {
+      map['home_id'] = Variable<String>(homeId.value);
+    }
+    if (ageConfirmedAt.present) {
+      map['age_confirmed_at'] = Variable<int>(ageConfirmedAt.value);
+    }
+    if (installId.present) {
+      map['install_id'] = Variable<String>(installId.value);
+    }
+    if (nickname.present) {
+      map['nickname'] = Variable<String>(nickname.value);
+    }
+    if (look.present) {
+      map['look'] = Variable<String>(look.value);
+    }
+    if (onboardedAt.present) {
+      map['onboarded_at'] = Variable<int>(onboardedAt.value);
+    }
+    if (linkConsentAt.present) {
+      map['link_consent_at'] = Variable<int>(linkConsentAt.value);
+    }
+    if (guestbookConsentAt.present) {
+      map['guestbook_consent_at'] = Variable<int>(guestbookConsentAt.value);
+    }
     return map;
   }
 
@@ -3521,7 +4096,15 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
           ..write('id: $id, ')
           ..write('homeName: $homeName, ')
           ..write('homeLat: $homeLat, ')
-          ..write('homeLng: $homeLng')
+          ..write('homeLng: $homeLng, ')
+          ..write('homeId: $homeId, ')
+          ..write('ageConfirmedAt: $ageConfirmedAt, ')
+          ..write('installId: $installId, ')
+          ..write('nickname: $nickname, ')
+          ..write('look: $look, ')
+          ..write('onboardedAt: $onboardedAt, ')
+          ..write('linkConsentAt: $linkConsentAt, ')
+          ..write('guestbookConsentAt: $guestbookConsentAt')
           ..write(')'))
         .toString();
   }
@@ -4337,6 +4920,8 @@ typedef $$JourneysTableCreateCompanionBuilder = JourneysCompanion Function({
   Value<Frame?> prevFrame,
   Value<Frame?> newFrame,
   Value<bool> arrivalShown,
+  Value<double?> destLat,
+  Value<double?> destLng,
   Value<int> rowid,
 });
 typedef $$JourneysTableUpdateCompanionBuilder = JourneysCompanion Function({
@@ -4356,6 +4941,8 @@ typedef $$JourneysTableUpdateCompanionBuilder = JourneysCompanion Function({
   Value<Frame?> prevFrame,
   Value<Frame?> newFrame,
   Value<bool> arrivalShown,
+  Value<double?> destLat,
+  Value<double?> destLng,
   Value<int> rowid,
 });
 
@@ -4449,6 +5036,16 @@ class $$JourneysTableFilterComposer extends Composer<_$AppDb, $JourneysTable> {
     column: $table.arrivalShown,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<double> get destLat => $composableBuilder(
+    column: $table.destLat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get destLng => $composableBuilder(
+    column: $table.destLng,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$JourneysTableOrderingComposer
@@ -4539,6 +5136,16 @@ class $$JourneysTableOrderingComposer
     column: $table.arrivalShown,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get destLat => $composableBuilder(
+    column: $table.destLat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get destLng => $composableBuilder(
+    column: $table.destLng,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$JourneysTableAnnotationComposer
@@ -4603,6 +5210,12 @@ class $$JourneysTableAnnotationComposer
     column: $table.arrivalShown,
     builder: (column) => column,
   );
+
+  GeneratedColumn<double> get destLat =>
+      $composableBuilder(column: $table.destLat, builder: (column) => column);
+
+  GeneratedColumn<double> get destLng =>
+      $composableBuilder(column: $table.destLng, builder: (column) => column);
 }
 
 class $$JourneysTableTableManager
@@ -4649,6 +5262,8 @@ class $$JourneysTableTableManager
                 Value<Frame?> prevFrame = const Value.absent(),
                 Value<Frame?> newFrame = const Value.absent(),
                 Value<bool> arrivalShown = const Value.absent(),
+                Value<double?> destLat = const Value.absent(),
+                Value<double?> destLng = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => JourneysCompanion(
                 id: id,
@@ -4667,6 +5282,8 @@ class $$JourneysTableTableManager
                 prevFrame: prevFrame,
                 newFrame: newFrame,
                 arrivalShown: arrivalShown,
+                destLat: destLat,
+                destLng: destLng,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4687,6 +5304,8 @@ class $$JourneysTableTableManager
                 Value<Frame?> prevFrame = const Value.absent(),
                 Value<Frame?> newFrame = const Value.absent(),
                 Value<bool> arrivalShown = const Value.absent(),
+                Value<double?> destLat = const Value.absent(),
+                Value<double?> destLng = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => JourneysCompanion.insert(
                 id: id,
@@ -4705,6 +5324,8 @@ class $$JourneysTableTableManager
                 prevFrame: prevFrame,
                 newFrame: newFrame,
                 arrivalShown: arrivalShown,
+                destLat: destLat,
+                destLng: destLng,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -5094,6 +5715,7 @@ typedef $$PaintingsOwnedTableCreateCompanionBuilder =
       required int firstArrivedUtc,
       required int lastArrivedUtc,
       Value<bool> seen,
+      Value<String?> sketch,
       Value<int> rowid,
     });
 typedef $$PaintingsOwnedTableUpdateCompanionBuilder =
@@ -5105,6 +5727,7 @@ typedef $$PaintingsOwnedTableUpdateCompanionBuilder =
       Value<int> firstArrivedUtc,
       Value<int> lastArrivedUtc,
       Value<bool> seen,
+      Value<String?> sketch,
       Value<int> rowid,
     });
 
@@ -5152,6 +5775,11 @@ class $$PaintingsOwnedTableFilterComposer
     column: $table.seen,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<String> get sketch => $composableBuilder(
+    column: $table.sketch,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$PaintingsOwnedTableOrderingComposer
@@ -5197,6 +5825,11 @@ class $$PaintingsOwnedTableOrderingComposer
     column: $table.seen,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get sketch => $composableBuilder(
+    column: $table.sketch,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PaintingsOwnedTableAnnotationComposer
@@ -5234,6 +5867,9 @@ class $$PaintingsOwnedTableAnnotationComposer
 
   GeneratedColumn<bool> get seen =>
       $composableBuilder(column: $table.seen, builder: (column) => column);
+
+  GeneratedColumn<String> get sketch =>
+      $composableBuilder(column: $table.sketch, builder: (column) => column);
 }
 
 class $$PaintingsOwnedTableTableManager
@@ -5274,6 +5910,7 @@ class $$PaintingsOwnedTableTableManager
                 Value<int> firstArrivedUtc = const Value.absent(),
                 Value<int> lastArrivedUtc = const Value.absent(),
                 Value<bool> seen = const Value.absent(),
+                Value<String?> sketch = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaintingsOwnedCompanion(
                 landmarkId: landmarkId,
@@ -5283,6 +5920,7 @@ class $$PaintingsOwnedTableTableManager
                 firstArrivedUtc: firstArrivedUtc,
                 lastArrivedUtc: lastArrivedUtc,
                 seen: seen,
+                sketch: sketch,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5294,6 +5932,7 @@ class $$PaintingsOwnedTableTableManager
                 required int firstArrivedUtc,
                 required int lastArrivedUtc,
                 Value<bool> seen = const Value.absent(),
+                Value<String?> sketch = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaintingsOwnedCompanion.insert(
                 landmarkId: landmarkId,
@@ -5303,6 +5942,7 @@ class $$PaintingsOwnedTableTableManager
                 firstArrivedUtc: firstArrivedUtc,
                 lastArrivedUtc: lastArrivedUtc,
                 seen: seen,
+                sketch: sketch,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -5512,12 +6152,28 @@ typedef $$ProfileTableCreateCompanionBuilder = ProfileCompanion Function({
   Value<String?> homeName,
   Value<double?> homeLat,
   Value<double?> homeLng,
+  Value<String?> homeId,
+  Value<int?> ageConfirmedAt,
+  Value<String?> installId,
+  Value<String?> nickname,
+  Value<String?> look,
+  Value<int?> onboardedAt,
+  Value<int?> linkConsentAt,
+  Value<int?> guestbookConsentAt,
 });
 typedef $$ProfileTableUpdateCompanionBuilder = ProfileCompanion Function({
   Value<int> id,
   Value<String?> homeName,
   Value<double?> homeLat,
   Value<double?> homeLng,
+  Value<String?> homeId,
+  Value<int?> ageConfirmedAt,
+  Value<String?> installId,
+  Value<String?> nickname,
+  Value<String?> look,
+  Value<int?> onboardedAt,
+  Value<int?> linkConsentAt,
+  Value<int?> guestbookConsentAt,
 });
 
 class $$ProfileTableFilterComposer extends Composer<_$AppDb, $ProfileTable> {
@@ -5545,6 +6201,46 @@ class $$ProfileTableFilterComposer extends Composer<_$AppDb, $ProfileTable> {
 
   ColumnFilters<double> get homeLng => $composableBuilder(
     column: $table.homeLng,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get homeId => $composableBuilder(
+    column: $table.homeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ageConfirmedAt => $composableBuilder(
+    column: $table.ageConfirmedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get installId => $composableBuilder(
+    column: $table.installId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nickname => $composableBuilder(
+    column: $table.nickname,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get look => $composableBuilder(
+    column: $table.look,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get onboardedAt => $composableBuilder(
+    column: $table.onboardedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get linkConsentAt => $composableBuilder(
+    column: $table.linkConsentAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get guestbookConsentAt => $composableBuilder(
+    column: $table.guestbookConsentAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5576,6 +6272,46 @@ class $$ProfileTableOrderingComposer extends Composer<_$AppDb, $ProfileTable> {
     column: $table.homeLng,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get homeId => $composableBuilder(
+    column: $table.homeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ageConfirmedAt => $composableBuilder(
+    column: $table.ageConfirmedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get installId => $composableBuilder(
+    column: $table.installId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nickname => $composableBuilder(
+    column: $table.nickname,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get look => $composableBuilder(
+    column: $table.look,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get onboardedAt => $composableBuilder(
+    column: $table.onboardedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get linkConsentAt => $composableBuilder(
+    column: $table.linkConsentAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get guestbookConsentAt => $composableBuilder(
+    column: $table.guestbookConsentAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProfileTableAnnotationComposer
@@ -5598,6 +6334,38 @@ class $$ProfileTableAnnotationComposer
 
   GeneratedColumn<double> get homeLng =>
       $composableBuilder(column: $table.homeLng, builder: (column) => column);
+
+  GeneratedColumn<String> get homeId =>
+      $composableBuilder(column: $table.homeId, builder: (column) => column);
+
+  GeneratedColumn<int> get ageConfirmedAt => $composableBuilder(
+    column: $table.ageConfirmedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get installId =>
+      $composableBuilder(column: $table.installId, builder: (column) => column);
+
+  GeneratedColumn<String> get nickname =>
+      $composableBuilder(column: $table.nickname, builder: (column) => column);
+
+  GeneratedColumn<String> get look =>
+      $composableBuilder(column: $table.look, builder: (column) => column);
+
+  GeneratedColumn<int> get onboardedAt => $composableBuilder(
+    column: $table.onboardedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get linkConsentAt => $composableBuilder(
+    column: $table.linkConsentAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get guestbookConsentAt => $composableBuilder(
+    column: $table.guestbookConsentAt,
+    builder: (column) => column,
+  );
 }
 
 class $$ProfileTableTableManager
@@ -5632,11 +6400,27 @@ class $$ProfileTableTableManager
                 Value<String?> homeName = const Value.absent(),
                 Value<double?> homeLat = const Value.absent(),
                 Value<double?> homeLng = const Value.absent(),
+                Value<String?> homeId = const Value.absent(),
+                Value<int?> ageConfirmedAt = const Value.absent(),
+                Value<String?> installId = const Value.absent(),
+                Value<String?> nickname = const Value.absent(),
+                Value<String?> look = const Value.absent(),
+                Value<int?> onboardedAt = const Value.absent(),
+                Value<int?> linkConsentAt = const Value.absent(),
+                Value<int?> guestbookConsentAt = const Value.absent(),
               }) => ProfileCompanion(
                 id: id,
                 homeName: homeName,
                 homeLat: homeLat,
                 homeLng: homeLng,
+                homeId: homeId,
+                ageConfirmedAt: ageConfirmedAt,
+                installId: installId,
+                nickname: nickname,
+                look: look,
+                onboardedAt: onboardedAt,
+                linkConsentAt: linkConsentAt,
+                guestbookConsentAt: guestbookConsentAt,
               ),
           createCompanionCallback:
               ({
@@ -5644,11 +6428,27 @@ class $$ProfileTableTableManager
                 Value<String?> homeName = const Value.absent(),
                 Value<double?> homeLat = const Value.absent(),
                 Value<double?> homeLng = const Value.absent(),
+                Value<String?> homeId = const Value.absent(),
+                Value<int?> ageConfirmedAt = const Value.absent(),
+                Value<String?> installId = const Value.absent(),
+                Value<String?> nickname = const Value.absent(),
+                Value<String?> look = const Value.absent(),
+                Value<int?> onboardedAt = const Value.absent(),
+                Value<int?> linkConsentAt = const Value.absent(),
+                Value<int?> guestbookConsentAt = const Value.absent(),
               }) => ProfileCompanion.insert(
                 id: id,
                 homeName: homeName,
                 homeLat: homeLat,
                 homeLng: homeLng,
+                homeId: homeId,
+                ageConfirmedAt: ageConfirmedAt,
+                installId: installId,
+                nickname: nickname,
+                look: look,
+                onboardedAt: onboardedAt,
+                linkConsentAt: linkConsentAt,
+                guestbookConsentAt: guestbookConsentAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(

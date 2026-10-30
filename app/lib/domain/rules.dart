@@ -94,6 +94,8 @@ class Rules {
     required this.earthRadiusKm,
     required this.ports,
     required this.islands,
+    required this.firstSketchMinKm,
+    required this.firstSketchMaxKm,
     required this.frameSilverKm,
     required this.frameGoldKm,
     required this.travelFundCapKm,
@@ -121,6 +123,9 @@ class Rules {
     required this.skyStars,
     required this.skyArc,
     required this.timeTint,
+    required this.nicknameMin,
+    required this.nicknameMax,
+    required this.notificationDailyMax,
     required this.allowedSourcesIos,
     required this.allowedSourcesAndroid,
   });
@@ -146,6 +151,10 @@ class Rules {
   /// wando·jeju·pohang·dodong
   final Map<String, LatLng> ports;
   final Map<Island, Bounds> islands;
+
+  /// 첫 여정 '내 동네 스케치'의 목적지까지 거리 범위(km) (config journey.firstSketchKm)
+  final double firstSketchMinKm;
+  final double firstSketchMaxKm;
 
   final double frameSilverKm;
   final double frameGoldKm;
@@ -204,6 +213,13 @@ class Rules {
   /// SkyPhase 변환은 time_tint.dart (sky.dart가 rules.dart를 읽어서 여기서는 문자열 키)
   final Map<String, TimeTint> timeTint;
 
+  /// 닉네임 길이(글자 수) 범위 (config profile)
+  final int nicknameMin;
+  final int nicknameMax;
+
+  /// 알림은 하루 이만큼까지만 (config notifications.dailyMax). 시작 화면의 알림 권한 설명에도 쓴다
+  final int notificationDailyMax;
+
   /// 비어 있으면 출처로 거르지 않는다 (M1 초기 수집용)
   final List<String> allowedSourcesIos;
   final List<String> allowedSourcesAndroid;
@@ -222,11 +238,14 @@ class Rules {
     final journey = j['journey'] as Map<String, dynamic>;
     final frame = journey['frame'] as Map<String, dynamic>;
     final eta = journey['eta'] as Map<String, dynamic>;
+    final firstSketch = journey['firstSketchKm'] as Map<String, dynamic>;
     final scene = j['scene'] as Map<String, dynamic>;
     final sky = scene['sky'] as Map<String, dynamic>;
     final fromSunrise = sky['fromSunriseMin'] as Map<String, dynamic>;
     final fromSunset = sky['fromSunsetMin'] as Map<String, dynamic>;
     final arc = sky['arc'] as Map<String, dynamic>;
+    final profile = j['profile'] as Map<String, dynamic>;
+    final notifications = j['notifications'] as Map<String, dynamic>;
     final sources = j['allowedSources'] as Map<String, dynamic>;
 
     LatLng latLng(dynamic v) => LatLng(_d(v['lat']), _d(v['lng']));
@@ -270,6 +289,8 @@ class Rules {
         Island.jeju: bounds(islandJson['jeju']),
         Island.ulleung: bounds(islandJson['ulleung']),
       },
+      firstSketchMinKm: _d(firstSketch['min']),
+      firstSketchMaxKm: _d(firstSketch['max']),
       frameSilverKm: _d(frame['silverKm']),
       frameGoldKm: _d(frame['goldKm']),
       travelFundCapKm: _d(journey['travelFundCapKm']),
@@ -316,6 +337,9 @@ class Rules {
       ),
       timeTint: (scene['tint'] as Map<String, dynamic>).map((k, v) => MapEntry(
           k, TimeTint(_hex(v['color'] as String), _d(v['bg']), _d(v['char'])))),
+      nicknameMin: profile['nicknameMin'] as int,
+      nicknameMax: profile['nicknameMax'] as int,
+      notificationDailyMax: notifications['dailyMax'] as int,
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),
       allowedSourcesAndroid: (sources['android'] as List).cast<String>(),
     );

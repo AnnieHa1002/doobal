@@ -1,3 +1,4 @@
+import 'package:doobal/app/auto_sync.dart';
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
@@ -69,11 +70,13 @@ class _Env {
       ];
 
   /// 설치(= _t0)하고 출발 동네를 testHome으로 골라 둔다([home]이 false면 안 고른 채로).
+  /// 시작 흐름도 끝낸 것으로 둔다(DoobalApp이 쉼터를 바로 띄운다).
   /// 원하면 kr003으로 여정을 시작해 둔다
   Future<void> seed(WidgetTester tester, {String? dest, LatLng? origin, bool home = true}) =>
       tester.runAsync(() async {
         await svc.sync(_t0);
         if (home) await svc.setHome(testHomeName, testHome);
+        await completeOnboarding(db, home: home);
         if (origin != null) await placeAt(db, origin, _t0);
         if (dest != null) await svc.startJourney(dest, _t1);
       }) as Future<void>;
@@ -149,7 +152,14 @@ void main() {
       final e = _Env();
       await e.seed(tester, home: false);
       _phone(tester);
-      await tester.pumpWidget(ProviderScope(overrides: e.overrides, child: const DoobalApp()));
+      // 시작 관문은 출발 동네가 없으면 ③ 단계를 띄우니, 쉼터의 임시 카드는 관문 없이 직접 띄운다
+      await tester.pumpWidget(ProviderScope(
+        overrides: e.overrides,
+        child: MaterialApp(
+          scaffoldMessengerKey: scaffoldMessengerKey,
+          home: const AutoSync(child: RestScreen()),
+        ),
+      ));
       await _settle(tester, () => find.text('출발 동네를 골라 주세요').evaluate().isNotEmpty);
 
       expect(find.text('출발 동네를 골라 주세요'), findsOneWidget);

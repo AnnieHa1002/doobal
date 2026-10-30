@@ -13,6 +13,7 @@ import '../common/frame_style.dart';
 import '../common/framed_painting.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
+import '../common/sketch_painting.dart';
 import '../common/toast.dart';
 import '../map/map_screen.dart';
 
@@ -25,6 +26,7 @@ const _maxBlur = 14.0;
 const _frameThickness = 12.0;
 
 /// 도착: 그림이 종이에 먹이 번지듯 나타나고, 이어서 액자와 이름이 붙고, 방문·거리·날짜·걸음 카드가 나온다.
+/// 내 동네 스케치는 액자 없이 그림만 번지고, 카드에는 이름·거리·날짜·걸음만 나온다.
 /// 닫은 뒤 본 것으로 적는 건 AutoSync가 한다
 class ArrivalScreen extends ConsumerWidget {
   const ArrivalScreen({super.key, required this.journeyId});
@@ -156,11 +158,14 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
 
   /// 그림은 번지며 나타나고(투명 → 불투명, 흐림 → 또렷), 끝나면 액자와 이름이 나타난다
   Widget _paintingAndFrame(ArrivalView v) {
+    final sketch = v.sketch;
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
         final blur = (1 - _painting.value) * _maxBlur;
-        Widget face = PaintingFace(landmark: v.dest, label: v.dest.name);
+        Widget face = sketch == null
+            ? PaintingFace(landmark: v.dest, label: v.dest.name)
+            : SketchThumb(sketch: sketch);
         if (blur > 0.01) {
           face = ImageFiltered(
             imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur, tileMode: TileMode.decal),
@@ -178,7 +183,8 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
                     fit: StackFit.expand,
                     children: [
                       Padding(
-                        padding: EdgeInsets.all(frameInset(_frameThickness)),
+                        // 스케치는 액자가 없어서 그림이 자리를 다 쓴다
+                        padding: EdgeInsets.all(sketch == null ? frameInset(_frameThickness) : 0),
                         child: ClipRect(
                           child: Opacity(
                             key: const ValueKey('arrival-painting'),
@@ -187,32 +193,35 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
                           ),
                         ),
                       ),
-                      Opacity(
-                        key: const ValueKey('arrival-frame'),
-                        opacity: _frame.value,
-                        child: FrameBorder(
-                          color: frameColors[v.newFrame]!,
-                          thickness: _frameThickness,
+                      if (sketch == null)
+                        Opacity(
+                          key: const ValueKey('arrival-frame'),
+                          opacity: _frame.value,
+                          child: FrameBorder(
+                            color: frameColors[v.newFrame]!,
+                            thickness: _frameThickness,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            Opacity(
-              key: const ValueKey('arrival-frame-label'),
-              opacity: _frame.value,
-              child: Text(
-                frameLabel(v.newFrame),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Palette.ink,
+            if (sketch == null) ...[
+              const SizedBox(height: 8),
+              Opacity(
+                key: const ValueKey('arrival-frame-label'),
+                opacity: _frame.value,
+                child: Text(
+                  frameLabel(v.newFrame),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Palette.ink,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         );
       },
@@ -221,7 +230,10 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
 
   Widget _infoCard(ArrivalView v) {
     const body = TextStyle(fontSize: 14, color: Palette.ink);
-    final revisit = revisitLine(v.visitNo, v.prevFrame, v.newFrame, v.prevBestKm);
+    // 스케치는 액자 등급·몇 번째 방문·재방문 줄이 없다
+    final isSketch = v.sketch != null;
+    final revisit =
+        isSketch ? null : revisitLine(v.visitNo, v.prevFrame, v.newFrame, v.prevBestKm);
     return _Card(
       key: const ValueKey('arrival-card'),
       child: Column(
@@ -232,7 +244,8 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
           ),
           const SizedBox(height: 4),
-          Text('${v.visitNo}번째 방문', style: body.copyWith(fontWeight: FontWeight.w600)),
+          if (!isSketch)
+            Text('${v.visitNo}번째 방문', style: body.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Text('이번 여정 ${formatKm(v.journeyKm)}', style: body),
           const SizedBox(height: 2),

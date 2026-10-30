@@ -8,8 +8,10 @@ import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/framed_painting.dart';
 import '../common/palette.dart';
+import '../common/sketch_painting.dart';
 
 /// 그림 상세: 큰 액자 그림, 이름, 시도·시군구·지형, 액자 등급과 방문 기록.
+/// 내 동네 스케치는 액자·방문 기록이 없어서 큰 그림과 이름·날짜만 보여 준다.
 /// 공유 버튼은 공유 패키지를 넣을 때 더한다
 class PaintingDetailScreen extends ConsumerWidget {
   const PaintingDetailScreen({super.key, required this.landmarkId});
@@ -47,12 +49,44 @@ class PaintingDetailScreen extends ConsumerWidget {
                   ? const SizedBox.shrink()
                   : SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                      child: _content(painting, visits),
+                      child: painting.sketch != null
+                          ? _sketchContent(painting)
+                          : _content(painting, visits),
                     ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// 내 동네 스케치: 큰 그림, 이름, 도착한 날짜
+  Widget _sketchContent(OwnedPaintingView p) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 300),
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: SketchThumb(key: const ValueKey('detail-sketch'), sketch: p.sketch!),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          p.landmark.name,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Palette.ink),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          formatMonthDay(kstDate(p.firstArrivedAt)),
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, color: Palette.subInk),
+        ),
+      ],
     );
   }
 

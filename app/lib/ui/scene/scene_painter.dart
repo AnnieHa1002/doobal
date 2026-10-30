@@ -10,6 +10,7 @@ import '../../domain/sky.dart';
 import '../../domain/time_tint.dart';
 import '../common/palette.dart';
 import 'scene_palette.dart';
+import 'sky_painter.dart';
 
 enum SceneMode { rest, walking }
 
@@ -20,11 +21,10 @@ const _figureHeight = 135.0;
 const _pathHalfWidth = 40.0;
 
 /// 땅 한 장을 줄무늬 몇 칸으로 나눌지(짝수여야 한 바퀴 돌아도 무늬가 이어진다),
-/// 숲 덩이·전경 풀 개수, 별 개수
+/// 숲 덩이·전경 풀 개수
 const _groundStripes = 32;
 const _groveCount = 16;
 const _tuftCount = 28;
-const _starCount = 40;
 
 /// 바다 후경(울릉도 등)의 먼 산은 띠 안에서 이만큼만 오르내린다
 const _seaHillFlatten = 0.35;
@@ -136,81 +136,9 @@ class ScenePainter extends CustomPainter {
   Paint _tintPaint(int factor) =>
       Paint()..colorFilter = ColorFilter.mode(Color(factor), BlendMode.modulate);
 
-  /// 하늘: 지평선까지 세로 그라디언트(위·가운데·지평선), 그 아래는 지평선 색.
-  /// 별 → 빛무리 → 해·달 순. 시간대 색은 입히지 않는다
-  void _sky(Canvas canvas, Size size, double k) {
-    final s = look.sky;
-    final horizon = rules.horizonY * k;
-    final skyRect = Rect.fromLTRB(0, 0, size.width, horizon);
-    canvas.drawRect(
-      skyRect,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(s.top), Color(s.mid), Color(s.horizon)],
-          stops: [0, rules.skyMidStop, 1],
-        ).createShader(skyRect),
-    );
-    canvas.drawRect(Rect.fromLTRB(0, horizon, size.width, size.height),
-        Paint()..color = Color(s.horizon));
-
-    canvas.save();
-    canvas.clipRect(skyRect);
-    _stars(canvas, size, horizon, k);
-    _celestial(canvas, size, k);
-    canvas.restore();
-  }
-
-  /// 별: 번호로만 정해지는 고정 위치(번호를 섞은 값이라 줄지어 서지 않는다). 하늘 위쪽 절반에 불투명도 sky.stars로
-  void _stars(Canvas canvas, Size size, double horizon, double k) {
-    final alpha = look.sky.stars;
-    if (alpha <= 0) return;
-    final paint = Paint()..color = starColor.withValues(alpha: alpha);
-    for (var i = 0; i < _starCount; i++) {
-      final fx = _scatter(i, 1);
-      final fy = _scatter(i, 2);
-      final r = (1 + i * 7 % 3) * 2.5 * k;
-      canvas.drawCircle(Offset(fx * size.width, horizon * (0.03 + 0.5 * fy)), r, paint);
-    }
-  }
-
-  /// 번호 [i]를 섞어 [0, 1)로. 같은 번호·[salt]면 늘 같은 값
-  static double _scatter(int i, int salt) {
-    var x = (i * 374761393 + salt * 668265263) & 0x7FFFFFFF;
-    x = ((x ^ (x >> 13)) * 1274126177) & 0x7FFFFFFF;
-    return (x ^ (x >> 16)) / 0x80000000;
-  }
-
-  /// 빛무리와 해·달. 호: x는 leftX → rightX, y는 지평선에서 peakY까지 올랐다 내려온다.
-  /// 해도 달도 없을 때(none)도 빛무리는 호의 그 자리(진 자리·뜰 자리 = 지평선)에 남는다
-  void _celestial(Canvas canvas, Size size, double k) {
-    final arc = rules.skyArc;
-    final c = look.celestial;
-    final center = Offset(
-      (arc.leftX + (arc.rightX - arc.leftX) * c.progress) * size.width,
-      (rules.horizonY - (rules.horizonY - arc.peakY) * math.sin(math.pi * c.progress)) * k,
-    );
-    final radius = arc.glowRadiusPx * k;
-    final glow = Color(look.sky.glow);
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..shader = RadialGradient(colors: [
-          glow.withValues(alpha: look.sky.glowStrength),
-          glow.withValues(alpha: 0),
-        ]).createShader(Rect.fromCircle(center: center, radius: radius)),
-    );
-    switch (c.body) {
-      case SkyBody.sun:
-        canvas.drawCircle(center, 70 * k, Paint()..color = sunDisc);
-      case SkyBody.moon:
-        canvas.drawCircle(center, 55 * k, Paint()..color = moonDisc);
-      case SkyBody.none:
-        break;
-    }
-  }
+  /// 하늘 (별·빛무리·해·달 포함). 그리는 건 sky_painter.dart, 시간대 색은 입히지 않는다
+  void _sky(Canvas canvas, Size size, double k) =>
+      paintSky(canvas, size, k, sky: look.sky, celestial: look.celestial, rules: rules);
 
   /// 한 바퀴([period])마다 되풀이되는 물체의 화면 x들. [worldX]는 레이어 위 위치, [margin]은 물체 반폭
   Iterable<double> _repeats(

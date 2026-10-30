@@ -10,20 +10,14 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'app/helpers.dart';
 import 'domain/helpers.dart';
 
 void main() {
   testWidgets('첫 화면은 쉼터다 (출발 동네를 골라 둔 뒤)', (tester) async {
     final db = AppDb(NativeDatabase.memory());
-    // 출발 동네가 없으면 쉼터 대신 고르라는 카드가 나온다
-    await tester.runAsync(() => SyncService(
-          db: db,
-          source: FakeStepSource(),
-          rules: rules,
-          allowedSources: const [],
-          landmarks: const {},
-          props: props,
-        ).setHome(testHomeName, testHome));
+    // 시작 흐름을 끝낸 프로필(출발 동네 포함)이 있어야 시작 화면 대신 쉼터가 나온다
+    await tester.runAsync(() => completeOnboarding(db));
     await tester.pumpWidget(ProviderScope(
       overrides: [
         // 에셋은 직접 넣는다 (테스트 환경에서 rootBundle이 불안정하다)
@@ -32,6 +26,9 @@ void main() {
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
         campThemeProvider.overrideWith((ref) => campTheme),
+        // 동기화 서비스가 지도 경계로 땅을 판정해서 지도도 필요하다
+        mapProjectionProvider.overrideWith((ref) => mapProjection),
+        mapRegionsProvider.overrideWith((ref) => mapRegions),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(FakeStepSource()),
       ],
@@ -64,7 +61,10 @@ void main() {
       landmarks: const {},
       props: props,
     );
-    await tester.runAsync(() => svc.sync(now.subtract(const Duration(hours: 3))));
+    await tester.runAsync(() async {
+      await svc.sync(now.subtract(const Duration(hours: 3)));
+      await completeOnboarding(db);
+    });
     source.records.add(StepRecord(
       start: now.subtract(const Duration(hours: 1)),
       end: now.subtract(const Duration(minutes: 30)),
@@ -81,6 +81,9 @@ void main() {
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
         campThemeProvider.overrideWith((ref) => campTheme),
+        // 동기화 서비스가 지도 경계로 땅을 판정해서 지도도 필요하다
+        mapProjectionProvider.overrideWith((ref) => mapProjection),
+        mapRegionsProvider.overrideWith((ref) => mapRegions),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
       ],

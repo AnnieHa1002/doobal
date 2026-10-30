@@ -5,6 +5,7 @@ import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/landmark.dart';
 import '../../domain/prop.dart';
+import '../../domain/sketch.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
@@ -162,14 +163,20 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
         if (_tab == 0)
           ..._paintingSlivers(owned, landmarks)
         else
-          _propSliver(owned.keys, landmarks),
+          // 내 동네 스케치는 명소가 아니라 권역 진행에 세지 않는다
+          _propSliver(owned.keys.where((id) => id != sketchId), landmarks),
       ],
     );
   }
 
-  /// 그림 탭: 권역 칩과 명소 칸 3열 (landmarks.json 순서)
+  /// 그림 탭: 권역 칩과 명소 칸 3열 (landmarks.json 순서). 칩이 `전체`일 때만
+  /// 맨 앞에 내 동네 스케치 칸이 하나 더 있다
   List<Widget> _paintingSlivers(Map<String, OwnedPaintingView> owned, List<Landmark> landmarks) {
     final shown = [for (final l in landmarks) if (_region == null || l.region == _region) l];
+    final withSketch = _region == null;
+    final sketch = owned[sketchId];
+    void openDetail(String id) => Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => PaintingDetailScreen(landmarkId: id)));
     return [
       SliverToBoxAdapter(
         child: RegionFilterChips(
@@ -187,20 +194,24 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
             crossAxisSpacing: 8,
             childAspectRatio: 0.78,
           ),
-          itemCount: shown.length,
+          itemCount: shown.length + (withSketch ? 1 : 0),
           itemBuilder: (context, i) {
-            final l = shown[i];
+            if (withSketch && i == 0) {
+              return SketchCell(
+                key: const ValueKey('cell-$sketchId'),
+                owned: sketch,
+                isNew: _newIds.contains(sketchId),
+                onTap: sketch == null ? null : () => openDetail(sketchId),
+              );
+            }
+            final l = shown[withSketch ? i - 1 : i];
             final p = owned[l.id];
             return PaintingCell(
               key: ValueKey('cell-${l.id}'),
               landmark: l,
               owned: p,
               isNew: _newIds.contains(l.id),
-              onTap: p == null
-                  ? null
-                  : () => Navigator.of(context).push(MaterialPageRoute<void>(
-                        builder: (_) => PaintingDetailScreen(landmarkId: l.id),
-                      )),
+              onTap: p == null ? null : () => openDetail(l.id),
             );
           },
         ),

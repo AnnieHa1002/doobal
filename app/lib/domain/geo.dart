@@ -41,6 +41,19 @@ double haversineKm(LatLng a, LatLng b, double radiusKm) {
   return 2 * radiusKm * math.asin(math.sqrt(h));
 }
 
+/// [from]에서 방위 [bearingDeg](북 0°, 시계 방향)로 대원을 따라 [distanceKm] 간 지점
+LatLng destinationPoint(LatLng from, double bearingDeg, double distanceKm, double radiusKm) {
+  double rad(double d) => d * math.pi / 180;
+  final delta = distanceKm / radiusKm;
+  final theta = rad(bearingDeg);
+  final phi1 = rad(from.lat);
+  final phi2 = math.asin(math.sin(phi1) * math.cos(delta) +
+      math.cos(phi1) * math.sin(delta) * math.cos(theta));
+  final dLng = math.atan2(math.sin(theta) * math.sin(delta) * math.cos(phi1),
+      math.cos(delta) - math.sin(phi1) * math.sin(phi2));
+  return LatLng(phi2 * 180 / math.pi, from.lng + dLng * 180 / math.pi);
+}
+
 /// 섬 경계 상자 안이면 그 섬, 아니면 본토
 Island islandOf(LatLng p, Map<Island, Bounds> islands) {
   for (final e in islands.entries) {

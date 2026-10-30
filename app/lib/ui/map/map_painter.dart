@@ -91,7 +91,10 @@ class MapPainter extends CustomPainter {
       final visited = data.visited.containsKey(e.key);
       circle(e.value, visited ? _visitedR : _hollowR, visited ? Palette.moss : Palette.card, 1.5);
     }
-    final dest = geometry.landmarkPoints[data.destId];
+    // 목적지: 명소면 그 자리, 내 동네 스케치처럼 명소가 아닌 가상 지점이면 그 좌표
+    final virtual = data.destPoint;
+    final dest = geometry.landmarkPoints[data.destId] ??
+        (virtual == null ? null : toOffset(geometry.projection.project(virtual)));
     if (dest != null) circle(dest, _destR, Palette.terracotta, 2.5);
 
     final selected = geometry.landmarkPoints[selectedId];

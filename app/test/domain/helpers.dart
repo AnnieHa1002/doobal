@@ -5,10 +5,12 @@ import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/camp_theme.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/landmark.dart';
+import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/map_projection.dart';
 import 'package:doobal/domain/map_regions.dart';
 import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/rules.dart';
+import 'package:doobal/domain/sigungu.dart';
 
 /// 테스트도 실제 config.json 값으로 돈다 (flutter test는 app/에서 실행)
 final Rules rules = Rules.fromJson(
@@ -46,6 +48,16 @@ final MapProjection mapProjection = MapProjection.fromJson(
 /// 실제 지도 경계 (assets/map/ui_map_regions_v01.svg의 18개)
 final List<MapRegion> mapRegions =
     parseMapRegions(File('assets/map/ui_map_regions_v01.svg').readAsStringSync());
+
+/// 실제 sigungu.json의 시·군·구
+final List<Sigungu> sigungu = parseSigungu(
+  jsonDecode(File('assets/data/sigungu.json').readAsStringSync()) as Map<String, dynamic>,
+);
+
+/// 실제 palette.json의 머리색 견본
+final List<HairSwatch> hairSwatches = parseHairSwatches(
+  jsonDecode(File('assets/data/palette.json').readAsStringSync()) as Map<String, dynamic>,
+);
 
 /// 테스트용 출발 동네: 서울시청 (서울특별시 중구). 실제 출발 동네는 사용자가 고른다
 const testHome = LatLng(37.5665, 126.9780);
