@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../app/sync_service.dart';
+import '../../data/db/app_db.dart' show PostStatus;
 import '../../domain/session.dart';
 import '../../domain/time_kst.dart';
 import '../../domain/walk_history.dart';
@@ -9,6 +11,7 @@ import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 import '../common/screen_header.dart';
+import '../guestbook/guestbook_tag.dart';
 import '../walk_record/walk_record_screen.dart';
 
 /// 노트: `내 방명록`과 `걷기 기록` 두 탭 (UI 명세 11장)
@@ -100,14 +103,75 @@ class _Tab extends StatelessWidget {
   }
 }
 
-/// 내 방명록: 남긴 방명록(장소·숫자 태그, 받은 하트) 목록.
-/// TODO: 방명록 저장이 생기면(방명록 작업) 목록을 연결한다. 그때까지는 빈 상태만 보인다
-class _GuestbookTab extends StatelessWidget {
+/// 내 방명록: 내가 쓴 글을 최신순으로. 카드마다 장소·숫자 태그, 본문, 날짜, 서버에 못 올린 글이면 안내.
+/// TODO(M5): 받은 하트를 카드에 붙인다 (지금은 서버가 없어서 표시하지 않는다)
+class _GuestbookTab extends ConsumerWidget {
   const _GuestbookTab();
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final posts = ref.watch(myPostsProvider).value;
+    if (posts == null) return const SizedBox();
+    if (posts.isEmpty) {
+      return const Center(child: Text('아직 남긴 방명록이 없어요', style: AppText.bodySub));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      itemCount: posts.length,
+      itemBuilder: (context, i) => _PostCard(posts[i]),
+    );
+  }
+}
+
+/// 서버에 아직 못 올린 글 밑에 붙는 한 줄. 올린 글(sent)·거절된 글(rejected)은 M5에서 정한다
+/// TODO(M5): 문구는 가안
+String? _statusLine(PostStatus status) => switch (status) {
+      PostStatus.pending => '연결되면 올라가요',
+      PostStatus.sent || PostStatus.rejected => null,
+    };
+
+/// 내가 쓴 글 하나: 위에 태그와 날짜, 본문, 아래에 상태 한 줄
+class _PostCard extends StatelessWidget {
+  const _PostCard(this.post);
+
+  final GuestbookPostView post;
+
+  @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('아직 남긴 방명록이 없어요', style: AppText.bodySub));
+    final status = _statusLine(post.status);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        key: ValueKey('post-${post.ticketId}'),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Palette.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Palette.ink, width: 2.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Flexible(
+                  child: GuestbookTagPill(guestbookPostTag(post), color: Palette.paper),
+                ),
+                const SizedBox(width: 8),
+                const Spacer(),
+                Text(formatMonthDay(kstDateTime(post.createdAt)), style: AppText.label),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(post.text, style: AppText.body.copyWith(height: 1.4)),
+            if (status != null) ...[
+              const SizedBox(height: 8),
+              Text(status, style: AppText.label),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/config_loader.dart';
@@ -102,7 +103,21 @@ final walkSessionsProvider = FutureProvider.autoDispose<List<WalkSession>>((ref)
   return ref.watch(statsServiceProvider).walkSessions();
 });
 
+/// 디버그용 거리 배수 (개발자 화면에서 1·10·100배). 여정 진행 거리에만 곱한다.
+/// 메모리에만 두어서 앱을 다시 켜면 1배로 돌아온다. 디버그 빌드가 아니면 읽지 않는다
+class DebugDistanceScale extends Notifier<double> {
+  @override
+  double build() => 1.0;
+
+  void set(double scale) => state = scale;
+}
+
+final debugDistanceScaleProvider =
+    NotifierProvider<DebugDistanceScale, double>(DebugDistanceScale.new);
+
 final syncServiceProvider = FutureProvider<SyncService>((ref) async {
+  // 배수를 바꾸면 서비스를 새로 만들어서, 그것을 읽는 상태도 함께 새로 읽는다
+  final distanceScale = kDebugMode ? ref.watch(debugDistanceScaleProvider) : 1.0;
   final rules = await ref.watch(rulesProvider.future);
   final landmarks = await ref.watch(landmarksProvider.future);
   final props = await ref.watch(propsProvider.future);
@@ -119,6 +134,7 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
     props: props,
     milestones: milestones,
     onLand: (p, island) => onIsland(p, island, projection, regions),
+    distanceScale: distanceScale,
   );
 });
 
@@ -185,6 +201,12 @@ final guestbookTicketProvider =
     FutureProvider.autoDispose.family<GuestbookTicket?, String>((ref, ticketId) async {
   final svc = await ref.watch(syncServiceProvider.future);
   return svc.guestbookTicket(ticketId, ref.read(clockProvider)());
+});
+
+/// 내가 쓴 방명록 글, 최신순 (노트의 내 방명록). 글을 쓴 뒤에는 invalidate 해서 다시 읽는다
+final myPostsProvider = FutureProvider.autoDispose<List<GuestbookPostView>>((ref) async {
+  final svc = await ref.watch(syncServiceProvider.future);
+  return svc.myPosts();
 });
 
 /// 방명록 동의를 이미 했는가. 쓰기 화면의 동의 줄을 처음에만 보여 주려고 읽는다

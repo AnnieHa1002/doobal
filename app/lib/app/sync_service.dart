@@ -33,7 +33,8 @@ class SyncReport {
   final Map<String, int> stepsBySource;
 
   /// 이번 동기화로 인정된 거리(km). 진행 중 여정이 있었으면 그 진행 거리의 증가,
-  /// 없었으면 여행 경비의 증가(상한에서 멈춤). 같은 기록으로 또 돌리면 0
+  /// 없었으면 여행 경비의 증가(상한에서 멈춤). 같은 기록으로 또 돌리면 0.
+  /// 디버그 거리 배수가 켜져 있으면 진행 거리의 증가에는 그 배수가 곱해져 있다
   final double advancedKm;
 }
 
@@ -222,6 +223,8 @@ class GuestbookPostView {
   const GuestbookPostView({
     required this.ticketId,
     required this.scope,
+    required this.placeName,
+    required this.milestone,
     required this.text,
     required this.createdAt,
     required this.status,
@@ -231,6 +234,12 @@ class GuestbookPostView {
 
   /// 어디서 쓴 글인지 (기회의 scope)
   final String scope;
+
+  /// 도착 기회로 쓴 글의 자리 이름 (명소 이름, 첫 여정이면 '내 동네 스케치'). 걸음 숫자 글은 null
+  final String? placeName;
+
+  /// 걸음 숫자 기회로 쓴 글의 숫자. 도착 기회로 쓴 글은 null
+  final int? milestone;
   final String text;
   final DateTime createdAt;
 
@@ -354,7 +363,8 @@ class SyncService {
     required this.props,
     this.milestones = const [],
     this.onLand = _anywhere,
-  });
+    this.distanceScale = 1.0,
+  }) : assert(distanceScale > 0);
 
   final AppDb db;
   final StepSource source;
@@ -374,6 +384,10 @@ class SyncService {
   /// 방명록 걸음 숫자 (milestones.json의 stepMilestones, 오름차순).
   /// 비어 있으면 걸음 숫자 기회가 생기지 않는다
   final List<int> milestones;
+
+  /// 디버그용 거리 배수 (개발자 화면). 여정 진행 거리에만 곱해서 빨리 도착하게 한다.
+  /// 여행 경비·하루 요약·걸음 숫자는 그대로다 (앱은 디버그 빌드에서만 1이 아닌 값을 넣는다)
+  final double distanceScale;
 
   Future<SyncReport> sync(DateTime now) async {
     final state = await _ensureState(now);
@@ -528,7 +542,7 @@ class SyncService {
   /// 멈춘 분까지는 이 여정의 걸음(진행 거리에 이미 들어 있다)이라, 경비는 다음 분부터 센다
   Future<LatLng> _stop(JourneyRow active, DateTime now) async {
     final j = _toJourney(active);
-    final p = progress(j, await _distanceKmFrom(_minuteOf(active.startUtc)), rules);
+    final p = progress(j, await _walkedKmOnJourney(active), rules);
     final at = positionAt(j.route, p.progressKm).latLng;
     await (db.update(db.journeys)..where((t) => t.id.equals(active.id))).write(JourneysCompanion(
       status: const Value(JourneyStatus.stopped),
@@ -693,7 +707,7 @@ class SyncService {
         id: r.id,
         kind: r.kind,
         scope: r.scope,
-        placeName: r.scope == sketchId ? sketchName : landmarks[r.scope]?.name ?? r.scope,
+        placeName: _placeNameOf(r.scope),
         milestone: null,
         stepsLeft: null,
         openedAt: opened,
@@ -713,6 +727,10 @@ class SyncService {
       openedAt: opened,
     );
   }
+
+  /// 도착 기회(글)의 자리 이름: 명소 이름, 첫 여정이면 '내 동네 스케치'
+  String _placeNameOf(String scope) =>
+      scope == sketchId ? sketchName : landmarks[scope]?.name ?? scope;
 
   /// 도착 화면을 보여 줬다고 적는다
   Future<void> markArrivalShown(String journeyId) =>
@@ -976,6 +994,8 @@ class SyncService {
         GuestbookPostView(
           ticketId: r.ticketId,
           scope: r.scope,
+          placeName: milestoneOfScope(r.scope) == null ? _placeNameOf(r.scope) : null,
+          milestone: milestoneOfScope(r.scope),
           text: r.body,
           createdAt: _utc(r.createdUtc),
           status: r.status,
@@ -1161,7 +1181,7 @@ class SyncService {
       return (journey: null, progress: null, position: await _restingPosition(), onSea: false);
     }
     final j = _toJourney(active);
-    final p = progress(j, await _distanceKmFrom(_minuteOf(active.startUtc)), rules);
+    final p = progress(j, await _walkedKmOnJourney(active), rules);
     final at = positionAt(j.route, p.progressKm);
     return (journey: j, progress: p, position: at.latLng, onSea: at.onSea);
   }
@@ -1276,11 +1296,11 @@ class SyncService {
 
     final active = await _activeJourney();
     if (active != null) {
-      final p = progress(_toJourney(active),
-          await _distanceKmFrom(_minuteOf(active.startUtc)), rules);
+      final p = progress(_toJourney(active), await _walkedKmOnJourney(active), rules);
       if (p.arrived) {
         await _arrive(active, to);
-        km = addToFund(km, p.overflowKm, rules);
+        // 넘친 거리는 배수를 곱하기 전 걸은 거리로 되돌려 경비에 넣는다
+        km = addToFund(km, p.overflowKm / distanceScale, rules);
         // 도착한 분까지는 여정의 걸음(넘친 거리에 들어 있다)이라 경비는 다음 분부터
         fundedUntil = _nextMinuteMs(to);
       }
@@ -1307,13 +1327,17 @@ class SyncService {
     return distanceM(classifyGait(minutes, rules), rules) / 1000;
   }
 
+  /// 여정을 시작한 뒤 걸은 거리(km) × 디버그 거리 배수: 여정 진행 거리를 계산하는 유일한 자리.
+  /// 경비(여정 없이 걸은 거리)와 하루 요약은 이 값이 아니라 [_distanceKmFrom] 그대로 쓴다
+  Future<double> _walkedKmOnJourney(JourneyRow journey) async =>
+      await _distanceKmFrom(_minuteOf(journey.startUtc)) * distanceScale;
+
   /// 동기화 전후로 비교하는 값: 여정이 있으면 그 진행 거리(도착 뒤에도 넘친 만큼 포함),
   /// 없으면 여행 경비. 여정이 있는 동안 경비는 도착할 때 넘친 거리만 늘고 그건 진행 거리에
   /// 이미 들어 있으니, 둘을 더하면 두 번 세게 된다
   Future<double> _creditedKm(JourneyRow? journey) async {
     if (journey == null) return (await _fund()).km;
-    final walked = await _distanceKmFrom(_minuteOf(journey.startUtc));
-    return progress(_toJourney(journey), walked, rules).progressKm;
+    return progress(_toJourney(journey), await _walkedKmOnJourney(journey), rules).progressKm;
   }
 
   Future<TravelFundRow> _fund() =>

@@ -1,9 +1,18 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import 'rive_preview_screen.dart';
+
+/// 거리 배수 고르기 선택지 (테스트용이라 코드에 둔다)
+const debugDistanceScales = [1.0, 10.0, 100.0];
+
+String _scaleNumber(double scale) => scale == scale.roundToDouble() ? '${scale.round()}' : '$scale';
+
+/// 1×가 아닐 때 쉼터에 띄우는 표시: "거리 ×10"
+String distanceScaleBadge(double scale) => '거리 ×${_scaleNumber(scale)}';
 
 /// M1 디버그 화면: 오늘 걸음·거리·걷기 1번·여정 진행·도착 예정일, 걸음 출처 확인
 class DebugScreen extends ConsumerStatefulWidget {
@@ -80,6 +89,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
   Widget build(BuildContext context) {
     final snapshot = ref.watch(snapshotProvider);
     final landmarks = ref.watch(landmarksProvider).value ?? const [];
+    final scale = ref.watch(debugDistanceScaleProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
@@ -92,6 +102,30 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
             error: (e, _) => Text('상태를 읽지 못함: $e'),
           ),
           const Divider(height: 32),
+          // 테스트용 거리 배수: 여정 진행 거리에만 곱한다. 앱을 다시 켜면 1×
+          if (kDebugMode) ...[
+            const Text('거리 배수 (테스트용, 다시 켜면 1×)'),
+            const SizedBox(height: 8),
+            SegmentedButton<double>(
+              key: const ValueKey('distance-scale'),
+              showSelectedIcon: false,
+              segments: [
+                for (final s in debugDistanceScales)
+                  ButtonSegment(value: s, label: Text('${_scaleNumber(s)}×')),
+              ],
+              selected: {scale},
+              onSelectionChanged: (v) =>
+                  ref.read(debugDistanceScaleProvider.notifier).set(v.first),
+            ),
+            if (scale != 1) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${distanceScaleBadge(scale)}: 걸은 거리에 곱해서 빨리 도착해요 (경비·하루 요약은 그대로)',
+                key: const ValueKey('distance-scale-note'),
+              ),
+            ],
+            const Divider(height: 32),
+          ],
           // 임시 출발 동네 고르기 (위 _setHome 참고)
           Row(
             children: [

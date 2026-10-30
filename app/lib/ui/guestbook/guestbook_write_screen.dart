@@ -10,12 +10,7 @@ import '../common/format.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
-
-/// 어디서 쓰는 글인지 알리는 태그: 도착이면 "경복궁 도착"(첫 여정은 "내 동네 스케치 도착"),
-/// 걸음 숫자면 "12,345보"
-String guestbookTag(GuestbookTicket t) => t.kind == TicketKind.milestone
-    ? '${formatInt(t.milestone!)}보'
-    : '${t.placeName} 도착';
+import 'guestbook_tag.dart';
 
 /// 방명록 쓰기 (UI 명세 9장). 위에 태그, 걸음 숫자 기회면 남은 걸음, 처음 쓸 때만 동의 한 줄,
 /// 입력 칸(글자 수 상한은 config guestbook.maxChars)과 글자 수, 주 버튼 "남기기".
@@ -43,7 +38,7 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
   }
 
   /// 저장하고 토스트를 띄운 뒤 닫는다. 그새 기회가 끝났으면(StateError) 그 사유를 토스트로 알리고 닫는다.
-  /// 어느 쪽이든 쉼터 표지판·도착 화면 버튼이 새로 읽는다
+  /// 어느 쪽이든 쉼터 표지판·도착 화면 버튼·노트의 내 방명록이 새로 읽는다
   Future<void> _save(GuestbookTicket ticket) async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -57,6 +52,7 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
     if (!mounted) return;
     ref.invalidate(snapshotProvider);
     ref.invalidate(guestbookTicketProvider);
+    ref.invalidate(myPostsProvider);
     showToast(context, message);
     Navigator.of(context).pop();
   }
@@ -125,7 +121,7 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    _Tag(guestbookTag(ticket)),
+                    GuestbookTagPill(guestbookTag(ticket), key: const ValueKey('guestbook-tag')),
                     if (ticket.stepsLeft != null)
                       Text(
                         '남은 ${formatInt(ticket.stepsLeft!)}보',
@@ -198,30 +194,6 @@ InputDecoration _inputDecoration(String hint) {
     enabledBorder: border(2.5),
     focusedBorder: border(3.5),
   );
-}
-
-/// 어디서 쓰는지 알리는 알약 (카드색, 잉크 2px 테두리)
-class _Tag extends StatelessWidget {
-  const _Tag(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: const ValueKey('guestbook-tag'),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Palette.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Palette.ink, width: 2),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Palette.ink),
-      ),
-    );
-  }
 }
 
 /// 글자(rune) 수가 [max]를 넘으면 앞에서 [max]자만 남긴다 (붙여 넣기도 자른다)

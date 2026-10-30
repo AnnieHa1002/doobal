@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,21 +22,64 @@ import '../profile/profile_screen.dart';
 import '../scene/scene_view.dart';
 import '../settings/settings_screen.dart';
 import '../walking/walking_screen.dart';
+import 'prop_wiggle.dart';
 
-/// 쉼터 (홈, 루트 화면). 하늘 → 후경 → 캠프 → 캐릭터 → 물건·버튼 → 상태 알약
-class RestScreen extends ConsumerWidget {
+/// 쉼터 (홈, 루트 화면). 하늘 → 후경 → 캠프 → 캐릭터 → 물건·버튼 → 상태 알약.
+/// 물건은 3~6초마다 하나씩 살짝 흔들린다 (알림 점이 있는 물건 우선, 연출 값은 prop_wiggle.dart)
+class RestScreen extends ConsumerStatefulWidget {
   const RestScreen({super.key});
+
+  @override
+  ConsumerState<RestScreen> createState() => _RestScreenState();
+}
+
+/// 흔들림 id: 캠프 물건은 테마의 id(지도·배낭·노트), 방명록 표지판은 이것
+const _guestbookSignId = 'guestbook';
+
+class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProviderStateMixin {
+  late final PropWiggler _wiggler;
+
+  @override
+  void initState() {
+    super.initState();
+    _wiggler = PropWiggler(vsync: this, spec: ref.read(restWiggleProvider), pool: _wigglePool);
+  }
+
+  @override
+  void dispose() {
+    _wiggler.dispose();
+    super.dispose();
+  }
+
+  /// 아직 안 본 소품이나 그림이 있는가 (배낭의 알림 점)
+  bool _hasNew(Snapshot snap) => snap.unseenProps > 0 || snap.unseenPaintings > 0;
+
+  /// 흔들 수 있는 물건과 그 중 알림 점이 있는 물건 (화면에 서 있는 것만)
+  ({List<String> all, Set<String> notice}) _wigglePool() {
+    final camp = ref.read(campThemeProvider).value;
+    final snap = ref.read(snapshotProvider).value;
+    if (camp == null || snap == null || snap.position == null) {
+      return (all: const [], notice: const {});
+    }
+    final sign = snap.guestbookTicket != null;
+    return (
+      all: [for (final o in camp.objects) o.id, if (sign) _guestbookSignId],
+      notice: {if (_hasNew(snap)) 'backpack', if (sign) _guestbookSignId},
+    );
+  }
 
   void _push(BuildContext context, Widget screen) =>
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final rules = ref.watch(rulesProvider).value;
     final landmarks = ref.watch(landmarksProvider).value;
     final camp = ref.watch(campThemeProvider).value;
     final snap = ref.watch(snapshotProvider).value;
     final now = ref.watch(minuteClockProvider).value ?? ref.watch(clockProvider)();
+    // 테스트용 거리 배수가 켜져 있으면 알려 준다 (켜 둔 채 잊지 않게)
+    final scale = kDebugMode ? ref.watch(debugDistanceScaleProvider) : 1.0;
     // 데이터가 올 때까지는 종이색 빈 화면
     if (rules == null || landmarks == null || camp == null || snap == null) {
       return const Scaffold(body: SizedBox.expand());
@@ -64,7 +108,7 @@ class RestScreen extends ConsumerWidget {
                 context,
                 box.biggest,
                 o,
-                hasNew: snap.unseenProps > 0 || snap.unseenPaintings > 0,
+                hasNew: _hasNew(snap),
               ),
             // 방명록 표지판은 쓸 기회가 있을 때만 선다
             if (snap.guestbookTicket != null)
@@ -95,7 +139,16 @@ class RestScreen extends ConsumerWidget {
                       child: Padding(
                         // 양쪽 모서리 버튼(56pt + 간격) 사이에 들어가게
                         padding: const EdgeInsets.symmetric(horizontal: 72),
-                        child: _StatusPill(_statusText(snap)),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _StatusPill(_statusText(snap)),
+                            if (scale != 1) ...[
+                              const SizedBox(height: 6),
+                              _ScaleBadge(distanceScaleBadge(scale)),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                     Align(
@@ -237,7 +290,12 @@ class RestScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _objectBox(size, Icons.edit_note_outlined),
+            PropWiggle(
+              key: const ValueKey('wiggle-$_guestbookSignId'),
+              wiggler: _wiggler,
+              id: _guestbookSignId,
+              child: _objectBox(size, Icons.edit_note_outlined),
+            ),
             const SizedBox(height: 2),
             const NameTag('방명록'),
           ],
@@ -272,17 +330,22 @@ class RestScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                _objectBox(o.size, _iconOf(o.id)),
-                if (o.id == 'backpack' && hasNew)
-                  const Positioned(
-                    top: -4,
-                    right: -4,
-                    child: NoticeDot(key: ValueKey('backpack-dot')),
-                  ),
-              ],
+            PropWiggle(
+              key: ValueKey('wiggle-${o.id}'),
+              wiggler: _wiggler,
+              id: o.id,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _objectBox(o.size, _iconOf(o.id)),
+                  if (o.id == 'backpack' && hasNew)
+                    const Positioned(
+                      top: -4,
+                      right: -4,
+                      child: NoticeDot(key: ValueKey('backpack-dot')),
+                    ),
+                ],
+              ),
             ),
             const SizedBox(height: 2),
             NameTag(o.label),
@@ -327,6 +390,30 @@ class _StatusPill extends StatelessWidget {
           text,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Palette.ink),
         ),
+      ),
+    );
+  }
+}
+
+/// 상태 알약 아래의 "거리 ×10" 표시 (테라코타 바탕, 잉크 2px 테두리). 디버그 배수가 켜진 동안만
+class _ScaleBadge extends StatelessWidget {
+  const _ScaleBadge(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('debug-scale-badge'),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: Palette.terracotta,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Palette.ink, width: 2),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Palette.paper),
       ),
     );
   }

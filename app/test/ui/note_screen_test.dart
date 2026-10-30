@@ -1,4 +1,6 @@
 import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/domain/guestbook.dart';
+import 'package:doobal/ui/guestbook/guestbook_write_screen.dart';
 import 'package:doobal/ui/note/note_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
@@ -9,6 +11,32 @@ import 'ui_env.dart';
 
 Future<void> _open(WidgetTester tester, UiEnv e) => openOnTop(tester, e, const NoteScreen(),
     height: 1200, ready: () => find.text('내 방명록').evaluate().isNotEmpty);
+
+final _empty = find.text('아직 남긴 방명록이 없어요');
+final _pending = find.text('연결되면 올라가요');
+
+/// 내 방명록 탭을 열고(처음에는 열려 있다) 글 목록이나 빈 상태가 뜰 때까지 기다린다
+Future<void> _settleGuestbook(WidgetTester tester) async {
+  await settle(tester, () => _empty.evaluate().isNotEmpty || _pending.evaluate().isNotEmpty);
+  await tester.pump();
+}
+
+/// 내가 쓴 글 한 줄을 DB에 직접 넣는다 (쓰기 화면을 거치지 않는 목록 확인용)
+Future<void> _post(
+  AppDb db,
+  String ticketId,
+  String scope,
+  String body,
+  DateTime at, {
+  PostStatus status = PostStatus.pending,
+}) =>
+    db.into(db.guestbookPosts).insert(GuestbookPostsCompanion.insert(
+          ticketId: ticketId,
+          scope: scope,
+          body: body,
+          createdUtc: at.millisecondsSinceEpoch,
+          status: status,
+        ));
 
 Future<void> _openWalksTab(WidgetTester tester, {String? waitFor}) async {
   await tester.tap(find.byKey(const ValueKey('tab-walks')));
@@ -38,24 +66,133 @@ void main() {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
+      await _settleGuestbook(tester);
 
       expect(find.text('노트'), findsOneWidget);
       expect(find.byTooltip('뒤로'), findsOneWidget);
       expect(find.text('내 방명록'), findsOneWidget);
       expect(find.text('걷기 기록'), findsOneWidget);
-      expect(find.text('아직 남긴 방명록이 없어요'), findsOneWidget);
+      expect(_empty, findsOneWidget);
       expect(find.text('아직 감지된 걷기가 없어요'), findsNothing);
 
       // 걷기 기록 탭을 보고 돌아와도 빈 상태
       await _openWalksTab(tester);
-      expect(find.text('아직 남긴 방명록이 없어요'), findsNothing);
+      expect(_empty, findsNothing);
       await tester.tap(find.byKey(const ValueKey('tab-guestbook')));
-      await tester.pump();
-      expect(find.text('아직 남긴 방명록이 없어요'), findsOneWidget);
+      await _settleGuestbook(tester);
+      expect(_empty, findsOneWidget);
 
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
       expect(find.text('열기'), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('쓴 글이 최신순으로: 태그(명소 도착·내 동네 스케치 도착·걸음 숫자)·본문·날짜', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        // 일부러 섞어 넣는다. 한국 11월 18일 10:00 = t1
+        await _post(e.db, 'a:j1', 'kr001', '경복궁 좋았어요', t1);
+        await _post(e.db, 'm:12345', 'steps:12345', '만 이천 걸음!', t1.add(const Duration(days: 1)));
+        await _post(e.db, 'a:j0', 'sketch', '첫 그림', t1.subtract(const Duration(days: 2)));
+        // 같은 한국 날짜 안(11월 18일 00:30)이면 전날 UTC여도 18일
+        await _post(e.db, 'a:j2', 'kr001', '또 왔어요', DateTime.utc(2026, 11, 17, 15, 30));
+      });
+      await _open(tester, e);
+      await _settleGuestbook(tester);
+
+      expect(_empty, findsNothing);
+      // 태그 3종: 명소 도착 / 내 동네 스케치 도착 / 걸음 숫자 (천 단위 쉼표)
+      expect(find.text('경복궁 도착'), findsNWidgets(2));
+      expect(find.text('내 동네 스케치 도착'), findsOneWidget);
+      expect(find.text('12,345보'), findsOneWidget);
+      // 날짜: 한국 날짜로
+      expect(find.text('11월 19일'), findsOneWidget);
+      expect(find.text('11월 18일'), findsNWidgets(2));
+      expect(find.text('11월 16일'), findsOneWidget);
+      expect(find.text('만 이천 걸음!'), findsOneWidget);
+      // 받은 하트는 아직 보이지 않는다
+      expect(find.byIcon(Icons.favorite), findsNothing);
+      expect(find.byIcon(Icons.favorite_border), findsNothing);
+
+      // 위에서 아래로: 11월 19일 → 11월 18일 10:00 → 11월 18일 00:30 → 11월 16일
+      final order = [
+        _y(tester, find.text('만 이천 걸음!')),
+        _y(tester, find.text('경복궁 좋았어요')),
+        _y(tester, find.text('또 왔어요')),
+        _y(tester, find.text('첫 그림')),
+      ];
+      for (var i = 1; i < order.length; i++) {
+        expect(order[i], greaterThan(order[i - 1]), reason: '$i번째 카드');
+      }
+      await end(tester, e);
+    });
+
+    testWidgets('서버에 못 올린 글(pending)만 "연결되면 올라가요"가 붙는다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _post(e.db, 'a:j1', 'kr001', '아직', t1);
+        await _post(e.db, 'a:j2', 'kr002', '이미', t1.add(const Duration(minutes: 1)),
+            status: PostStatus.sent);
+      });
+      await _open(tester, e);
+      await _settleGuestbook(tester);
+
+      expect(find.text('아직'), findsOneWidget);
+      expect(find.text('이미'), findsOneWidget);
+      expect(_pending, findsOneWidget);
+      // 안내는 pending 글의 카드 안에 있다
+      expect(
+        find.descendant(of: find.byKey(const ValueKey('post-a:j1')), matching: _pending),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: find.byKey(const ValueKey('post-a:j2')), matching: _pending),
+        findsNothing,
+      );
+      await end(tester, e);
+    });
+
+    testWidgets('쓰기 화면에서 글을 남기고 돌아오면 노트에 새 글이 맨 위에 보인다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _post(e.db, 'a:j0', 'sketch', '예전 글', t1.subtract(const Duration(days: 1)));
+        await e.db.into(e.db.guestbookTickets).insert(GuestbookTicketsCompanion.insert(
+              id: 'a:j1',
+              kind: TicketKind.arrival,
+              scope: 'kr001',
+              openedUtc: t1.millisecondsSinceEpoch,
+            ));
+      });
+      await _open(tester, e);
+      await _settleGuestbook(tester);
+      expect(find.text('예전 글'), findsOneWidget);
+      expect(find.text('새로 남긴 글'), findsNothing);
+
+      // 노트 위에 쓰기 화면을 올려 쓴다 (노트는 아래에 열려 있다)
+      final nav = Navigator.of(tester.element(find.byType(NoteScreen)));
+      nav.push(MaterialPageRoute<void>(
+        builder: (_) => const GuestbookWriteScreen(ticketId: 'a:j1'),
+      ));
+      await transition(tester);
+      final input = find.byKey(const ValueKey('guestbook-input'));
+      await settle(tester, () => input.evaluate().isNotEmpty);
+      await tester.enterText(input, '새로 남긴 글');
+      await tester.pump();
+      await tester.tap(find.text('남기기'));
+      await settle(tester, () => find.text('방명록을 남겼어요').evaluate().isNotEmpty, tries: 12);
+      await transition(tester);
+      await settle(tester, () => find.text('새로 남긴 글').evaluate().isNotEmpty);
+
+      expect(find.byType(GuestbookWriteScreen), findsNothing);
+      expect(find.text('새로 남긴 글'), findsOneWidget);
+      expect(find.text('예전 글'), findsOneWidget);
+      expect(_y(tester, find.text('새로 남긴 글')), lessThan(_y(tester, find.text('예전 글'))));
+      // 방금 쓴 글은 아직 서버로 보내지 않았다
+      expect(
+        find.descendant(of: find.byKey(const ValueKey('post-a:j1')), matching: _pending),
+        findsOneWidget,
+      );
       await end(tester, e);
     });
   });
