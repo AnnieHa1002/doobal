@@ -86,5 +86,6 @@
   "blink": { "approx": true, "minGapSec": 3, "maxGapSec": 6, "doubleChance": 0.15, "doubleGapSec": 0.3 }
  },
  "notifications": { "quietFromHour": 22, "quietToHour": 8, "dailyMax": 2, "nearDestKm": 10, "inactiveHours": 72 },
+ "backup": { "minIntervalMin": 10, "maxChars": 1000000 },
  "allowedSources": { "ios": [], "android": [] }
 }

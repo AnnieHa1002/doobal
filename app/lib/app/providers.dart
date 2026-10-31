@@ -4,6 +4,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/backup_store.dart';
 import '../data/config_loader.dart';
 import '../data/db/app_db.dart';
 import '../data/landmark_loader.dart';
@@ -31,6 +32,8 @@ import '../domain/rules.dart';
 import '../domain/session.dart';
 import '../domain/sigungu.dart';
 import '../domain/walk_history.dart';
+import 'backup_runner.dart';
+import 'backup_service.dart';
 import 'notification_service.dart';
 import 'profile_service.dart';
 import 'stats_service.dart';
@@ -120,6 +123,31 @@ final notificationServiceProvider = FutureProvider<NotificationService>((ref) as
 /// 설정 화면의 알림 켜고 끄기. 바꾼 뒤에는 invalidate 해서 다시 읽는다
 final noticeSettingsProvider = FutureProvider.autoDispose<NoticeSettings>((ref) async {
   return (await ref.watch(notificationServiceProvider.future)).settings();
+});
+
+/// 백업 문자열을 서버에 두고 받아 오는 곳. M5에서 Firestore(users/{uid}/backup/state)로 바꾼다
+/// (지금은 메모리에만 두는 자리표시)
+final backupStoreProvider = Provider<BackupStore>((ref) => PlaceholderBackupStore());
+
+/// 계정을 연결한 사용자의 uid. 연결하지 않았으면 null. 백업은 계정을 연결한 사용자만 한다
+/// (익명 uid는 앱을 지우면 다시 찾을 수 없다). M5에서 Firebase Auth로 바꾼다.
+/// 계정 연결이 아직 없어서 늘 null이고, 그래서 자동 백업은 일어나지 않는다
+final backupUidProvider = Provider<String?>((ref) => null);
+
+/// 로컬 DB ↔ 백업 문자열
+final backupServiceProvider = FutureProvider<BackupService>((ref) async {
+  return BackupService(ref.watch(dbProvider), await ref.watch(rulesProvider.future));
+});
+
+/// 자동 백업 (동기화·도착·백그라운드에서 AutoSync가 부른다). 마지막 백업 시각을 메모리에 들고 있어서
+/// 앱이 도는 동안 하나만 둔다
+final backupRunnerProvider = FutureProvider<BackupRunner>((ref) async {
+  return BackupRunner(
+    service: await ref.watch(backupServiceProvider.future),
+    store: ref.watch(backupStoreProvider),
+    rules: await ref.watch(rulesProvider.future),
+    uid: () => ref.read(backupUidProvider),
+  );
 });
 
 /// 프로필(사용자 자신의 정보) 읽기·쓰기. 걸음·여정이 아니라서 SyncService와 따로 둔다

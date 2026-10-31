@@ -132,6 +132,8 @@ class Rules {
     required this.notificationInactiveHours,
     required this.guestbookMaxChars,
     required this.guestbookWindowSteps,
+    required this.backupMinIntervalMin,
+    required this.backupMaxChars,
     required this.allowedSourcesIos,
     required this.allowedSourcesAndroid,
   });
@@ -239,6 +241,12 @@ class Rules {
   final int guestbookMaxChars;
   final int guestbookWindowSteps;
 
+  /// 자동 백업은 마지막 백업 뒤 이 시간(분) 안에는 다시 하지 않는다 (config backup.minIntervalMin).
+  /// 백업 문자열(base64)의 글자 수 상한은 서버 문서 한도(1MiB)에서 필드 이름 같은 여유를 뺀 값이다
+  /// (config backup.maxChars)
+  final int backupMinIntervalMin;
+  final int backupMaxChars;
+
   /// 비어 있으면 출처로 거르지 않는다 (M1 초기 수집용)
   final List<String> allowedSourcesIos;
   final List<String> allowedSourcesAndroid;
@@ -266,6 +274,7 @@ class Rules {
     final profile = j['profile'] as Map<String, dynamic>;
     final notifications = j['notifications'] as Map<String, dynamic>;
     final guestbook = j['guestbook'] as Map<String, dynamic>;
+    final backup = j['backup'] as Map<String, dynamic>;
     final sources = j['allowedSources'] as Map<String, dynamic>;
 
     LatLng latLng(dynamic v) => LatLng(_d(v['lat']), _d(v['lng']));
@@ -366,6 +375,8 @@ class Rules {
       notificationInactiveHours: notifications['inactiveHours'] as int,
       guestbookMaxChars: guestbook['maxChars'] as int,
       guestbookWindowSteps: guestbook['milestoneWindowSteps'] as int,
+      backupMinIntervalMin: backup['minIntervalMin'] as int,
+      backupMaxChars: backup['maxChars'] as int,
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),
       allowedSourcesAndroid: (sources['android'] as List).cast<String>(),
     );

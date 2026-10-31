@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../domain/backup_policy.dart';
 import '../ui/arrival/arrival_screen.dart';
+import 'backup_runner.dart';
 import 'notification_service.dart';
 import 'providers.dart';
 import 'sync_service.dart';
@@ -16,6 +18,8 @@ const _toastMinKm = 0.1;
 /// 권한이 없는 등 실패는 조용히 넘어간다.
 /// 앱이 앞에 있는지도 알려 준다 (알림 판단이 앞이면 화면 안 표시만 한다). 앱을 열 때는 예약해 둔
 /// '다시 부르기' 알림(N5)을 취소하고, 백그라운드로 갈 때는 다시 예약한다.
+/// 자동 백업도 여기서 시도한다 (계정을 연결한 사용자만, 10분 안 반복은 건너뛴다): 날짜가 바뀐 뒤 첫
+/// 동기화, 도착을 알았을 때, 백그라운드로 갈 때.
 /// 도착했는데 도착 화면을 아직 안 봤으면(앱을 켜기 전에 도착했거나, 걷는 중 화면이 새로 읽다가
 /// 도착을 알게 됐을 때) 열려 있는 화면 위에 도착 화면을 띄운다. 이 위젯이 home이라
 /// 어느 화면 위에서든 같은 Navigator에 올릴 수 있다
@@ -68,6 +72,7 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   void _onBackground() {
     ref.read(appForegroundProvider.notifier).set(false);
     _notice((svc, now) => svc.onBackground(now));
+    _backup((runner, now) => runner.run(BackupReason.background, now));
   }
 
   /// 알림 판단에 지금 시각으로 일을 시킨다. 실패해도 앱 흐름은 그대로다
@@ -80,9 +85,21 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     }
   }
 
+  /// 백업을 시도한다. 계정을 연결하지 않았거나 정책이 막으면 아무 일도 없고, 실패해도 앱 흐름은 그대로다
+  Future<void> _backup(Future<bool> Function(BackupRunner runner, DateTime now) job) async {
+    try {
+      final runner = await ref.read(backupRunnerProvider.future);
+      await job(runner, ref.read(clockProvider)());
+    } catch (e) {
+      debugPrint('자동 백업 실패: $e');
+    }
+  }
+
   void _checkArrival(Snapshot? snap) {
     final id = snap?.pendingArrival?.journeyId;
     if (id == null || !_arrivalsShown.add(id)) return;
+    // 도착을 알았다: 새 그림이 들어간 상태를 백업한다 (도착 화면이 닫히길 기다리지 않는다)
+    _backup((runner, now) => runner.run(BackupReason.arrived, now));
     // 그리는 중에 화면을 올리지 않도록 이번 그리기가 끝난 뒤에
     Future.microtask(() {
       if (mounted) _showArrival(id);
@@ -118,6 +135,7 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
           content: Text('그동안 ${report.advancedKm.toStringAsFixed(1)}km 걸었어요'),
         ));
       }
+      _backup((runner, now) => runner.afterSync(now));
     } catch (e) {
       debugPrint('자동 동기화 실패: $e');
     } finally {

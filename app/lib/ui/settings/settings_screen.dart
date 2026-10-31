@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,6 +15,7 @@ import '../common/notice_page.dart';
 import '../common/palette.dart';
 import '../common/screen_header.dart';
 import '../common/toast.dart';
+import '../debug/backup_debug_screen.dart';
 import '../debug/debug_screen.dart';
 
 /// 문서 화면의 안내. 원문이 아직 리포에 없다.
@@ -201,7 +203,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ]),
                   const SizedBox(height: 20),
-                  _Group([_Row('개발자 화면', onTap: () => _push(const DebugScreen()))]),
+                  _Group([
+                    _Row('개발자 화면', onTap: () => _push(const DebugScreen())),
+                    if (kDebugMode) _Row('백업 시험', onTap: () => _push(const BackupDebugScreen())),
+                  ]),
                   const SizedBox(height: 20),
                   _Group([_Row('계정 삭제', onTap: _deleteAccount)]),
                 ],
