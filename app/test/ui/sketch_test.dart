@@ -80,6 +80,20 @@ void main() {
       await end(tester, e);
     });
 
+    testWidgets('config 범위 안의 짧은 여정(0.6km)은 `0.6 km · 약 900보`로 나온다', (tester) async {
+      final e = UiEnv();
+      // 0.6km ÷ 0.7m = 857보 → 900보
+      await e.seed(tester, () => e.insertSketchJourney(0.6));
+      await _pumpRest(tester, e);
+
+      expect(find.text('쉬는 중 · 내 동네 스케치까지 0.6 km'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: _bubble, matching: find.text('첫 그림을 그리러 가요. 중구에서 0.6 km · 약 900보')),
+          findsOneWidget);
+      await end(tester, e);
+    });
+
     testWidgets('말풍선은 카드색에 잉크 2px 테두리', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => e.insertSketchJourney(2.5));
@@ -103,7 +117,9 @@ void main() {
 
       final snap = (await tester.runAsync(() => e.svc.snapshot(e.now)))!;
       final km = snap.journey!.progress.remainingKm;
-      expect(km, inInclusiveRange(2, 3));
+      expect(km, inInclusiveRange(rules.firstSketchMinKm - 1e-6, rules.firstSketchMaxKm + 1e-6));
+      // 0.5~0.8km라 `0.6 km`처럼 소수 한 자리로 나온다
+      expect(formatKm(km), matches(RegExp(r'^0\.[5-8] km$')));
       expect(find.text('쉬는 중 · 내 동네 스케치까지 ${formatKm(km)}'), findsOneWidget);
       expect(find.text('첫 그림을 그리러 가요. 중구에서 ${formatKm(km)} · '
           '약 ${formatInt(sketchSteps(km, rules))}보'), findsOneWidget);
@@ -113,8 +129,8 @@ void main() {
     testWidgets('걷기 시작해서 진행이 생기면 말풍선과 알림 점이 함께 사라진다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.startSketch);
-      // 앱을 켜면 동기화하니 그 전에 걸은 기록을 넣어 둔다 (10분 × 100보 = 0.7km)
-      e.source.records.add(walkRecord(t1.add(const Duration(minutes: 1)), 10, 100));
+      // 앱을 켜면 동기화하니 그 전에 걸은 기록을 넣어 둔다 (3분 × 100보 = 0.21km, 첫 여정의 최소 거리보다 짧다)
+      e.source.records.add(walkRecord(t1.add(const Duration(minutes: 1)), 3, 100));
       e.now = t1.add(const Duration(minutes: 40));
       await pumpDoobal(tester, e, const DoobalApp());
       await settle(

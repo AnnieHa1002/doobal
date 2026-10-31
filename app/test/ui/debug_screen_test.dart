@@ -1,4 +1,6 @@
 import 'package:doobal/app/providers.dart';
+import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/debug/debug_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -88,6 +90,49 @@ void main() {
       final restarted = ProviderContainer();
       addTearDown(restarted.dispose);
       expect(restarted.read(debugDistanceScaleProvider), 1.0);
+      await end(tester, e);
+    });
+  });
+
+  group('첫 여정(내 동네 스케치) 중 개발자 화면의 멈추기·출발', () {
+    // 서비스가 막으면(StateError) 화면은 아무 일도 안 하고 그 글을 한 줄로 보여 준다
+    const lockedLine = '여정 실패: Bad state: $sketchLockedNote';
+
+    Future<List<JourneyRow>> journeys(WidgetTester tester, UiEnv e) async =>
+        (await tester.runAsync(() => e.db.select(e.db.journeys).get()))!;
+
+    testWidgets('멈추기: 서비스의 안내가 화면에 나오고 여정은 그대로다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, e.startSketch);
+      await openOnTop(tester, e, const DebugScreen(),
+          height: 1200, ready: () => _picker.evaluate().isNotEmpty);
+
+      await tester.tap(find.text('멈추기'));
+      await settle(tester, () => find.text(lockedLine).evaluate().isNotEmpty);
+      expect(find.text(lockedLine), findsOneWidget);
+      final rows = await journeys(tester, e);
+      expect((rows.single.destId, rows.single.status), (sketchId, JourneyStatus.active));
+      // 막힌 뒤에도 버튼은 다시 눌린다 (눌린 채로 멈춰 있지 않는다)
+      expect(tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, '멈추기')).onPressed,
+          isNotNull);
+      await end(tester, e);
+    });
+
+    testWidgets('지금 자리에서 출발: 서비스의 안내가 화면에 나오고 여정은 그대로다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, e.startSketch);
+      await openOnTop(tester, e, const DebugScreen(),
+          height: 1200, ready: () => _picker.evaluate().isNotEmpty);
+
+      await tester.tap(find.text('목적지'));
+      await tester.pump();
+      await tester.tap(find.text('kr001 경복궁').last);
+      await tester.pump();
+      await tester.tap(find.text('지금 자리에서 출발'));
+      await settle(tester, () => find.text(lockedLine).evaluate().isNotEmpty);
+      expect(find.text(lockedLine), findsOneWidget);
+      final rows = await journeys(tester, e);
+      expect((rows.single.destId, rows.single.status), (sketchId, JourneyStatus.active));
       await end(tester, e);
     });
   });

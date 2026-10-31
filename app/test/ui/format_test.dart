@@ -18,6 +18,13 @@ void main() {
     expect(formatKm(1.05, digits: 2), '1.05 km');
   });
 
+  test('formatKm: 첫 여정의 0.5~0.8km는 0.6 km처럼 소수 한 자리', () {
+    expect(formatKm(0.5), '0.5 km');
+    expect(formatKm(0.6), '0.6 km');
+    expect(formatKm(0.8), '0.8 km');
+    expect(formatKm(0.634), '0.6 km');
+  });
+
   test('formatHourKo: 시를 말하듯이 (밤 10시, 아침 8시)', () {
     expect(formatHourKo(22), '밤 10시');
     expect(formatHourKo(8), '아침 8시');

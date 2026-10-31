@@ -15,6 +15,9 @@ const firstPackName = '첫 여행 짐 꾸러미';
 /// 화집 칸·도착 카드의 이름표. 가안
 const firstPackLabel = '첫 그림';
 
+/// 첫 그림을 받기 전(첫 여정 '내 동네 스케치' 중)에 목적지를 바꾸거나 여정을 멈추려 할 때의 안내. 가안
+const sketchLockedNote = '첫 그림을 받은 뒤에 고를 수 있어요';
+
 /// 첫 그림을 화집·벽의 그림 자리에 끼워 넣는 가짜 명소 (id는 [sketchId]). 장소가 없는 그림이라
 /// id·이름만 뜻이 있고 나머지는 빈 값이다. 명소 목록에는 넣지 않는다
 const firstPackLandmark = Landmark(

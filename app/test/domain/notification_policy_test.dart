@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:doobal/domain/notification_policy.dart';
+import 'package:doobal/domain/rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
@@ -8,6 +12,13 @@ DateTime _kst(int month, int day, int hour, [int minute = 0, int second = 0, int
     DateTime.utc(2026, month, day, hour - 9, minute, second, ms);
 
 const _install = '00000000000000000000000000000000';
+
+/// config의 notifications 값 일부만 바꾼 규칙
+Rules _rulesWith(Map<String, Object> notifications) {
+  final j = jsonDecode(File('assets/data/config.json').readAsStringSync()) as Map<String, dynamic>;
+  (j['notifications'] as Map<String, dynamic>).addAll(notifications);
+  return Rules.fromJson(j);
+}
 
 /// 한국 11월 18일 낮 12시 (조용한 시간이 아니다)
 final _noon = _kst(11, 18, 12);
@@ -45,12 +56,13 @@ const _allVars = <String, Object>{
 
 void main() {
   group('config 숫자', () {
-    test('조용한 시간 22시~8시, 하루 최대 2, 10km, 72시간', () {
+    test('조용한 시간 22시~8시, 하루 최대 2, 10km, 72시간, 미루는 시각 10시', () {
       expect(rules.notificationQuietFromHour, 22);
       expect(rules.notificationQuietToHour, 8);
       expect(rules.notificationDailyMax, 2);
       expect(rules.notificationNearDestKm, 10);
       expect(rules.notificationInactiveHours, 72);
+      expect(rules.notificationInactiveDeferHour, 10);
     });
   });
 
@@ -524,13 +536,67 @@ void main() {
       expect(plan(_kst(11, 18, 14), enabled: false), isNull);
     });
 
-    test('72시간 뒤가 조용한 시간이면 그 시간이 끝나는 08:00으로 미룬다', () {
-      // 한국 23:00 → 72시간 뒤 21일 23:00 (조용) → 22일 08:00
-      expect(plan(_kst(11, 18, 23)), _kst(11, 22, 8));
-      // 한국 03:00 → 21일 03:00 (조용) → 21일 08:00
-      expect(plan(_kst(11, 18, 3)), _kst(11, 21, 8));
+    /// 예약 시각(지금 + 72시간)이 [at]이 되도록 지금을 거꾸로 잡는다
+    DateTime? planAt(DateTime at, {Rules? withRules}) => planInactive(
+          now: at.subtract(const Duration(hours: 72)),
+          rules: withRules ?? rules,
+          enabled: true,
+          state: InactiveState.none,
+        );
+
+    test('72시간 뒤가 조용한 시간이면 그 뒤 처음 오는 10:00으로 미룬다', () {
+      // 한국 23:00 → 72시간 뒤 21일 23:00 (조용) → 22일 10:00
+      expect(plan(_kst(11, 18, 23)), _kst(11, 22, 10));
+      // 한국 03:00 → 21일 03:00 (조용) → 21일 10:00
+      expect(plan(_kst(11, 18, 3)), _kst(11, 21, 10));
       // 한국 21:59 → 21일 21:59 (조용하지 않다)
       expect(plan(_kst(11, 18, 21, 59)), _kst(11, 21, 21, 59));
+    });
+
+    test('경계: 21:59는 그대로, 22:00~09:59는 10:00으로, 10:00부터는 그대로', () {
+      expect(planAt(_kst(11, 21, 21, 59)), _kst(11, 21, 21, 59));
+      // 22:00 정각은 조용한 시간이라 다음 날 10:00
+      expect(planAt(_kst(11, 21, 22)), _kst(11, 22, 10));
+      expect(planAt(_kst(11, 21, 23, 59, 59)), _kst(11, 22, 10));
+      expect(planAt(_kst(11, 22, 0)), _kst(11, 22, 10));
+      // 07:59는 조용한 시간, 08:00~09:59는 조용하진 않지만 아침이라 10:00으로
+      expect(planAt(_kst(11, 21, 7, 59)), _kst(11, 21, 10));
+      expect(planAt(_kst(11, 21, 8)), _kst(11, 21, 10));
+      expect(planAt(_kst(11, 21, 9, 59)), _kst(11, 21, 10));
+      expect(planAt(_kst(11, 21, 9, 59, 59, 999)), _kst(11, 21, 10));
+      // 10:00 정각부터는 그 시각 그대로
+      expect(planAt(_kst(11, 21, 10)), _kst(11, 21, 10));
+      expect(planAt(_kst(11, 21, 13)), _kst(11, 21, 13));
+      expect(planAt(_kst(11, 21, 15, 30)), _kst(11, 21, 15, 30));
+    });
+
+    test('config의 미루는 시각을 13시로 바꾸면 13:00으로 미룬다', () {
+      final r = _rulesWith({'inactiveDeferHour': 13});
+      expect(r.notificationInactiveDeferHour, 13);
+      expect(planAt(_kst(11, 21, 21, 59), withRules: r), _kst(11, 21, 21, 59));
+      expect(planAt(_kst(11, 21, 22), withRules: r), _kst(11, 22, 13));
+      expect(planAt(_kst(11, 21, 7, 59), withRules: r), _kst(11, 21, 13));
+      expect(planAt(_kst(11, 21, 10), withRules: r), _kst(11, 21, 13));
+      expect(planAt(_kst(11, 21, 12, 59), withRules: r), _kst(11, 21, 13));
+      expect(planAt(_kst(11, 21, 13), withRules: r), _kst(11, 21, 13));
+      expect(planAt(_kst(11, 21, 14), withRules: r), _kst(11, 21, 14));
+    });
+
+    test('미루는 시각이 조용한 시간 끝(8시)보다 빠르면 8시로 미룬다 (밤에 울리지 않는다)', () {
+      final early = _rulesWith({'inactiveDeferHour': 6});
+      expect(planAt(_kst(11, 21, 23), withRules: early), _kst(11, 22, 8));
+      expect(planAt(_kst(11, 21, 7, 59), withRules: early), _kst(11, 21, 8));
+      expect(planAt(_kst(11, 21, 8), withRules: early), _kst(11, 21, 8));
+      expect(planAt(_kst(11, 21, 9), withRules: early), _kst(11, 21, 9));
+    });
+
+    test('예약 시각은 지금 + 72시간에서 정해진다 (지금이 조용한 시간이어도 상관없다)', () {
+      // 지금 한국 02:00 → 21일 02:00 (조용) → 21일 10:00
+      expect(plan(_kst(11, 18, 2)), _kst(11, 21, 10));
+      // 지금 한국 09:30 → 21일 09:30 → 21일 10:00
+      expect(plan(_kst(11, 18, 9, 30)), _kst(11, 21, 10));
+      // 지금 한국 10:00 → 21일 10:00 그대로
+      expect(plan(_kst(11, 18, 10)), _kst(11, 21, 10));
     });
   });
 

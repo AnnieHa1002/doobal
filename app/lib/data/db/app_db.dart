@@ -9,7 +9,7 @@ part 'app_db.g.dart';
 // M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝) + 스키마 3 (프로필: 출발 동네)
 // + 스키마 4 (화집 벽) + 스키마 5 (새 그림 표시) + 스키마 6 (프로필: 시작 흐름)
 // + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지) + 스키마 8 (방명록 쓸 기회·쓴 글)
-// + 스키마 9 (알림 기록·알림 켜고 끄기).
+// + 스키마 9 (알림 기록·알림 켜고 끄기) + 스키마 10 (복원한 하루 요약 지키기: 동기화 상태 열).
 // 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
@@ -147,6 +147,12 @@ class SyncState extends Table {
   TextColumn get firstRecordDay => text()();
   IntColumn get installUtc => integer()();
 
+  /// 백업을 복원한 기기에서, 복원한 하루 요약의 마지막 날 (한국 날짜 키 'YYYY-MM-DD').
+  /// 이 날까지의 하루 요약은 건강 앱에서 다시 계산한 값이 복원값보다 작으면 복원값을 지킨다
+  /// (새 기기의 건강 앱에는 그 기록이 없을 수 있다). 복원한 적이 없으면 null.
+  /// 이 기기에만 두는 값이라 백업에 넣지 않는다
+  TextColumn get restoreFloorDay => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -275,7 +281,7 @@ class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -328,6 +334,8 @@ class AppDb extends _$AppDb {
             await m.createTable(notificationLog);
             await m.createTable(notificationSettings);
           }
+          // 동기화 상태 표는 1부터 있었고 다시 만든 적이 없어서 어디서 올라와도 열을 더한다
+          if (from < 10) await m.addColumn(syncState, syncState.restoreFloorDay);
         },
       );
 }

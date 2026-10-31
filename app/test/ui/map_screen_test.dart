@@ -7,6 +7,7 @@ import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/map_regions.dart';
 import 'package:doobal/domain/route.dart';
+import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/palette.dart';
@@ -591,6 +592,97 @@ void main() {
       final active = rows.singleWhere((r) => r.status == JourneyStatus.active);
       expect(active.destId, 'kr001');
       expect(active.fundKm, closeTo(2.1, 1e-9));
+      await _end(tester, e);
+    });
+  });
+
+  group('첫 여정(내 동네 스케치) 중', () {
+    const note = '첫 그림을 받은 뒤에 고를 수 있어요';
+
+    Future<void> startSketch(_Env e) async {
+      await completeOnboarding(e.db);
+      expect(await e.svc.startSketch(_t1), isTrue);
+    }
+
+    testWidgets('다른 명소 카드는 `목적지 바꾸기`가 흐리고 눌리지 않고, 아래에 안내 한 줄이 붙는다', (tester) async {
+      final e = _Env();
+      await e.seed(tester, () => startSketch(e));
+      await _openMap(tester, e);
+      await _searchAndPick(tester, '경복궁', 'kr001');
+
+      expect(_card('경복궁'), findsOneWidget);
+      expect(find.text('목적지 바꾸기'), findsOneWidget);
+      expect(find.text('여기로 가기'), findsNothing);
+      expect(find.text('여정 멈추기'), findsNothing);
+      final button = tester.widget<GameButton>(find.widgetWithText(GameButton, '목적지 바꾸기'));
+      expect(button.onPressed, isNull);
+      expect(button.kind, GameButtonKind.primary);
+      final dim = find.descendant(
+          of: find.widgetWithText(GameButton, '목적지 바꾸기'), matching: find.byType(Opacity));
+      expect(tester.widget<Opacity>(dim.first).opacity, lessThan(1));
+      // 안내는 카드 안, 버튼 아래 한 줄
+      expect(_card(note), findsOneWidget);
+      expect(note, sketchLockedNote);
+      expect(tester.getTopLeft(find.text(note)).dy,
+          greaterThan(tester.getBottomLeft(find.text('목적지 바꾸기')).dy));
+      // 남은 거리 줄은 그대로 나온다
+      expect(find.textContaining('남은 거리'), findsOneWidget);
+
+      // 눌러도 확인 시트가 뜨지 않고, 여정은 첫 여정 그대로다
+      await tester.tap(find.text('목적지 바꾸기'), warnIfMissed: false);
+      await _transition(tester);
+      expect(find.text('바꾸기'), findsNothing);
+      expect(find.text('지금 자리에서 다시 출발해요. 액자 거리는 새로 세요.'), findsNothing);
+      final rows = await e.journeys(tester);
+      expect(rows, hasLength(1));
+      expect((rows.single.destId, rows.single.status), (sketchId, JourneyStatus.active));
+      await _end(tester, e);
+    });
+
+    testWidgets('명소를 여럿 골라도 모두 같다 (명소 쪽 카드에 여정 멈추기는 없다)', (tester) async {
+      final e = _Env();
+      await e.seed(tester, () => startSketch(e));
+      await _openMap(tester, e);
+
+      for (final (query, id) in [('경복궁', 'kr001'), ('해운대', 'kr008')]) {
+        await _searchAndPick(tester, query, id);
+        expect(_card(_byId[id]!.name), findsOneWidget, reason: id);
+        expect(find.text('목적지 바꾸기'), findsOneWidget, reason: id);
+        expect(find.text(note), findsOneWidget, reason: id);
+        expect(find.text('여정 멈추기'), findsNothing, reason: id);
+      }
+      await _end(tester, e);
+    });
+
+    testWidgets('첫 여정이 아니면 안내가 없고 `목적지 바꾸기`는 눌린다', (tester) async {
+      final e = _Env();
+      await e.seed(tester, () async => e.svc.startJourney('kr003', _t1, useFund: false));
+      await _openMap(tester, e);
+      await _searchAndPick(tester, '경복궁', 'kr001');
+
+      expect(find.text(note), findsNothing);
+      expect(tester.widget<GameButton>(find.widgetWithText(GameButton, '목적지 바꾸기')).onPressed,
+          isNotNull);
+      await _end(tester, e);
+    });
+
+    testWidgets('도착해서 첫 여정이 끝나면 `여기로 가기`가 눌린다', (tester) async {
+      final e = _Env();
+      await e.seed(tester, () async {
+        await startSketch(e);
+        final km = (await e.svc.snapshot(_t1)).journey!.totalKm;
+        final minutes = (km * 1000 / (rules.walkStrideM * 100)).ceil() + 1;
+        e.source.records.add(_walk(_t1.add(const Duration(minutes: 5)), minutes, 100));
+        e.now = _t1.add(const Duration(hours: 2));
+        await e.svc.sync(e.now);
+      });
+      await _openMap(tester, e);
+      await _searchAndPick(tester, '경복궁', 'kr001');
+
+      expect(find.text(note), findsNothing);
+      expect(find.text('목적지 바꾸기'), findsNothing);
+      expect(tester.widget<GameButton>(find.widgetWithText(GameButton, '여기로 가기')).onPressed,
+          isNotNull);
       await _end(tester, e);
     });
   });

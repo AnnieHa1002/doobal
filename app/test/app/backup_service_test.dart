@@ -38,7 +38,7 @@ Map<String, Object?> _table(List<String> cols, List<List<Object?>> rows) =>
 /// 머리만 있는 백업 JSON (표는 [tables])
 Map<String, dynamic> _backupJson({
   int format = 1,
-  int schema = 9,
+  int schema = 10,
   int? synced,
   Map<String, Object?>? walked,
   Map<String, Object?> tables = const {},
@@ -330,7 +330,7 @@ void main() {
       final json = _json(await svcA.exportBackup(_now));
       expect(json['format'], 1);
       expect(json['schema'], a.schemaVersion);
-      expect(json['schema'], 9);
+      expect(json['schema'], 10);
       expect(json['createdUtc'], _ms(_now));
       expect(json['syncedUtc'], _ms(_synced));
       expect((json['tables'] as Map<String, dynamic>).keys, svcA.includedTableNames);
@@ -461,11 +461,44 @@ void main() {
     test('쓰던 기기의 동기화 상태는 새로 만든 값으로 바뀐다 (한 줄만)', () async {
       await _fill(a);
       await _fill(b);
-      await b.update(b.syncState).write(SyncStateCompanion(lastFetchedUtc: Value(_ms(_now))));
+      await b.update(b.syncState).write(SyncStateCompanion(
+          lastFetchedUtc: Value(_ms(_now)), restoreFloorDay: const Value('2026-01-01')));
       await svcB.restoreBackup(await svcA.exportBackup(_now));
       final rows = await b.select(b.syncState).get();
       expect(rows, hasLength(1));
       expect(rows.single.lastFetchedUtc, isNull);
+      // 복원한 마지막 날도 새로 정한다 (쓰던 기기의 값이 남지 않는다)
+      expect(rows.single.restoreFloorDay, '2026-11-18');
+    });
+
+    test('복원한 마지막 날(restoreFloorDay)은 복원한 하루 요약의 가장 늦은 날이다', () async {
+      await _fill(a); // 하루 요약 2026-11-17·2026-11-18
+      await a.into(a.daySummaries).insert(DaySummariesCompanion.insert(
+          day: '2026-10-01', steps: 10, distanceM: 7, countedSessions: 0));
+      await svcB.restoreBackup(await svcA.exportBackup(_now));
+      final s = await b.select(b.syncState).getSingle();
+      expect(s.restoreFloorDay, '2026-11-18');
+    });
+
+    test('복원한 하루 요약이 없으면 복원한 마지막 날도 없다', () async {
+      await svcB.restoreBackup(await svcA.exportBackup(_now));
+      expect((await b.select(b.syncState).getSingle()).restoreFloorDay, isNull);
+    });
+
+    test('복원한 마지막 날은 이 기기에만 둔다: 백업 문자열에 열도 값도 없고, 복원할 때 새로 정한다', () async {
+      await _fill(a);
+      // 이 기기도 전에 복원한 적이 있다고 치고, 하루 요약과 다른 값을 적어 둔다
+      await a
+          .update(a.syncState)
+          .write(const SyncStateCompanion(restoreFloorDay: Value('2099-01-01')));
+      final text = await svcA.exportBackup(_now);
+      final raw = jsonEncode(_json(text));
+      expect(raw, isNot(contains('restore_floor_day')));
+      expect(raw, isNot(contains('2099-01-01')));
+      expect((_json(text)['tables'] as Map<String, dynamic>).keys, isNot(contains('sync_state')));
+
+      await svcB.restoreBackup(text);
+      expect((await b.select(b.syncState).getSingle()).restoreFloorDay, '2026-11-18');
     });
   });
 
@@ -588,7 +621,7 @@ void main() {
     test('이 앱보다 새 스키마면 StateError (DB는 그대로)', () async {
       await _fill(b);
       final before = await _userState(b);
-      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 10))), throwsStateError);
+      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 11))), throwsStateError);
       expect(await _userState(b), before);
     });
 
@@ -861,6 +894,132 @@ void main() {
       await sb.sync(syncAt);
       expect((await sb.snapshot(syncAt)).fundKm, closeTo(original.fundKm, 1e-9));
       expect(await sortedDays(b), await sortedDays(a));
+    });
+
+    group('복원 직후 하루 요약 지키기 (새 기기의 건강 앱에 기록이 없을 때)', () {
+      // 사흘 걸은 옛 기기: 11/18 걷기 6,000보, 11/19 걷기 7,200보, 11/20 걷기 3,000보 (한국 11:00)
+      final records = [
+        walk(t0.add(const Duration(hours: 2)), 60, 100),
+        walk(t0.add(const Duration(hours: 26)), 60, 120),
+        walk(t0.add(const Duration(hours: 50)), 30, 100),
+      ];
+      // 마지막 동기화(t0 + 51시간) = 한국 11/20 12:00, 백업은 그 한 시간 뒤
+      final backupAt = t0.add(const Duration(hours: 52));
+
+      /// 옛 기기 a를 돌려 백업 문자열을 만든다
+      Future<String> backupOfA() async {
+        final sa = svcOf(a, FakeStepSource(records));
+        for (final h in [0, 3, 27, 51]) {
+          await sa.sync(t0.add(Duration(hours: h)));
+        }
+        return svcA.exportBackup(backupAt);
+      }
+
+      test('옛 기기의 하루 요약·걷기 구간은 사흘 모두 기록이 있다 (시험 전제)', () async {
+        await backupOfA();
+        expect([for (final d in await sortedDays(a)) (d.day, d.steps, d.countedSessions)],
+            [('2026-11-18', 6000, 1), ('2026-11-19', 7200, 1), ('2026-11-20', 3000, 1)]);
+        expect(await sortedSessions(a), hasLength(3));
+      });
+
+      test('건강 기록이 0인 새 기기로 동기화해도 복원한 하루 요약·걷기 구간·합계가 그대로다', () async {
+        final text = await backupOfA();
+        final original = await svcOf(a, FakeStepSource(records)).snapshot(backupAt);
+
+        await svcB.restoreBackup(text);
+        final sb = svcOf(b, FakeStepSource());
+        final syncAt = t0.add(const Duration(hours: 54));
+        await sb.sync(syncAt);
+
+        expect(await sortedDays(b), await sortedDays(a));
+        expect(await sortedSessions(b), await sortedSessions(a));
+        final restored = await sb.snapshot(syncAt);
+        expect(restored.totalSteps, original.totalSteps);
+        expect(restored.totalSteps, 6000 + 7200 + 3000);
+        expect(restored.totalKm, closeTo(original.totalKm, 1e-9));
+        // 지금은 한국 11/20 오후 (복원한 마지막 날): 오늘 인정된 걷기도 그대로 1번
+        expect(restored.today, '2026-11-20');
+        expect(restored.countedSessions, original.countedSessions);
+        expect(restored.countedSessions, 1);
+        expect((await sb.walkRecord(t0, t0.add(const Duration(hours: 54)))).sessions, hasLength(3));
+
+        // 다시 동기화해도, 다음 날 동기화해도 그대로다 (복원한 날은 계속 지킨다. 11/21은 0으로 새로 생긴다)
+        await sb.sync(syncAt.add(const Duration(minutes: 1)));
+        await sb.sync(syncAt.add(const Duration(hours: 20)));
+        final later = await sortedDays(b);
+        expect(later.take(3).toList(), await sortedDays(a));
+        expect([for (final d in later.skip(3)) (d.day, d.steps)], [('2026-11-21', 0)]);
+        expect(await sortedSessions(b), await sortedSessions(a));
+      });
+
+      test('지키는 장치가 없으면 0으로 덮인다 (restoreFloorDay를 지운 비교)', () async {
+        final text = await backupOfA();
+        await svcB.restoreBackup(text);
+        await b.update(b.syncState).write(const SyncStateCompanion(restoreFloorDay: Value(null)));
+        await svcOf(b, FakeStepSource()).sync(t0.add(const Duration(hours: 54)));
+
+        expect([for (final d in await sortedDays(b)) d.steps], [0, 0, 0]);
+        expect(await b.select(b.walkSessions).get(), isEmpty);
+      });
+
+      test('복원한 뒤 새로 걸은 날은 정상으로 계산된다 (줄어들면 줄어든다)', () async {
+        final text = await backupOfA();
+        await svcB.restoreBackup(text);
+        final health = FakeStepSource([walk(t0.add(const Duration(hours: 74)), 45, 100)]);
+        final sb = svcOf(b, health);
+        final syncAt = t0.add(const Duration(hours: 76));
+        await sb.sync(syncAt);
+
+        // 11/21(복원한 마지막 날 11/20 다음 날)은 건강 기록 그대로
+        var days = await sortedDays(b);
+        expect([for (final d in days) (d.day, d.steps, d.countedSessions)], [
+          ('2026-11-18', 6000, 1),
+          ('2026-11-19', 7200, 1),
+          ('2026-11-20', 3000, 1),
+          ('2026-11-21', 4500, 1),
+        ]);
+        expect(days.last.distanceM, closeTo(4500 * 0.7, 1e-9));
+        expect(await b.select(b.walkSessions).get(), hasLength(4));
+        expect((await sb.snapshot(syncAt)).totalSteps, 6000 + 7200 + 3000 + 4500);
+
+        // 건강 앱에서 그 기록이 사라지면 새로 걸은 날은 0이 되고, 복원한 날은 그대로
+        health.records.clear();
+        await sb.sync(syncAt.add(const Duration(hours: 1)));
+        days = await sortedDays(b);
+        expect([for (final d in days) d.steps], [6000, 7200, 3000, 0]);
+        expect(await b.select(b.walkSessions).get(), hasLength(3));
+      });
+
+      test('복원한 날에 걸음이 더 들어오면 더 큰 값으로 바뀐다 (걷기 구간도 다시 계산한 것)', () async {
+        final text = await backupOfA();
+        await svcB.restoreBackup(text);
+        // 건강 앱에 옛 기록이 모두 있고, 백업한 뒤 11/20 오후에 30분 더 걸었다
+        final extra = walk(t0.add(const Duration(hours: 53)), 30, 100);
+        final sb = svcOf(b, FakeStepSource([...records, extra]));
+        await sb.sync(t0.add(const Duration(hours: 55)));
+
+        final days = await sortedDays(b);
+        expect([for (final d in days) (d.day, d.steps, d.countedSessions)],
+            [('2026-11-18', 6000, 1), ('2026-11-19', 7200, 1), ('2026-11-20', 6000, 2)]);
+        expect(days.last.distanceM, closeTo(6000 * 0.7, 1e-9));
+        // 11/18·19는 옛 기기와 같고, 11/20 걷기 구간은 둘이 됐다
+        expect((await sortedSessions(b)).map((r) => r.steps), [6000, 7200, 3000, 3000]);
+        expect((await sortedSessions(b)).where((r) => r.counted), hasLength(4));
+      });
+
+      test('복원한 날에 건강 앱에 일부만 있으면(복원값보다 작으면) 복원값을 지킨다', () async {
+        final text = await backupOfA();
+        await svcB.restoreBackup(text);
+        // 새 기기의 건강 앱에는 11/20 걷기 10분(1,000보)만 있다 (옛 기록 3,000보보다 작다)
+        final sb = svcOf(b, FakeStepSource([walk(t0.add(const Duration(hours: 50)), 10, 100)]));
+        await sb.sync(t0.add(const Duration(hours: 54)));
+
+        expect([for (final d in await sortedDays(b)) (d.day, d.steps, d.countedSessions)],
+            [('2026-11-18', 6000, 1), ('2026-11-19', 7200, 1), ('2026-11-20', 3000, 1)]);
+        // 걷기 구간은 복원한 것 그대로 (30분짜리)
+        final last = (await sortedSessions(b)).last;
+        expect((last.steps, last.endUtc - last.startUtc), (3000, 30 * 60000));
+      });
     });
   });
 }

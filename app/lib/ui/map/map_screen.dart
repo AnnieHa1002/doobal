@@ -8,6 +8,7 @@ import '../../app/sync_service.dart';
 import '../../domain/landmark.dart';
 import '../../domain/map_projection.dart';
 import '../../domain/map_regions.dart';
+import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
@@ -357,7 +358,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
   }
 
   /// 고른 명소가 있으면 아래 카드. 현재 목적지는 보조 버튼 `여정 멈추기`,
-  /// 여정이 없으면 `여기로 가기`, 있으면 다른 명소에 `목적지 바꾸기`
+  /// 여정이 없으면 `여기로 가기`, 있으면 다른 명소에 `목적지 바꾸기`.
+  /// 첫 여정(내 동네 스케치) 중에는 `목적지 바꾸기`를 흐리게 두고 안내 한 줄을 붙인다
   List<Widget> _selectedCard(MapGeometry g, MapData data, Snapshot snap) {
     final id = _selectedId;
     final l = g.byId[id];
@@ -396,6 +398,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                   ? '여정 멈추기'
                   : (isDest ? null : (change ? '목적지 바꾸기' : '여기로 가기')),
               secondary: isJourneyDest,
+              lockedNote: data.destId == sketchId ? sketchLockedNote : null,
               onPressed: isJourneyDest ? _onStop : () => _onGo(l, snap, change: change),
             ),
           ),

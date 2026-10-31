@@ -19,8 +19,10 @@ LatLng _dest(String installId, {bool Function(LatLng)? ok, LatLng home = testHom
     );
 
 void main() {
-  test('config의 범위는 2~3km', () {
-    expect((rules.firstSketchMinKm, rules.firstSketchMaxKm), (2, 3));
+  test('config의 범위는 0.5~0.8km (약 700~1,100보)', () {
+    expect((rules.firstSketchMinKm, rules.firstSketchMaxKm), (0.5, 0.8));
+    expect(sketchSteps(rules.firstSketchMinKm, rules), 700);
+    expect(sketchSteps(rules.firstSketchMaxKm, rules), 1100);
   });
 
   group('sketchDestination', () {
@@ -30,14 +32,16 @@ void main() {
       expect(_dest(_id(7)), isNot(_dest(_id(8))));
     });
 
-    test('출발 동네에서 2~3km 안, 설치 번호가 달라도', () {
+    test('출발 동네에서 config 범위 안, 설치 번호가 달라도', () {
+      final min = rules.firstSketchMinKm;
+      final max = rules.firstSketchMaxKm;
       final distances = [for (var i = 0; i < 300; i++) _km(testHome, _dest(_id(i)))];
       for (final d in distances) {
-        expect(d, inInclusiveRange(2 - 1e-6, 3 + 1e-6));
+        expect(d, inInclusiveRange(min - 1e-6, max + 1e-6));
       }
       // 범위 전체에 퍼진다 (한쪽에 몰려 있지 않다)
-      expect(distances.reduce((a, b) => a < b ? a : b), lessThan(2.2));
-      expect(distances.reduce((a, b) => a > b ? a : b), greaterThan(2.8));
+      expect(distances.reduce((a, b) => a < b ? a : b), lessThan(min + (max - min) * 0.1));
+      expect(distances.reduce((a, b) => a > b ? a : b), greaterThan(max - (max - min) * 0.1));
     });
 
     test('방향도 사방으로 퍼진다', () {
@@ -137,6 +141,12 @@ void main() {
       expect(sketchSteps(2.0, rules), 2900);
       expect(sketchSteps(3.0, rules), 4300);
       expect(sketchSteps(0, rules), 0);
+    });
+
+    test('0.5~0.8km 범위: 0.5km는 714보 → 700, 0.6km는 857보 → 900, 0.8km는 1,143보 → 1,100', () {
+      expect(sketchSteps(0.5, rules), 700);
+      expect(sketchSteps(0.6, rules), 900);
+      expect(sketchSteps(0.8, rules), 1100);
     });
   });
 

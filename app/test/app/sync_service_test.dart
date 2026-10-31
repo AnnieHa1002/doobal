@@ -1900,7 +1900,17 @@ void main() {
       return end;
     }
 
-    test('startSketch: 출발 동네에서 2~3km 떨어진 가상 목적지로 가는 여정을 만든다', () async {
+    /// 이미 시작한 스케치 여정을 [start] 뒤에 걸어서 도착할 때까지 동기화한다. 도착을 동기화한 시각
+    Future<DateTime> walkToSketchFrom(_Env e, DateTime start) async {
+      final totalKm = (await e.svc.snapshot(start)).journey!.totalKm;
+      final record = _walkKm(start.add(minute * 20), totalKm);
+      e.source.records.add(record);
+      final end = record.end.add(minute * 30);
+      await e.svc.sync(end);
+      return end;
+    }
+
+    test('startSketch: 출발 동네에서 config 범위(0.5~0.8km) 안의 가상 목적지로 가는 여정을 만든다', () async {
       final e = await sketchEnv();
       // 시작 흐름 직후라 동기화도 안 했다 (경비 없이 시작)
       expect(await e.svc.startSketch(t1), isTrue);
@@ -1909,7 +1919,8 @@ void main() {
       expect(j.id, 'j${_ms(t1)}');
       expect(j.destId, sketchId);
       expect((j.originLat, j.originLng), (testHome.lat, testHome.lng));
-      expect(km(testHome, destOf(j)), inInclusiveRange(2 - 1e-6, 3 + 1e-6));
+      expect(km(testHome, destOf(j)),
+          inInclusiveRange(rules.firstSketchMinKm - 1e-6, rules.firstSketchMaxKm + 1e-6));
       expect(j.totalEffectiveKm, closeTo(km(testHome, destOf(j)), 1e-9));
       expect(j.status, JourneyStatus.active);
       expect(j.fundKm, 0);
@@ -1933,7 +1944,7 @@ void main() {
       await e.svc.startSketch(t1);
       final dest = (await e.svc.snapshot(t1)).journey!.dest;
       final nearest = nearestLandmark(dest.latLng, _landmarks.values.toList(), rules.earthRadiusKm);
-      // 서울시청 2~3km 안의 가장 가까운 명소는 경복궁(capital)
+      // 이 설치 번호의 목적지(서울시청 근처)에서 가장 가까운 명소는 경복궁(capital)
       expect(nearest.id, 'kr001');
       expect((dest.sido, dest.sigungu, dest.region, dest.backdrop, dest.terrain),
           (nearest.sido, nearest.sigungu, nearest.region, nearest.backdrop, nearest.terrain));
@@ -2016,9 +2027,9 @@ void main() {
     });
 
     test('경계 상자 밖(다른 섬으로 치는) 후보는 onLand를 묻기 전에 거절한다', () async {
-      // 제주 동쪽 끝(경도 127.0 상자 가장자리)에서는 동쪽 후보가 상자 밖이다.
+      // 제주 상자의 동쪽 가장자리(경도 127.0) 약 200m 앞에서는 동쪽 후보가 상자 밖이다.
       // 첫 후보가 상자 밖이 되는 설치 번호를 찾는다
-      const home = LatLng(33.4, 126.99);
+      const home = LatLng(33.4, 126.998);
       LatLng first(String id) => sketchDestination(
             home: home,
             installId: id,
@@ -2229,37 +2240,80 @@ void main() {
       expect(await e.svc.wall(), [sketchId, null, null, null]);
     });
 
-    test('스케치 중 목적지를 바꾸면 스케치 여정은 멈추고 다시 정할 길은 없다', () async {
+    /// 모든 표의 내용 (동기화 상태·여행 경비 포함: 막힌 호출이 아무것도 안 바꿨는지 비교한다)
+    Future<List<Object?>> everything(_Env e) async => [
+          await e.dump(),
+          await e.db.select(e.db.syncState).get(),
+          await e.db.select(e.db.travelFund).get(),
+        ];
+
+    Matcher locked() =>
+        throwsA(isA<StateError>().having((x) => x.message, 'message', sketchLockedNote));
+
+    test('첫 여정 중에는 목적지를 못 바꾼다: StateError, 동기화도 하지 않고 DB는 그대로', () async {
       final e = await sketchEnv();
       await e.svc.sync(_t0);
       await e.svc.startSketch(t1);
-      final stopAt = t1.add(minute * 10);
-      await e.svc.startJourney('kr001', stopAt, useFund: false);
+      // 걸은 기록이 건강 앱에 있어도(동기화 전) 아무것도 가져오지 않는다
+      e.source.records.add(_walk(t1.add(minute * 2), 5, 100));
+      final before = await everything(e);
 
-      final rows = {for (final r in await e.db.select(e.db.journeys).get()) r.id: r};
-      final sketchJourney = rows['j${_ms(t1)}']!;
-      expect(sketchJourney.destId, sketchId);
-      expect(sketchJourney.status, JourneyStatus.stopped);
-      expect(sketchJourney.endLat, isNotNull);
-      expect(sketchJourney.endedUtc, _ms(stopAt));
-      final next = rows['j${_ms(stopAt)}']!;
-      expect((next.destId, next.status), ('kr001', JourneyStatus.active));
-      // 새 여정의 출발지는 스케치를 멈춘 지점
-      expect((next.originLat, next.originLng), (sketchJourney.endLat, sketchJourney.endLng));
-      expect(next.destLat, isNull);
+      await expectLater(e.svc.startJourney('kr001', t1.add(minute * 10), useFund: false), locked());
+      await expectLater(e.svc.startJourney('kr001', t1.add(minute * 10)), locked());
+      expect(await everything(e), before);
+      // 첫 여정은 그대로 진행 중이고 목적지도 그대로
+      final j = await journeyRow(e);
+      expect((j.destId, j.status), (sketchId, JourneyStatus.active));
       expect(await e.db.select(e.db.paintingsOwned).get(), isEmpty);
-      expect((await e.svc.snapshot(stopAt)).journey!.dest.id, 'kr001');
-      // 이미 여정이 있어서 스케치는 다시 못 정한다
-      expect(await e.svc.startSketch(stopAt.add(minute)), isFalse);
+      expect(sketchLockedNote, '첫 그림을 받은 뒤에 고를 수 있어요');
     });
 
-    test('여정을 멈춰도(stopJourney) 스케치 그림은 생기지 않는다', () async {
+    test('첫 여정 중에는 멈출 수 없다: StateError, 동기화도 하지 않고 DB는 그대로', () async {
       final e = await sketchEnv();
       await e.svc.sync(_t0);
       await e.svc.startSketch(t1);
-      expect(await e.svc.stopJourney(t1.add(minute * 3)), isTrue);
-      expect(await e.db.select(e.db.paintingsOwned).get(), isEmpty);
-      expect((await e.svc.snapshot(t1.add(minute * 4))).journey, isNull);
+      e.source.records.add(_walk(t1.add(minute * 2), 5, 100));
+      final before = await everything(e);
+
+      await expectLater(e.svc.stopJourney(t1.add(minute * 3)), locked());
+      expect(await everything(e), before);
+      expect((await journeyRow(e)).status, JourneyStatus.active);
+      expect((await e.svc.snapshot(t1.add(minute * 4))).journey!.dest.id, sketchId);
+      // 첫 그림은 잃지 않았고, 도착은 계속 걸어서 할 수 있다
+      final end = await walkToSketchFrom(e, t1);
+      expect((await journeyRow(e)).status, JourneyStatus.arrived);
+      expect((await e.svc.paintings()).single.isFirstPack, isTrue);
+      expect(end.isAfter(t1), isTrue);
+    });
+
+    test('도착을 동기화한 뒤에는 목적지를 고를 수 있고 멈출 수도 있다 (평소처럼)', () async {
+      final e = await sketchEnv();
+      await e.svc.sync(_t0);
+      await e.svc.startSketch(t1);
+      final totalKm = (await e.svc.snapshot(t1)).journey!.totalKm;
+      final record = _walkKm(t1.add(minute * 5), totalKm);
+      e.source.records.add(record);
+      final end = record.end.add(minute * 30);
+
+      // 도착할 만큼 걸었어도 동기화가 도착을 처리하기 전에는 아직 첫 여정 중이다
+      await expectLater(e.svc.startJourney('kr001', end, useFund: false), locked());
+      await e.svc.sync(end);
+      expect((await journeyRow(e)).status, JourneyStatus.arrived);
+
+      final later = end.add(const Duration(hours: 1));
+      await e.svc.startJourney('kr001', later, useFund: false);
+      final rows = {for (final r in await e.db.select(e.db.journeys).get()) r.id: r};
+      final sketchJourney = rows['j${_ms(t1)}']!;
+      expect(sketchJourney.status, JourneyStatus.arrived);
+      final next = rows['j${_ms(later)}']!;
+      expect((next.destId, next.status), ('kr001', JourneyStatus.active));
+      // 새 여정의 출발지는 스케치 목적지(쉬는 자리)
+      expect((next.originLat, next.originLng), (sketchJourney.endLat, sketchJourney.endLng));
+      expect((await e.svc.snapshot(later)).journey!.dest.id, 'kr001');
+      // 첫 그림은 그대로 있고, 이제 멈출 수 있다 (일반 여정)
+      expect(await e.svc.stopJourney(later.add(minute * 3)), isTrue);
+      expect((await e.svc.paintings()).single.isFirstPack, isTrue);
+      expect((await e.svc.snapshot(later.add(minute * 4))).journey, isNull);
     });
 
     test('멱등: 도착한 뒤 같은 기록으로 또 동기화해도 그림 값이 그대로', () async {

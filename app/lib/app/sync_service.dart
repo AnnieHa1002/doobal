@@ -14,6 +14,7 @@ import '../domain/journey.dart';
 import '../domain/landmark.dart';
 import '../domain/notification_policy.dart';
 import '../domain/prop.dart';
+import '../domain/restore_floor.dart';
 import '../domain/route.dart';
 import '../domain/rules.dart';
 import '../domain/scene.dart' show nearestLandmark;
@@ -435,7 +436,7 @@ class SyncService {
             for (final m in minutes)
               StepMinutesCompanion.insert(minuteUtc: Value(m.minute), steps: m.steps),
           ]));
-      await _recomputeDays(kstDayKey(from), kstDayKey(to));
+      await _recomputeDays(kstDayKey(from), kstDayKey(to), state.restoreFloorDay);
       await _advanceJourney(to);
       await _unlockProps(to);
       final newMilestones = await _updateGuestbookTickets(to);
@@ -487,8 +488,10 @@ class SyncService {
   /// [useFund]가 true면 여행 경비를 모두 더한다 (더한 만큼 경비는 줄어든다)
   /// 진행 중인 여정도 쉬는 자리도 없으면(출발 동네를 안 골랐고 여행한 적도 없음) StateError를
   /// 던지고 아무것도 바꾸지 않는다 (동기화도 하지 않는다).
-  /// 내 동네 스케치 여정 중에 부르면 그 여정은 멈춘다 (스케치는 다시 정하는 길이 없다)
+  /// 첫 여정 '내 동네 스케치' 중에는 목적지를 못 바꾼다: StateError([sketchLockedNote])를 던지고
+  /// 아무것도 바꾸지 않는다 (동기화도 하지 않는다. 도착해서 끝난 뒤에는 평소처럼 된다)
   Future<void> startJourney(String destId, DateTime now, {bool useFund = true}) async {
+    await _requireNotSketching();
     if (await _activeJourney() == null && await _restingPosition() == null) {
       throw StateError(_needHome);
     }
@@ -568,10 +571,19 @@ class SyncService {
         .write(TravelFundCompanion(km: Value(fund.km - used)));
   }
 
+  /// 진행 중인 여정이 첫 여정 '내 동네 스케치'이면 StateError. 동기화하기 전의 저장된 상태로 판단한다
+  /// (이미 도착할 만큼 걸었어도 동기화가 도착을 처리하기 전이면 막힌다)
+  Future<void> _requireNotSketching() async {
+    if ((await _activeJourney())?.destId == sketchId) throw StateError(sketchLockedNote);
+  }
+
   /// 그때까지의 거리를 반영한 뒤, 진행 중인 여정을 지금 지점에서 멈춘다.
   /// 이후 걸음은 여행 경비로 간다. 멈췄으면 true. 진행 중인 여정이 없으면
-  /// (그 동기화에서 도착한 경우도) 동기화만 하고 false
+  /// (그 동기화에서 도착한 경우도) 동기화만 하고 false.
+  /// 첫 여정 '내 동네 스케치' 중에는 멈출 수 없다 (멈추면 첫 그림을 잃는다): StateError
+  /// ([sketchLockedNote])를 던지고 아무것도 바꾸지 않는다 (동기화도 하지 않는다)
   Future<bool> stopJourney(DateTime now) async {
+    await _requireNotSketching();
     await sync(now);
     return db.transaction(() async {
       final active = await _activeJourney();
@@ -1279,8 +1291,10 @@ class SyncService {
   }
 
   /// 영향받은 날의 하루 요약·걷기 1번을 다시 계산한다.
-  /// 전날 0시부터 불러서 자정을 넘는 구간과 직전 걷기/뛰기 상태를 이어 본다
-  Future<void> _recomputeDays(String firstDay, String lastDay) async {
+  /// 전날 0시부터 불러서 자정을 넘는 구간과 직전 걷기/뛰기 상태를 이어 본다.
+  /// 백업을 복원한 기기라면 [restoreFloorDay]까지의 날은 건강 앱에서 다시 계산한 값이 복원값보다
+  /// 작을 때 복원값(하루 요약과 걷기 구간)을 지킨다 ([guardRestoredDay])
+  Future<void> _recomputeDays(String firstDay, String lastDay, String? restoreFloorDay) async {
     final days = <String>[];
     for (var d = firstDay; d.compareTo(lastDay) <= 0; d = addDays(d, 1)) {
       days.add(d);
@@ -1300,14 +1314,37 @@ class SyncService {
       steps[d] = steps[d]! + g.steps;
       dist[d] = dist[d]! + distanceM([g], rules);
     }
+    final counted = {
+      for (final d in days)
+        d: sessions.where((s) => s.counted && kstDayKey(s.start) == d).length,
+    };
 
-    final rangeFrom = kstDayStartUtc(firstDay).millisecondsSinceEpoch;
-    final rangeTo = kstDayStartUtc(addDays(lastDay, 1)).millisecondsSinceEpoch;
-    await (db.delete(db.walkSessions)
-          ..where((t) =>
-              t.startUtc.isBiggerOrEqualValue(rangeFrom) &
-              t.startUtc.isSmallerThanValue(rangeTo)))
-        .go();
+    // 복원한 날: 지금 저장된 행이 복원값이다 (복원한 뒤 다시 계산해서 그대로 둔 날도 같은 값)
+    final keepSessions = <String>{};
+    if (restoreFloorDay != null) {
+      final stored = await (db.select(db.daySummaries)..where((t) => t.day.isIn(days))).get();
+      for (final r in stored) {
+        if (!isRestoredDay(r.day, restoreFloorDay)) continue;
+        final out = guardRestoredDay(
+          DayTotals(r.steps, r.distanceM, r.countedSessions),
+          DayTotals(steps[r.day]!, dist[r.day]!, counted[r.day]!),
+        );
+        steps[r.day] = out.totals.steps;
+        dist[r.day] = out.totals.distanceM;
+        counted[r.day] = out.totals.countedSessions;
+        if (!out.useRecomputedSessions) keepSessions.add(r.day);
+      }
+    }
+
+    for (final d in days) {
+      if (keepSessions.contains(d)) continue;
+      final from = kstDayStartUtc(d).millisecondsSinceEpoch;
+      final to = kstDayStartUtc(addDays(d, 1)).millisecondsSinceEpoch;
+      await (db.delete(db.walkSessions)
+            ..where((t) =>
+                t.startUtc.isBiggerOrEqualValue(from) & t.startUtc.isSmallerThanValue(to)))
+          .go();
+    }
     await db.batch((b) {
       for (final d in days) {
         b.insert(
@@ -1316,22 +1353,23 @@ class SyncService {
             day: d,
             steps: steps[d]!,
             distanceM: dist[d]!,
-            countedSessions: sessions.where((s) => s.counted && kstDayKey(s.start) == d).length,
+            countedSessions: counted[d]!,
           ),
           mode: InsertMode.insertOrReplace,
         );
       }
       b.insertAll(db.walkSessions, [
         for (final s in sessions)
-          WalkSessionsCompanion.insert(
-            startUtc: Value(s.start.millisecondsSinceEpoch),
-            endUtc: s.end.millisecondsSinceEpoch,
-            steps: s.steps,
-            distanceM: s.distanceM,
-            runRatio: s.runRatio,
-            qualified: s.qualified,
-            counted: s.counted,
-          ),
+          if (!keepSessions.contains(kstDayKey(s.start)))
+            WalkSessionsCompanion.insert(
+              startUtc: Value(s.start.millisecondsSinceEpoch),
+              endUtc: s.end.millisecondsSinceEpoch,
+              steps: s.steps,
+              distanceM: s.distanceM,
+              runRatio: s.runRatio,
+              qualified: s.qualified,
+              counted: s.counted,
+            ),
       ]);
     });
   }

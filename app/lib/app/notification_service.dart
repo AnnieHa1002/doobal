@@ -136,7 +136,8 @@ class NotificationService {
   // -------------------------------------------------------------------------------------------
   // N5 (며칠 미접속)
 
-  /// 앱이 백그라운드로 갈 때: N5를 지금 + inactiveHours에 예약한다. 이미 예약돼 있거나,
+  /// 앱이 백그라운드로 갈 때: N5를 지금 + inactiveHours에 예약한다 (그 시각이 밤이나 이른 아침이면
+  /// 낮 inactiveDeferHour시로 미룬다: [planInactive]). 이미 예약돼 있거나,
   /// 이미 울렸는데 아직 안 열었거나, N5가 꺼져 있으면 하지 않는다
   Future<void> onBackground(DateTime now) async {
     try {

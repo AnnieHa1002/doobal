@@ -18,7 +18,7 @@
   }
  },
  "journey": {
-  "firstSketchKm": { "min": 2, "max": 3 },
+  "firstSketchKm": { "min": 0.5, "max": 0.8 },
   "frame": { "silverKm": 20, "goldKm": 50 },
   "travelFundCapKm": 15,
   "eta": { "windowDays": 30, "defaultDailySteps": 7000 }
@@ -85,7 +85,7 @@
  "character": {
   "blink": { "approx": true, "minGapSec": 3, "maxGapSec": 6, "doubleChance": 0.15, "doubleGapSec": 0.3 }
  },
- "notifications": { "quietFromHour": 22, "quietToHour": 8, "dailyMax": 2, "nearDestKm": 10, "inactiveHours": 72 },
+ "notifications": { "quietFromHour": 22, "quietToHour": 8, "dailyMax": 2, "nearDestKm": 10, "inactiveHours": 72, "inactiveDeferHour": 10 },
  "backup": { "minIntervalMin": 10, "maxChars": 1000000 },
  "allowedSources": { "ios": [], "android": [] }
 }

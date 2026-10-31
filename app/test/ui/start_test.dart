@@ -770,7 +770,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
 
-      // 출발 동네(_fill이 고른 첫 시·군·구)에서 config 범위(2~3km) 안의 가상 목적지로 가는 여정
+      // 출발 동네(_fill이 고른 첫 시·군·구)에서 config 범위(firstSketchKm) 안의 가상 목적지로 가는 여정
       final home = sigungu.first;
       final j = (await tester.runAsync(() => e.db.select(e.db.journeys).getSingle()))!;
       expect(j.destId, sketchId);

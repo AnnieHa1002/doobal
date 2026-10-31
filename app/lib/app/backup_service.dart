@@ -62,7 +62,8 @@ class BackupService {
   };
 
   /// 백업에 넣지 않는 표 (기기 상태). 복원할 때 걸음 분과 동기화 상태는 다시 만들고,
-  /// 알림 기록은 지금 기기 것을 그대로 둔다
+  /// 알림 기록은 지금 기기 것을 그대로 둔다. 동기화 상태의 restoreFloorDay(복원한 마지막 날)도
+  /// 이 기기에서 복원할 때 정하는 값이라 표째 넣지 않는다
   List<TableInfo<Table, dynamic>> get skippedTables =>
       [db.stepMinutes, db.syncState, db.notificationLog];
 
@@ -101,7 +102,9 @@ class BackupService {
   /// - 걸음 분(StepMinutes)은 비운다. 동기화 상태는 마지막 동기화 시각을 비우고, 설치 시각을 거기서
   ///   48시간 전으로 둬서 다음 동기화가 건강 앱에서 그 뒤를 다시 가져온다: 백업에 적힌 마지막 동기화
   ///   (syncedUtc)의 refetchHours 전 한국 날짜 시작부터 (그 날의 하루 요약이 잘리지 않게 날짜 시작으로,
-  ///   첫 기록일보다는 앞서지 않게).
+  ///   첫 기록일보다는 앞서지 않게). 복원한 하루 요약의 마지막 날은 restoreFloorDay에 적는다:
+  ///   새 기기의 건강 앱에 그 기록이 없어도 그 날까지의 하루 요약·걷기 구간이 0으로 덮이지 않는다
+  ///   (SyncService가 다시 계산한 값이 복원값보다 작으면 복원값을 지킨다)
   /// - 진행 중인 여정은 걸음 분이 없어서 진행 거리를 다시 셀 수 없다. 백업에 적힌 걸은 거리
   ///   (journeyWalked.km)를 여정의 경비(fundKm)에 더하고 시작 시각을 syncedUtc의 분으로 옮긴다.
   ///   그러면 진행 거리 = 경비 + 시작 이후 걸은 거리라는 엔진 계산은 그대로이고, 복원 뒤 동기화가
@@ -230,19 +233,23 @@ class BackupService {
   /// (마지막 동기화의 refetchHours 전 한국 날짜 시작). 첫 기록일은 복원한 하루 요약의 가장 이른 날이라
   /// (옛 기기의 첫 동기화 날이 곧 가장 이른 하루 요약이다) 도착 예정일 평균이 이어지고,
   /// 가져올 시작이 그 날보다 앞이면 그 날 시작으로 미룬다 (첫 기록일 전의 하루 요약을 새로 만들지 않는다).
-  /// 하루 요약이 없으면 가져올 시작의 날짜가 첫 기록일이다
+  /// 하루 요약이 없으면 가져올 시작의 날짜가 첫 기록일이다.
+  /// 복원한 하루 요약의 가장 늦은 날은 restoreFloorDay (없으면 null)
   Future<void> _resetSyncState(_Backup b) async {
     final ref = DateTime.fromMillisecondsSinceEpoch(b.syncedUtc ?? b.createdUtc, isUtc: true);
     var from = kstDayStartUtc(kstDayKey(ref.subtract(Duration(hours: rules.refetchHours))));
     final earliest = db.daySummaries.day.min();
-    final first = (await (db.selectOnly(db.daySummaries)..addColumns([earliest])).getSingle())
-        .read(earliest);
+    final latest = db.daySummaries.day.max();
+    final range =
+        await (db.selectOnly(db.daySummaries)..addColumns([earliest, latest])).getSingle();
+    final first = range.read(earliest);
     if (first != null && kstDayStartUtc(first).isAfter(from)) from = kstDayStartUtc(first);
     await db.delete(db.syncState).go();
     await db.into(db.syncState).insert(SyncStateCompanion.insert(
           id: const Value(1),
           firstRecordDay: first ?? kstDayKey(from),
           installUtc: from.millisecondsSinceEpoch,
+          restoreFloorDay: Value(range.read(latest)),
         ));
   }
 

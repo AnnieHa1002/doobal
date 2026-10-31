@@ -2307,12 +2307,24 @@ class $SyncStateTable extends SyncState
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _restoreFloorDayMeta = const VerificationMeta(
+    'restoreFloorDay',
+  );
+  @override
+  late final GeneratedColumn<String> restoreFloorDay = GeneratedColumn<String>(
+    'restore_floor_day',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     lastFetchedUtc,
     firstRecordDay,
     installUtc,
+    restoreFloorDay,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2357,6 +2369,15 @@ class $SyncStateTable extends SyncState
     } else if (isInserting) {
       context.missing(_installUtcMeta);
     }
+    if (data.containsKey('restore_floor_day')) {
+      context.handle(
+        _restoreFloorDayMeta,
+        restoreFloorDay.isAcceptableOrUnknown(
+          data['restore_floor_day']!,
+          _restoreFloorDayMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2382,6 +2403,10 @@ class $SyncStateTable extends SyncState
         DriftSqlType.int,
         data['${effectivePrefix}install_utc'],
       )!,
+      restoreFloorDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}restore_floor_day'],
+      ),
     );
   }
 
@@ -2396,11 +2421,18 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
   final int? lastFetchedUtc;
   final String firstRecordDay;
   final int installUtc;
+
+  /// 백업을 복원한 기기에서, 복원한 하루 요약의 마지막 날 (한국 날짜 키 'YYYY-MM-DD').
+  /// 이 날까지의 하루 요약은 건강 앱에서 다시 계산한 값이 복원값보다 작으면 복원값을 지킨다
+  /// (새 기기의 건강 앱에는 그 기록이 없을 수 있다). 복원한 적이 없으면 null.
+  /// 이 기기에만 두는 값이라 백업에 넣지 않는다
+  final String? restoreFloorDay;
   const SyncStateRow({
     required this.id,
     this.lastFetchedUtc,
     required this.firstRecordDay,
     required this.installUtc,
+    this.restoreFloorDay,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2411,6 +2443,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     }
     map['first_record_day'] = Variable<String>(firstRecordDay);
     map['install_utc'] = Variable<int>(installUtc);
+    if (!nullToAbsent || restoreFloorDay != null) {
+      map['restore_floor_day'] = Variable<String>(restoreFloorDay);
+    }
     return map;
   }
 
@@ -2422,6 +2457,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           : Value(lastFetchedUtc),
       firstRecordDay: Value(firstRecordDay),
       installUtc: Value(installUtc),
+      restoreFloorDay: restoreFloorDay == null && nullToAbsent
+          ? const Value.absent()
+          : Value(restoreFloorDay),
     );
   }
 
@@ -2435,6 +2473,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       lastFetchedUtc: serializer.fromJson<int?>(json['lastFetchedUtc']),
       firstRecordDay: serializer.fromJson<String>(json['firstRecordDay']),
       installUtc: serializer.fromJson<int>(json['installUtc']),
+      restoreFloorDay: serializer.fromJson<String?>(json['restoreFloorDay']),
     );
   }
   @override
@@ -2445,6 +2484,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       'lastFetchedUtc': serializer.toJson<int?>(lastFetchedUtc),
       'firstRecordDay': serializer.toJson<String>(firstRecordDay),
       'installUtc': serializer.toJson<int>(installUtc),
+      'restoreFloorDay': serializer.toJson<String?>(restoreFloorDay),
     };
   }
 
@@ -2453,6 +2493,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     Value<int?> lastFetchedUtc = const Value.absent(),
     String? firstRecordDay,
     int? installUtc,
+    Value<String?> restoreFloorDay = const Value.absent(),
   }) => SyncStateRow(
     id: id ?? this.id,
     lastFetchedUtc: lastFetchedUtc.present
@@ -2460,6 +2501,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
         : this.lastFetchedUtc,
     firstRecordDay: firstRecordDay ?? this.firstRecordDay,
     installUtc: installUtc ?? this.installUtc,
+    restoreFloorDay: restoreFloorDay.present
+        ? restoreFloorDay.value
+        : this.restoreFloorDay,
   );
   SyncStateRow copyWithCompanion(SyncStateCompanion data) {
     return SyncStateRow(
@@ -2473,6 +2517,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       installUtc: data.installUtc.present
           ? data.installUtc.value
           : this.installUtc,
+      restoreFloorDay: data.restoreFloorDay.present
+          ? data.restoreFloorDay.value
+          : this.restoreFloorDay,
     );
   }
 
@@ -2482,14 +2529,20 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           ..write('id: $id, ')
           ..write('lastFetchedUtc: $lastFetchedUtc, ')
           ..write('firstRecordDay: $firstRecordDay, ')
-          ..write('installUtc: $installUtc')
+          ..write('installUtc: $installUtc, ')
+          ..write('restoreFloorDay: $restoreFloorDay')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, lastFetchedUtc, firstRecordDay, installUtc);
+  int get hashCode => Object.hash(
+    id,
+    lastFetchedUtc,
+    firstRecordDay,
+    installUtc,
+    restoreFloorDay,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2497,7 +2550,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           other.id == this.id &&
           other.lastFetchedUtc == this.lastFetchedUtc &&
           other.firstRecordDay == this.firstRecordDay &&
-          other.installUtc == this.installUtc);
+          other.installUtc == this.installUtc &&
+          other.restoreFloorDay == this.restoreFloorDay);
 }
 
 class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
@@ -2505,17 +2559,20 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
   final Value<int?> lastFetchedUtc;
   final Value<String> firstRecordDay;
   final Value<int> installUtc;
+  final Value<String?> restoreFloorDay;
   const SyncStateCompanion({
     this.id = const Value.absent(),
     this.lastFetchedUtc = const Value.absent(),
     this.firstRecordDay = const Value.absent(),
     this.installUtc = const Value.absent(),
+    this.restoreFloorDay = const Value.absent(),
   });
   SyncStateCompanion.insert({
     this.id = const Value.absent(),
     this.lastFetchedUtc = const Value.absent(),
     required String firstRecordDay,
     required int installUtc,
+    this.restoreFloorDay = const Value.absent(),
   }) : firstRecordDay = Value(firstRecordDay),
        installUtc = Value(installUtc);
   static Insertable<SyncStateRow> custom({
@@ -2523,12 +2580,14 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Expression<int>? lastFetchedUtc,
     Expression<String>? firstRecordDay,
     Expression<int>? installUtc,
+    Expression<String>? restoreFloorDay,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (lastFetchedUtc != null) 'last_fetched_utc': lastFetchedUtc,
       if (firstRecordDay != null) 'first_record_day': firstRecordDay,
       if (installUtc != null) 'install_utc': installUtc,
+      if (restoreFloorDay != null) 'restore_floor_day': restoreFloorDay,
     });
   }
 
@@ -2537,12 +2596,14 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Value<int?>? lastFetchedUtc,
     Value<String>? firstRecordDay,
     Value<int>? installUtc,
+    Value<String?>? restoreFloorDay,
   }) {
     return SyncStateCompanion(
       id: id ?? this.id,
       lastFetchedUtc: lastFetchedUtc ?? this.lastFetchedUtc,
       firstRecordDay: firstRecordDay ?? this.firstRecordDay,
       installUtc: installUtc ?? this.installUtc,
+      restoreFloorDay: restoreFloorDay ?? this.restoreFloorDay,
     );
   }
 
@@ -2561,6 +2622,9 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     if (installUtc.present) {
       map['install_utc'] = Variable<int>(installUtc.value);
     }
+    if (restoreFloorDay.present) {
+      map['restore_floor_day'] = Variable<String>(restoreFloorDay.value);
+    }
     return map;
   }
 
@@ -2570,7 +2634,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
           ..write('id: $id, ')
           ..write('lastFetchedUtc: $lastFetchedUtc, ')
           ..write('firstRecordDay: $firstRecordDay, ')
-          ..write('installUtc: $installUtc')
+          ..write('installUtc: $installUtc, ')
+          ..write('restoreFloorDay: $restoreFloorDay')
           ..write(')'))
         .toString();
   }
@@ -7073,12 +7138,14 @@ typedef $$SyncStateTableCreateCompanionBuilder = SyncStateCompanion Function({
   Value<int?> lastFetchedUtc,
   required String firstRecordDay,
   required int installUtc,
+  Value<String?> restoreFloorDay,
 });
 typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<int> id,
   Value<int?> lastFetchedUtc,
   Value<String> firstRecordDay,
   Value<int> installUtc,
+  Value<String?> restoreFloorDay,
 });
 
 class $$SyncStateTableFilterComposer
@@ -7107,6 +7174,11 @@ class $$SyncStateTableFilterComposer
 
   ColumnFilters<int> get installUtc => $composableBuilder(
     column: $table.installUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get restoreFloorDay => $composableBuilder(
+    column: $table.restoreFloorDay,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7139,6 +7211,11 @@ class $$SyncStateTableOrderingComposer
     column: $table.installUtc,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get restoreFloorDay => $composableBuilder(
+    column: $table.restoreFloorDay,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncStateTableAnnotationComposer
@@ -7165,6 +7242,11 @@ class $$SyncStateTableAnnotationComposer
 
   GeneratedColumn<int> get installUtc => $composableBuilder(
     column: $table.installUtc,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get restoreFloorDay => $composableBuilder(
+    column: $table.restoreFloorDay,
     builder: (column) => column,
   );
 }
@@ -7204,11 +7286,13 @@ class $$SyncStateTableTableManager
                 Value<int?> lastFetchedUtc = const Value.absent(),
                 Value<String> firstRecordDay = const Value.absent(),
                 Value<int> installUtc = const Value.absent(),
+                Value<String?> restoreFloorDay = const Value.absent(),
               }) => SyncStateCompanion(
                 id: id,
                 lastFetchedUtc: lastFetchedUtc,
                 firstRecordDay: firstRecordDay,
                 installUtc: installUtc,
+                restoreFloorDay: restoreFloorDay,
               ),
           createCompanionCallback:
               ({
@@ -7216,11 +7300,13 @@ class $$SyncStateTableTableManager
                 Value<int?> lastFetchedUtc = const Value.absent(),
                 required String firstRecordDay,
                 required int installUtc,
+                Value<String?> restoreFloorDay = const Value.absent(),
               }) => SyncStateCompanion.insert(
                 id: id,
                 lastFetchedUtc: lastFetchedUtc,
                 firstRecordDay: firstRecordDay,
                 installUtc: installUtc,
+                restoreFloorDay: restoreFloorDay,
               ),
           withReferenceMapper: (p0) => p0
               .map(

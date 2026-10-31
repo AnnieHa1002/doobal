@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'rules.dart';
 import 'time_kst.dart';
@@ -137,10 +138,13 @@ bool isQuietTime(DateTime t, Rules rules) {
 
 /// [t] 뒤 처음 오는 한국 시간 quietToHour시 정각 (조용한 시간이 끝나는 때).
 /// 조용한 시간 안의 시각이면 그 시간의 끝이다
-DateTime quietEnd(DateTime t, Rules rules) {
+DateTime quietEnd(DateTime t, Rules rules) => _nextKstHour(t, rules.notificationQuietToHour);
+
+/// [t] 뒤 처음 오는 한국 시간 [hour]시 정각 (그 시각 정각이면 다음 날)
+DateTime _nextKstHour(DateTime t, int hour) {
   final today = kstDayKey(t);
-  final day = kstDateTime(t).hour < rules.notificationQuietToHour ? today : addDays(today, 1);
-  return kstDayStartUtc(day).add(Duration(hours: rules.notificationQuietToHour));
+  final day = kstDateTime(t).hour < hour ? today : addDays(today, 1);
+  return kstDayStartUtc(day).add(Duration(hours: hour));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -280,7 +284,10 @@ enum InactiveState {
 
 /// 앱이 백그라운드로 갈 때 N5를 예약할 시각 (UTC). 예약하지 않으면 null:
 /// 꺼져 있거나, 이미 예약돼 있거나(그대로 둔다), 이미 울렸는데 아직 안 열었을 때.
-/// 지금 + inactiveHours가 조용한 시간이면 그 시간이 끝날 때로 미룬다 (밤에는 안 울린다)
+/// 지금 + inactiveHours가 조용한 시간이거나 조용한 시간이 끝난 뒤 inactiveDeferHour시 전이면
+/// (한국 시간 22시 정각부터 10시 정각 전까지) 그 뒤 처음 오는 inactiveDeferHour시 정각으로 미룬다.
+/// 막 일어난 아침이 아니라 낮에 부른다. inactiveDeferHour가 조용한 시간이 끝나는 시각보다
+/// 빠르면 그 끝으로 미룬다 (밤에는 안 울린다)
 DateTime? planInactive({
   required DateTime now,
   required Rules rules,
@@ -289,7 +296,11 @@ DateTime? planInactive({
 }) {
   if (!enabled || state != InactiveState.none) return null;
   final at = now.toUtc().add(Duration(hours: rules.notificationInactiveHours));
-  return isQuietTime(at, rules) ? quietEnd(at, rules) : at;
+  final deferHour = math.max(rules.notificationQuietToHour, rules.notificationInactiveDeferHour);
+  final hour = kstDateTime(at).hour;
+  final held = isQuietTime(at, rules) ||
+      (hour >= rules.notificationQuietToHour && hour < deferHour);
+  return held ? _nextKstHour(at, deferHour) : at;
 }
 
 // ---------------------------------------------------------------------------------------------

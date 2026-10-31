@@ -130,6 +130,7 @@ class Rules {
     required this.notificationQuietToHour,
     required this.notificationNearDestKm,
     required this.notificationInactiveHours,
+    required this.notificationInactiveDeferHour,
     required this.guestbookMaxChars,
     required this.guestbookWindowSteps,
     required this.backupMinIntervalMin,
@@ -229,12 +230,14 @@ class Rules {
   final int notificationDailyMax;
 
   /// 알림을 안 보내는 조용한 시간 (한국 시간, quietFromHour시 정각부터 quietToHour시 정각 전까지),
-  /// '거의 다 왔어' 알림의 남은 거리(km), '다시 부르기' 알림까지 안 연 시간
-  /// (config notifications.quietFromHour·quietToHour·nearDestKm·inactiveHours)
+  /// '거의 다 왔어' 알림의 남은 거리(km), '다시 부르기' 알림까지 안 연 시간, '다시 부르기'를
+  /// 조용한 시간이나 아침에 맞췄을 때 미루는 한국 시간(시)
+  /// (config notifications.quietFromHour·quietToHour·nearDestKm·inactiveHours·inactiveDeferHour)
   final int notificationQuietFromHour;
   final int notificationQuietToHour;
   final double notificationNearDestKm;
   final int notificationInactiveHours;
+  final int notificationInactiveDeferHour;
 
   /// 방명록 글 길이 상한(글자 수)과, 걸음 숫자 기회가 열린 뒤 쓸 수 있는 걸음 수
   /// (config guestbook.maxChars·milestoneWindowSteps)
@@ -373,6 +376,7 @@ class Rules {
       notificationQuietToHour: notifications['quietToHour'] as int,
       notificationNearDestKm: _d(notifications['nearDestKm']),
       notificationInactiveHours: notifications['inactiveHours'] as int,
+      notificationInactiveDeferHour: notifications['inactiveDeferHour'] as int,
       guestbookMaxChars: guestbook['maxChars'] as int,
       guestbookWindowSteps: guestbook['milestoneWindowSteps'] as int,
       backupMinIntervalMin: backup['minIntervalMin'] as int,

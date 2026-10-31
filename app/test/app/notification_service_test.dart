@@ -380,10 +380,10 @@ void main() {
       expect(await e.log(), isEmpty);
     });
 
-    test('72시간 뒤가 조용한 시간이면 08:00에 울리도록 예약한다', () async {
+    test('72시간 뒤가 조용한 시간이면 10:00에 울리도록 예약한다', () async {
       final e = _Env();
       await e.svc.onBackground(_kst(11, 18, 23));
-      expect(e.calls(NotifierOp.schedule).single.at, _kst(11, 22, 8));
+      expect(e.calls(NotifierOp.schedule).single.at, _kst(11, 22, 10));
     });
 
     test('N5도 그날의 개수에 센다', () async {
