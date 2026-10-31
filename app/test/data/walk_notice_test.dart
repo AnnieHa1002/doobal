@@ -58,6 +58,7 @@ void main() {
 
   List<MethodCall> starts() => calls.where((c) => c.method == 'startForegroundService').toList();
   List<MethodCall> stops() => calls.where((c) => c.method == 'stopForegroundService').toList();
+  List<MethodCall> shows() => calls.where((c) => c.method == 'show').toList();
 
   Map<Object?, Object?> data(MethodCall c) =>
       (c.arguments as Map<Object?, Object?>)['notificationData'] as Map<Object?, Object?>;
@@ -96,19 +97,23 @@ void main() {
       expect(d['when'], _startedAt.millisecondsSinceEpoch);
     });
 
-    test('update: 같은 id로 서비스를 다시 시작해 문구만 새로 쓴다 (시작 시각은 그대로)', () async {
+    test('update: 서비스를 다시 시작하지 않고 같은 id의 알림을 다시 쓴다 (시작 시각은 그대로)', () async {
       final notice = make(FakeLiveSteps());
       await notice.start(_startedAt, 0);
       await notice.update(1234);
 
-      expect(starts(), hasLength(2));
-      final first = data(starts().first);
-      final second = data(starts().last);
-      expect(second['id'], first['id']);
-      expect(second['body'], '1,234보');
-      final d = second['platformSpecifics']! as Map<Object?, Object?>;
+      // 앱이 뒤에 있을 때 서비스 시작은 막힐 수 있어서 갱신은 show로만 한다
+      expect(starts(), hasLength(1));
+      expect(shows(), hasLength(1));
+      final args = shows().single.arguments as Map<Object?, Object?>;
+      expect(args['id'], data(starts().single)['id']);
+      expect(args['title'], '걷는 중이에요');
+      expect(args['body'], '1,234보');
+      final d = args['platformSpecifics']! as Map<Object?, Object?>;
+      expect(d['channelId'], 'walking');
+      expect(d['ongoing'], true);
+      expect(d['usesChronometer'], true);
       expect(d['when'], _startedAt.millisecondsSinceEpoch);
-      expect((starts().last.arguments as Map<Object?, Object?>)['foregroundServiceTypes'], [256]);
     });
 
     test('센서 권한이 없으면 서비스를 시작하지 않고(안드로이드 14에서 앱이 멈춘다), update도 무시한다', () async {
@@ -135,6 +140,11 @@ void main() {
 
       expect(stops(), hasLength(2));
       expect(starts(), hasLength(1));
+      expect(shows(), isEmpty);
+      // 서비스를 멈춘 뒤 같은 id의 알림도 지운다
+      final cancels = calls.where((c) => c.method == 'cancel').toList();
+      expect(cancels, hasLength(2));
+      expect((cancels.first.arguments as Map<Object?, Object?>)['id'], 2000000001);
     });
 
     test('stop 뒤에 다시 start하면 새로 시작한다', () async {
@@ -180,8 +190,9 @@ void main() {
       fail = null;
       await notice.update(20);
 
-      expect(starts(), hasLength(3));
-      expect(data(starts().last)['body'], '20보');
+      expect(starts(), hasLength(1));
+      expect(shows(), hasLength(2));
+      expect((shows().last.arguments as Map<Object?, Object?>)['body'], '20보');
     });
 
     test('stop이 실패해도 던지지 않는다', () async {

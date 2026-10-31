@@ -34,8 +34,9 @@ class NoopWalkNotice implements WalkNotice {
 }
 
 /// 안드로이드: flutter_local_notifications의 포그라운드 서비스(유형 health)에 알림을 건다.
-/// 알림은 시간이 스스로 흐르는 크로노미터와 `n보`. 같은 id로 서비스를 다시 시작해 문구를 새로 쓴다
-/// (플러그인이 알려 주는 갱신 방법). 알림을 눌러 앱으로 돌아오면 singleTop 액티비티가 이어진다.
+/// 알림은 시간이 스스로 흐르는 크로노미터와 `n보`. 갱신은 서비스를 다시 시작하지 않고 같은 id의 알림을
+/// 다시 쓴다 (안드로이드 12부터 앱이 뒤에 있을 때 포그라운드 서비스 시작을 막을 수 있어서).
+/// 알림을 눌러 앱으로 돌아오면 singleTop 액티비티가 이어진다.
 /// 서비스는 AndroidManifest에서 stopWithTask라서 앱을 화면에서 밀어 끄면 함께 끝난다
 /// (앱이 종료되면 본격 걷기도 끝난다). 프로세스가 죽어도 서비스를 되살리지 않는다 (START_NOT_STICKY)
 class AndroidWalkNotice implements WalkNotice {
@@ -66,13 +67,13 @@ class AndroidWalkNotice implements WalkNotice {
     }
     _startedAt = startedAt;
     _running = true;
-    if (!await _post(steps, epoch) && epoch == _epoch) _running = false;
+    if (!await _post(steps, epoch, first: true) && epoch == _epoch) _running = false;
   }
 
   @override
   Future<void> update(int steps) async {
     if (!_running) return;
-    await _post(steps, _epoch);
+    await _post(steps, _epoch, first: false);
   }
 
   @override
@@ -80,26 +81,42 @@ class AndroidWalkNotice implements WalkNotice {
     _epoch++;
     _running = false;
     try {
-      await _notifications.plugin
+      final plugin = _notifications.plugin;
+      await plugin
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.stopForegroundService();
+      // show로 다시 쓴 알림이 서비스와 함께 지워지지 않는 기기가 있을 수 있어서 한 번 더 지운다
+      await plugin.cancel(id: _id);
     } catch (e) {
       debugPrint('걷는 중 알림 끄기 실패: $e');
     }
   }
 
-  /// 알림을 띄우거나 새로 쓴다. 실패해도(로그만) 걷기는 계속된다. 성공했는가를 돌려준다
-  Future<bool> _post(int steps, int epoch) async {
+  /// 알림을 띄우거나([first]: 서비스 시작) 새로 쓴다. 실패해도(로그만) 걷기는 계속된다.
+  /// 성공했는가를 돌려준다
+  Future<bool> _post(int steps, int epoch, {required bool first}) async {
     try {
       final plugin = await _notifications.ready();
       if (epoch != _epoch) return false;
+      const title = '걷는 중이에요';
+      final body = '${formatInt(steps)}보';
+      final details = _details(_startedAt!);
+      if (!first) {
+        await plugin.show(
+          id: _id,
+          title: title,
+          body: body,
+          notificationDetails: NotificationDetails(android: details),
+        );
+        return true;
+      }
       await plugin
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.startForegroundService(
             id: _id,
-            title: '걷는 중이에요',
-            body: '${formatInt(steps)}보',
-            notificationDetails: _details(_startedAt!),
+            title: title,
+            body: body,
+            notificationDetails: details,
             startType: AndroidServiceStartType.startNotSticky,
             foregroundServiceTypes: {AndroidServiceForegroundType.foregroundServiceTypeHealth},
           );
