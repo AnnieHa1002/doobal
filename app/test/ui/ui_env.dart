@@ -1,11 +1,14 @@
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/sync_service.dart';
+import 'package:doobal/data/app_settings_opener.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/notifier.dart';
+import 'package:doobal/data/painting_sharer.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
+import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:drift/drift.dart' show Value;
@@ -38,11 +41,13 @@ StepRecord walkRecord(DateTime start, int minutes, int spm) => StepRecord(
 /// 메모리 DB + 가짜 걸음(원하면 [source]를 넣는다) + 바꿀 수 있는 시계. 에셋은 모두 직접 넣는다
 /// (두 번째 testWidgets부터는 rootBundle 에셋이 로드되지 않는다)
 class UiEnv {
-  /// [appRules]를 주면 config.json 대신 그 규칙으로 앱이 돈다 (config 숫자가 화면에 나오는지 볼 때)
-  UiEnv({FakeStepSource? source, Rules? appRules})
+  /// [appRules]를 주면 config.json 대신 그 규칙으로 앱이 돈다 (config 숫자가 화면에 나오는지 볼 때).
+  /// [appLandmarks]를 주면 화면이 읽는 명소 목록(landmarksProvider)만 그것으로 바뀐다 (서비스는 101곳 그대로)
+  UiEnv({FakeStepSource? source, Rules? appRules, List<Landmark>? appLandmarks})
       : db = AppDb(NativeDatabase.memory()),
         source = source ?? FakeStepSource(),
         appRules = appRules ?? rules,
+        appLandmarks = appLandmarks ?? landmarks,
         now = t1 {
     svc = SyncService(
       db: db,
@@ -58,19 +63,28 @@ class UiEnv {
   final AppDb db;
   final FakeStepSource source;
   final Rules appRules;
+  final List<Landmark> appLandmarks;
   late final SyncService svc;
   DateTime now;
 
   /// 앱이 보내거나 예약한 시스템 알림 (아무것도 안 띄우는 자리표시가 받은 부름)
   final notifier = PlaceholderNotifier();
 
+  /// 앱이 연 휴대폰 설정 (실제로는 열지 않는다)
+  final appSettings = FakeAppSettingsOpener();
+
+  /// 앱이 공유 시트에 올린 그림 (실제로는 열지 않는다)
+  final sharer = FakePaintingSharer();
+
   List<Override> get overrides => [
         rulesProvider.overrideWith((ref) => appRules),
-        landmarksProvider.overrideWith((ref) => landmarks),
+        landmarksProvider.overrideWith((ref) => appLandmarks),
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
         noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
         systemNotifierProvider.overrideWithValue(notifier),
+        appSettingsOpenerProvider.overrideWithValue(appSettings),
+        paintingSharerProvider.overrideWithValue(sharer),
         campThemeProvider.overrideWith((ref) => campTheme),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),

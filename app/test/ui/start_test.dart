@@ -90,6 +90,20 @@ Future<void> _arrive(WidgetTester tester, Type screen) async {
 Future<ProfileRow> _profile(WidgetTester tester, UiEnv e) async =>
     (await tester.runAsync(() => ProfileService(e.db).row()))!;
 
+/// 앱을 뒤로 보냈다가 앞으로 가져온다 (휴대폰 설정에 다녀오는 것과 같다)
+void _leaveAndReturn(WidgetTester tester) {
+  for (final s in [
+    AppLifecycleState.inactive,
+    AppLifecycleState.hidden,
+    AppLifecycleState.paused,
+    AppLifecycleState.hidden,
+    AppLifecycleState.inactive,
+    AppLifecycleState.resumed,
+  ]) {
+    tester.binding.handleAppLifecycleStateChanged(s);
+  }
+}
+
 Finder _button(String label) => find.widgetWithText(GameButton, label);
 
 bool _enabled(WidgetTester tester, String label) =>
@@ -670,16 +684,130 @@ void main() {
       expect((await _profile(tester, e)).onboardedAt, isNull);
       expect(find.byType(PermissionScreen), findsOneWidget);
 
-      // 설정에서 켠 뒤 다시 누르면 (지금은 요청을 다시 부른다) 통과한다
+      // 안드로이드 쪽(iOS가 아닌 쪽): "설정에서 켜기"는 앱 설정을 열지 않고 요청을 다시 부른다.
+      // 설정에서 켠 뒤 다시 누르면 통과한다
       e.source.granted = true;
       await tester.tap(_button('설정에서 켜기'));
       await tester.pump();
       await tester.pump();
       expect(e.source.permissionRequests, 2);
+      expect(e.appSettings.appOpens, 0);
       expect(find.text('허용됨'), findsOneWidget);
       expect(_button('설정에서 켜기'), findsNothing);
       expect(_enabled(tester, '쉼터로 가기'), isTrue);
       await end(tester, e);
+    });
+
+    group('iOS: "설정에서 켜기"는 앱 설정을 열고, 돌아오면 다시 확인한다', () {
+      final iosFix = [stepFixOpensSettingsProvider.overrideWithValue(true)];
+
+      /// 걸음을 거부한 상태(설정에서 켜기가 나온 상태)까지
+      Future<void> openDenied(WidgetTester tester, UiEnv e) async {
+        e.source.granted = false;
+        await openPermission(tester, e, extra: iosFix);
+        await tester.tap(allow().first);
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 1);
+        expect(_button('설정에서 켜기'), findsOneWidget);
+      }
+
+      testWidgets('버튼은 앱 설정을 열기만 하고 권한은 다시 묻지 않는다', (tester) async {
+        final e = UiEnv();
+        await openDenied(tester, e);
+
+        await tester.tap(_button('설정에서 켜기'));
+        await tester.pump();
+        await tester.pump();
+        expect(e.appSettings.appOpens, 1);
+        expect(e.appSettings.noticeOpens, 0);
+        expect(e.source.permissionRequests, 1);
+        expect(_button('설정에서 켜기'), findsOneWidget);
+        expect(_enabled(tester, '쉼터로 가기'), isFalse);
+        await end(tester, e);
+      });
+
+      testWidgets('설정에서 켜고 돌아오면 다시 확인해서 허용됨으로 바뀌고 다음으로 갈 수 있다', (tester) async {
+        final e = UiEnv();
+        await openDenied(tester, e);
+        await tester.tap(_button('설정에서 켜기'));
+        await tester.pump();
+
+        e.source.granted = true;
+        _leaveAndReturn(tester);
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 2);
+        expect(e.appSettings.appOpens, 1);
+        expect(find.text('허용됨'), findsOneWidget);
+        expect(_button('설정에서 켜기'), findsNothing);
+        expect(_enabled(tester, '쉼터로 가기'), isTrue);
+
+        // 허용된 뒤에 또 다녀와도 다시 묻지 않는다
+        _leaveAndReturn(tester);
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 2);
+        await end(tester, e);
+      });
+
+      testWidgets('켜지 않고 돌아오면 다시 확인해도 그대로 "설정에서 켜기"이고, 또 열 수 있다', (tester) async {
+        final e = UiEnv();
+        await openDenied(tester, e);
+        await tester.tap(_button('설정에서 켜기'));
+        await tester.pump();
+
+        _leaveAndReturn(tester);
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 2);
+        expect(_button('설정에서 켜기'), findsOneWidget);
+        expect(_enabled(tester, '쉼터로 가기'), isFalse);
+
+        // 한 번 돌아온 뒤에는 설정을 다시 열 때까지 확인하지 않는다
+        _leaveAndReturn(tester);
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 2);
+        await tester.tap(_button('설정에서 켜기'));
+        await tester.pump();
+        expect(e.appSettings.appOpens, 2);
+        await end(tester, e);
+      });
+
+      testWidgets('설정을 열지 않았으면 앱을 다녀와도 다시 묻지 않는다', (tester) async {
+        final e = UiEnv();
+        await openDenied(tester, e);
+
+        e.source.granted = true;
+        _leaveAndReturn(tester);
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 1);
+        expect(e.appSettings.appOpens, 0);
+        expect(_button('설정에서 켜기'), findsOneWidget);
+        await end(tester, e);
+      });
+
+      testWidgets('설정을 열지 못해도 앱이 죽지 않고, 돌아와도 다시 확인하지 않는다', (tester) async {
+        final e = UiEnv();
+        e.appSettings.fail = true;
+        await openDenied(tester, e);
+
+        await tester.tap(_button('설정에서 켜기'));
+        await tester.pump();
+        await tester.pump();
+        expect(e.appSettings.appOpens, 1);
+
+        e.source.granted = true;
+        _leaveAndReturn(tester);
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 1);
+        expect(_button('설정에서 켜기'), findsOneWidget);
+        expect(find.byType(PermissionScreen), findsOneWidget);
+        await end(tester, e);
+      });
     });
 
     testWidgets('건강 앱에 물어보다 예외가 나면 거부로 본다 (앱이 죽지 않는다)', (tester) async {

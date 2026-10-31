@@ -508,6 +508,12 @@ void main() {
       await tester.enterText(_key('guestbook-input'), '가' * rules.guestbookMaxChars);
       await tester.pump();
       fit.check('글자 수를 꽉 채움');
+      // 금칙어 안내는 글자 수와 한 줄에 나란히 뜬다 (큰 글자에서는 안내가 줄바꿈된다)
+      await tester.enterText(
+          _key('guestbook-input'), '시발${'가' * (rules.guestbookMaxChars - 2)}');
+      await tester.pump();
+      expect(_key('guestbook-blocked'), findsOneWidget);
+      fit.check('금칙어 안내 + 글자 수 꽉 참');
       await end(tester, e);
     });
 

@@ -30,6 +30,22 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
   /// 묻는 중에 또 누르지 않게
   var _asking = false;
 
+  /// 앱 설정을 열고 나갔다 (돌아오면 걸음 권한을 다시 확인한다)
+  var _inSettings = false;
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(onResume: _backFromSettings);
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
   Future<void> _ask(Future<bool> Function() request, void Function(_Ask) set) async {
     if (_asking) return;
     _asking = true;
@@ -44,10 +60,33 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
     if (mounted) setState(() => set(ok ? _Ask.granted : _Ask.denied));
   }
 
-  /// 걸음 권한. 거부된 뒤의 "설정에서 켜기"도 지금은 이 요청을 다시 부른다
-  /// TODO: 앱 설정 열기(패키지가 없어서 못 한다). 설정을 여는 방법이 정해지면 거부 뒤 버튼을 바꾼다
   Future<void> _askSteps() =>
       _ask(ref.read(stepSourceProvider).requestPermission, (a) => _steps = a);
+
+  /// 거부된 뒤의 "설정에서 켜기". 플랫폼마다 켜는 길이 달라서 갈린다 (stepFixOpensSettingsProvider).
+  /// iOS: 한 번 답하면 권한 창이 다시 뜨지 않아서 앱 설정을 열고, 돌아오면 다시 확인한다.
+  /// 안드로이드: Health Connect 권한은 앱 정보 화면에 없고, 요청을 다시 부르면 창이 다시 뜬다.
+  /// 두 번 거부한 뒤에는 창 없이 거부만 돌아오는데, 그때 켜는 곳(Health Connect 설정)은
+  /// app_settings가 열지 못한다. TODO: 막힌 사용자에게 켜는 길을 글로 안내한다
+  Future<void> _fixSteps() async {
+    if (!ref.read(stepFixOpensSettingsProvider)) return _askSteps();
+    _inSettings = true;
+    try {
+      await ref.read(appSettingsOpenerProvider).openApp();
+    } catch (e) {
+      // 열지 못하면 돌아올 일도 없다
+      _inSettings = false;
+      debugPrint('앱 설정 열기 실패: $e');
+    }
+  }
+
+  /// 설정에서 돌아왔다. 설정을 열었던 때만 걸음 권한을 다시 확인한다.
+  /// HealthKit은 읽기 허용 여부를 알려 주지 않아서, 요청이 오류 없이 끝나면 허용으로 본다
+  void _backFromSettings() {
+    if (!_inSettings) return;
+    _inSettings = false;
+    _askSteps();
+  }
 
   Future<void> _askNotice() =>
       _ask(ref.read(notificationPermissionProvider).requestPermission, (a) => _notice = a);
@@ -106,7 +145,7 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
                                   state: _steps,
                                   // 거부되면 "설정에서 켜기"가 나오고 다음으로 못 간다
                                   actionLabel: _steps == _Ask.denied ? '설정에서 켜기' : '허용하기',
-                                  onAction: _askSteps,
+                                  onAction: _steps == _Ask.denied ? _fixSteps : _askSteps,
                                 ),
                                 const Padding(
                                   padding: EdgeInsets.symmetric(vertical: 16),

@@ -53,7 +53,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.dispose();
   }
 
-  /// 걸음 권한을 다시 묻는다. 건강 앱이 없는 기기처럼 묻지 못한 것도 못 연 것으로 본다
+  /// 걸음 권한을 다시 묻는다. 건강 앱이 없는 기기처럼 묻지 못한 것도 못 연 것으로 본다.
+  /// 거부돼도 앱 설정으로 보내지 않고 글로만 안내한다 (안드로이드의 Health Connect 권한은 앱 정보에
+  /// 없고, iOS는 거부해도 요청이 성공으로 돌아와서 이 토스트가 뜨는 건 건강 앱이 없는 기기 정도다)
   Future<void> _reopenPermission() async {
     var ok = false;
     try {
@@ -78,16 +80,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) ref.invalidate(noticeSettingsProvider);
   }
 
-  /// 휴대폰 알림 권한이 꺼져 있을 때의 "설정 열기".
-  /// TODO(M6): 거부된 뒤에는 휴대폰의 앱 알림 설정을 열어야 한다 (지금은 열 방법이 없어서 권한을 다시 묻는다.
-  /// flutter_local_notifications를 넣을 때 방법을 정한다)
-  Future<void> _askNoticePermission() async {
+  /// 휴대폰 알림 권한이 꺼져 있을 때의 "설정 열기": 이 앱의 알림 설정을 연다.
+  /// 켜고 돌아오면 lifecycle 리스너가 권한을 다시 읽는다
+  Future<void> _openNoticeSettings() async {
     try {
-      await ref.read(notificationPermissionProvider).requestPermission();
+      await ref.read(appSettingsOpenerProvider).openNotifications();
     } catch (e) {
-      debugPrint('알림 권한 요청 실패: $e');
+      debugPrint('알림 설정 열기 실패: $e');
     }
-    if (mounted) ref.invalidate(notificationGrantedProvider);
   }
 
   /// 두 번 확인한 뒤 이 기기의 기록을 모두 지우고 시작 흐름 첫 화면으로 돌아간다.
@@ -185,7 +185,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       rules: rules,
                       settings: settings,
                       granted: granted,
-                      onAskPermission: _askNoticePermission,
+                      onOpenSettings: _openNoticeSettings,
                       onAll: (on) => _changeNotice((svc, now) => svc.setAll(on, now)),
                       onKind: (kind, on) =>
                           _changeNotice((svc, now) => svc.setKind(kind, on, now)),
@@ -303,7 +303,7 @@ class _NoticeSection extends StatelessWidget {
     required this.rules,
     required this.settings,
     required this.granted,
-    required this.onAskPermission,
+    required this.onOpenSettings,
     required this.onAll,
     required this.onKind,
   });
@@ -311,7 +311,7 @@ class _NoticeSection extends StatelessWidget {
   final Rules rules;
   final NoticeSettings settings;
   final bool? granted;
-  final VoidCallback onAskPermission;
+  final VoidCallback onOpenSettings;
   final ValueChanged<bool> onAll;
   final void Function(NoticeKind kind, bool on) onKind;
 
@@ -342,7 +342,7 @@ class _NoticeSection extends StatelessWidget {
                   GameButton(
                     label: '설정 열기',
                     kind: GameButtonKind.secondary,
-                    onPressed: onAskPermission,
+                    onPressed: onOpenSettings,
                   ),
                 ],
               ),

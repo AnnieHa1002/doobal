@@ -1,12 +1,16 @@
+import 'package:doobal/app/providers.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/guestbook.dart';
+import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/common/game_button.dart';
+import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/guestbook/guestbook_write_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../domain/helpers.dart';
@@ -18,6 +22,7 @@ final _input = find.byKey(const ValueKey('guestbook-input'));
 final _count = find.byKey(const ValueKey('guestbook-count'));
 final _stepsLeft = find.byKey(const ValueKey('guestbook-steps-left'));
 final _consent = find.byKey(const ValueKey('guestbook-consent'));
+final _blocked = find.byKey(const ValueKey('guestbook-blocked'));
 final _closed = find.byKey(const ValueKey('guestbook-closed'));
 final _arrivalCard = find.byKey(const ValueKey('arrival-card'));
 
@@ -34,11 +39,17 @@ bool _enabled(WidgetTester tester, String label) =>
     tester.widget<GameButton>(find.widgetWithText(GameButton, label)).onPressed != null;
 
 /// 쓰기 화면(기회 [ticketId])을 앱 첫 화면 위에 열고 태그(또는 닫힘 안내)가 뜰 때까지 기다린다
-Future<void> _openWrite(WidgetTester tester, UiEnv e, String ticketId) async {
+Future<void> _openWrite(
+  WidgetTester tester,
+  UiEnv e,
+  String ticketId, {
+  List<Override> extra = const [],
+}) async {
   await openOnTop(
     tester,
     e,
     GuestbookWriteScreen(ticketId: ticketId),
+    extra: extra,
     ready: () => _tag.evaluate().isNotEmpty || _closed.evaluate().isNotEmpty,
   );
   // 동의 줄이 정해질 때까지
@@ -274,6 +285,104 @@ void main() {
       await tester.enterText(_input, '가' * 200);
       await tester.pump();
       expect(_enabled(tester, '남기기'), isTrue);
+      await end(tester, e);
+    });
+
+    testWidgets('금칙어에 걸리면 입력 칸 아래에 테라코타 안내가 뜨고 "남기기"가 꺼진다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _putTicket(e, 'a:j1', TicketKind.arrival, 'kr001'));
+      await _openWrite(tester, e, 'a:j1');
+      expect(_blocked, findsNothing);
+
+      await tester.enterText(_input, '오늘 진짜 시발 날씨');
+      await tester.pump();
+      expect(_blocked, findsOneWidget);
+      final note = tester.widget<Text>(_blocked);
+      expect(note.data, '이 표현은 방명록에 남길 수 없어요');
+      // 빨간색이 아니라 테라코타, 어떤 단어인지는 말하지 않는다
+      expect(note.style!.color, Palette.terracotta);
+      expect(find.textContaining('시발'), findsOneWidget); // 입력한 글뿐
+      // 입력 칸 아래에 있다
+      expect(tester.getTopLeft(_blocked).dy, greaterThan(tester.getBottomLeft(_input).dy));
+      expect(_enabled(tester, '남기기'), isFalse);
+
+      // 초성 줄임도 같다
+      await tester.enterText(_input, 'ㅅㅂ');
+      await tester.pump();
+      expect(_blocked, findsOneWidget);
+      expect(_enabled(tester, '남기기'), isFalse);
+
+      // 고치면 안내가 사라지고 버튼이 켜진다
+      await tester.enterText(_input, '오늘 날씨가 좋아요');
+      await tester.pump();
+      expect(_blocked, findsNothing);
+      expect(_enabled(tester, '남기기'), isTrue);
+      await end(tester, e);
+    });
+
+    testWidgets('걸린 글은 꺼진 "남기기"를 눌러도 저장되지 않는다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _putTicket(e, 'a:j1', TicketKind.arrival, 'kr001'));
+      await _openWrite(tester, e, 'a:j1');
+
+      await tester.enterText(_input, '병신');
+      await tester.pump();
+      await tester.tap(find.text('남기기'), warnIfMissed: false);
+      await settle(tester, () => false, tries: 6);
+
+      expect(find.byType(GuestbookWriteScreen), findsOneWidget);
+      expect(await _posts(tester, e), isEmpty);
+      await end(tester, e);
+    });
+
+    testWidgets('명소 이름이 든 글과 일반 글은 안내가 뜨지 않는다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _putTicket(e, 'a:j1', TicketKind.arrival, 'kr001'));
+      await _openWrite(tester, e, 'a:j1');
+
+      for (final l in landmarks) {
+        await tester.enterText(_input, '${l.name}에서 걸었어요');
+        await tester.pump();
+        expect(_blocked, findsNothing, reason: l.name);
+        expect(_enabled(tester, '남기기'), isTrue, reason: l.name);
+      }
+      await end(tester, e);
+    });
+
+    testWidgets('명소 이름은 검사에서 빠지고(허용 목록), 추가 목록의 낱말은 공백을 끼워도 걸린다', (tester) async {
+      // 패키지가 욕설로 보는 낱말("시발점")을 이름으로 가진 명소를 하나 더 둔다
+      final first = landmarks.first;
+      final trap = Landmark(
+        id: 'kr900',
+        name: '시발점',
+        sido: first.sido,
+        sigungu: first.sigungu,
+        region: first.region,
+        backdrop: first.backdrop,
+        terrain: first.terrain,
+        types: first.types,
+        latLng: first.latLng,
+        island: first.island,
+        painting: first.painting,
+      );
+      final e = UiEnv(appLandmarks: [...landmarks, trap]);
+      await e.seed(tester, () => _putTicket(e, 'a:j1', TicketKind.arrival, 'kr001'));
+      await _openWrite(tester, e, 'a:j1',
+          extra: [extraBlockedWordsProvider.overrideWithValue(const ['나쁜말'])]);
+
+      await tester.enterText(_input, '시발점에서 출발해요');
+      await tester.pump();
+      expect(_blocked, findsNothing);
+      expect(_enabled(tester, '남기기'), isTrue);
+
+      await tester.enterText(_input, '시발점에서 시발');
+      await tester.pump();
+      expect(_blocked, findsOneWidget);
+
+      await tester.enterText(_input, '그건 나 쁜-말이야');
+      await tester.pump();
+      expect(_blocked, findsOneWidget);
+      expect(_enabled(tester, '남기기'), isFalse);
       await end(tester, e);
     });
 

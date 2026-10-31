@@ -65,6 +65,20 @@ Future<void> _open(WidgetTester tester, UiEnv e, {List<Override> extra = const [
             find.text('권한 다시 열기').evaluate().isNotEmpty &&
             find.text('알림 받기').evaluate().isNotEmpty);
 
+/// 앱을 뒤로 보냈다가 앞으로 가져온다 (휴대폰 설정에 다녀오는 것과 같다)
+void _leaveAndReturn(WidgetTester tester) {
+  for (final s in [
+    AppLifecycleState.inactive,
+    AppLifecycleState.hidden,
+    AppLifecycleState.paused,
+    AppLifecycleState.hidden,
+    AppLifecycleState.inactive,
+    AppLifecycleState.resumed,
+  ]) {
+    tester.binding.handleAppLifecycleStateChanged(s);
+  }
+}
+
 /// 알림 줄의 스위치: 0 전체, 1~5 방명록 기회·도착·이야기·거의 다 왔어·다시 부르기
 bool _on(WidgetTester tester, int i) => tester.widget<Switch>(find.byType(Switch).at(i)).value;
 
@@ -324,13 +338,22 @@ void main() {
       expect([for (var i = 0; i < 6; i++) _on(tester, i)], everyElement(isTrue));
       expect(await _settingsRows(tester, e.db), isEmpty);
 
-      // 설정 열기: 지금은 열 방법이 없어서 권한을 다시 묻는다. 허용되면 경고가 사라지고 토글이 켜진다
-      expect(permission.requests, 0);
+      // 설정 열기: 이 앱의 알림 설정을 연다 (권한을 다시 묻지 않는다). 그대로 두면 경고가 남는다
+      expect(e.appSettings.noticeOpens, 0);
       await tester.tap(find.text('설정 열기'));
-      await settle(tester, () => permission.requests > 0);
+      await tester.pump();
+      expect(e.appSettings.noticeOpens, 1);
+      expect(e.appSettings.appOpens, 0);
+      expect(permission.requests, 0);
+      expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsOneWidget);
+
+      // 설정에서 켜고 돌아오면 권한을 다시 읽어서 경고가 사라지고 토글이 켜진다
+      permission.state = true;
+      _leaveAndReturn(tester);
       await settle(tester, () => find.text('설정 열기').evaluate().isEmpty);
       await tester.pump();
-      expect(permission.requests, 1);
+      expect(e.appSettings.noticeOpens, 1);
+      expect(permission.requests, 0);
       expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsNothing);
       for (var i = 0; i < 6; i++) {
         expect(_opacity(tester, i), 1, reason: '$i');
@@ -338,7 +361,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('권한이 허용돼 있으면 경고가 없고, 거부돼서 다시 물어도 거부면 경고가 남는다', (tester) async {
+    testWidgets('권한이 허용돼 있으면 경고가 없고, 돌아와도 거부면 경고가 남는다', (tester) async {
       final granted = UiEnv();
       await granted.seed(tester);
       await _open(tester, granted,
@@ -356,11 +379,30 @@ void main() {
       await settle(tester, () => find.text('설정 열기').evaluate().isNotEmpty);
       await tester.pump();
       await tester.tap(find.text('설정 열기'));
-      await settle(tester, () => permission.requests > 0);
       await tester.pump();
-      expect(permission.requests, 1);
+      expect(denied.appSettings.noticeOpens, 1);
+      // 켜지 않고 돌아오면 여전히 꺼져 있다
+      _leaveAndReturn(tester);
+      await settle(tester, () => false, tries: 6);
+      expect(permission.requests, 0);
       expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsOneWidget);
       await end(tester, denied);
+    });
+
+    testWidgets('설정을 열지 못해도 화면은 그대로다', (tester) async {
+      final e = UiEnv();
+      e.appSettings.fail = true;
+      await e.seed(tester);
+      await _open(tester, e,
+          extra: [notificationPermissionProvider.overrideWithValue(_FakePermission(false))]);
+      await settle(tester, () => find.text('설정 열기').evaluate().isNotEmpty);
+      await tester.pump();
+      await tester.tap(find.text('설정 열기'));
+      await tester.pump();
+      expect(e.appSettings.noticeOpens, 1);
+      expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsOneWidget);
+      expect(find.text('설정'), findsOneWidget);
+      await end(tester, e);
     });
   });
 
@@ -401,6 +443,7 @@ void main() {
 
       expect(e.source.permissionRequests, 1);
       expect(find.text('걸음 기록을 읽을 수 있어요'), findsOneWidget);
+      expect(e.appSettings.appOpens, 0);
       await end(tester, e);
     });
 
@@ -414,6 +457,8 @@ void main() {
       expect(denied.source.permissionRequests, 1);
       expect(find.textContaining('걸음 권한을 열지 못했어요'), findsOneWidget);
       expect(find.text('설정'), findsOneWidget);
+      // 거부돼도 앱 설정으로 보내지 않고 안내만 한다
+      expect((denied.appSettings.appOpens, denied.appSettings.noticeOpens), (0, 0));
       await end(tester, denied);
 
       final broken = UiEnv(source: _ThrowingSource());

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/guestbook.dart';
+import '../../domain/moderation.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
@@ -14,7 +15,9 @@ import 'guestbook_tag.dart';
 
 /// 방명록 쓰기 (UI 명세 9장). 위에 태그, 걸음 숫자 기회면 남은 걸음, 처음 쓸 때만 동의 한 줄,
 /// 입력 칸(글자 수 상한은 config guestbook.maxChars)과 글자 수, 주 버튼 "남기기".
-/// 글이 유효할 때만 버튼이 켜지고, 누르면 이 기기에 저장하고 닫는다. 서버로 보내는 건 M5에서 한다
+/// 쓰는 중에 금칙어에 걸리면 입력 칸 아래에 테라코타 글자로 안내하고 "남기기"를 끈다 (어떤 단어인지는
+/// 알리지 않는다). 글이 유효할 때만 버튼이 켜지고, 누르면 이 기기에 저장하고 닫는다.
+/// 서버로 보내는 건 M5에서 한다 (서버도 한 번 더 검사한다)
 class GuestbookWriteScreen extends ConsumerStatefulWidget {
   const GuestbookWriteScreen({super.key, required this.ticketId});
 
@@ -107,7 +110,15 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
   }
 
   Widget _form(GuestbookTicket ticket, int maxChars, {required bool showConsent}) {
-    final valid = cleanPost(_controller.text, maxChars) != null;
+    // 명소 이름은 검사에서 뺀다 (오탐 방지). 목록을 읽는 동안에는 이름 없이 검사한다
+    final allowed =
+        ref.watch(landmarksProvider).value?.map((l) => l.name).toList() ?? const <String>[];
+    final blocked = isBlocked(
+      _controller.text,
+      extraWords: ref.watch(extraBlockedWordsProvider),
+      allowedNames: allowed,
+    );
+    final valid = cleanPost(_controller.text, maxChars) != null && !blocked;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -144,7 +155,6 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
                   ),
                   const SizedBox(height: 8),
                 ],
-                // TODO(M5): 금칙어는 올리기 전에 입력 칸 아래에 안내한다 (앱·서버 두 번 검사)
                 TextField(
                   key: const ValueKey('guestbook-input'),
                   controller: _controller,
@@ -157,13 +167,28 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '${postLength(_controller.text)}/$maxChars',
-                    key: const ValueKey('guestbook-count'),
-                    style: const TextStyle(fontSize: 13, color: Palette.subInk),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: blocked
+                          ? const Padding(
+                              padding: EdgeInsets.only(left: 4),
+                              child: Text(
+                                blockedMessage,
+                                key: ValueKey('guestbook-blocked'),
+                                style: TextStyle(fontSize: 13, color: Palette.terracotta),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '${postLength(_controller.text)}/$maxChars',
+                      key: const ValueKey('guestbook-count'),
+                      style: const TextStyle(fontSize: 13, color: Palette.subInk),
+                    ),
+                  ],
                 ),
               ],
             ),

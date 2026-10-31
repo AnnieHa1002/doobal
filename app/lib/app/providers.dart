@@ -4,6 +4,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/app_settings_opener.dart';
 import '../data/backup_store.dart';
 import '../data/config_loader.dart';
 import '../data/db/app_db.dart';
@@ -13,6 +14,7 @@ import '../data/milestone_loader.dart';
 import '../data/notice_loader.dart';
 import '../data/notification_permission.dart';
 import '../data/notifier.dart';
+import '../data/painting_sharer.dart';
 import '../data/palette_loader.dart';
 import '../data/prop_loader.dart';
 import '../data/sigungu_loader.dart';
@@ -25,6 +27,7 @@ import '../domain/look_palette.dart';
 import '../domain/map_land.dart';
 import '../domain/map_projection.dart';
 import '../domain/map_regions.dart';
+import '../domain/moderation.dart';
 import '../domain/notification_policy.dart';
 import '../domain/onboarding.dart';
 import '../domain/prop.dart';
@@ -83,6 +86,24 @@ final dbProvider = Provider<AppDb>((ref) {
 });
 
 final stepSourceProvider = Provider<StepSource>((ref) => HealthStepSource());
+
+/// 휴대폰 설정 앱 열기 (권한을 거부한 사용자를 설정으로 보낸다)
+final appSettingsOpenerProvider =
+    Provider<AppSettingsOpener>((ref) => const PlatformAppSettingsOpener());
+
+/// 시작 흐름에서 걸음 권한을 거부한 사용자를 앱 설정으로 보내는가 (false면 권한 요청을 다시 부른다).
+/// iOS만 보낸다. HealthKit은 한 번 답한 뒤에는 권한 창을 다시 띄우지 않아서 다시 물어도 소용이 없고,
+/// 안드로이드는 Health Connect 권한이 앱 정보가 아니라 Health Connect 화면에서 관리되고
+/// 그 창은 요청을 다시 부르면 (두 번 거부하기 전까지) 다시 뜬다
+final stepFixOpensSettingsProvider = Provider<bool>((ref) => Platform.isIOS);
+
+/// 그림 공유 시트 (share_plus)
+final paintingSharerProvider =
+    Provider<PaintingSharer>((ref) => const SharePlusPaintingSharer());
+
+/// 방명록 금칙어 중 혐오·성적 표현 목록. 첫 실행에는 앱에 넣은 시작 목록을 쓴다.
+/// TODO(M5): Firestore config/moderation에서 받은 목록으로 바꾼다
+final extraBlockedWordsProvider = Provider<List<String>>((ref) => starterWords);
 
 /// M6에서 flutter_local_notifications로 바꾼다 (지금은 늘 거부로 답하는 자리표시)
 final notificationPermissionProvider =
