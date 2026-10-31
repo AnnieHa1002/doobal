@@ -3,6 +3,7 @@ import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/ui/common/figure_painter.dart';
 import 'package:doobal/ui/common/palette.dart';
+import 'package:doobal/ui/decorate/decorate_screen.dart';
 import 'package:doobal/ui/profile/profile_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
@@ -200,25 +201,61 @@ void main() {
     await end(tester, e);
   });
 
-  testWidgets('꾸미기 버튼은 준비 중 화면으로 가고, 뒤로 오면 나의 정보', (tester) async {
+  testWidgets('꾸미기 버튼은 꾸미기 화면으로 가고, 뒤로 오면 나의 정보', (tester) async {
     final e = UiEnv();
     await e.seed(tester);
     await _open(tester, e);
 
     await tester.tap(find.text('꾸미기'));
     await transition(tester);
+    await settle(tester, () => find.byKey(const ValueKey('tab-hair')).evaluate().isNotEmpty);
     expect(find.text('꾸미기'), findsOneWidget);
-    expect(find.text('준비 중'), findsOneWidget);
+    expect(find.byType(DecorateScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('tab-hair')), findsOneWidget);
+    expect(find.text('준비 중'), findsNothing);
     expect(find.text('나의 정보'), findsNothing);
 
+    // 바꾸지 않았으니 확인 없이 나온다
     await tester.tap(find.byTooltip('뒤로'));
     await transition(tester);
     expect(find.text('나의 정보'), findsOneWidget);
-    expect(find.text('준비 중'), findsNothing);
+    expect(find.byType(DecorateScreen), findsNothing);
 
     await tester.tap(find.byTooltip('뒤로'));
     await transition(tester);
     expect(find.text('열기'), findsOneWidget);
+    await end(tester, e);
+  });
+
+  testWidgets('꾸미기에서 저장하고 돌아오면 초상이 새 머리색·피부색으로 바뀐다', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester);
+    await _open(tester, e);
+    FigurePainter portrait() => tester
+        .widget<CustomPaint>(find.descendant(
+            of: find.byKey(const ValueKey('portrait')), matching: find.byType(CustomPaint)))
+        .painter! as FigurePainter;
+    expect(portrait().hairColor, Color(hairSwatches.first.color));
+    expect(portrait().skin, FigurePainter.defaultSkin);
+
+    await tester.tap(find.text('꾸미기'));
+    await transition(tester);
+    await settle(tester, () => find.byKey(const ValueKey('tab-hair')).evaluate().isNotEmpty);
+    await tester.tap(find.byKey(const ValueKey('hair-swatch-9')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('tab-skin')));
+    await tester.tap(find.byKey(const ValueKey('tab-skin')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('skin-swatch-5')));
+    await tester.pump();
+    await tester.tap(find.text('저장'));
+    await settle(tester, () => find.text('저장했어요').evaluate().isNotEmpty);
+
+    await tester.tap(find.byTooltip('뒤로'));
+    await transition(tester);
+    await settle(tester, () => portrait().skin != FigurePainter.defaultSkin);
+    expect(portrait().hairColor, Color(hairSwatches[8].color));
+    expect(portrait().skin, Color(lookPalette.skin.swatches[4].color));
     await end(tester, e);
   });
 }

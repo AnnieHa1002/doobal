@@ -75,6 +75,24 @@ class ProfileService {
         look: Value(jsonEncode(look.toJson())),
       ));
 
+  /// 꾸미기 저장: 모습만 바꾸고 닉네임 같은 다른 열은 그대로 둔다. 칸에는 가진 소품
+  /// (기본 소품은 처음부터 가진 것)만 끼울 수 있고, 아니면 아무것도 적지 않고 StateError.
+  /// 소품이 그 칸의 것인지는 보지 않는다 (꾸미기가 칸의 소품만 보여 준다)
+  Future<void> saveLook(Look look) => db.transaction(() async {
+        if (look.slots[alwaysWornSlot] == null) throw StateError('옷은 비울 수 없어요');
+        final owned = {for (final r in await db.select(db.propsOwned).get()) r.propId};
+        for (final slot in lookSlots) {
+          final id = look.slots[slot];
+          if (id != null && id != defaultSlots[slot] && !owned.contains(id)) {
+            throw StateError('가지지 않은 소품이에요: $id');
+          }
+        }
+        await _write(ProfileCompanion(
+          id: const Value(1),
+          look: Value(jsonEncode(look.toJson())),
+        ));
+      });
+
   /// 출발 동네: id, 이름(시·도를 붙인 label), 대표 좌표
   Future<void> saveHome(Sigungu s) => _write(ProfileCompanion(
         id: const Value(1),

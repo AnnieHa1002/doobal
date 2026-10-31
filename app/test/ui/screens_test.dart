@@ -65,6 +65,7 @@ class _Env {
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),
         hairSwatchesProvider.overrideWith((ref) => hairSwatches),
+        lookPaletteProvider.overrideWith((ref) => lookPalette),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
         clockProvider.overrideWithValue(() => now),

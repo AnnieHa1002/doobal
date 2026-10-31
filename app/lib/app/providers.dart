@@ -18,6 +18,7 @@ import '../data/theme_loader.dart';
 import '../domain/camp_theme.dart';
 import '../domain/landmark.dart';
 import '../domain/look.dart';
+import '../domain/look_palette.dart';
 import '../domain/map_land.dart';
 import '../domain/map_projection.dart';
 import '../domain/map_regions.dart';
@@ -55,6 +56,9 @@ final sigunguProvider = FutureProvider<List<Sigungu>>((ref) => loadSigungu());
 
 /// 머리색 견본 (palette.json hair.swatches)
 final hairSwatchesProvider = FutureProvider<List<HairSwatch>>((ref) => loadHairSwatches());
+
+/// 머리·피부 색 규칙 (palette.json hair·skin). 꾸미기와 나의 정보 초상이 읽는다
+final lookPaletteProvider = FutureProvider<LookPalette>((ref) => loadLookPalette());
 
 /// 지금 시각(UTC). 화면과 서비스는 DateTime.now()를 직접 부르지 않고 이걸 쓴다. 테스트에서 바꾼다
 final clockProvider = Provider<DateTime Function()>((ref) => () => DateTime.now().toUtc());

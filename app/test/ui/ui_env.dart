@@ -66,6 +66,7 @@ class UiEnv {
         mapRegionsProvider.overrideWith((ref) => mapRegions),
         sigunguProvider.overrideWith((ref) => sigungu),
         hairSwatchesProvider.overrideWith((ref) => hairSwatches),
+        lookPaletteProvider.overrideWith((ref) => lookPalette),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
         clockProvider.overrideWithValue(() => now),

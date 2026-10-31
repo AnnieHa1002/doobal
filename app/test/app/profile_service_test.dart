@@ -104,6 +104,93 @@ void main() {
     });
   });
 
+  group('saveLook', () {
+    /// 가진 소품 기록을 직접 넣는다
+    Future<void> own(Iterable<String> ids) => db.batch((b) => b.insertAll(db.propsOwned, [
+          for (final id in ids) PropsOwnedCompanion.insert(propId: id, unlockedUtc: 1),
+        ]));
+
+    Future<Look> stored() async =>
+        Look.fromJson(jsonDecode((await svc.row())!.look!) as Map<String, dynamic>);
+
+    test('모습(JSON)만 바꾸고 닉네임·출발 동네 같은 다른 열은 그대로 둔다', () async {
+      await svc.confirmAge(_at);
+      await svc.saveMe('나그네', Look.initial);
+      await svc.saveHome(sigungu.first);
+      await own(['hat_02', 'bag_02']);
+      final look = Look.initial
+          .copyWith(
+            hair: 5,
+            hairColor: const GradientHairColor('#2B2522', '#E39AB0'),
+            skin: const CustomSkinColor('#C08060'),
+            eyes: 2,
+            nose: 3,
+            brows: 2,
+            ears: 2,
+          )
+          .withSlot('hat', 'hat_02')
+          .withSlot('bag', 'bag_02')
+          .withSlot('hand', null);
+      await svc.saveLook(look);
+      expect(await stored(), look);
+      final r = (await svc.row())!;
+      expect(r.nickname, '나그네');
+      expect((r.homeName, r.installId), (sigungu.first.label, 'a' * 32));
+      expect((await svc.me()).look, look);
+    });
+
+    test('프로필 행이 아직 없어도 적는다', () async {
+      await svc.saveLook(Look.initial.copyWith(hair: 3));
+      expect((await stored()).hair, 3);
+    });
+
+    test('다시 저장하면 바뀐다', () async {
+      await own(['hat_02']);
+      await svc.saveLook(Look.initial.withSlot('hat', 'hat_02'));
+      await svc.saveLook(Look.initial.withSlot('hat', null));
+      expect((await stored()).slots['hat'], isNull);
+    });
+
+    test('기본 소품은 얻은 기록이 없어도 끼울 수 있다', () async {
+      expect(await db.select(db.propsOwned).get(), isEmpty);
+      await svc.saveLook(Look.initial);
+      expect((await stored()).slots, defaultSlots);
+    });
+
+    test('안 가진 소품은 거절하고 아무것도 적지 않는다', () async {
+      await svc.saveMe('나그네', Look.initial);
+      final before = (await svc.row())!.look;
+      await expectLater(
+        svc.saveLook(Look.initial.withSlot('hat', 'hat_03')),
+        throwsStateError,
+      );
+      expect((await svc.row())!.look, before);
+      // 여러 칸 중 하나만 안 가졌어도 거절
+      await own(['hand_02']);
+      await expectLater(
+        svc.saveLook(Look.initial.withSlot('hand', 'hand_02').withSlot('shoe', 'shoe_02')),
+        throwsStateError,
+      );
+      expect((await svc.row())!.look, before);
+    });
+
+    test('얻은 소품이면 끼운다 (거절은 안 가진 것만)', () async {
+      await own(['hat_03']);
+      await svc.saveLook(Look.initial.withSlot('hat', 'hat_03'));
+      expect((await stored()).slots['hat'], 'hat_03');
+    });
+
+    test('옷은 비울 수 없다 (거절)', () async {
+      final noCloth = Look(
+        hair: 1,
+        hairColor: const SwatchHairColor(1),
+        slots: {...defaultSlots, 'cloth': null},
+      );
+      await expectLater(svc.saveLook(noCloth), throwsStateError);
+      expect(await svc.row(), isNull);
+    });
+  });
+
   group('saveHome', () {
     final suwon = sigungu.singleWhere((s) => s.label == '경기 수원시');
 
@@ -178,6 +265,18 @@ void main() {
       final me = await svc.me();
       expect(me.nickname, '나그네');
       expect(me.look, look);
+    });
+
+    test('이미 저장된 옛 모습({hair, hairColor}만)은 나머지를 기본값으로 읽는다', () async {
+      await db.into(db.profile).insert(ProfileCompanion.insert(
+            id: const Value(1),
+            nickname: const Value('옛 화가'),
+            look: const Value('{"hair":4,"hairColor":{"kind":"swatch","i":3}}'),
+          ));
+      final me = await svc.me();
+      expect(me.look, const Look(hair: 4, hairColor: SwatchHairColor(3)));
+      expect(me.look.skin, const SwatchSkinColor(1));
+      expect(me.look.slots, defaultSlots);
     });
 
     test('아직 없거나 모습이 깨졌으면 기본값', () async {

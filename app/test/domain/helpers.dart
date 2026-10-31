@@ -6,6 +6,7 @@ import 'package:doobal/domain/camp_theme.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/domain/look.dart';
+import 'package:doobal/domain/look_palette.dart';
 import 'package:doobal/domain/map_projection.dart';
 import 'package:doobal/domain/map_regions.dart';
 import 'package:doobal/domain/prop.dart';
@@ -56,6 +57,11 @@ final List<Sigungu> sigungu = parseSigungu(
 
 /// 실제 palette.json의 머리색 견본
 final List<HairSwatch> hairSwatches = parseHairSwatches(
+  jsonDecode(File('assets/data/palette.json').readAsStringSync()) as Map<String, dynamic>,
+);
+
+/// 실제 palette.json의 머리·피부 규칙 (견본, 기준 밝기, 직접 고르기 범위, 그러데이션 구간)
+final LookPalette lookPalette = LookPalette.fromJson(
   jsonDecode(File('assets/data/palette.json').readAsStringSync()) as Map<String, dynamic>,
 );
 
