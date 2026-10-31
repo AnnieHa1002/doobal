@@ -268,7 +268,8 @@ void main() {
       expect(find.text('걷기 기록'), findsOneWidget);
       expect(find.text('11월 18일 10:00 ~ 10:15'), findsOneWidget);
       expect(find.text('1,500'), findsOneWidget);
-      expect(find.text('1.05 km'), findsOneWidget);
+      // 큰 거리 숫자와 1km 기록의 남은 구간 줄
+      expect(find.text('1.05 km'), findsNWidgets(2));
       expect(find.text('15:00'), findsOneWidget);
       expect(find.text('걷기 100% · 달리기 0%'), findsOneWidget);
       expect(find.text('오늘 1/3번째 함께 걷기'), findsOneWidget);

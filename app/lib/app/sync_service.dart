@@ -12,6 +12,7 @@ import '../domain/geo.dart';
 import '../domain/guestbook.dart';
 import '../domain/journey.dart';
 import '../domain/landmark.dart';
+import '../domain/laps.dart';
 import '../domain/notification_policy.dart';
 import '../domain/prop.dart';
 import '../domain/restore_floor.dart';
@@ -53,9 +54,12 @@ class SyncReport {
 
 /// 걷기 마치기 직후 걷기 기록 화면의 내용
 class WalkRecord {
-  const WalkRecord(this.summary, this.sessions, this.countedToday);
+  const WalkRecord(this.summary, this.sessions, this.countedToday, {this.laps = const []});
 
   final WalkSummary summary;
+
+  /// 랩(rules.lapKm마다)과 마지막에 남은 부분 랩. 걸음이 없으면 빈 목록
+  final List<Lap> laps;
 
   /// 창과 겹치는 저장된 걷기 구간 (걷기 1번 인정 여부 포함)
   final List<WalkSession> sessions;
@@ -1076,7 +1080,9 @@ class SyncService {
       epochMinute(kstDayStartUtc(addDays(kstDayKey(fromUtc), -1))),
       beforeMinute: toMin,
     );
-    final summary = summarizeWalk(classifyGait(minutes, rules), fromMin, toMin, rules);
+    final gaits = classifyGait(minutes, rules);
+    final summary = summarizeWalk(gaits, fromMin, toMin, rules);
+    final laps = splitLaps(gaits, fromMin, toMin, rules);
 
     final fromMs = fromMin * Duration.millisecondsPerMinute;
     final toMs = toMin * Duration.millisecondsPerMinute;
@@ -1088,7 +1094,12 @@ class SyncService {
           ..where((t) => t.day.equals(kstDayKey(toUtc))))
         .getSingleOrNull();
 
-    return WalkRecord(summary, [for (final r in rows) _sessionOf(r)], today?.countedSessions ?? 0);
+    return WalkRecord(
+      summary,
+      [for (final r in rows) _sessionOf(r)],
+      today?.countedSessions ?? 0,
+      laps: laps,
+    );
   }
 
   Future<Snapshot> snapshot(DateTime now) async {

@@ -61,4 +61,33 @@ void main() {
       expect(distanceM(g, rules), closeTo(100 * 0.7 + 150 * 1.0, 1e-9));
     });
   });
+
+  group('페이스', () {
+    test('평균 페이스: 1000m를 12분 30초에 → 750초/km', () {
+      expect(paceSecPerKm(1000, const Duration(minutes: 12, seconds: 30)), 750);
+    });
+
+    test('평균 페이스는 반올림: 700m를 10분에 → 600 ÷ 0.7 = 857.14 → 857', () {
+      expect(paceSecPerKm(700, const Duration(minutes: 10)), 857);
+      // 1050m를 15분에 → 900 ÷ 1.05 = 857.14 → 857
+      expect(paceSecPerKm(1050, const Duration(minutes: 15)), 857);
+    });
+
+    test('거리가 0 이하면 null (시간이 0이어도 null)', () {
+      expect(paceSecPerKm(0, const Duration(minutes: 5)), isNull);
+      expect(paceSecPerKm(-1, const Duration(minutes: 5)), isNull);
+      expect(paceSecPerKm(100, Duration.zero), isNull);
+    });
+
+    test('지금 페이스 = 3600 ÷ 속도: 걷기 100보 → 4.2km/h → 857, 뛰기 140보 → 8.4km/h → 429', () {
+      expect(livePaceSecPerKm(100, Gait.walk, rules), 857);
+      // 3600 ÷ 8.4 = 428.57 → 429
+      expect(livePaceSecPerKm(140, Gait.run, rules), 429);
+    });
+
+    test('분당 걸음이 0이면 null', () {
+      expect(livePaceSecPerKm(0, Gait.walk, rules), isNull);
+      expect(livePaceSecPerKm(0, Gait.run, rules), isNull);
+    });
+  });
 }

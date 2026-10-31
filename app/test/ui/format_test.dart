@@ -25,6 +25,17 @@ void main() {
     expect(formatKm(0.634), '0.6 km');
   });
 
+  test('formatPace: 분\'초" (초는 두 자리)', () {
+    expect(formatPace(857), '14\'17"');
+    expect(formatPace(60), '1\'00"');
+    expect(formatPace(750), '12\'30"');
+    expect(formatPace(605), '10\'05"');
+    expect(formatPace(59), '0\'59"');
+    expect(formatPace(0), '0\'00"');
+    expect(formatPace(3600), '60\'00"');
+    expect(formatPace(-5), '0\'00"');
+  });
+
   test('formatHourKo: 시를 말하듯이 (밤 10시, 아침 8시)', () {
     expect(formatHourKo(22), '밤 10시');
     expect(formatHourKo(8), '아침 8시');

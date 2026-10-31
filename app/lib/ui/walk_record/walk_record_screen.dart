@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/gait.dart';
+import '../../domain/laps.dart';
 import '../../domain/milestones.dart';
 import '../../domain/rules.dart';
 import '../../domain/time_kst.dart';
+import '../../domain/walk_record.dart';
 import '../common/app_text.dart';
 import '../common/big_number.dart';
 import '../common/format.dart';
@@ -140,6 +143,32 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
     );
   }
 
+  /// `평균 페이스 14'17"/km · 평균 분당 걸음 112보`. 시간은 위 시간 숫자와 같다.
+  /// 거리가 없어 페이스를 못 내면 페이스 부분은 뺀다
+  String _averageLine(WalkSummary s) {
+    final pace = paceSecPerKm(s.distanceM, widget.end.difference(widget.start));
+    return [
+      if (pace != null) '평균 페이스 ${formatPace(pace)}/km',
+      '평균 분당 걸음 ${s.avgSpm}보',
+    ].join(' · ');
+  }
+
+  /// 랩마다 한 줄: 그 랩이 끝난 곳까지의 거리와 그 랩의 페이스.
+  /// 가득 찬 랩은 `1 km`, 남은 부분 랩은 `1.05 km`처럼 소수 둘째 자리까지
+  List<Widget> _lapRows(List<Lap> laps) {
+    final rows = <Widget>[];
+    var cumM = 0.0;
+    for (final lap in laps) {
+      cumM += lap.distanceM;
+      final pace = lap.paceSecPerKm;
+      rows.add(_LapRow(
+        lap.partial ? formatKm(cumM / 1000, digits: 2) : '${_plainKm(cumM / 1000)} km',
+        pace == null ? '-' : '${formatPace(pace)}/km',
+      ));
+    }
+    return rows;
+  }
+
   Widget _content(Rules rules, WalkRecord record, Snapshot snap, List<int>? milestones) {
     final s = record.summary;
     final run = s.runRatio;
@@ -171,6 +200,17 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
           '걷기 ${((1 - run) * 100).round()}% · 달리기 ${(run * 100).round()}%',
           style: AppText.label,
         ),
+        // 자리표시: 평균 줄과 1km 기록의 화면 구성은 디자인팀이 정할 때까지(10/31) 이 모양으로 둔다
+        if (s.steps > 0) ...[
+          const SizedBox(height: 12),
+          Text(_averageLine(s), style: AppText.bodySub),
+        ],
+        if (record.laps.any((l) => !l.partial)) ...[
+          const SizedBox(height: 12),
+          Text('${_plainKm(rules.lapKm)}km 기록', style: AppText.label),
+          const SizedBox(height: 4),
+          ..._lapRows(record.laps),
+        ],
         const SizedBox(height: 16),
         Text(
           _sessionText(rules, record),
@@ -198,6 +238,32 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
           Text('다음 방명록 지점까지 ${formatInt(left)}보', style: AppText.bodySub),
         ],
       ],
+    );
+  }
+}
+
+/// 거리(km)를 군더더기 없이: 1 → '1', 0.5 → '0.5', 1.25 → '1.25' (랩 길이는 config라 1km가 아닐 수 있다)
+String _plainKm(double km) =>
+    double.parse(km.toStringAsFixed(2)).toString().replaceFirst(RegExp(r'\.0$'), '');
+
+/// 1km 기록 한 줄 (왼쪽 거리, 오른쪽 페이스). 글자를 키우면 줄바꿈으로 읽힌다
+class _LapRow extends StatelessWidget {
+  const _LapRow(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: Text(label, style: AppText.bodySub)),
+          Flexible(child: Text(value, style: AppText.body, textAlign: TextAlign.end)),
+        ],
+      ),
     );
   }
 }

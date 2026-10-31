@@ -726,6 +726,8 @@ void main() {
       final e = UiEnv();
       await e.seed(tester, () => seedWalk(e));
       await openRecord(tester, e, fit, review: false);
+      // 15분 × 100보는 1km를 넘어서 평균 줄과 1km 기록 줄도 같이 점검한다
+      expect(find.text('1km 기록'), findsOneWidget);
       fit.check('걷기 기록 (진행 막대·긴 목적지 이름)');
       await end(tester, e);
     });

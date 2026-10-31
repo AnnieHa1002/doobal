@@ -23,6 +23,23 @@ void main() {
     expect(s.runRatio, closeTo(750 / 1750, 1e-12));
   });
 
+  group('평균 분당 걸음', () {
+    test('걸음 / 걸음이 있던 분, 반올림: 1750 ÷ 15 = 116.67 → 117', () {
+      expect(summarizeWalk(gaits, from, from + 15, rules).avgSpm, 117);
+      // 앞 10분은 100보 / 분
+      expect(summarizeWalk(gaits, from, from + 10, rules).avgSpm, 100);
+    });
+
+    test('걸음 없는 분은 나누는 수에서 뺀다: [100, 0, 100] → 200 ÷ 2 = 100', () {
+      final m = minutesFrom(_t0, [100, 0, 100]);
+      expect(summarizeWalk(classifyGait(m, rules), from, from + 3, rules).avgSpm, 100);
+    });
+
+    test('걸음이 없으면 0', () {
+      expect(summarizeWalk(const [], from, from + 3, rules).avgSpm, 0);
+    });
+  });
+
   test('창 [from, to) 밖의 분은 뺀다', () {
     // 앞 3분 · 뒤 2분을 뺀 10분: 걷기 7분(700보) + 뛰기 3분(450보)
     final s = summarizeWalk(gaits, from + 3, from + 13, rules);

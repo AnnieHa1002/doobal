@@ -347,6 +347,9 @@ void main() {
       expect(find.text('분당 걸음'), findsOneWidget);
       expect(find.text('100보'), findsOneWidget);
       expect(find.text('4.2 km/h'), findsOneWidget);
+      // 3600 ÷ 4.2 = 857.14 → 857초 = 14분 17초
+      expect(find.text('페이스'), findsOneWidget);
+      expect(find.text('14\'17"/km'), findsOneWidget);
       expect(find.text('0.70 m'), findsOneWidget);
       expect(find.text('오늘 걸음'), findsOneWidget);
       // 걸음 숫자와 오늘 걸음 둘
@@ -517,6 +520,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
         expect(find.text('140보'), findsOneWidget);
         expect(find.text('8.4 km/h'), findsOneWidget);
+        // 3600 ÷ 8.4 = 428.57 → 429초 = 7분 9초
+        expect(find.text('7\'09"/km'), findsOneWidget);
         expect(find.text('1.00 m'), findsOneWidget);
 
         // 가만히 서면 창이 비어 분당 걸음이 0이 되고 달리는 중이 아니게 된다
@@ -525,6 +530,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         expect(find.text('걷는 중'), findsOneWidget);
         expect(find.text('0.0 km/h'), findsOneWidget);
+        // 속도가 0이면 페이스를 못 낸다
+        expect(find.text('-'), findsOneWidget);
         await _end(tester, e);
       });
 
@@ -651,7 +658,8 @@ void main() {
 
       expect(find.text('걷기 기록'), findsOneWidget);
       expect(find.text('1,500'), findsOneWidget);
-      expect(find.text('1.05 km'), findsOneWidget);
+      // 큰 거리 숫자와 1km 기록의 남은 구간 줄
+      expect(find.text('1.05 km'), findsNWidgets(2));
       expect(find.text('15:00'), findsOneWidget);
       expect(find.text('걸음'), findsOneWidget);
       expect(find.text('거리'), findsOneWidget);
@@ -733,7 +741,8 @@ void main() {
       await openRecord(tester, e, start: _t1, end: _t1.add(const Duration(minutes: 15)));
 
       expect(tester.widget<Text>(find.text('1,500')).textSpan!.style!.fontSize, 40);
-      expect(tester.widget<Text>(find.text('1.05 km')).textSpan!.style!.fontSize, 40);
+      // 큰 숫자가 먼저, 그 뒤가 1km 기록의 남은 구간 줄
+      expect(tester.widget<Text>(find.text('1.05 km').first).textSpan!.style!.fontSize, 40);
       expect(tester.widget<Text>(find.text('15:00')).textSpan!.style!.fontSize, 40);
       expect(tester.widget<Text>(find.text('걸음')).style!.fontSize, 12);
       expect(tester.widget<Text>(find.text('걷기 기록')).style!.fontSize, 22);
@@ -774,6 +783,48 @@ void main() {
 
       expect(find.text('1,750'), findsOneWidget);
       expect(find.text('걷기 57% · 달리기 43%'), findsOneWidget);
+      await _end(tester, e);
+    });
+
+    testWidgets('1km 이상 걸으면 평균 줄과 1km 기록이 나온다 (1km 랩 + 남은 부분 랩)', (tester) async {
+      final e = _Env();
+      await e.seed(tester);
+      // 15분 × 100보: 1.05km, 1,500보
+      // 평균 페이스 900초 ÷ 1.05km = 857.14 → 857 = 14'17", 평균 분당 걸음 1,500 ÷ 15 = 100
+      // 1km 랩은 857초 → 14'17", 남은 50m는 43초 ÷ 0.05km = 860 → 14'20"
+      e.source.records.add(_walk(_t1, 15, 100));
+      await openRecord(tester, e, start: _t1, end: _t1.add(const Duration(minutes: 15)));
+
+      expect(find.text('평균 페이스 14\'17"/km · 평균 분당 걸음 100보'), findsOneWidget);
+      expect(find.text('1km 기록'), findsOneWidget);
+      expect(find.text('1 km'), findsOneWidget);
+      expect(find.text('14\'17"/km'), findsOneWidget);
+      // 남은 부분 랩은 거기까지의 거리 1.05 km (큰 거리 숫자와 같은 글자라 둘)
+      expect(find.text('1.05 km'), findsNWidgets(2));
+      expect(find.text('14\'20"/km'), findsOneWidget);
+      await _end(tester, e);
+    });
+
+    testWidgets('1km를 못 채우면 평균 줄만 있고 1km 기록은 없다', (tester) async {
+      final e = _Env();
+      await e.seed(tester);
+      // 5분 × 100보: 0.35km. 300초 ÷ 0.35km = 857.14 → 14'17"
+      e.source.records.add(_walk(_t1, 5, 100));
+      await openRecord(tester, e, start: _t1, end: _t1.add(const Duration(minutes: 5)));
+
+      expect(find.text('평균 페이스 14\'17"/km · 평균 분당 걸음 100보'), findsOneWidget);
+      expect(find.text('1km 기록'), findsNothing);
+      await _end(tester, e);
+    });
+
+    testWidgets('걸음이 없으면 평균 줄도 1km 기록도 없다', (tester) async {
+      final e = _Env();
+      await e.seed(tester);
+      await openRecord(tester, e, start: _t1, end: _t1.add(const Duration(minutes: 5)));
+
+      expect(find.text('걸음'), findsOneWidget);
+      expect(find.textContaining('평균'), findsNothing);
+      expect(find.text('1km 기록'), findsNothing);
       await _end(tester, e);
     });
 

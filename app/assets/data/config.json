@@ -4,6 +4,7 @@
  "session": { "maxGapMin": 2, "minMin": 10, "minSteps": 1000, "maxPerDay": 3 },
  "sync": { "refetchHours": 48, "walkingRefreshSec": 30 },
  "live": { "cadenceWindowSec": 30 },
+ "record": { "lapKm": 1 },
  "route": {
   "seaFactor": 0.3333333333,
   "earthRadiusKm": 6371.0088,

@@ -91,6 +91,7 @@ class Rules {
     required this.refetchHours,
     required this.walkingRefreshSec,
     required this.liveCadenceWindowSec,
+    required this.lapKm,
     required this.seaFactor,
     required this.earthRadiusKm,
     required this.ports,
@@ -157,6 +158,9 @@ class Rules {
 
   /// 걸음 센서로 분당 걸음을 낼 때 보는 최근 시간(초) (config live.cadenceWindowSec)
   final int liveCadenceWindowSec;
+
+  /// 걷기 기록의 랩 길이(km) (config record.lapKm)
+  final double lapKm;
 
   final double seaFactor;
   final double earthRadiusKm;
@@ -269,6 +273,7 @@ class Rules {
     final session = j['session'] as Map<String, dynamic>;
     final sync = j['sync'] as Map<String, dynamic>;
     final live = j['live'] as Map<String, dynamic>;
+    final record = j['record'] as Map<String, dynamic>;
     final route = j['route'] as Map<String, dynamic>;
     final journey = j['journey'] as Map<String, dynamic>;
     final frame = journey['frame'] as Map<String, dynamic>;
@@ -307,6 +312,9 @@ class Rules {
       if (!layers.containsKey(id)) throw FormatException('레이어 규격이 없다: ${id.name}');
     }
 
+    // 랩 길이가 0 이하면 랩을 끊을 수 없다
+    if (_d(record['lapKm']) <= 0) throw const FormatException('record.lapKm는 0보다 커야 한다');
+
     return Rules(
       walkMaxSpm: gait['walkMaxSpm'] as int,
       runMinSpm: gait['runMinSpm'] as int,
@@ -319,6 +327,7 @@ class Rules {
       refetchHours: sync['refetchHours'] as int,
       walkingRefreshSec: sync['walkingRefreshSec'] as int,
       liveCadenceWindowSec: live['cadenceWindowSec'] as int,
+      lapKm: _d(record['lapKm']),
       seaFactor: _d(route['seaFactor']),
       earthRadiusKm: _d(route['earthRadiusKm']),
       ports: (route['ports'] as Map<String, dynamic>)

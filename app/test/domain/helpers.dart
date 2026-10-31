@@ -19,6 +19,13 @@ final Rules rules = Rules.fromJson(
   jsonDecode(File('assets/data/config.json').readAsStringSync()) as Map<String, dynamic>,
 );
 
+/// 랩 길이(record.lapKm)만 바꾼 규칙. 한 분 안에 경계가 여러 개인 경우를 작은 값으로 본다
+Rules rulesWithLapKm(double lapKm) {
+  final j = jsonDecode(File('assets/data/config.json').readAsStringSync()) as Map<String, dynamic>;
+  (j['record'] as Map<String, dynamic>)['lapKm'] = lapKm;
+  return Rules.fromJson(j);
+}
+
 /// 실제 landmarks.json의 명소 101곳
 final List<Landmark> landmarks = [
   for (final l in (jsonDecode(File('assets/data/landmarks.json').readAsStringSync())

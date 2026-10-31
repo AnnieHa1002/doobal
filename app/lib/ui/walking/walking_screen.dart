@@ -283,6 +283,7 @@ class _Panel extends StatelessWidget {
     final j = snap.journey;
     final spm = summary?.lastSteps ?? 0;
     final gait = summary?.lastGait ?? Gait.walk;
+    final pace = livePaceSecPerKm(spm, gait, rules);
     const small = TextStyle(fontSize: 14, color: Palette.subInk);
 
     return Container(
@@ -345,6 +346,7 @@ class _Panel extends StatelessWidget {
               const Divider(height: 24, color: Palette.ink),
               _Line('분당 걸음', '$spm보'),
               _Line('속도', '${speedKmh(spm, gait, rules).toStringAsFixed(1)} km/h'),
+              _Line('페이스', pace == null ? '-' : '${formatPace(pace)}/km'),
               _Line('보폭', '${strideM(gait, rules).toStringAsFixed(2)} m'),
               _Line('오늘 걸음', '${formatInt(snap.todaySteps)}보'),
               if (j != null) _Line('도착 예정일', formatMonthDay(j.eta)),

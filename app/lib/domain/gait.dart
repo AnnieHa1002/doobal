@@ -58,3 +58,15 @@ double speedKmh(int stepsPerMin, Gait gait, Rules rules) =>
 /// 속도(m/s) = 분당 걸음 × 보폭(m) ÷ 60
 double speedMps(int stepsPerMin, Gait gait, Rules rules) =>
     stepsPerMin * strideM(gait, rules) / 60;
+
+/// 평균 페이스(초/km) = 시간 ÷ 거리, 반올림. 거리가 0 이하거나 시간이 0 이하면 null
+int? paceSecPerKm(double distanceM, Duration time) {
+  if (distanceM <= 0 || time <= Duration.zero) return null;
+  return (time.inMilliseconds / 1000 / (distanceM / 1000)).round();
+}
+
+/// 지금 페이스(초/km) = 3600 ÷ 속도(km/h), 반올림. 속도가 0이면 null
+int? livePaceSecPerKm(int stepsPerMin, Gait gait, Rules rules) {
+  final kmh = speedKmh(stepsPerMin, gait, rules);
+  return kmh <= 0 ? null : (3600 / kmh).round();
+}

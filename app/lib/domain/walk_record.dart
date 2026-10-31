@@ -28,6 +28,9 @@ class WalkSummary {
 
   /// 뛴 분 걸음 / 전체 걸음 (WalkSession.runRatio와 같은 정의). 걸음이 없으면 0
   double get runRatio => steps == 0 ? 0.0 : runSteps / steps;
+
+  /// 평균 분당 걸음 = 걸음 / 걸음이 있었던 분 수, 반올림. 걸음이 있던 분이 없으면 0
+  int get avgSpm => activeMinutes == 0 ? 0 : (steps / activeMinutes).round();
 }
 
 /// 이미 걷기/뛰기로 나눈 분 중 [fromMinute, toMinute)(UTC epoch 분)만 모은다.

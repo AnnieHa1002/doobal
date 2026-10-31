@@ -27,6 +27,12 @@ String formatDuration(Duration d) {
   return '$h:${m.toString().padLeft(2, '0')}:$ss';
 }
 
+/// 페이스(초/km)를 분'초"로: 857 → `14'17"`, 60 → `1'00"`. 음수는 0으로
+String formatPace(int secPerKm) {
+  final total = secPerKm < 0 ? 0 : secPerKm;
+  return '${total ~/ 60}\'${(total % 60).toString().padLeft(2, '0')}"';
+}
+
 /// 날짜만 쓴다: '11월 24일'
 String formatMonthDay(DateTime d) => '${d.month}월 ${d.day}일';
 

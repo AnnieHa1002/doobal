@@ -342,6 +342,43 @@ void main() {
       expect(r.countedToday, 1);
     });
 
+    test('랩: 1km 랩과 남은 부분 랩. 창 앞쪽 분은 쓰지 않고, 걸음이 없으면 빈 목록', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      e.source.records.add(_walk(t1, 15, 100));
+      await e.svc.sync(t2);
+
+      // 분당 70m: 1km는 14분 + 60초 × 20/70 = 857.14 → 857초, 걸음 1,428.57 → 1,429
+      // 남은 50m는 900 - 857 = 43초, 걸음 1,500 - 1,429 = 71
+      final r = await e.svc.walkRecord(t1, at(15));
+      expect(r.laps.map((l) => l.duration.inSeconds), [857, 43]);
+      expect(r.laps.map((l) => l.steps), [1429, 71]);
+      expect(r.laps.map((l) => l.partial), [false, true]);
+
+      // 5~10분만: 500보 = 350m라 부분 랩 하나. 시간의 기준은 창의 첫 분(5분)이라 300초
+      final mid = await e.svc.walkRecord(at(5), at(10));
+      expect(mid.laps, hasLength(1));
+      expect(mid.laps.single.distanceM, closeTo(350, 1e-9));
+      expect(mid.laps.single.duration, const Duration(seconds: 300));
+      expect(mid.laps.single.steps, 500);
+
+      expect((await e.svc.walkRecord(at(20), at(30))).laps, isEmpty);
+    });
+
+    test('랩: 걷다 뛰면 분마다 보폭이 다르게 쌓인다 (경계가 분 끝과 겹쳐도 부분 랩이 늘지 않는다)', () async {
+      final e = await _env();
+      await e.svc.sync(_t0);
+      // 100보 10분(700m) → 150보 5분(분당 150m). 1km는 11분 끝에서 정확히 닿는다
+      // 시각 720초, 걸음 1,000 + 300 = 1,300. 남은 450m는 900 - 720 = 180초, 걸음 1,750 - 1,300 = 450
+      e.source.records.addAll([_walk(t1, 10, 100), _walk(at(10), 5, 150)]);
+      await e.svc.sync(t2);
+
+      final r = await e.svc.walkRecord(t1, at(15));
+      expect(r.laps.map((l) => l.duration.inSeconds), [720, 180]);
+      expect(r.laps.map((l) => l.steps), [1300, 450]);
+      expect(r.laps.last.distanceM, closeTo(450, 1e-9));
+    });
+
     test('창 밖은 뺀다: 앞뒤를 자르면 걸음이 줄고, 걷기 구간은 겹치면 그대로 나온다', () async {
       final e = await _env();
       await e.svc.sync(_t0);
