@@ -49,13 +49,17 @@ List<StepRecord> filterRecords(List<StepRecord> records, List<String> allowedSou
         .where((r) => allowedSources.isEmpty || allowedSources.contains(r.sourceId))
         .toList();
 
-/// 기록 하나를 각 분과 겹친 시간 비율로 나눈다 (분 → 걸음).
-/// 정수로 맞출 때는 최대 나머지 방식: 나머지가 큰 분부터 1씩, 같으면 이른 분 먼저. 합은 원래 걸음과 같다
-Map<int, int> splitRecord(StepRecord r) {
-  if (r.steps <= 0) return {};
-  final s = r.start.millisecondsSinceEpoch;
-  final e = r.end.millisecondsSinceEpoch;
-  if (e <= s) return {s ~/ _msPerMin: r.steps};
+/// 기록 하나를 각 분과 겹친 시간 비율로 나눈다 (분 → 걸음). 나누는 방법은 [splitSteps]
+Map<int, int> splitRecord(StepRecord r) => splitSteps(r.steps, r.start, r.end);
+
+/// 걸음 [steps]를 [start, end]와 각 분이 겹친 시간 비율로 나눈다 (분 → 걸음).
+/// 정수로 맞출 때는 최대 나머지 방식: 나머지가 큰 분부터 1씩, 같으면 이른 분 먼저. 합은 원래 걸음과 같다.
+/// 끝이 시작보다 늦지 않으면 시작이 속한 분에 전부 넣는다
+Map<int, int> splitSteps(int steps, DateTime start, DateTime end) {
+  if (steps <= 0) return {};
+  final s = start.millisecondsSinceEpoch;
+  final e = end.millisecondsSinceEpoch;
+  if (e <= s) return {s ~/ _msPerMin: steps};
 
   final total = e - s;
   final first = s ~/ _msPerMin;
@@ -64,11 +68,11 @@ Map<int, int> splitRecord(StepRecord r) {
   final rem = <int, int>{};
   for (var m = first; m <= last; m++) {
     final overlap = _min(e, (m + 1) * _msPerMin) - _max(s, m * _msPerMin);
-    base[m] = r.steps * overlap ~/ total;
-    rem[m] = r.steps * overlap % total;
+    base[m] = steps * overlap ~/ total;
+    rem[m] = steps * overlap % total;
   }
 
-  var left = r.steps - base.values.fold(0, (a, b) => a + b);
+  var left = steps - base.values.fold(0, (a, b) => a + b);
   final order = rem.keys.toList()
     ..sort((a, b) => rem[a] != rem[b] ? rem[b]!.compareTo(rem[a]!) : a.compareTo(b));
   for (final m in order) {

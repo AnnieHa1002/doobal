@@ -183,7 +183,8 @@ void main() {
   });
 
   group('앱이 뒤로 갔다 오면', () {
-    testWidgets('읽기를 멈췄다가 다시 켜지면 새 기준값부터 센다 (꺼져 있던 동안의 걸음은 안 센다)', (tester) async {
+    testWidgets('읽기를 멈췄다가 다시 켜지면 그동안 늘어난 걸음도 센다 (첫 증가에 다 들어 있다)',
+        (tester) async {
       final w = _Walker(FakeLiveSteps());
       await w.walker.start();
       w.live.push(1000);
@@ -192,6 +193,7 @@ void main() {
       await tester.pump();
       expect(w.walker.walk.steps, 10);
 
+      // 5초에 숨는다
       _leave(tester);
       expect(w.live.listeners, 0);
       // 꺼져 있는 동안 센서에 걸음이 쌓였다 (읽지 않으니 들어오지 않는다)
@@ -202,19 +204,52 @@ void main() {
       _back(tester);
       expect(w.live.listeners, 1);
       expect(w.live.subscriptions, 2);
-      expect(w.walker.walk.active, isFalse);
-
-      // 다시 읽기 시작하며 받은 첫 값이 새 기준값
-      w.now = _t0.add(const Duration(minutes: 30));
-      w.live.push(2000);
-      await tester.pump();
+      // 기준값은 그대로라 아직 활성이다
       expect(w.walker.walk.active, isTrue);
-      expect(w.walker.walk.steps, 10);
 
+      // 30분 5초에 다시 읽기 시작해서 받은 값: 숨은 5초부터 30분 5초까지 30분(1,800초)에
+      // 1,510 - 10 = 1,500보 → 분당 1500 × 60 ÷ 1800 = 50 → 걷기 → 1,500 × 0.7 = 1,050m
       w.now = _t0.add(const Duration(minutes: 30, seconds: 5));
-      w.live.push(2007);
+      w.live.push(2510);
       await tester.pump();
-      expect(w.walker.walk.steps, 17);
+      expect(w.walker.walk.steps, 1510);
+      expect(w.walker.walk.catchUps, 1);
+      expect(w.walker.walk.distanceM, closeTo(1057, 1e-9)); // 7 + 1,050
+
+      // 그 뒤는 평소처럼 센다
+      w.now = _t0.add(const Duration(minutes: 30, seconds: 10));
+      w.live.push(2517);
+      await tester.pump();
+      expect(w.walker.walk.steps, 1517);
+      expect(w.walker.walk.catchUps, 1);
+      w.walker.dispose();
+    });
+
+    testWidgets('숨은 뒤 옛 값이 먼저 다시 와도 숨은 시각부터 센다', (tester) async {
+      final w = _Walker(FakeLiveSteps());
+      await w.walker.start();
+      w.live.push(1000);
+      w.now = _t0.add(const Duration(seconds: 5));
+      w.live.push(1010);
+      await tester.pump();
+
+      // 5초에 숨는다
+      _leave(tester);
+      _back(tester);
+      // 다시 구독하자 센서가 마지막 값을 한 번 더 준다
+      w.now = _t0.add(const Duration(minutes: 10));
+      w.live.push(1010);
+      await tester.pump();
+      expect(w.walker.walk.steps, 10);
+      expect(w.walker.walk.catchUps, 0);
+
+      // 숨은 5초부터 10분 5초까지 10분에 600보 → 분당 60 → 걷기 → 420m
+      w.now = _t0.add(const Duration(minutes: 10, seconds: 5));
+      w.live.push(1610);
+      await tester.pump();
+      expect(w.walker.walk.steps, 610);
+      expect(w.walker.walk.catchUps, 1);
+      expect(w.walker.walk.distanceM, closeTo(427, 1e-9)); // 7 + 420
       w.walker.dispose();
     });
 

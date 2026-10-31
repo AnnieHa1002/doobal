@@ -26,7 +26,8 @@ import '../walk_record/walk_record_screen.dart';
 /// 걷는 중. 열 때 걷기 시작 시각을 적고, rules.walkingRefreshSec마다 동기화해서
 /// 이번 걷기의 걸음·거리를 새로 받는다. 보이는 거리는 새 값을 향해 부드럽게 따라간다.
 /// health 기록은 늦게 들어오므로, 기기 걸음 센서(LiveWalker)가 있으면 걸음·거리는 둘 중 큰 쪽,
-/// 분당 걸음과 걷기/뛰기는 센서 기준으로 보여 준다. 진행 바·남은 km·도착은 동기화 값 그대로
+/// 분당 걸음과 걷기/뛰기는 센서 기준으로 보여 준다. 진행 바·남은 km·도착은 동기화 값 그대로.
+/// 화면이 꺼져 있던 동안 센 걸음은 앱이 돌아올 때 한꺼번에 들어오고, 그때 거리는 바로 맞춘다
 class WalkingScreen extends ConsumerStatefulWidget {
   const WalkingScreen({super.key});
 
@@ -48,6 +49,9 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   /// 기기 걸음 센서. 센서나 권한이 없으면 값이 오지 않는다
   LiveWalker? _live;
+
+  /// 마지막으로 본 LiveWalk.catchUps. 바뀌면 숨어 있던 동안의 걸음이 들어온 것이라 거리를 바로 맞춘다
+  var _catchUps = 0;
 
   /// 새 기록이 왔을 때 그때 남은 거리를 한 주기에 메우는 속도(m/s).
   /// 걷는 속도보다 크면 이 속도로 따라가서 한 주기 안에 목표에 닿는다
@@ -159,13 +163,19 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final now = ref.read(clockProvider)();
     final summary = _summaryAt(now);
     final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
-    final shown = followDistance(
+    var shown = followDistance(
       _shownM,
       summary?.distanceM ?? 0,
       math.max(walkMps, _catchUpMps),
       dt,
       rules.walkingRefreshSec.toDouble(),
     );
+    // 숨어 있던 동안의 걸음이 한꺼번에 들어왔으면 따라가지 않고 바로 맞춘다
+    final catchUps = _live?.walk.catchUps ?? 0;
+    if (catchUps != _catchUps) {
+      _catchUps = catchUps;
+      shown = math.max(shown, summary?.distanceM ?? 0);
+    }
     // 거리가 움직이거나 초가 바뀔 때만 다시 그린다
     final secondChanged =
         now.difference(_start).inSeconds != _now.difference(_start).inSeconds;

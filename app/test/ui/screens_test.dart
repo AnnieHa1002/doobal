@@ -611,7 +611,7 @@ void main() {
         await _end(tester, e);
       });
 
-      testWidgets('앱이 뒤로 갔다 오면 새 기준값부터 센다 (꺼져 있던 동안의 걸음은 화면에 안 들어간다)',
+      testWidgets('앱이 뒤로 갔다 오면 그동안 센 걸음이 한꺼번에 들어오고, 거리도 바로 맞춘다',
           (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
@@ -620,10 +620,16 @@ void main() {
         await sensorTo(tester, e, 5, 1010);
         expect(find.text('10보'), findsOneWidget);
 
+        // 5초에 화면을 끄고 20분 뒤에 켠다
         for (final s in [
           AppLifecycleState.inactive,
           AppLifecycleState.hidden,
           AppLifecycleState.paused,
+        ]) {
+          tester.binding.handleAppLifecycleStateChanged(s);
+        }
+        e.now = e.now.add(const Duration(minutes: 20));
+        for (final s in [
           AppLifecycleState.hidden,
           AppLifecycleState.inactive,
           AppLifecycleState.resumed,
@@ -632,11 +638,18 @@ void main() {
         }
         expect(e.live.subscriptions, 2);
 
-        e.live.push(5000);
+        // 다시 읽으며 받은 값: 숨은 20분(1,200초)에 1,000보 → 분당 50 → 걷기 → 700m
+        e.live.push(2010);
         await tester.pump(const Duration(milliseconds: 100));
-        expect(find.text('10보'), findsOneWidget);
-        await sensorTo(tester, e, 5, 5005);
-        expect(find.text('15보'), findsOneWidget);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('1,010보'), findsOneWidget);
+        expect(find.text('걷는 중'), findsOneWidget);
+        // 거리(7 + 700 = 707m)는 30초에 걸쳐 따라가지 않고 바로 보인다
+        expect(find.text('0.71 km'), findsOneWidget);
+
+        // 그 뒤는 평소처럼 센다
+        await sensorTo(tester, e, 5, 2017);
+        expect(find.text('1,017보'), findsOneWidget);
         await _end(tester, e);
       });
 

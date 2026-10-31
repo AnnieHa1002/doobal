@@ -13,6 +13,12 @@ DateTime _at(int sec) => _t0.add(Duration(seconds: sec));
 /// 누적값 [total]을 [sec]초에 받는다
 void _feed(LiveWalk w, int sec, int total) => w.onCount(total, _at(sec));
 
+/// (분 - 첫 분, 걸음, 걷기/뛰기)로 줄인 minutes. 분 번호는 _t0가 속한 분을 0으로 본다
+List<(int, int, Gait)> _shape(LiveWalk w) {
+  final m0 = epochMinute(_t0);
+  return [for (final m in w.minutes) (m.minute - m0, m.steps, m.gait)];
+}
+
 void main() {
   test('config의 분당 걸음 창은 30초', () {
     expect(rules.liveCadenceWindowSec, 30);
@@ -66,32 +72,160 @@ void main() {
     });
   });
 
-  group('resume: 꺼져 있던 동안의 증가는 버린다', () {
-    test('rebase 뒤 첫 값이 새 기준이고 그 사이 늘어난 걸음은 세지 않는다', () {
+  group('pause/resume: 숨어 있던 동안의 걸음도 센다', () {
+    /// 0초에 [base]를 기준으로 받고 [pauseSec]초에 숨은 걸음
+    LiveWalk hiddenAt(int base, int pauseSec) {
+      final w = LiveWalk(rules);
+      _feed(w, 0, base);
+      w.pause(_at(pauseSec));
+      return w;
+    }
+
+    test('걷다 숨어서 10분 뒤 600보가 한꺼번에: 분당 60 → 걷기, 숨은 분마다 60보, +420m', () {
       final w = LiveWalk(rules);
       _feed(w, 0, 1000);
-      _feed(w, 5, 1010);
-      expect(w.steps, 10);
+      _feed(w, 30, 1050); // 30초에 50보 → 분당 100 → 걷기, +35m (0분)
+      _feed(w, 60, 1100); // 창(30초 전은 빠진다)에 50보 → 분당 100 → 걷기, +35m (1분)
+      expect(w.steps, 100);
+      expect(w.distanceM, closeTo(70, 1e-9));
 
-      w.rebase();
-      expect(w.active, isFalse);
-      // 한 시간 동안 800보가 쌓인 채로 돌아왔다
-      _feed(w, 3600, 1810);
-      expect(w.active, isTrue);
-      expect(w.steps, 10);
-      expect(w.distanceM, closeTo(7, 1e-9));
-
-      _feed(w, 3605, 1820);
-      expect(w.steps, 20);
+      w.pause(_at(120));
+      expect(w.stepsPerMin(_at(120)), 0);
+      // 숨은 120초~720초 10분 뒤 600보가 한꺼번에: 600 × 60 ÷ 600초 = 분당 60 → 걷기
+      _feed(w, 720, 1700);
+      expect(w.steps, 700); // 100 + 600
+      expect(w.distanceM, closeTo(490, 1e-9)); // 70 + 600 × 0.7
+      expect(w.catchUps, 1);
+      expect(w.gait, Gait.walk);
+      // 따라잡은 걸음은 분당 걸음 창에 넣지 않는다
+      expect(w.stepsPerMin(_at(720)), 0);
+      // 0분 50보, 1분 50보, 숨은 2~11분은 분마다 600 ÷ 10 = 60보
+      expect(_shape(w), [
+        (0, 50, Gait.walk),
+        (1, 50, Gait.walk),
+        for (var m = 2; m <= 11; m++) (m, 60, Gait.walk),
+      ]);
+      expect(distanceM(w.minutes, rules), closeTo(490, 1e-9));
     });
 
-    test('rebase는 분당 걸음 창도 비운다', () {
+    test('뛰는 걸음 따라잡기: 10분에 1,500보 = 분당 150 → 뛰기 → 1,500m, 분마다 150보', () {
+      final w = hiddenAt(1000, 60);
+      // 숨은 60초~660초 10분 → 분당 1500 × 60 ÷ 600 = 150
+      _feed(w, 660, 2500);
+      expect(w.gait, Gait.run);
+      expect(w.steps, 1500);
+      expect(w.distanceM, closeTo(1500, 1e-9)); // 1500 × 1.0
+      expect(w.catchUps, 1);
+      expect(w.stepsPerMin(_at(660)), 0);
+      expect(_shape(w), [for (var m = 1; m <= 10; m++) (m, 150, Gait.run)]);
+      expect(distanceM(w.minutes, rules), closeTo(1500, 1e-9));
+    });
+
+    test('구간 평균 분당 130은 걷기, 140은 뛰기, 그 사이(135)는 직전(걷기)을 따른다', () {
+      // 숨은 60초~360초 5분에 [gain]보 → 분당 gain ÷ 5
+      Gait gaitFor(int gain) {
+        final w = hiddenAt(0, 60);
+        _feed(w, 360, gain);
+        return w.gait;
+      }
+
+      expect(gaitFor(650), Gait.walk); // 130
+      expect(gaitFor(675), Gait.walk); // 135
+      expect(gaitFor(700), Gait.run); // 140
+    });
+
+    test('기준과 같은 값이 먼저 와도 숨은 채고, 늘어난 값이 오면 숨은 시각부터 편다', () {
+      final w = hiddenAt(1000, 60);
+      _feed(w, 120, 1000); // 기기에 따라 옛 값을 다시 준다
+      expect(w.steps, 0);
+      expect(w.catchUps, 0);
+      expect(w.minutes, isEmpty);
+
+      // 숨은 60초~360초 5분에 300보 → 분당 60 → 걷기, 1~5분에 60보씩, 300 × 0.7 = 210m
+      _feed(w, 360, 1300);
+      expect(w.steps, 300);
+      expect(w.distanceM, closeTo(210, 1e-9));
+      expect(w.catchUps, 1);
+      expect(_shape(w), [for (var m = 1; m <= 5; m++) (m, 60, Gait.walk)]);
+    });
+
+    test('숨은 사이 값이 작아지면(재부팅) 그 값이 새 기준이고 숨은 채다: 다음 증가가 따라잡기', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 30, 1010); // 10보 → 분당 20 → 걷기, +7m (0분)
+      w.pause(_at(60));
+      _feed(w, 120, 25); // 재부팅: 25가 새 기준
+      expect(w.active, isTrue);
+      expect(w.steps, 10);
+      expect(w.catchUps, 0);
+
+      // 숨은 60초~360초 5분에 300보 → 분당 60 → 걷기 → 210m
+      _feed(w, 360, 325);
+      expect(w.steps, 310);
+      expect(w.distanceM, closeTo(217, 1e-9)); // 7 + 210
+      expect(w.catchUps, 1);
+      expect(_shape(w), [
+        (0, 10, Gait.walk),
+        for (var m = 1; m <= 5; m++) (m, 60, Gait.walk),
+      ]);
+    });
+
+    test('이미 숨어 있을 때 또 숨으면 이른 시각을 쓴다', () {
+      final w = hiddenAt(1000, 60);
+      w.pause(_at(180));
+      // 60초~360초 5분에 300보 → 분당 60, 1~5분
+      _feed(w, 360, 1300);
+      expect(_shape(w), [for (var m = 1; m <= 5; m++) (m, 60, Gait.walk)]);
+    });
+
+    test('기준값을 받기 전에 숨으면 따라잡을 게 없다: 첫 값은 기준, 그 뒤는 평소처럼 센다', () {
+      final w = LiveWalk(rules);
+      w.pause(_at(0));
+      _feed(w, 600, 500);
+      _feed(w, 610, 520); // 20보 → 창 20보 → 분당 40
+      expect(w.catchUps, 0);
+      expect(w.steps, 20);
+      expect(w.stepsPerMin(_at(610)), 40);
+      expect(_shape(w), [(10, 20, Gait.walk)]);
+    });
+
+    test('숨으면 분당 걸음 창을 비운다', () {
       final w = LiveWalk(rules);
       _feed(w, 0, 0);
       _feed(w, 10, 50);
       expect(w.stepsPerMin(_at(10)), 100);
-      w.rebase();
+      w.pause(_at(10));
       expect(w.stepsPerMin(_at(11)), 0);
+    });
+
+    test('따라잡은 뒤에는 평소처럼 센다: 분당 걸음은 새 증가만, 한 번 더 숨으면 또 따라잡는다', () {
+      final w = hiddenAt(1000, 60);
+      _feed(w, 660, 2500); // 1,500보 = 분당 150 → 뛰기, 1,500m
+      expect(w.gait, Gait.run);
+
+      // 10초에 10보 → 창에는 이 10보뿐 → 분당 20 → 걷기로 내려온다, +7m (11분)
+      _feed(w, 670, 2510);
+      expect(w.stepsPerMin(_at(670)), 20);
+      expect(w.gait, Gait.walk);
+      expect(w.steps, 1510);
+      expect(w.distanceM, closeTo(1507, 1e-9));
+      expect(w.catchUps, 1);
+
+      // 숨은 700초~1300초 10분에 600보 → 분당 60 → 걷기 → 420m
+      w.pause(_at(700));
+      _feed(w, 1300, 3110);
+      expect(w.catchUps, 2);
+      expect(w.steps, 2110);
+      expect(w.distanceM, closeTo(1927, 1e-9)); // 1507 + 420
+      expect(distanceM(w.minutes, rules), closeTo(1927, 1e-9));
+    });
+
+    test('숨은 시각과 같은 순간에 증가가 와도 나누기 0이 없다 (구간은 1초로 본다)', () {
+      final w = hiddenAt(100, 60);
+      _feed(w, 60, 102); // 2 × 60 ÷ 1초 = 분당 120 → 걷기
+      expect(w.steps, 2);
+      expect(w.catchUps, 1);
+      expect(_shape(w), [(1, 2, Gait.walk)]);
     });
   });
 
@@ -200,16 +334,28 @@ void main() {
       expect(w.steps, 80);
     });
 
-    test('재부팅·resume으로 기준을 다시 잡아도 쌓인 거리는 그대로', () {
+    test('재부팅으로 기준을 다시 잡아도 쌓인 거리는 그대로', () {
       final w = LiveWalk(rules);
       _feed(w, 0, 1000);
       _feed(w, 10, 1010);
       _feed(w, 20, 5);
+      expect(w.distanceM, closeTo(10 * 0.7, 1e-9));
       _feed(w, 30, 15);
       expect(w.distanceM, closeTo(20 * 0.7, 1e-9));
-      w.rebase();
-      _feed(w, 90, 900);
-      expect(w.distanceM, closeTo(20 * 0.7, 1e-9));
+    });
+
+    test('따라잡은 걸음도 증가분 × 그 구간의 보폭: 걷기 구간은 0.7m, 뛰기 구간은 1.0m', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      w.pause(_at(0));
+      // 10분에 600보 → 분당 60 → 걷기 → 420m
+      _feed(w, 600, 600);
+      expect(w.distanceM, closeTo(420, 1e-9));
+      w.pause(_at(600));
+      // 5분에 750보 → 분당 150 → 뛰기 → +750m
+      _feed(w, 900, 1350);
+      expect(w.distanceM, closeTo(1170, 1e-9));
+      expect(w.steps, 1350);
     });
   });
 
@@ -285,25 +431,50 @@ void main() {
       expect(w.steps, 168);
     });
 
-    test('rebase·재부팅 뒤에도 쌓인 버킷은 그대로, 새로 센 것은 이어서 쌓인다', () {
+    test('재부팅 뒤에도 쌓인 버킷은 그대로, 새로 센 것은 이어서 쌓인다', () {
       final w = LiveWalk(rules);
       _feed(w, 0, 1000);
       _feed(w, 10, 1010);
       expect(shape(w), [(0, 10, Gait.walk)]);
 
-      w.rebase();
+      // 한 시간 뒤 값이 작아졌다(재부팅): 그 값은 기준이라 버킷이 늘지 않는다
+      _feed(w, 3600, 5);
       expect(shape(w), [(0, 10, Gait.walk)]);
-      // 한 시간 뒤 돌아온 첫 값은 기준값이라 버킷이 늘지 않는다
-      _feed(w, 3600, 1810);
-      expect(shape(w), [(0, 10, Gait.walk)]);
-      // 그다음 증가는 61분 버킷
-      _feed(w, 3605, 1820);
+      // 그다음 증가는 60분 버킷
+      _feed(w, 3605, 15);
       expect(shape(w), [(0, 10, Gait.walk), (60, 10, Gait.walk)]);
 
-      // 재부팅(값이 작아짐)도 기준만 다시 잡는다
-      _feed(w, 3610, 5);
-      _feed(w, 3615, 12);
+      // 다시 재부팅해도 기준만 다시 잡는다
+      _feed(w, 3610, 3);
+      _feed(w, 3615, 10);
       expect(shape(w), [(0, 10, Gait.walk), (60, 17, Gait.walk)]);
+    });
+
+    test('따라잡은 걸음이 걸음이 있던 분과 겹치면 같은 걷기에 더한다 (0분 20 + 30 = 50보)', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 10, 1020); // 20보 → 분당 40 → 걷기 (0분)
+      w.pause(_at(30));
+      // 숨은 30초~150초 2분에 120보 → 분당 60 → 걷기. 겹친 시간 30초·60초·30초 → 30, 60, 30보
+      _feed(w, 150, 1140);
+      expect(shape(w), [(0, 50, Gait.walk), (1, 60, Gait.walk), (2, 30, Gait.walk)]);
+      // 140 × 0.7 = 98m
+      expect(w.distanceM, closeTo(98, 1e-9));
+      expect(distanceM(w.minutes, rules), closeTo(98, 1e-9));
+    });
+
+    test('따라잡은 걸음이 뛰기고 그 분에 걷기가 있었으면 그 분이 두 번 나온다 (걷기 먼저)', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      _feed(w, 10, 35); // 35보 → 분당 70 → 걷기 (0분)
+      w.pause(_at(20));
+      // 숨은 20초~80초 1분에 150보 → 분당 150 → 뛰기. 0분(40초) 100보, 1분(20초) 50보
+      _feed(w, 80, 185);
+      expect(shape(w), [(0, 35, Gait.walk), (0, 100, Gait.run), (1, 50, Gait.run)]);
+      // 35 × 0.7 + 150 × 1.0 = 24.5 + 150 = 174.5m
+      expect(w.distanceM, closeTo(174.5, 1e-9));
+      expect(distanceM(w.minutes, rules), closeTo(174.5, 1e-9));
+      expect(w.minutes.fold(0, (sum, m) => sum + m.steps), w.steps);
     });
 
     test('돌려준 목록은 그 시점의 복사본이다 (이후 센 걸음이 섞이지 않는다)', () {
@@ -369,6 +540,27 @@ void main() {
       expect(s.distanceM, closeTo(14, 1e-9));
       expect(s.lastSteps, 40);
       expect(s.activeMinutes, 0);
+    });
+
+    test('숨어 있던 동안 따라잡은 걸음도 합치고, 분당 걸음은 0이다 (그 구간의 걷기/뛰기는 유지)', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      w.pause(_at(0));
+      // 10분에 600보 → 분당 60 → 걷기 → 420m
+      _feed(w, 600, 600);
+      final walk = liveSummary(null, w, _at(600))!;
+      expect(walk.steps, 600);
+      expect(walk.distanceM, closeTo(420, 1e-9));
+      expect(walk.lastSteps, 0);
+      expect(walk.lastGait, Gait.walk);
+
+      w.pause(_at(600));
+      // 5분에 750보 → 분당 150 → 뛰기
+      _feed(w, 900, 1350);
+      final run = liveSummary(null, w, _at(900))!;
+      expect(run.steps, 1350);
+      expect(run.lastSteps, 0);
+      expect(run.lastGait, Gait.run);
     });
 
     test('가만히 서면 분당 걸음이 0으로 내려간다 (직전 걷기/뛰기는 유지)', () {

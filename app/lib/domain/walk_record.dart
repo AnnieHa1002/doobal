@@ -65,8 +65,8 @@ WalkSummary summarizeWalk(
 
 /// 걷기 기록에 쓸 숫자 하나: [health]와 [live](기기 걸음 센서) 분 목록 중 창 [fromMinute, toMinute)의
 /// 걸음이 더 많은 쪽 하나를 통째로 쓴다. 걸음·거리·걸은 분·뛴 비율·랩이 서로 맞게 한 출처에서만 가져오고,
-/// 같으면(센서가 비었을 때 포함) health다. health 기록은 늦게 들어오고, 센서는 앱이 앞에 있는 동안만
-/// 세므로 어느 쪽이 모자랄지 몰라서 큰 쪽을 믿는다
+/// 같으면(센서가 비었을 때 포함) health다. health 기록은 늦게 들어오고, 센서는 앱이 숨어 있던 동안의
+/// 걸음을 돌아올 때 한꺼번에 주지만 그 사이 앱이 종료되면 놓치므로 어느 쪽이 모자랄지 몰라서 큰 쪽을 믿는다
 ({WalkSummary summary, List<Lap> laps}) pickWalkNumbers({
   required List<GaitMinute> health,
   required List<GaitMinute> live,

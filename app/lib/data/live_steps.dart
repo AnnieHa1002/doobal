@@ -7,7 +7,8 @@ import 'package:pedometer/pedometer.dart';
 /// 기기 걸음 센서. health 기록은 안드로이드에서 몇 분씩 늦게 들어와서, 걷는 중 화면의 숫자와
 /// 땅 움직임만 이 센서로 바로 보여 준다 (진행·보상의 기준은 StepSource). 테스트는 FakeLiveSteps를 쓴다
 abstract class LiveSteps {
-  /// 부팅 이후 누적 걸음. 구독하는 동안만 센서를 읽는다. 센서가 없으면 오류가 흐른다
+  /// 부팅 이후 누적 걸음. 구독하는 동안만 센서를 읽지만 누적값이라, 구독을 쉬었다 다시 하면
+  /// 첫 값에 쉬는 동안의 걸음이 들어 있다. 센서가 없으면 오류가 흐른다
   Stream<int> stepCounts();
 
   /// 센서를 읽을 권한이 있는가
@@ -20,6 +21,8 @@ abstract class LiveSteps {
 /// 안드로이드 STEP_COUNTER / iOS CMPedometer (pedometer 패키지).
 /// 안드로이드 ACTIVITY_RECOGNITION 런타임 권한은 MainActivity의 채널로 묻는다.
 /// iOS는 따로 묻지 않고 구독할 때 시스템이 동작 권한을 묻는다 (거부하면 값이 오지 않는다).
+/// 앱이 숨어 있던 동안의 걸음은 다시 구독해서 받는 값에 들어 있다. 숨어 있는 사이 앱 프로세스가
+/// 종료되면 이 센서는 그 걸음을 놓친다 (health에는 남는다).
 /// 휴대폰이 아닌 곳(테스트·데스크톱)에서는 센서도 권한도 없다
 class PedometerLiveSteps implements LiveSteps {
   const PedometerLiveSteps();

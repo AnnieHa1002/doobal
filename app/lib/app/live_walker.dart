@@ -8,8 +8,9 @@ import '../domain/rules.dart';
 
 /// 걷는 중 화면 하나가 쓰는 실시간 걸음. 센서 스트림을 [LiveWalk]에 먹인다.
 /// 센서가 없거나 권한이 없으면 [LiveWalk.active]가 false인 채로 있어서, 화면은 health 값만 쓴다.
-/// 앱이 뒤로 가면 센서 읽기를 멈추고, 다시 앞으로 오면 새 기준값을 잡아서
-/// 꺼져 있던 동안 쌓인 센서 걸음을 화면 이동에 넣지 않는다
+/// 앱이 뒤로 가면 숨은 시각을 적고 센서 읽기를 멈춘다 (배터리). 센서 값은 부팅 이후 누적이라
+/// 다시 앞으로 와서 읽으면 첫 증가에 숨어 있던 동안의 걸음이 다 들어 있고, [LiveWalk]가 그걸 센다.
+/// 숨어 있는 사이 앱이 종료되면 이 걸음은 놓친다 (health 기록에는 남는다)
 class LiveWalker {
   LiveWalker({
     required this._steps,
@@ -35,7 +36,7 @@ class LiveWalker {
 
   /// 권한을 확인하고(없으면 거부된 적이 없을 때 한 번 묻고) 센서 읽기를 시작한다
   Future<void> start() async {
-    _lifecycle = AppLifecycleListener(onHide: _unlisten, onResume: _resume);
+    _lifecycle = AppLifecycleListener(onHide: _hide, onResume: _resume);
     try {
       if (!await _steps.hasPermission()) {
         if (_denied()) return;
@@ -78,10 +79,15 @@ class LiveWalker {
     _sub = null;
   }
 
-  /// 앱이 다시 켜졌다. 읽기를 멈췄었다면 새 기준값부터 다시 센다
+  /// 앱이 뒤로 갔다: 숨은 시각을 적고 읽기를 멈춘다
+  void _hide() {
+    walk.pause(_clock());
+    _unlisten();
+  }
+
+  /// 앱이 다시 켜졌다. 읽기를 멈췄었다면 다시 읽는다 (그동안의 걸음은 첫 증가에 들어 있다)
   void _resume() {
     if (!_ready || _disposed || _sub != null) return;
-    walk.rebase();
     _listen();
   }
 }
