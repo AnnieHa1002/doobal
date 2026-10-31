@@ -43,8 +43,12 @@ class _Walker {
   var deniedCalls = 0;
   var now = _t0;
 
-  /// 앱이 숨어 있는 동안 알린 걸음 미리보기, 받은 순서대로
-  final hiddenSteps = <int>[];
+  /// 앱이 숨어 있는 동안 알린 걸음·거리 미리보기, 받은 순서대로
+  final hiddenSteps = <HiddenPreview>[];
+
+  /// 알린 미리보기의 걸음 / 거리(m)
+  List<int> get hiddenStepCounts => [for (final p in hiddenSteps) p.steps];
+  List<double> get hiddenDistances => [for (final p in hiddenSteps) p.distanceM];
 
   /// [sec]초 뒤(처음부터 잰 시각)로 시계를 옮기고 센서가 누적 걸음 [total]을 준다
   Future<void> sensorAt(WidgetTester tester, int sec, int total) async {
@@ -229,7 +233,9 @@ void main() {
       await w.sensorAt(tester, 125, 1250);
 
       // 미리보기 = 센 걸음 10 + (받은 값 - 기준 1,010) = 100, 250
-      expect(w.hiddenSteps, [100, 250]);
+      expect(w.hiddenStepCounts, [100, 250]);
+      // 거리는 센 거리 7m + 늘어난 걸음 × 걷기 보폭 0.7m = 70m, 175m
+      expect(w.hiddenDistances, [closeTo(70, 1e-9), closeTo(175, 1e-9)]);
       // LiveWalk는 그대로다: 걸음·거리·따라잡기·분 버킷 모두 숨기 전과 같다
       expect(w.walker.walk.steps, 10);
       expect(w.walker.walk.distanceM, closeTo(7, 1e-9));
@@ -310,7 +316,7 @@ void main() {
 
       _leave(tester); // 5초에 숨는다
       await w.sensorAt(tester, 60, 1010);
-      expect(w.hiddenSteps, [10]);
+      expect(w.hiddenStepCounts, [10]);
 
       w.now = _t0.add(const Duration(minutes: 10));
       _back(tester);
@@ -332,7 +338,8 @@ void main() {
 
       _leave(tester);
       await w.sensorAt(tester, 30, 5000);
-      expect(w.hiddenSteps, [0]);
+      expect(w.hiddenStepCounts, [0]);
+      expect(w.hiddenDistances, [0.0]);
       expect(w.walker.walk.active, isFalse);
 
       _back(tester);
@@ -353,7 +360,9 @@ void main() {
 
       _leave(tester);
       await w.sensorAt(tester, 60, 30);
-      expect(w.hiddenSteps, [20]);
+      expect(w.hiddenStepCounts, [20]);
+      // 거리도 더하지 않는다 (센 20보 × 0.7m = 14m)
+      expect(w.hiddenDistances, [closeTo(14, 1e-9)]);
       w.walker.dispose();
     });
 

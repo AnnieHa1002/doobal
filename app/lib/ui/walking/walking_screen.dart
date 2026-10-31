@@ -52,11 +52,12 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   /// 기기 걸음 센서. 센서나 권한이 없으면 값이 오지 않는다
   LiveWalker? _live;
 
-  /// 걷는 중 상시 알림. 켰을 때만(_noticeOn) 마지막으로 새로 쓴 걸음과 그 시각을 적어 두고,
-  /// rules.liveNoticeUpdateSec초에 한 번까지만 새로 쓴다
+  /// 걷는 중 상시 알림. 켰을 때만(_noticeOn) 마지막으로 새로 쓴 걸음·거리와 그 시각을 적어 두고,
+  /// 알림 글(걸음, 0.1km 단위 거리)이 바뀔 때만 rules.liveNoticeUpdateSec초에 한 번까지 새로 쓴다
   late final WalkNotice _notice;
   var _noticeOn = false;
   var _noticeSteps = 0;
+  var _noticeDistanceM = 0.0;
   DateTime? _noticeAt;
 
   /// 마지막으로 본 LiveWalk.catchUps. 바뀌면 숨어 있던 동안의 걸음이 들어온 것이라 거리를 바로 맞춘다
@@ -109,8 +110,11 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
         clock: ref.read(clockProvider),
         denied: () => denied.denied,
         onDenied: () => denied.set(true),
-        // 화면이 꺼져 있는 동안은 센서가 센 걸음으로 알림만 새로 쓴다 (줄어들지는 않게)
-        onHiddenSteps: (steps) => _pushNotice(math.max(_noticeSteps, steps)),
+        // 화면이 꺼져 있는 동안은 센서가 센 걸음·거리로 알림만 새로 쓴다 (줄어들지는 않게)
+        onHiddenSteps: (p) => _pushNotice(
+          math.max(_noticeSteps, p.steps),
+          math.max(_noticeDistanceM, p.distanceM),
+        ),
       );
       live.start().then((_) => _startNotice(live));
       _timer = Timer.periodic(Duration(seconds: rules.walkingRefreshSec), (_) => _refresh());
@@ -125,15 +129,19 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   void _startNotice(LiveWalker live) {
     if (!mounted || !live.ready) return;
     final now = ref.read(clockProvider)();
-    _noticeSteps = _summaryAt(now)?.steps ?? 0;
+    final summary = _summaryAt(now);
+    _noticeSteps = summary?.steps ?? 0;
+    _noticeDistanceM = summary?.distanceM ?? 0;
     _noticeAt = now;
     _noticeOn = true;
-    _notice.start(_start, _noticeSteps);
+    _notice.start(_noticeSteps, _noticeDistanceM);
   }
 
-  /// 알림의 걸음을 [steps]로 새로 쓴다. 바뀐 값만, rules.liveNoticeUpdateSec초에 한 번까지
-  void _pushNotice(int steps) {
-    if (!_noticeOn || steps == _noticeSteps) return;
+  /// 알림의 걸음·거리를 [steps]·[distanceM]으로 새로 쓴다. 알림 글이 바뀔 때만
+  /// (걸음이 다르거나 0.1km 단위 거리가 다를 때), rules.liveNoticeUpdateSec초에 한 번까지
+  void _pushNotice(int steps, double distanceM) {
+    if (!_noticeOn) return;
+    if (steps == _noticeSteps && noticeKm(distanceM) == noticeKm(_noticeDistanceM)) return;
     final rules = ref.read(rulesProvider).value;
     final now = ref.read(clockProvider)();
     final last = _noticeAt;
@@ -143,7 +151,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     }
     _noticeAt = now;
     _noticeSteps = steps;
-    _notice.update(steps);
+    _noticeDistanceM = distanceM;
+    _notice.update(steps, distanceM);
   }
 
   Future<void> _refresh() async {
@@ -203,7 +212,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
     final now = ref.read(clockProvider)();
     final summary = _summaryAt(now);
-    _pushNotice(summary?.steps ?? 0);
+    _pushNotice(summary?.steps ?? 0, summary?.distanceM ?? 0);
     final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
     var shown = followDistance(
       _shownM,

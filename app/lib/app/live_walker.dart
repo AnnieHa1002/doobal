@@ -6,11 +6,14 @@ import '../data/live_steps.dart';
 import '../domain/live_walk.dart';
 import '../domain/rules.dart';
 
+/// 앱이 숨어 있는 동안 센서 값으로 미리 낸 걸음 수와 거리(m)
+typedef HiddenPreview = ({int steps, double distanceM});
+
 /// 걷는 중 화면 하나가 쓰는 실시간 걸음. 센서 스트림을 [LiveWalk]에 먹인다.
 /// 센서가 없거나 권한이 없으면 [LiveWalk.active]가 false인 채로 있어서, 화면은 health 값만 쓴다.
 /// 앱이 뒤로 가도 센서 읽기는 멈추지 않는다 (안드로이드는 걷는 중 상시 알림이 앱을 살려 둔다.
 /// iOS는 앱이 멈춰서 아무 값도 오지 않는다). 숨은 시각은 [LiveWalk.pause]에 적되 숨어 있는 동안의
-/// 값은 [LiveWalk]에 먹이지 않고 마지막 값과 받은 시각만 기억해 둔다. 그 값으로 걸음 미리보기를
+/// 값은 [LiveWalk]에 먹이지 않고 마지막 값과 받은 시각만 기억해 둔다. 그 값으로 걸음·거리 미리보기를
 /// [onHiddenSteps]에 알리고(알림 갱신용), 앱이 다시 앞으로 오면 마지막 값을 받은 시각으로 한 번 먹인다.
 /// 센서 값은 부팅 이후 누적이라 그 값에 숨어 있던 동안의 걸음이 다 들어 있고, [LiveWalk]가 그걸 센다.
 /// 숨어 있는 사이 앱이 종료되면 이 걸음은 놓친다 (health 기록에는 남는다)
@@ -31,8 +34,9 @@ class LiveWalker {
   final bool Function() _denied;
   final void Function() _onDenied;
 
-  /// 앱이 숨어 있는 동안 센서 값이 올 때마다 그때의 걸음 수 미리보기([LiveWalk.previewSteps])를 알린다
-  final void Function(int steps)? onHiddenSteps;
+  /// 앱이 숨어 있는 동안 센서 값이 올 때마다 그때의 걸음·거리 미리보기
+  /// ([LiveWalk.previewSteps]·[LiveWalk.previewDistanceM])를 알린다
+  final void Function(HiddenPreview preview)? onHiddenSteps;
 
   final LiveWalk walk;
 
@@ -102,7 +106,10 @@ class LiveWalker {
     }
     _hiddenTotal = total;
     _hiddenAt = at;
-    onHiddenSteps?.call(walk.previewSteps(total));
+    onHiddenSteps?.call((
+      steps: walk.previewSteps(total),
+      distanceM: walk.previewDistanceM(total),
+    ));
   }
 
   /// 앱이 뒤로 갔다: 숨은 시각을 적는다. 읽기는 계속한다

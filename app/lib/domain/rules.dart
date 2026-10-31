@@ -160,7 +160,7 @@ class Rules {
   /// 걸음 센서로 분당 걸음을 낼 때 보는 최근 시간(초) (config live.cadenceWindowSec)
   final int liveCadenceWindowSec;
 
-  /// 걷는 중 상시 알림(안드로이드)의 걸음 수를 새로 쓰는 가장 짧은 간격(초) (config live.noticeUpdateSec)
+  /// 걷는 중 상시 알림(안드로이드)의 걸음·거리를 새로 쓰는 가장 짧은 간격(초) (config live.noticeUpdateSec)
   final int liveNoticeUpdateSec;
 
   /// 걷기 기록의 랩 길이(km) (config record.lapKm)

@@ -750,13 +750,17 @@ void main() {
         }
       }
 
-      testWidgets('센서 권한이 있으면 걷는 중에 들어올 때 알림을 시작한다 (걷기 시작 시각과 그때 걸음)',
+      /// 알림으로 보낸 걸음 / 거리(m), 보낸 순서대로
+      List<int> sentSteps(_Env e) => [for (final u in e.notice.updates) u.$1];
+      List<double> sentMeters(_Env e) => [for (final u in e.notice.updates) u.$2];
+
+      testWidgets('센서 권한이 있으면 걷는 중에 들어올 때 알림을 시작한다 (그때의 걸음·거리)',
           (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
 
-        expect(e.notice.starts, [(_t1, 0)]);
+        expect(e.notice.starts, [(0, 0.0)]);
         expect(e.notice.running, isTrue);
         expect(e.notice.updates, isEmpty);
         await _end(tester, e);
@@ -768,7 +772,7 @@ void main() {
         await openWalking(tester, e);
 
         expect(e.live.permissionRequests, 1);
-        expect(e.notice.starts, [(_t1, 0)]);
+        expect(e.notice.starts, [(0, 0.0)]);
         await _end(tester, e);
       });
 
@@ -788,78 +792,87 @@ void main() {
         await _end(tester, e);
       });
 
-      testWidgets('걸음 갱신은 바뀐 값만, 5초(config)에 한 번까지 보낸다', (tester) async {
+      testWidgets('갱신은 글이 바뀔 때만, 60초(config)에 한 번까지 보낸다', (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
-        expect(rules.liveNoticeUpdateSec, 5);
+        expect(rules.liveNoticeUpdateSec, 60);
 
         e.live.push(0); // 기준값 (0초)
-        await sensorTo(tester, e, 1, 10); // 1초: 마지막 갱신(시작, 0초) 뒤 1초라 아직
-        await sensorTo(tester, e, 3, 30); // 4초: 아직
-        expect(find.text('30보'), findsOneWidget);
+        await sensorTo(tester, e, 10, 20); // 10초: 마지막 갱신(시작, 0초) 뒤 10초라 아직
+        await sensorTo(tester, e, 20, 40); // 30초: 아직
+        await sensorTo(tester, e, 29, 60); // 59초: 아직
+        expect(find.text('60보'), findsOneWidget);
         expect(e.notice.updates, isEmpty);
 
-        await sensorTo(tester, e, 1, 40); // 5초: 5초가 찼다 → 40
-        expect(e.notice.updates, [40]);
-        await sensorTo(tester, e, 2, 60); // 7초: 갱신(5초) 뒤 2초라 아직
-        expect(find.text('60보'), findsOneWidget);
-        expect(e.notice.updates, [40]);
+        // 60초가 찼다 → 61보 · 61 × 0.7 = 42.7m
+        await sensorTo(tester, e, 1, 61);
+        expect(sentSteps(e), [61]);
+        expect(sentMeters(e), [closeTo(42.7, 1e-9)]);
+        await sensorTo(tester, e, 9, 70); // 69초: 갱신(60초) 뒤 9초라 아직
+        expect(find.text('70보'), findsOneWidget);
+        expect(sentSteps(e), [61]);
 
-        await sensorTo(tester, e, 3, 80); // 10초: 갱신(5초) 뒤 5초 → 80
-        expect(e.notice.updates, [40, 80]);
+        // 120초: 갱신(60초) 뒤 60초 → 90보 · 63m
+        await sensorTo(tester, e, 51, 90);
+        expect(sentSteps(e), [61, 90]);
+        expect(sentMeters(e), [closeTo(42.7, 1e-9), closeTo(63, 1e-9)]);
 
-        // 걸음이 그대로면 시간이 한참 지나도 보내지 않는다
-        await sensorTo(tester, e, 20, 80); // 30초
-        await sensorTo(tester, e, 20, 80); // 50초
-        expect(e.notice.updates, [40, 80]);
+        // 글이 그대로면 (걸음도 거리도 그대로) 시간이 한참 지나도 보내지 않는다
+        await sensorTo(tester, e, 100, 90);
+        await sensorTo(tester, e, 100, 90);
+        expect(sentSteps(e), [61, 90]);
         await _end(tester, e);
       });
 
-      testWidgets('health 걸음이 더 크면 그 값(화면에 보이는 값)을 보낸다', (tester) async {
+      testWidgets('health 걸음·거리가 더 크면 그 값(화면에 보이는 값)을 보낸다', (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
         e.live.push(0);
-        await sensorTo(tester, e, 5, 30);
-        expect(e.notice.updates, [30]);
+        await sensorTo(tester, e, 60, 30); // 60초: 30보 · 21m → 갱신
+        expect(sentSteps(e), [30]);
+        expect(sentMeters(e), [closeTo(21, 1e-9)]);
 
-        // 10분 × 100보 = 1,000보가 health에 들어왔다
+        // 10분 × 100보 = 1,000보 · 700m가 health에 들어왔다
         await walkAndRefresh(tester, e, 10, 100);
         expect(find.text('1,000보'), findsOneWidget);
-        expect(e.notice.updates, [30, 1000]);
+        expect(sentSteps(e), [30, 1000]);
+        expect(sentMeters(e), [closeTo(21, 1e-9), closeTo(700, 1e-9)]);
         await _end(tester, e);
       });
 
-      testWidgets('숨어 있는 동안은 센서 값으로 미리본 걸음을 같은 간격으로 보낸다', (tester) async {
+      testWidgets('숨어 있는 동안은 센서 값으로 미리본 걸음·거리를 같은 간격으로 보낸다', (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
         e.live.push(1000); // 기준값 (0초)
-        await sensorTo(tester, e, 6, 1010); // 6초: 10보 → 갱신
-        expect(e.notice.updates, [10]);
+        await sensorTo(tester, e, 61, 1010); // 61초: 10보 · 7m → 갱신
+        expect(sentSteps(e), [10]);
+        expect(sentMeters(e), [closeTo(7, 1e-9)]);
 
-        leave(tester); // 6초에 숨는다
-        // 9초: 센 10 + (1,060 - 1,010) = 60보지만 갱신(6초) 뒤 3초라 아직
-        e.now = e.now.add(const Duration(seconds: 3));
+        leave(tester); // 61초에 숨는다
+        // 91초: 센 10 + (1,060 - 1,010) = 60보지만 갱신(61초) 뒤 30초라 아직
+        e.now = e.now.add(const Duration(seconds: 30));
         e.live.push(1060);
         await tester.pump();
-        expect(e.notice.updates, [10]);
+        expect(sentSteps(e), [10]);
 
-        // 12초: 10 + (1,100 - 1,010) = 100보 → 갱신 뒤 6초라 보낸다
-        e.now = e.now.add(const Duration(seconds: 3));
+        // 121초: 10 + (1,100 - 1,010) = 100보, 7 + 90 × 0.7 = 70m → 갱신 뒤 60초라 보낸다
+        e.now = e.now.add(const Duration(seconds: 30));
         e.live.push(1100);
         await tester.pump();
-        expect(e.notice.updates, [10, 100]);
+        expect(sentSteps(e), [10, 100]);
+        expect(sentMeters(e), [closeTo(7, 1e-9), closeTo(70, 1e-9)]);
         // 걷는 중 화면의 걸음은 그대로다 (돌아올 때 들어온다)
         expect(find.text('10보'), findsOneWidget);
 
-        // 앞으로 오면 마지막 값(12초, 1,100)이 들어와서 화면 걸음이 알림과 같아진다
+        // 앞으로 오면 마지막 값(121초, 1,100)이 들어와서 화면 걸음이 알림과 같아진다 (글이 같아 또 보내지 않는다)
         back(tester);
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
         expect(find.text('100보'), findsOneWidget);
-        expect(e.notice.updates, [10, 100]);
+        expect(sentSteps(e), [10, 100]);
         await _end(tester, e);
       });
 
@@ -869,17 +882,40 @@ void main() {
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
         e.live.push(0);
-        await sensorTo(tester, e, 5, 30); // 5초: 30보 → 갱신
+        await sensorTo(tester, e, 60, 30); // 60초: 30보 → 갱신
         // health에 1,000보가 들어와서 1,000을 보냈다
         await walkAndRefresh(tester, e, 10, 100);
-        expect(e.notice.updates, [30, 1000]);
+        expect(sentSteps(e), [30, 1000]);
 
         leave(tester);
-        // 센서 미리보기는 30 + (80 - 30) = 80보로 1,000보다 작다
-        e.now = e.now.add(const Duration(seconds: 10));
+        // 센서 미리보기는 30 + (80 - 30) = 80보 · 35m로 보낸 1,000보 · 700m보다 작다 (간격은 지났다)
+        e.now = e.now.add(const Duration(seconds: 120));
         e.live.push(80);
         await tester.pump();
-        expect(e.notice.updates, [30, 1000]);
+        expect(sentSteps(e), [30, 1000]);
+        await _end(tester, e);
+      });
+
+      testWidgets('숨어 있는 동안 미리본 거리가 보낸 거리보다 작으면 거리는 그대로 두고 걸음만 올린다',
+          (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        e.live.push(0);
+        await sensorTo(tester, e, 60, 30); // 60초: 30보 · 21m → 갱신
+        // 10분 × 150보는 뛰기라 1,500보 · 1,500m(보폭 1.0m)가 health에 들어왔다
+        await walkAndRefresh(tester, e, 10, 150);
+        expect(sentSteps(e), [30, 1500]);
+        expect(sentMeters(e), [closeTo(21, 1e-9), closeTo(1500, 1e-9)]);
+
+        leave(tester);
+        // 센서 미리보기: 30 + (2,000 - 30) = 2,000보, 21 + 1,970 × 0.7 = 1,400m (걷기 보폭).
+        // 걸음은 늘었지만 거리는 보낸 1,500m보다 작아서 1,500m 그대로 보낸다
+        e.now = e.now.add(const Duration(seconds: 120));
+        e.live.push(2000);
+        await tester.pump();
+        expect(sentSteps(e), [30, 1500, 2000]);
+        expect(sentMeters(e).last, closeTo(1500, 1e-9));
         await _end(tester, e);
       });
 

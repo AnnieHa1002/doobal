@@ -104,6 +104,16 @@ class LiveWalk {
     return last == null ? _steps : _steps + math.max(0, total - last);
   }
 
+  /// [previewSteps]와 같은 값으로 낸 거리(m): 지금까지 센 거리 + 기준 뒤 늘어난 걸음 × 걷기 보폭.
+  /// 숨어 있는 동안은 걷는지 뛰는지 알 수 없어서, 알림 거리가 앞섰다가 줄어드는 일이 없게
+  /// 더 짧은 걷기 보폭을 쓴다 (앞으로 돌아오면 판정한 보폭으로 다시 맞춘다). 상태는 바꾸지 않는다
+  double previewDistanceM(int total) {
+    final last = _last;
+    return last == null
+        ? _distanceM
+        : _distanceM + math.max(0, total - last) * strideM(Gait.walk, rules);
+  }
+
   /// 앱이 [at]에 숨었다. 기준값은 그대로 두고 분당 걸음 창만 비운다.
   /// 이미 숨어 있으면 이른 시각을 그대로 둔다. 기준값을 받은 적이 없으면 따라잡을 게 없어 무시한다
   void pause(DateTime at) {

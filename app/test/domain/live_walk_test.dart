@@ -24,8 +24,8 @@ void main() {
     expect(rules.liveCadenceWindowSec, 30);
   });
 
-  test('config의 알림 걸음 갱신 간격은 5초', () {
-    expect(rules.liveNoticeUpdateSec, 5);
+  test('config의 알림 갱신 간격은 60초 (1분마다)', () {
+    expect(rules.liveNoticeUpdateSec, 60);
   });
 
   group('previewSteps: 숨어 있는 동안 본 센서 값으로 낸 걸음 (상태는 그대로)', () {
@@ -61,6 +61,58 @@ void main() {
       w.previewSteps(1500);
 
       expect(w.steps, 10);
+      expect(w.catchUps, 0);
+      // 기준은 그대로 1,010이라 1,500이 오면 490보를 숨은 시각(10초)부터 따라잡는다
+      _feed(w, 710, 1500);
+      expect(w.steps, 500);
+      expect(w.catchUps, 1);
+    });
+  });
+
+  group('previewDistanceM: 숨어 있는 동안 본 센서 값으로 낸 거리 (걷기 보폭, 상태는 그대로)', () {
+    test('기준을 받기 전에는 센 거리(0) 그대로', () {
+      final w = LiveWalk(rules);
+      expect(w.previewDistanceM(5000), 0);
+    });
+
+    test('센 거리 + 기준 뒤 늘어난 걸음 × 걷기 보폭: 7 + (1,500 - 1,010) × 0.7 = 350', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 5, 1010); // 10보, 분당 120 → 걷기 → 7m
+      w.pause(_at(10));
+      expect(w.previewDistanceM(1010), closeTo(7, 1e-9)); // 늘지 않았으면 센 거리 그대로
+      expect(w.previewDistanceM(1500), closeTo(350, 1e-9));
+      expect(w.previewDistanceM(2510), closeTo(1057, 1e-9));
+    });
+
+    test('뛰던 중에 숨어도 늘어난 걸음은 걷기 보폭으로 낸다 (센 거리는 뛰기 보폭 그대로)', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 10, 1080); // 30초 창에 80보 → 분당 160 → 뛰기 → 80m
+      expect(w.gait, Gait.run);
+      expect(w.distanceM, closeTo(80, 1e-9));
+      w.pause(_at(12));
+      // 걷기 보폭: 80 + 100 × 0.7 = 150 (뛰기 보폭이었다면 180)
+      expect(w.previewDistanceM(1180), closeTo(150, 1e-9));
+    });
+
+    test('기준보다 작으면(재부팅) 더하지 않는다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 50000);
+      _feed(w, 5, 50020); // 20보 → 14m
+      expect(w.previewDistanceM(30), closeTo(14, 1e-9));
+      expect(w.previewDistanceM(0), closeTo(14, 1e-9));
+    });
+
+    test('부르기만 해서는 걸음·거리·기준·숨은 상태가 바뀌지 않는다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 5, 1010);
+      w.pause(_at(10));
+      w.previewDistanceM(1500);
+
+      expect(w.steps, 10);
+      expect(w.distanceM, closeTo(7, 1e-9));
       expect(w.catchUps, 0);
       // 기준은 그대로 1,010이라 1,500이 오면 490보를 숨은 시각(10초)부터 따라잡는다
       _feed(w, 710, 1500);

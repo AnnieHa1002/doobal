@@ -1,5 +1,8 @@
 import 'package:doobal/app/providers.dart';
+import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/journey.dart';
+import 'package:doobal/domain/prop.dart';
+import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/album/album_widgets.dart';
@@ -10,27 +13,51 @@ import 'package:doobal/ui/common/framed_painting.dart';
 import 'package:doobal/ui/common/notice_dot.dart';
 import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../domain/helpers.dart';
 import 'ui_env.dart';
 
-/// 101곳이 모두 그려지도록 세로를 길게 잡은 화면 높이
-const _tall = 6000.0;
+const _hangHint = '바꿀 액자를 누르세요';
+const _wallHint = '길게 눌러 걸기';
+const _firstOnlyHint = '걸어서 명소에 닿으면 여기에 걸려요';
+const _noPropsLine = '아직 모은 소품이 없어요';
 
 Finder _wall(int i) => find.byKey(ValueKey('wall-$i'));
 Finder _cell(String id) => find.byKey(ValueKey('cell-$id'));
 Finder _prop(String id) => find.byKey(ValueKey('prop-$id'));
+Finder _chip(String region) => find.byKey(ValueKey('album-chip-$region'));
+Finder _hint() => find.byKey(const ValueKey('album-first-only-hint'));
 
 FramedPainting _framed(WidgetTester tester, Finder owner) => tester
     .widget<FramedPainting>(find.descendant(of: owner, matching: find.byType(FramedPainting)));
 
-/// 소품 줄 안의 Opacity (잠긴 소품만 흐리게 하려고 감싼다)
-Finder _fade(String propId) =>
-    find.descendant(of: _prop(propId), matching: find.byType(Opacity));
+/// 벽 칸 안에 걸린 액자 (빈 칸이면 없다)
+Finder _hung(int i) => find.descendant(of: _wall(i), matching: find.byType(FramedPainting));
+
+/// 벽 칸 안의 점선 액자 (빈 칸만 있다)
+Finder _dotted(int i) => find.descendant(
+    of: _wall(i),
+    matching: find.byWidgetPredicate((w) => w is CustomPaint && w.painter is DottedFramePainter));
+
+/// 키가 `<prefix><이름>`인 위젯의 이름을 화면 순서대로
+List<String> _keyNames(WidgetTester tester, String prefix) => [
+      for (final w in tester.widgetList(find.byWidgetPredicate((w) {
+        final k = w.key;
+        return k is ValueKey<String> && k.value.startsWith(prefix);
+      })))
+        (w.key! as ValueKey<String>).value.substring(prefix.length),
+    ];
+
+/// 그림 격자의 칸 id (첫 그림은 sketch)
+List<String> _cellIds(WidgetTester tester) => _keyNames(tester, 'cell-');
+
+/// 화면에 있는 권역 칩 (`전체`는 all)
+List<String> _chipKeys(WidgetTester tester) => _keyNames(tester, 'album-chip-');
 
 Future<void> _openAlbum(WidgetTester tester, UiEnv e,
     {Widget screen = const AlbumScreen(), double height = 844}) async {
@@ -54,26 +81,30 @@ void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   group('화면 틀·벽', () {
-    testWidgets('뒤로와 제목 `화집`, 빈 벽 4칸, 탭 둘, 권역 칩 8개', (tester) async {
+    testWidgets('뒤로와 제목 `화집`, 빈 벽 4칸은 점선 액자와 `길게 눌러 걸기`, 탭 둘, 칩은 `전체`뿐', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _openAlbum(tester, e);
 
       expect(find.text('화집'), findsOneWidget);
       expect(find.byTooltip('뒤로'), findsOneWidget);
-      expect(find.byType(FramedPainting), findsAtLeast(4));
       for (var i = 0; i < 4; i++) {
-        expect(_framed(tester, _wall(i)).landmark, isNull, reason: 'wall-$i');
+        expect(_dotted(i), findsOneWidget, reason: 'wall-$i');
+        expect(_hung(i), findsNothing, reason: 'wall-$i');
+        expect(find.descendant(of: _wall(i), matching: find.text(_wallHint)), findsOneWidget);
       }
+      expect(find.text(_wallHint), findsNWidgets(4));
       expect(_wall(4), findsNothing);
       expect(find.text('그림'), findsOneWidget);
       expect(find.text('소품'), findsOneWidget);
+      // 얻은 그림이 없어서 칩은 전체뿐이다
+      expect(_chipKeys(tester), ['all']);
       expect(find.text('전체'), findsOneWidget);
       for (final label in regionLabels.values) {
-        expect(find.text(label), findsOneWidget, reason: label);
+        expect(find.text(label), findsNothing, reason: label);
       }
       // 바꾸기 모드가 아니라 안내가 없다
-      expect(find.text('바꿀 액자를 누르세요'), findsNothing);
+      expect(find.text(_hangHint), findsNothing);
 
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
@@ -81,7 +112,28 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('벽에 건 그림은 그 액자 색으로 보이고, 눌러도 아무 일도 없다', (tester) async {
+    testWidgets('점선 액자: 둥근 네모 둘레를 여러 토막으로 긋는다', (tester) async {
+      await tester.pumpWidget(const Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+          child: SizedBox(
+            width: 80,
+            height: 100,
+            child: CustomPaint(painter: DottedFramePainter()),
+          ),
+        ),
+      ));
+      final box = tester.renderObject<RenderCustomPaint>(find.byType(CustomPaint));
+      expect(box.size, const Size(80, 100));
+      // 둘레 약 340pt를 4pt 긋고 3pt 쉬면 50토막 가까이다. 열 토막 넘게 끊겨 있으면 점선이다
+      final pattern = paints;
+      for (var i = 0; i < 10; i++) {
+        pattern.path(color: Palette.subInk, style: PaintingStyle.stroke, strokeWidth: 1.5);
+      }
+      expect(box, pattern);
+    });
+
+    testWidgets('건 칸은 그 액자 색으로, 빈 칸은 점선 액자로 보이고, 눌러도 아무 일도 없다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         await e.ownPaintings({'kr001': Frame.gold, 'kr002': Frame.wood});
@@ -89,19 +141,51 @@ void main() {
         await e.svc.setWall(2, 'kr001');
       });
       await _openAlbum(tester, e);
-      await settle(tester, () => _framed(tester, _wall(0)).landmark != null);
+      await settle(tester, () => _hung(0).evaluate().isNotEmpty);
 
       expect(_framed(tester, _wall(0)).landmark!.id, 'kr002');
       expect(_framed(tester, _wall(0)).frame, Frame.wood);
-      expect(_framed(tester, _wall(1)).landmark, isNull);
       expect(_framed(tester, _wall(2)).landmark!.id, 'kr001');
       expect(_framed(tester, _wall(2)).frame, Frame.gold);
       expect(frameColors[Frame.gold], isNot(frameColors[Frame.wood]));
+      // 걸린 칸에는 점선도 안내 글도 없고, 빈 두 칸에만 있다
+      for (final i in [0, 2]) {
+        expect(_dotted(i), findsNothing, reason: 'wall-$i');
+        expect(find.descendant(of: _wall(i), matching: find.text(_wallHint)), findsNothing);
+      }
+      for (final i in [1, 3]) {
+        expect(_hung(i), findsNothing, reason: 'wall-$i');
+        expect(_dotted(i), findsOneWidget, reason: 'wall-$i');
+        expect(find.descendant(of: _wall(i), matching: find.text(_wallHint)), findsOneWidget);
+      }
+      expect(find.text(_wallHint), findsNWidgets(2));
 
       await tester.tap(_wall(1));
       await tester.pump(const Duration(milliseconds: 300));
       expect(await _dbWall(tester, e), ['kr002', null, 'kr001', null]);
       expect(find.byType(PaintingDetailScreen), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('벽을 다 채우면 점선 칸도 안내 글도 없다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await e.ownPaintings({
+          'kr001': Frame.gold,
+          'kr002': Frame.wood,
+          'kr003': Frame.wood,
+          'kr004': Frame.wood,
+        });
+        for (final (i, id) in ['kr001', 'kr002', 'kr003', 'kr004'].indexed) {
+          await e.svc.setWall(i, id);
+        }
+      });
+      await _openAlbum(tester, e);
+      await settle(tester, () => _hung(3).evaluate().isNotEmpty);
+      for (var i = 0; i < 4; i++) {
+        expect(_dotted(i), findsNothing, reason: 'wall-$i');
+      }
+      expect(find.text(_wallHint), findsNothing);
       await end(tester, e);
     });
 
@@ -118,19 +202,22 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('pick-kr002')));
       await transition(tester);
-      await settle(tester, () => _framed(tester, _wall(1)).landmark != null);
+      await settle(tester, () => _hung(1).evaluate().isNotEmpty);
       expect(find.byKey(const ValueKey('pick-kr002')), findsNothing);
       expect(await _dbWall(tester, e), [null, 'kr002', null, null]);
       expect(_framed(tester, _wall(1)).landmark!.id, 'kr002');
+      expect(_dotted(1), findsNothing);
 
-      // 같은 그림을 다른 칸에 걸면 옮겨진다
+      // 같은 그림을 다른 칸에 걸면 옮겨진다 (비운 칸은 다시 점선 액자)
       await tester.longPress(_wall(3));
       await transition(tester);
       await tester.tap(find.byKey(const ValueKey('pick-kr002')));
       await transition(tester);
-      await settle(tester, () => _framed(tester, _wall(1)).landmark == null);
+      await settle(tester, () => _dotted(1).evaluate().isNotEmpty);
       expect(await _dbWall(tester, e), [null, null, null, 'kr002']);
       expect(_framed(tester, _wall(3)).landmark!.id, 'kr002');
+      expect(_dotted(1), findsOneWidget);
+      expect(_dotted(3), findsNothing);
       await end(tester, e);
     });
 
@@ -154,6 +241,7 @@ void main() {
       await transition(tester);
       expect(find.byKey(const ValueKey('pick-kr001')), findsNothing);
       expect(await _dbWall(tester, e), [null, null, null, null]);
+      expect(_dotted(0), findsOneWidget);
       await end(tester, e);
     });
 
@@ -173,75 +261,169 @@ void main() {
       });
       await _openAlbum(tester, e, screen: const AlbumScreen(hangLandmarkId: 'kr001'));
 
-      expect(find.text('바꿀 액자를 누르세요'), findsOneWidget);
+      expect(find.text(_hangHint), findsOneWidget);
       await tester.tap(_wall(0));
-      await settle(tester, () => find.text('바꿀 액자를 누르세요').evaluate().isEmpty);
-      expect(find.text('바꿀 액자를 누르세요'), findsNothing);
+      await settle(tester, () => find.text(_hangHint).evaluate().isEmpty);
+      expect(find.text(_hangHint), findsNothing);
       expect(await _dbWall(tester, e), ['kr001', 'kr003', 'kr004', 'kr005']);
       await settle(tester, () => _framed(tester, _wall(0)).landmark?.id == 'kr001');
       expect(_framed(tester, _wall(0)).frame, Frame.gold);
       await end(tester, e);
     });
+
+    testWidgets('바꾸기 모드에서는 빈 점선 칸에도 테라코타 테두리가 둘러 눌러서 고른다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await e.ownPaintings({'kr001': Frame.gold, 'kr002': Frame.wood});
+        await e.svc.setWall(0, 'kr002');
+      });
+      await _openAlbum(tester, e, screen: const AlbumScreen(hangLandmarkId: 'kr001'));
+      await settle(tester, () => _hung(0).evaluate().isNotEmpty);
+
+      Color? ring(int i) {
+        final box = tester.widget<DecoratedBox>(
+            find.descendant(of: _wall(i), matching: find.byType(DecoratedBox)).first);
+        return ((box.decoration as BoxDecoration).border! as Border).top.color;
+      }
+
+      for (var i = 0; i < 4; i++) {
+        expect(ring(i), Palette.terracotta, reason: 'wall-$i');
+      }
+      expect(_dotted(2), findsOneWidget);
+
+      // 빈 칸을 눌러도 거는 칸으로 고를 수 있다
+      await tester.tap(_wall(2));
+      await settle(tester, () => _hung(2).evaluate().isNotEmpty);
+      expect(await _dbWall(tester, e), ['kr002', null, 'kr001', null]);
+      expect(find.text(_hangHint), findsNothing);
+      await end(tester, e);
+    });
   });
 
   group('그림 탭', () {
-    testWidgets('명소 101곳이 landmarks.json 순서로 나온다', (tester) async {
+    testWidgets('아무것도 못 얻었으면 칸이 없고 `걸어서 명소에 닿으면 여기에 걸려요`만 있다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
-      await _openAlbum(tester, e, height: _tall);
+      await _openAlbum(tester, e);
 
-      final shown = tester.widgetList<PaintingCell>(find.byType(PaintingCell)).toList();
-      expect(shown, hasLength(101));
-      expect([for (final c in shown) c.landmark.id], [for (final l in landmarks) l.id]);
+      expect(_cellIds(tester), isEmpty);
+      expect(find.byType(PaintingCell), findsNothing);
+      expect(find.byType(FirstPackCell), findsNothing);
+      // 격자 안에는 빈 액자도 없다 (벽의 점선 칸만 있다)
+      expect(find.descendant(of: find.byType(SliverGrid), matching: find.byType(FramedPainting)),
+          findsNothing);
+      expect(find.text(_firstOnlyHint), findsOneWidget);
+      expect(_chipKeys(tester), ['all']);
       await end(tester, e);
     });
 
-    testWidgets('얻은 그림은 액자 색과 잉크색 이름, 못 얻은 그림은 빈 밝은 액자와 흐린 이름', (tester) async {
+    testWidgets('첫 그림뿐이면 첫 그림 한 칸과 그 아래에 한 줄 안내', (tester) async {
       final e = UiEnv();
-      await e.seed(tester, () => e.ownPaintings({'kr001': Frame.gold, 'kr003': Frame.silver}));
+      await e.seed(tester, () => e.ownPaintings({sketchId: Frame.wood}));
       await _openAlbum(tester, e);
-      await settle(tester, () => _framed(tester, _cell('kr001')).landmark != null);
+      await settle(tester, () => _cell(sketchId).evaluate().isNotEmpty);
 
+      expect(_cellIds(tester), [sketchId]);
+      expect(find.byType(FirstPackCell), findsOneWidget);
+      expect(find.byType(PaintingCell), findsNothing);
+      expect(find.text(_firstOnlyHint), findsOneWidget);
+      // 안내는 격자(첫 그림 칸) 아래에 있다
+      expect(tester.getTopLeft(_hint()).dy, greaterThan(tester.getBottomLeft(_cell(sketchId)).dy));
+      expect(_chipKeys(tester), ['all']);
+      await end(tester, e);
+    });
+
+    testWidgets('얻은 그림만 나온다: 첫 그림이 맨 앞, 명소는 landmarks.json 순서, 못 얻은 칸은 없다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        // 얻은 순서는 kr003, sketch, kr001이지만 화면은 첫 그림 → 명소 순서
+        await e.ownPaintings({'kr003': Frame.silver, sketchId: Frame.wood, 'kr001': Frame.gold});
+      });
+      await _openAlbum(tester, e);
+      await settle(tester, () => _cell('kr001').evaluate().isNotEmpty);
+
+      expect(_cellIds(tester), [sketchId, 'kr001', 'kr003']);
+      expect(find.byType(FirstPackCell), findsOneWidget);
+      expect(find.byType(PaintingCell), findsNWidgets(2));
+      expect(_cell('kr002'), findsNothing);
       expect(_framed(tester, _cell('kr001')).frame, Frame.gold);
       expect(_framed(tester, _cell('kr003')).frame, Frame.silver);
-      expect(_framed(tester, _cell('kr002')).frame, isNull);
-      expect(_framed(tester, _cell('kr002')).landmark, isNull);
+      expect(_framed(tester, _cell(sketchId)).firstPack, isTrue);
+      // 격자 안은 모두 얻은 그림이라 빈 액자가 없다
+      final frames = tester.widgetList<FramedPainting>(
+          find.descendant(of: find.byType(SliverGrid), matching: find.byType(FramedPainting)));
+      expect(frames, hasLength(3));
+      expect(frames.every((f) => f.frame != null), isTrue);
+      // 첫 그림 말고 얻은 명소 그림이 있으면 안내는 없다
+      expect(find.text(_firstOnlyHint), findsNothing);
+      expect(_hint(), findsNothing);
 
       Color? nameColor(String id, String name) => tester
           .widget<Text>(find.descendant(of: _cell(id), matching: find.text(name)))
           .style
           ?.color;
       expect(nameColor('kr001', '경복궁'), Palette.ink);
-      expect(nameColor('kr002', '인천 차이나타운·월미도'), Palette.subInk);
+      expect(nameColor(sketchId, '첫 그림'), Palette.ink);
       await end(tester, e);
     });
 
-    testWidgets('권역 칩을 누르면 그 권역 명소만, 전체를 누르면 모두', (tester) async {
+    testWidgets('명소 이름은 한 줄 말줄임: 긴 이름은 …로 줄고 이름 줄은 한 줄 높이', (tester) async {
       final e = UiEnv();
-      await e.seed(tester);
-      await _openAlbum(tester, e, height: _tall);
+      await e.seed(tester, () => e.ownPaintings({'kr001': Frame.wood, 'kr002': Frame.wood}));
+      await _openAlbum(tester, e);
+      await settle(tester, () => _cell('kr002').evaluate().isNotEmpty);
 
-      Future<List<String>> shownRegions() async => [
-            for (final c in tester.widgetList<PaintingCell>(find.byType(PaintingCell)))
-              c.landmark.region,
-          ];
-
-      for (final r in ['gyeongsang', 'jeolla', 'jeju', 'ulleung']) {
-        // 칩 줄은 옆으로 밀리는 줄이라 뒤쪽 칩은 먼저 보이게 한다
-        await tester.ensureVisible(find.byKey(ValueKey('album-chip-$r')));
-        await tester.tap(find.byKey(ValueKey('album-chip-$r')));
-        await tester.pump();
-        final regions = await shownRegions();
-        expect(regions, isNotEmpty, reason: r);
-        expect(regions.toSet(), {r});
-        expect(regions.length, landmarks.where((l) => l.region == r).length, reason: r);
+      for (final (id, name) in [('kr001', '경복궁'), ('kr002', '인천 차이나타운·월미도')]) {
+        final label = find.descendant(of: _cell(id), matching: find.text(name));
+        final text = tester.widget<Text>(label);
+        expect((text.maxLines, text.overflow), (1, TextOverflow.ellipsis), reason: name);
+        // 이름 줄은 한 줄 높이: 12pt · 줄 높이 1.25 = 15pt + 2pt (두 줄이면 32pt)
+        expect(tester.getSize(label).height, closeTo(17, 0.01), reason: name);
       }
-      expect(await shownRegions(), hasLength(1));
+      // 칸 너비(약 114pt)에 안 들어가는 이름은 말줄임표로 잘린다
+      final long = find.descendant(of: _cell('kr002'), matching: find.text('인천 차이나타운·월미도'));
+      expect(tester.renderObject<RenderParagraph>(long).didExceedMaxLines, isTrue);
+      await end(tester, e);
+    });
 
-      await tester.ensureVisible(find.byKey(const ValueKey('album-chip-all')));
-      await tester.tap(find.byKey(const ValueKey('album-chip-all')));
+    testWidgets('칩은 `전체` + 얻은 그림이 있는 권역만, 칩을 누르면 그 권역 그림만 (첫 그림은 전체에서만)',
+        (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await e.ownPaintings({
+          sketchId: Frame.wood,
+          'kr001': Frame.gold, // 수도권
+          'kr022': Frame.wood, // 강원
+          'kr089': Frame.wood, // 울릉
+        });
+      });
+      await _openAlbum(tester, e);
+      await settle(tester, () => _cell('kr089').evaluate().isNotEmpty);
+
+      // 얻은 권역만, 권역 순서(수도권 → 강원 → 울릉)로
+      expect(_chipKeys(tester), ['all', 'capital', 'gangwon', 'ulleung']);
+      expect(find.text('수도권'), findsOneWidget);
+      expect(find.text('강원'), findsOneWidget);
+      expect(find.text('울릉'), findsOneWidget);
+      for (final r in ['chungcheong', 'jeolla', 'gyeongsang', 'jeju']) {
+        expect(_chip(r), findsNothing, reason: r);
+        expect(find.text(regionLabels[r]!), findsNothing, reason: r);
+      }
+      expect(_cellIds(tester), [sketchId, 'kr001', 'kr022', 'kr089']);
+
+      await tester.tap(_chip('gangwon'));
       await tester.pump();
-      expect(await shownRegions(), hasLength(101));
+      expect(_cellIds(tester), ['kr022']);
+      expect(find.byType(FirstPackCell), findsNothing);
+      expect(_hint(), findsNothing);
+
+      await tester.tap(_chip('capital'));
+      await tester.pump();
+      expect(_cellIds(tester), ['kr001']);
+
+      await tester.tap(_chip('all'));
+      await tester.pump();
+      expect(_cellIds(tester), [sketchId, 'kr001', 'kr022', 'kr089']);
       await end(tester, e);
     });
 
@@ -255,7 +437,7 @@ void main() {
         await e.insertArrival('j3', 'kr002', DateTime.utc(2026, 11, 26, 3), km: 3);
       });
       await _openAlbum(tester, e);
-      await settle(tester, () => _framed(tester, _cell('kr001')).landmark != null);
+      await settle(tester, () => _cell('kr001').evaluate().isNotEmpty);
 
       await tester.tap(_cell('kr001'));
       await transition(tester);
@@ -279,107 +461,142 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('못 얻은 그림을 눌러도 아무 일도 없다', (tester) async {
+    testWidgets('그림이 많아도 얻은 것만 3열로 나온다 (101곳 모두 얻으면 첫 그림 + 101칸)', (tester) async {
       final e = UiEnv();
-      await e.seed(tester, () => e.ownPaintings({'kr001': Frame.wood}));
-      await _openAlbum(tester, e);
-      await tester.tap(_cell('kr002'));
-      await transition(tester);
-      expect(find.byType(PaintingDetailScreen), findsNothing);
-      expect(find.byType(AlbumScreen), findsOneWidget);
+      await e.seed(tester, () async {
+        await e.ownPaintings({sketchId: Frame.wood, for (final l in landmarks) l.id: Frame.wood});
+      });
+      await _openAlbum(tester, e, height: 6000);
+      await settle(tester, () => _cell('kr101').evaluate().isNotEmpty);
+
+      expect(_cellIds(tester), [sketchId, for (final l in landmarks) l.id]);
+      expect(_chipKeys(tester), ['all', ...regionLabels.keys]);
+      // 3열: 첫 줄에 첫 그림과 명소 둘
+      final y = tester.getTopLeft(_cell(sketchId)).dy;
+      expect(tester.getTopLeft(_cell('kr001')).dy, y);
+      expect(tester.getTopLeft(_cell('kr002')).dy, y);
+      expect(tester.getTopLeft(_cell('kr003')).dy, greaterThan(y));
+      expect(find.text(_firstOnlyHint), findsNothing);
       await end(tester, e);
     });
   });
 
   group('소품 탭', () {
-    Future<void> openProps(WidgetTester tester, UiEnv e) async {
+    /// 소품 탭을 열고 [ready]가 보일 때까지 기다린다 (기본: 기본 소품 모자)
+    Future<void> openProps(WidgetTester tester, UiEnv e, {Finder? ready}) async {
       await _openAlbum(tester, e, height: 3000);
       await tester.tap(find.byKey(const ValueKey('tab-props')));
       await tester.pump();
-      await settle(tester, () => _prop('hat_01').evaluate().isNotEmpty);
-      // 얻은 소품 목록이 와서 기본 소품이 얻은 모습이 될 때까지
-      await settle(tester, () => _fade('hat_01').evaluate().isEmpty);
+      final f = ready ?? _prop('hat_01');
+      await settle(tester, () => f.evaluate().isNotEmpty);
     }
 
-    testWidgets('27개를 칸별로: 모자·옷·손·가방·신발·어깨 친구 순서', (tester) async {
+    /// 지금 화면의 소품 줄 id (위에서 아래로)
+    List<String> shownProps(WidgetTester tester) =>
+        [for (final r in tester.widgetList<PropRow>(find.byType(PropRow))) r.prop.id];
+
+    /// 소품 칸 순서(모자·옷·손·가방·신발·어깨 친구)와 props.json 순서로, [have]인 소품만
+    List<String> expected(bool Function(Prop p) have) => [
+          for (final slot in propSlotLabels.keys)
+            for (final p in props)
+              if (p.slot == slot && have(p)) p.id,
+        ];
+
+    bool isDefault(Prop p) => p.kind == PropUnlockKind.initial;
+
+    testWidgets('얻은 소품만 칸별로: 기본 소품뿐이면 잠긴 소품·얻는 방법이 없다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await openProps(tester, e);
 
-      expect(find.byType(PropRow), findsNWidgets(27));
-      final ys = [
-        for (final label in ['모자', '옷', '손', '가방', '신발', '어깨 친구'])
-          tester.getTopLeft(find.text(label)).dy,
+      final ids = shownProps(tester);
+      expect(ids, expected(isDefault));
+      expect(ids.length, lessThan(props.length));
+      // 잠긴 소품은 줄이 없고, 얻는 방법·잠금 표시도 없다
+      for (final id in ['hat_02', 'hand_03', 'pet_02', 'cloth_04', 'hat_10']) {
+        expect(_prop(id), findsNothing, reason: id);
+      }
+      expect(find.textContaining('누적'), findsNothing);
+      expect(find.textContaining('동행 이야기'), findsNothing);
+      expect(find.text('수도권 0/12'), findsNothing);
+      expect(find.descendant(of: find.byType(PropRow), matching: find.byType(Opacity)),
+          findsNothing);
+      expect(find.byKey(const ValueKey('album-no-props')), findsNothing);
+
+      // 얻은 소품이 있는 칸의 이름이 위에서 아래로 (칸마다 기본 소품이 하나씩 있다)
+      final labels = [
+        for (final slot in propSlotLabels.entries)
+          if (props.any((p) => p.slot == slot.key && isDefault(p))) slot.value,
       ];
+      expect(labels, propSlotLabels.values.toList());
+      final ys = [for (final label in labels) tester.getTopLeft(find.text(label)).dy];
       expect(ys, orderedEquals([...ys]..sort()));
-      expect(ys.toSet(), hasLength(6));
-
-      // 칸 안에서는 props.json 순서, 칸 사이도 위에서 아래로
-      final order = [
-        for (final p in tester.widgetList<PropRow>(find.byType(PropRow))) p.prop.slot,
-      ];
-      expect(order, [
-        ...List.filled(7, 'hat'),
-        ...List.filled(4, 'cloth'),
-        ...List.filled(6, 'hand'),
-        ...List.filled(3, 'bag'),
-        ...List.filled(2, 'shoe'),
-        ...List.filled(5, 'pet'),
-      ]);
+      expect(ys.toSet(), hasLength(labels.length));
       await end(tester, e);
     });
 
-    testWidgets('얻은 소품은 이름만, 잠긴 소품은 흐리게 얻는 방법을 붙인다', (tester) async {
+    testWidgets('걸어서 얻은 소품은 그 칸에 props.json 순서로 붙는다 (11km → 지팡이)', (tester) async {
       final e = UiEnv();
-      await e.seed(tester, () async {
-        await _walk11km(e);
-        // 전라 21곳 중 2곳
-        final jeolla = [for (final l in landmarks) if (l.region == 'jeolla') l.id];
-        await e.ownPaintings({for (final id in jeolla.take(2)) id: Frame.wood});
-      });
-      await openProps(tester, e);
-      await settle(tester, () => find.text('전라 2/21').evaluate().isNotEmpty);
+      await e.seed(tester, () => _walk11km(e));
+      await openProps(tester, e, ready: _prop('hand_02'));
 
-      bool faded(String id) => _fade(id).evaluate().isNotEmpty;
-      bool has(String id, String text) =>
-          find.descendant(of: _prop(id), matching: find.text(text)).evaluate().isNotEmpty;
-
-      // 기본 소품과 11km로 얻은 지팡이(10km)는 얻은 모습
-      const owned = ['hat_01', 'hand_01', 'hand_02', 'pet_01', 'bag_01', 'shoe_01', 'cloth_01'];
-      for (final id in owned) {
-        expect(faded(id), isFalse, reason: id);
-        expect(find.descendant(of: _prop(id), matching: find.textContaining('누적')), findsNothing);
-      }
-      expect(has('hand_02', '지팡이'), isTrue);
-      expect(has('hat_01', '베레모'), isTrue);
-
-      // 잠긴 소품: 거리·걸음·권역·동료
-      expect(faded('hat_02'), isTrue);
-      expect(has('hat_02', '깃털 꽂은 여행 모자'), isTrue);
-      expect(has('hat_02', '누적 25km · 지금 11km'), isTrue);
-      expect(has('hand_03', '누적 150km · 지금 11km'), isTrue);
-      expect(has('hat_03', '누적 1,000km · 지금 11km'), isTrue);
-      expect(has('cloth_04', '누적 1,000,000보 · 지금 16,000보'), isTrue);
-      expect(has('hat_04', '전라 2/21'), isTrue);
-      expect(has('pet_02', '수도권 0/12'), isTrue);
-      expect(has('pet_05', '울릉 0/1'), isTrue);
-      for (final id in ['hat_10', 'hat_11', 'hand_09']) {
-        expect(faded(id), isTrue, reason: id);
-        expect(has(id, '동행 이야기 완결'), isTrue, reason: id);
-      }
+      expect(shownProps(tester), expected((p) => isDefault(p) || p.id == 'hand_02'));
+      expect(find.descendant(of: _prop('hand_02'), matching: find.text('지팡이')), findsOneWidget);
+      expect(find.descendant(of: _prop('hat_01'), matching: find.text('베레모')), findsOneWidget);
+      // 25km에 얻는 모자는 아직 없다
+      expect(_prop('hat_02'), findsNothing);
       await end(tester, e);
     });
 
-    testWidgets('권역을 채운 소품은 얻은 모습 (울릉 그림이 있으면 괭이갈매기)', (tester) async {
+    testWidgets('권역을 채운 소품도 얻으면 나온다 (울릉 그림이 있으면 괭이갈매기)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         await e.ownPaintings({'kr089': Frame.wood});
         await e.svc.sync(e.now.add(const Duration(minutes: 1)));
       });
-      await openProps(tester, e);
-      await settle(tester, () => _fade('pet_05').evaluate().isEmpty);
-      expect(_fade('pet_05'), findsNothing);
+      await openProps(tester, e, ready: _prop('pet_05'));
+      expect(_prop('pet_05'), findsOneWidget);
+      expect(find.text(props.firstWhere((p) => p.id == 'pet_05').name), findsOneWidget);
       expect(find.text('울릉 0/1'), findsNothing);
+      // 다른 어깨 친구는 잠긴 채라 없다
+      expect(_prop('pet_02'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('얻은 소품이 없는 칸은 감춘다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        // 모자와 어깨 친구 하나씩만 얻은 상태로 둔다
+        await e.db.delete(e.db.propsOwned).go();
+        await e.db.batch((b) => b.insertAll(e.db.propsOwned, [
+              PropsOwnedCompanion.insert(
+                  propId: 'hat_01', unlockedUtc: 1, seen: const Value(true)),
+              PropsOwnedCompanion.insert(
+                  propId: 'pet_01', unlockedUtc: 1, seen: const Value(true)),
+            ]));
+      });
+      await openProps(tester, e);
+
+      expect(shownProps(tester), ['hat_01', 'pet_01']);
+      expect(find.text('모자'), findsOneWidget);
+      expect(find.text('어깨 친구'), findsOneWidget);
+      for (final label in ['옷', '손', '가방', '신발']) {
+        expect(find.text(label), findsNothing, reason: label);
+      }
+      expect(find.byKey(const ValueKey('album-no-props')), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('얻은 소품이 하나도 없으면 `아직 모은 소품이 없어요` 한 줄뿐', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.db.delete(e.db.propsOwned).go());
+      await openProps(tester, e, ready: find.byKey(const ValueKey('album-no-props')));
+
+      expect(find.text(_noPropsLine), findsOneWidget);
+      expect(find.byType(PropRow), findsNothing);
+      for (final label in propSlotLabels.values) {
+        expect(find.text(label), findsNothing, reason: label);
+      }
       await end(tester, e);
     });
 

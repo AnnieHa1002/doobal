@@ -11,6 +11,7 @@ import 'package:doobal/ui/common/frame_style.dart';
 import 'package:doobal/ui/common/framed_painting.dart';
 import 'package:doobal/ui/common/notice_dot.dart';
 import 'package:doobal/ui/common/palette.dart';
+import 'package:doobal/ui/decorate/decorate_screen.dart';
 import 'package:doobal/ui/map/landmark_card.dart';
 import 'package:doobal/ui/map/map_painter.dart';
 import 'package:doobal/ui/map/map_screen.dart';
@@ -333,50 +334,58 @@ void main() {
   });
 
   group('화집', () {
-    testWidgets('그림 탭 맨 앞에 첫 그림 칸 (1 + 101칸), 못 얻었으면 빈 액자와 흐린 "첫 그림"', (tester) async {
+    testWidgets('첫 그림을 못 얻었으면 첫 그림 칸이 없고, 못 얻은 칸은 그리지 않는다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
-      await _openAlbum(tester, e, height: 6000);
+      await _openAlbum(tester, e);
 
-      expect(find.byType(PaintingCell), findsNWidgets(101));
+      expect(find.byType(FirstPackCell), findsNothing);
+      expect(_cell(sketchId), findsNothing);
+      expect(find.byType(PaintingCell), findsNothing);
+      expect(find.byKey(const ValueKey('new-painting-sketch')), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('첫 그림 칸은 격자의 맨 앞 (얻은 첫 명소 칸의 앞)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await e.arriveAtSketch();
+        await e.ownPaintings({'kr001': Frame.wood});
+        await e.svc.markPaintingsSeen();
+      });
+      await _openAlbum(tester, e);
+      await settle(tester, () => _cell('kr001').evaluate().isNotEmpty);
+
       expect(find.byType(FirstPackCell), findsOneWidget);
-      // 첫 그림 칸이 격자의 맨 앞 (첫 명소 칸의 앞)
+      expect(find.byType(PaintingCell), findsOneWidget);
       final pack = tester.getTopLeft(_cell(sketchId));
       final first = tester.getTopLeft(_cell('kr001'));
       expect(pack.dy, first.dy);
       expect(pack.dx, lessThan(first.dx));
-
-      final framed = find.descendant(of: _cell(sketchId), matching: find.byType(FramedPainting));
-      expect(framed, findsOneWidget);
-      expect(tester.widget<FramedPainting>(framed).frame, isNull);
-      expect(tester.widget<FramedPainting>(framed).firstPack, isFalse);
-      expect(_packIn(_cell(sketchId)), findsNothing);
-      expect(_name(tester, _cell(sketchId), '첫 그림').style?.color, Palette.subInk);
-      expect(find.byKey(const ValueKey('new-painting-sketch')), findsNothing);
-
-      // 못 얻은 칸은 눌러도 아무 일도 없다
-      await tester.tap(_cell(sketchId));
-      await transition(tester);
-      expect(find.byType(PaintingDetailScreen), findsNothing);
       await end(tester, e);
     });
 
     testWidgets('권역 칩을 고르면 첫 그림 칸이 사라지고, 전체를 누르면 돌아온다', (tester) async {
       final e = UiEnv();
-      await e.seed(tester);
-      await _openAlbum(tester, e, height: 6000);
+      await e.seed(tester, () async {
+        await e.arriveAtSketch();
+        await e.ownPaintings({'kr001': Frame.wood});
+        await e.svc.markPaintingsSeen();
+      });
+      await _openAlbum(tester, e);
+      await settle(tester, () => _cell('kr001').evaluate().isNotEmpty);
+      expect(_cell(sketchId), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('album-chip-capital')));
       await tester.pump();
       expect(_cell(sketchId), findsNothing);
       expect(find.byType(FirstPackCell), findsNothing);
-      final capital = landmarks.where((l) => l.region == 'capital').length;
-      expect(find.byType(PaintingCell), findsNWidgets(capital));
+      expect(find.byType(PaintingCell), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('album-chip-all')));
       await tester.pump();
       expect(_cell(sketchId), findsOneWidget);
-      expect(find.byType(PaintingCell), findsNWidgets(101));
+      expect(find.byType(PaintingCell), findsOneWidget);
       await end(tester, e);
     });
 
@@ -474,17 +483,24 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('소품 탭의 권역 진행에는 첫 그림이 세지 않는다', (tester) async {
+    // 화집 소품 탭에는 얻는 방법이 없다. 얻는 방법은 꾸미기의 잠긴 칸에서 본다
+    testWidgets('꾸미기 잠긴 칸의 권역 진행에는 첫 그림이 세지 않는다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         await e.arriveAtSketch();
         await e.svc.markPaintingsSeen();
       });
-      await _openAlbum(tester, e, height: 3000);
-      await tester.tap(find.byKey(const ValueKey('tab-props')));
+      await openOnTop(tester, e, const DecorateScreen(),
+          height: 1400, ready: () => find.byKey(const ValueKey('tab-pet')).evaluate().isNotEmpty);
+      await tester.ensureVisible(find.byKey(const ValueKey('tab-pet')));
       await tester.pump();
-      await settle(tester, () => find.byKey(const ValueKey('prop-hat_01')).evaluate().isNotEmpty);
+      await tester.tap(find.byKey(const ValueKey('tab-pet')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
       // 수도권 소품(해치)은 잠긴 채, 얻는 방법의 진행 숫자는 0곳 (첫 그림은 서울이어도 세지 않는다)
+      await tester.tap(find.byKey(const ValueKey('prop-pet_02')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
       final capital = landmarks.where((l) => l.region == 'capital').length;
       expect(find.text('수도권 0/$capital'), findsOneWidget);
       expect(find.textContaining('수도권 1/'), findsNothing);

@@ -4,16 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/landmark.dart';
-import '../../domain/prop.dart';
 import '../../domain/sketch.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 import 'album_widgets.dart';
 import 'painting_detail_screen.dart';
-import 'prop_text.dart';
 
-/// 화집: 벽에 건 액자 4칸, 그림 탭(첫 그림 1칸 + 명소 101곳 칸)과 소품 탭.
+/// 그림 탭에 얻은 그림이 첫 그림뿐이거나 없을 때 격자 아래에 붙이는 한 줄
+const albumFirstOnlyHint = '걸어서 명소에 닿으면 여기에 걸려요';
+
+/// 소품 탭에 얻은 소품이 하나도 없을 때의 한 줄. 가안
+const albumNoPropsLine = '아직 모은 소품이 없어요';
+
+/// 화집: 벽에 건 액자 4칸, 그림 탭(얻은 그림만: 첫 그림 + 얻은 명소)과 소품 탭(얻은 소품만).
 /// [hangLandmarkId]가 있으면 벽이 가득 찬 채 도착해서 연 것이라, 바꿀 액자를 눌러 거는 모드로 시작한다
 class AlbumScreen extends ConsumerStatefulWidget {
   const AlbumScreen({super.key, this.hangLandmarkId});
@@ -160,71 +164,85 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
             ),
           ),
         ),
-        if (_tab == 0)
-          ..._paintingSlivers(owned, landmarks)
-        else
-          // 첫 그림은 명소가 아니라 권역 진행에 세지 않는다
-          _propSliver(owned.keys.where((id) => id != sketchId), landmarks),
+        if (_tab == 0) ..._paintingSlivers(owned, landmarks) else _propSliver(),
       ],
     );
   }
 
-  /// 그림 탭: 권역 칩과 명소 칸 3열 (landmarks.json 순서). 칩이 `전체`일 때만
-  /// 맨 앞에 첫 그림 칸이 하나 더 있다
+  /// 그림 탭: 권역 칩과 얻은 그림 3열 (첫 그림이 맨 앞, 명소는 landmarks.json 순서).
+  /// 못 얻은 그림은 그리지 않는다. 칩은 `전체` + 얻은 그림이 있는 권역만이고,
+  /// 첫 그림은 권역이 없어서 칩이 `전체`일 때만 나온다
   List<Widget> _paintingSlivers(Map<String, OwnedPaintingView> owned, List<Landmark> landmarks) {
-    final shown = [for (final l in landmarks) if (_region == null || l.region == _region) l];
-    final withFirstPack = _region == null;
-    final firstPack = owned[sketchId];
+    final mine = [for (final l in landmarks) if (owned.containsKey(l.id)) l];
+    final regions = {
+      for (final r in regionLabels.entries)
+        if (mine.any((l) => l.region == r.key)) r.key: r.value,
+    };
+    final region = regions.containsKey(_region) ? _region : null;
+    final cells = [
+      if (region == null && owned.containsKey(sketchId)) owned[sketchId]!,
+      for (final l in mine)
+        if (region == null || l.region == region) owned[l.id]!,
+    ];
+    // 얻은 명소 그림이 아직 없으면 (첫 그림뿐이거나 아무것도 없으면) 격자 아래에 안내를 붙인다
+    final hint = mine.isEmpty;
     void openDetail(String id) => Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => PaintingDetailScreen(landmarkId: id)));
     return [
       SliverToBoxAdapter(
         child: RegionFilterChips(
-          labels: regionLabels,
-          region: _region,
+          labels: regions,
+          region: region,
           onSelect: (r) => setState(() => _region = r),
         ),
       ),
       SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, hint ? 12 : 24),
         sliver: SliverGrid.builder(
           gridDelegate: paintingGridDelegate(context),
-          itemCount: shown.length + (withFirstPack ? 1 : 0),
+          itemCount: cells.length,
           itemBuilder: (context, i) {
-            if (withFirstPack && i == 0) {
-              return FirstPackCell(
-                key: const ValueKey('cell-$sketchId'),
-                owned: firstPack,
-                isNew: _newIds.contains(sketchId),
-                onTap: firstPack == null ? null : () => openDetail(sketchId),
-              );
-            }
-            final l = shown[withFirstPack ? i - 1 : i];
-            final p = owned[l.id];
-            return PaintingCell(
-              key: ValueKey('cell-${l.id}'),
-              landmark: l,
-              owned: p,
-              isNew: _newIds.contains(l.id),
-              onTap: p == null ? null : () => openDetail(l.id),
+            final p = cells[i];
+            final id = p.landmark.id;
+            return ownedPaintingCell(
+              p,
+              key: ValueKey('cell-$id'),
+              isNew: _newIds.contains(id),
+              onTap: () => openDetail(id),
             );
           },
         ),
       ),
+      if (hint)
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Text(
+              albumFirstOnlyHint,
+              key: ValueKey('album-first-only-hint'),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Palette.subInk),
+            ),
+          ),
+        ),
     ];
   }
 
-  /// 소품 탭: 소품 27개를 칸별로 (모자·옷·손·가방·신발·어깨 친구)
-  Widget _propSliver(Iterable<String> visitedIds, List<Landmark> landmarks) {
-    final props = ref.watch(propsProvider).value ?? const <Prop>[];
-    final ownedProps = ref.watch(ownedPropIdsProvider).value ?? const <String>{};
-    final snap = ref.watch(snapshotProvider).value;
-    final progress = regionProgress(visitedIds.toSet(), landmarks);
+  /// 소품 탭: 얻은 소품만 칸별로 (모자·옷·손·가방·신발·어깨 친구). 얻은 소품이 없는 칸은 감추고,
+  /// 하나도 없으면 한 줄 안내. 얻는 방법은 꾸미기의 잠긴 칸에서 본다
+  Widget _propSliver() {
+    final props = ref.watch(propsProvider).value;
+    final ownedProps = ref.watch(ownedPropIdsProvider).value;
+    // 읽어 오는 동안은 비워 둔다 (안내 글이 잠깐 비치지 않게)
+    if (props == null || ownedProps == null) return const SliverToBoxAdapter();
 
     final children = <Widget>[];
     for (final slot in propSlotLabels.entries) {
-      final inSlot = [for (final p in props) if (p.slot == slot.key) p];
-      if (inSlot.isEmpty) continue;
+      final mine = [
+        for (final p in props)
+          if (p.slot == slot.key && ownedProps.contains(p.id)) p,
+      ];
+      if (mine.isEmpty) continue;
       children.add(Padding(
         padding: const EdgeInsets.only(top: 16, bottom: 8),
         child: Text(
@@ -232,25 +250,23 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Palette.ink),
         ),
       ));
-      for (final p in inSlot) {
-        final has = ownedProps.contains(p.id);
+      for (final p in mine) {
         children.add(Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: PropRow(
-            key: ValueKey('prop-${p.id}'),
-            prop: p,
-            owned: has,
-            howTo: has
-                ? null
-                : propHowTo(
-                    p,
-                    totalKm: snap?.totalKm ?? 0,
-                    totalSteps: snap?.totalSteps ?? 0,
-                    progress: progress,
-                  ),
-          ),
+          child: PropRow(key: ValueKey('prop-${p.id}'), prop: p),
         ));
       }
+    }
+    if (children.isEmpty) {
+      children.add(const Padding(
+        padding: EdgeInsets.only(top: 24),
+        child: Text(
+          albumNoPropsLine,
+          key: ValueKey('album-no-props'),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14, color: Palette.subInk),
+        ),
+      ));
     }
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),

@@ -1,7 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../app/sync_service.dart';
-import '../../domain/landmark.dart';
 import '../../domain/prop.dart';
 import '../../domain/sketch.dart';
 import '../common/app_text.dart' show badgeMaxTextScale;
@@ -18,12 +19,12 @@ const _cellAspect = 0.78;
 const _gridGutter = 16.0;
 const _gridGap = 8.0;
 
-/// 그림 칸 이름 줄의 기본 높이: 두 줄 (12pt, 줄 높이 1.25) + 2pt
-const _labelHeight = 32.0;
+/// 그림 칸 이름 줄의 기본 높이: 한 줄 (12pt, 줄 높이 1.25) + 2pt. 긴 이름은 말줄임표
+const _labelHeight = 17.0;
 
-/// 이름 줄 높이: 글자 크기를 키우면 두 줄이 같이 커진다 (기본 크기에서는 32pt)
+/// 이름 줄 높이: 글자 크기를 키우면 한 줄이 같이 커진다 (기본 크기에서는 17pt)
 double paintingLabelHeight(BuildContext context) =>
-    MediaQuery.textScalerOf(context).scale(12) * 1.25 * 2 + 2;
+    MediaQuery.textScalerOf(context).scale(12) * 1.25 + 2;
 
 /// 그림 칸 3열 격자. 칸 높이는 기본 크기에서 너비 : 높이 = 0.78이고,
 /// 글자 크기를 키우면 이름 줄이 커진 만큼 칸이 길어져서 그림 크기는 그대로다
@@ -39,8 +40,12 @@ SliverGridDelegate paintingGridDelegate(BuildContext context) {
   );
 }
 
-/// 화집 벽: 액자 [wall].length칸을 한 줄로. 건 칸은 색 액자(첫 그림은 나무 액자), 빈 칸은 빈 액자.
-/// [replacing]이면 칸마다 테라코타 테두리를 둘러 눌러서 고르게 한다
+/// 빈 칸 안내 글. 길게 눌러서 건다는 뜻이다
+const emptyWallHint = '길게 눌러 걸기';
+
+/// 화집 벽: 액자 [wall].length칸을 한 줄로. 건 칸은 색 액자(첫 그림은 나무 액자),
+/// 빈 칸은 점선 액자와 `길게 눌러 걸기`. [replacing]이면 칸마다 테라코타 테두리를 둘러 눌러서 고르게 한다.
+/// 벽 그림(나무 선반·못과 끈) 에셋은 아직 없어서 벽 뒤는 비워 둔다. 나오면 이 줄 뒤에 깐다
 class WallRow extends StatelessWidget {
   const WallRow({
     super.key,
@@ -89,7 +94,7 @@ class WallRow extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(2),
             child: p == null
-                ? const FramedPainting.empty(thickness: 5)
+                ? const _EmptyWallSlot()
                 : p.isFirstPack
                     ? const FramedPainting.firstPack(thickness: 5)
                     : FramedPainting(landmark: p.landmark, frame: p.frame, thickness: 5),
@@ -98,6 +103,72 @@ class WallRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 벽의 빈 칸: 점선 액자 안에 안내 글. 부모를 꽉 채운다
+class _EmptyWallSlot extends StatelessWidget {
+  const _EmptyWallSlot();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: const DottedFramePainter(),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: Text(
+            emptyWallHint,
+            textAlign: TextAlign.center,
+            // 칸 크기가 정해져 있어서 글자 배율 상한을 둔다
+            textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: badgeMaxTextScale),
+            style: const TextStyle(fontSize: 11, color: Palette.subInk),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 둥근 네모 점선 테두리 (빈 액자 자리). [dash]·[gap]은 점선 한 토막과 틈의 길이
+class DottedFramePainter extends CustomPainter {
+  const DottedFramePainter({
+    this.color = Palette.subInk,
+    this.radius = 6,
+    this.width = 1.5,
+    this.dash = 4,
+    this.gap = 3,
+  });
+
+  final Color color;
+  final double radius;
+  final double width;
+  final double dash;
+  final double gap;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width
+      ..strokeCap = StrokeCap.round;
+    // 선 굵기의 절반만큼 안쪽으로 그려서 칸 밖으로 번지지 않게 한다
+    final rect = (Offset.zero & size).deflate(width / 2);
+    final path = Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+    for (final metric in path.computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += dash + gap) {
+        canvas.drawPath(metric.extractPath(d, math.min(d + dash, metric.length)), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(DottedFramePainter old) =>
+      old.color != color ||
+      old.radius != radius ||
+      old.width != width ||
+      old.dash != dash ||
+      old.gap != gap;
 }
 
 /// `그림` / `소품` 탭 두 개. [propsDot]이면 `소품` 라벨 오른쪽 위에 알림 점이 붙는다
@@ -167,7 +238,7 @@ class AlbumTabs extends StatelessWidget {
   }
 }
 
-/// 권역 걸러 보기 칩: `전체` + 권역 7개. [region]이 null이면 전체
+/// 권역 걸러 보기 칩: `전체` + [labels]의 권역 (얻은 그림이 있는 권역만 넘긴다). [region]이 null이면 전체
 class RegionFilterChips extends StatelessWidget {
   const RegionFilterChips({
     super.key,
@@ -253,26 +324,25 @@ class _Chip extends StatelessWidget {
   }
 }
 
-/// 명소 하나의 칸: 그림 자리 + 이름. 얻은 그림은 색 액자와 잉크색 이름,
-/// 못 얻은 그림은 빈 밝은 액자와 흐린 이름. 누르는 동작은 얻은 그림만 [onTap]이 있다.
-/// [isNew]이면(이번에 화집을 열기 전에 얻은 그림) 오른쪽 위에 알림 점이 붙는다
-class PaintingCell extends StatelessWidget {
-  const PaintingCell({
-    super.key,
-    required this.landmark,
-    required this.owned,
-    this.onTap,
-    this.isNew = false,
+/// 얻은 그림 한 칸의 뼈대: 액자 + 한 줄 이름 (긴 이름은 말줄임표).
+/// [isNew]이면 오른쪽 위에 알림 점이 붙는다 (점 키는 `new-painting-<그림 id>`)
+class _OwnedCell extends StatelessWidget {
+  const _OwnedCell({
+    required this.paintingId,
+    required this.frame,
+    required this.name,
+    required this.onTap,
+    required this.isNew,
   });
 
-  final Landmark landmark;
-  final OwnedPaintingView? owned;
+  final String paintingId;
+  final Widget frame;
+  final String name;
   final VoidCallback? onTap;
   final bool isNew;
 
   @override
   Widget build(BuildContext context) {
-    final p = owned;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -282,24 +352,20 @@ class PaintingCell extends StatelessWidget {
         children: [
           Column(
             children: [
-              Expanded(
-                child: p == null
-                    ? const FramedPainting.empty()
-                    : FramedPainting(landmark: landmark, frame: p.frame),
-              ),
+              Expanded(child: frame),
               const SizedBox(height: 4),
               SizedBox(
                 height: paintingLabelHeight(context),
                 child: Text(
-                  landmark.name,
-                  maxLines: 2,
+                  name,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     height: 1.25,
-                    color: p == null ? Palette.subInk : Palette.ink,
+                    color: Palette.ink,
                   ),
                 ),
               ),
@@ -309,7 +375,7 @@ class PaintingCell extends StatelessWidget {
             Positioned(
               top: -4,
               right: -4,
-              child: NoticeDot(key: ValueKey('new-painting-${landmark.id}')),
+              child: NoticeDot(key: ValueKey('new-painting-$paintingId')),
             ),
         ],
       ),
@@ -317,74 +383,67 @@ class PaintingCell extends StatelessWidget {
   }
 }
 
-/// 첫 그림 칸 (그림 격자 맨 앞): 얻었으면 나무 액자에 낀 짐 꾸러미 그림, 아니면 빈 액자.
-/// 아래에 이름표 '첫 그림'. 누르는 동작은 얻었을 때만 [onTap]이 있다.
-/// [isNew]이면 오른쪽 위에 알림 점이 붙는다 (명소 칸과 같다)
-class FirstPackCell extends StatelessWidget {
-  const FirstPackCell({super.key, required this.owned, this.onTap, this.isNew = false});
+/// 명소 그림 한 칸: 색 액자 + 명소 이름. 얻은 그림만 그린다 (못 얻은 그림은 칸이 없다).
+/// [isNew]이면(이번에 화집을 열기 전에 얻은 그림) 오른쪽 위에 알림 점이 붙는다
+class PaintingCell extends StatelessWidget {
+  const PaintingCell({super.key, required this.owned, this.onTap, this.isNew = false});
 
-  final OwnedPaintingView? owned;
+  final OwnedPaintingView owned;
   final VoidCallback? onTap;
   final bool isNew;
 
   @override
   Widget build(BuildContext context) {
-    final has = owned != null;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return _OwnedCell(
+      paintingId: owned.landmark.id,
+      frame: FramedPainting(landmark: owned.landmark, frame: owned.frame),
+      name: owned.landmark.name,
       onTap: onTap,
-      child: Stack(
-        fit: StackFit.expand,
-        clipBehavior: Clip.none,
-        children: [
-          Column(
-            children: [
-              Expanded(
-                child: has ? const FramedPainting.firstPack() : const FramedPainting.empty(),
-              ),
-              const SizedBox(height: 4),
-              SizedBox(
-                height: paintingLabelHeight(context),
-                child: Text(
-                  firstPackLabel,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    height: 1.25,
-                    color: has ? Palette.ink : Palette.subInk,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (isNew)
-            const Positioned(
-              top: -4,
-              right: -4,
-              child: NoticeDot(key: ValueKey('new-painting-$sketchId')),
-            ),
-        ],
-      ),
+      isNew: isNew,
     );
   }
 }
 
-/// 소품 한 줄: 첫 글자 원 + 이름. 잠긴 소품은 흐리게 하고 얻는 방법을 아래에 붙인다
-class PropRow extends StatelessWidget {
-  const PropRow({super.key, required this.prop, required this.owned, required this.howTo});
+/// 첫 그림 칸 (그림 격자 맨 앞): 나무 액자에 낀 짐 꾸러미 그림, 아래에 이름표 '첫 그림'.
+/// 첫 그림을 얻었을 때만 그린다. [isNew]이면 오른쪽 위에 알림 점이 붙는다 (명소 칸과 같다)
+class FirstPackCell extends StatelessWidget {
+  const FirstPackCell({super.key, this.onTap, this.isNew = false});
 
-  final Prop prop;
-  final bool owned;
-
-  /// 잠긴 소품을 얻는 방법 (얻었거나 기본 소품이면 null)
-  final String? howTo;
+  final VoidCallback? onTap;
+  final bool isNew;
 
   @override
   Widget build(BuildContext context) {
-    final row = Container(
+    return _OwnedCell(
+      paintingId: sketchId,
+      frame: const FramedPainting.firstPack(),
+      name: firstPackLabel,
+      onTap: onTap,
+      isNew: isNew,
+    );
+  }
+}
+
+/// 얻은 그림 [p]의 칸: 첫 그림이면 [FirstPackCell], 명소 그림이면 [PaintingCell]
+Widget ownedPaintingCell(
+  OwnedPaintingView p, {
+  Key? key,
+  VoidCallback? onTap,
+  bool isNew = false,
+}) =>
+    p.isFirstPack
+        ? FirstPackCell(key: key, onTap: onTap, isNew: isNew)
+        : PaintingCell(key: key, owned: p, onTap: onTap, isNew: isNew);
+
+/// 소품 한 줄: 첫 글자 원 + 이름. 얻은 소품만 나온다 (얻는 방법은 꾸미기의 잠긴 칸에서 본다)
+class PropRow extends StatelessWidget {
+  const PropRow({super.key, required this.prop});
+
+  final Prop prop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Palette.card,
@@ -398,9 +457,9 @@ class PropRow extends StatelessWidget {
             height: 40,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: owned ? Palette.paper : Palette.card,
+              color: Palette.paper,
               shape: BoxShape.circle,
-              border: Border.all(color: owned ? Palette.ink : Palette.subInk, width: 2),
+              border: Border.all(color: Palette.ink, width: 2),
             ),
             child: Text(
               prop.name.substring(0, 1),
@@ -411,26 +470,18 @@ class PropRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  prop.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Palette.ink,
-                  ),
-                ),
-                if (!owned && howTo != null)
-                  Text(howTo!, style: const TextStyle(fontSize: 14, color: Palette.subInk)),
-              ],
+            child: Text(
+              prop.name,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Palette.ink,
+              ),
             ),
           ),
         ],
       ),
     );
-    return owned ? row : Opacity(opacity: 0.55, child: row);
   }
 }
 
@@ -456,12 +507,10 @@ Future<String?> showPaintingPicker(BuildContext context, List<OwnedPaintingView>
           itemCount: paintings.length,
           itemBuilder: (context, i) {
             final p = paintings[i];
-            void pick() => Navigator.of(context).pop(p.landmark.id);
             return KeyedSubtree(
               key: ValueKey('pick-${p.landmark.id}'),
-              child: p.isFirstPack
-                  ? FirstPackCell(owned: p, onTap: pick)
-                  : PaintingCell(landmark: p.landmark, owned: p, onTap: pick),
+              child: ownedPaintingCell(p,
+                  onTap: () => Navigator.of(context).pop(p.landmark.id)),
             );
           },
         ),

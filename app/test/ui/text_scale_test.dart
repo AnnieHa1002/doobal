@@ -421,6 +421,17 @@ void main() {
       await end(tester, e);
     });
 
+    // 빈 벽 4칸(점선 액자 + 길게 눌러 걸기)과 첫 그림 아래 한 줄 안내
+    _scaleCases('그림 탭 (첫 그림뿐)', (tester, fit) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.ownPaintings({sketchId: Frame.wood}));
+      await openAlbum(tester, e, fit);
+      expect(find.text('길게 눌러 걸기'), findsNWidgets(4));
+      expect(find.text('걸어서 명소에 닿으면 여기에 걸려요'), findsOneWidget);
+      fit.check('그림 탭 (첫 그림뿐)');
+      await end(tester, e);
+    });
+
     _scaleCases('소품 탭', (tester, fit) async {
       final e = UiEnv();
       await e.seed(tester, () => seedAlbum(e));
@@ -433,6 +444,16 @@ void main() {
         await tester.pump();
         fit.check('소품 탭 ${i + 1}번째 내림');
       }
+      await end(tester, e);
+    });
+
+    _scaleCases('소품 탭 (얻은 소품 없음)', (tester, fit) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.db.delete(e.db.propsOwned).go());
+      await openAlbum(tester, e, fit);
+      await _tap(tester, _key('tab-props'));
+      expect(find.text('아직 모은 소품이 없어요'), findsOneWidget);
+      fit.check('소품 탭 (얻은 소품 없음)');
       await end(tester, e);
     });
 
