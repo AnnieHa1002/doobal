@@ -2,6 +2,7 @@ import 'package:doobal/app/auto_sync.dart';
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/data/live_steps.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
@@ -53,6 +54,9 @@ class _Env {
 
   final AppDb db;
   final FakeStepSource source;
+
+  /// 기기 걸음 센서 (테스트가 값을 밀어 넣는다). 권한은 처음부터 있다
+  final live = FakeLiveSteps();
   late final SyncService svc;
   DateTime now;
 
@@ -69,6 +73,7 @@ class _Env {
         lookPaletteProvider.overrideWith((ref) => lookPalette),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
+        liveStepsProvider.overrideWithValue(live),
         clockProvider.overrideWithValue(() => now),
       ];
 
@@ -440,6 +445,184 @@ void main() {
       await openWalking(tester, e);
       expect(find.textContaining('배를 타고'), findsNothing);
       await _end(tester, e);
+    });
+
+    group('기기 걸음 센서', () {
+      /// 시계가 [sec]초 흐른 뒤 센서가 누적 걸음 [total]을 준다
+      Future<void> sensorTo(WidgetTester tester, _Env e, int sec, int total) async {
+        e.now = e.now.add(Duration(seconds: sec));
+        e.live.push(total);
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      testWidgets('센서 값을 밀어 넣으면 이번 걸음이 바로 오르고 (health 기록이 없어도), 거리가 따라 흐른다',
+          (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        expect(find.text('0보'), findsOneWidget);
+        expect(e.live.listeners, 1);
+
+        // 첫 값은 기준값이라 세지 않는다
+        e.live.push(50000);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('0보'), findsOneWidget);
+
+        // 6초마다 10보 (분당 100보) 6번 = 60보 = 42m
+        for (var i = 1; i <= 6; i++) {
+          await sensorTo(tester, e, 6, 50000 + i * 10);
+          expect(find.text('${i * 10}보'), findsOneWidget);
+        }
+        expect(find.text('걷는 중'), findsOneWidget);
+        // 한 주기 안에 센서 거리(60 × 0.7 = 42m)까지 따라온다
+        for (var i = 0; i < 70; i++) {
+          await tester.pump(const Duration(milliseconds: 500));
+        }
+        expect(find.text('0.04 km'), findsOneWidget);
+        await _end(tester, e);
+      });
+
+      testWidgets('health 값이 더 크면 health 값, 센서가 더 늘면 다시 센서 값 (큰 쪽)', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        e.live.push(0);
+        await sensorTo(tester, e, 5, 30);
+        expect(find.text('30보'), findsOneWidget);
+
+        await walkAndRefresh(tester, e, 10, 100);
+        expect(find.text('1,000보'), findsOneWidget);
+        expect(find.text('30보'), findsNothing);
+
+        await sensorTo(tester, e, 5, 1530);
+        expect(find.text('1,530보'), findsOneWidget);
+        expect(find.text('1,000보'), findsNothing);
+        await _end(tester, e);
+      });
+
+      testWidgets('센서가 있으면 달리는 중 라벨과 분당 걸음·속도·보폭은 센서 기준', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        expect(find.text('걷는 중'), findsOneWidget);
+
+        e.live.push(0);
+        // 30초 창에 70보 → 분당 140보 → 뛰기 (health 기록은 없다)
+        await sensorTo(tester, e, 5, 70);
+        expect(find.text('달리는 중'), findsOneWidget);
+        expect(find.text('걷는 중'), findsNothing);
+        await tester.tap(find.text('달리는 중'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('140보'), findsOneWidget);
+        expect(find.text('8.4 km/h'), findsOneWidget);
+        expect(find.text('1.00 m'), findsOneWidget);
+
+        // 가만히 서면 창이 비어 분당 걸음이 0이 되고 달리는 중이 아니게 된다
+        e.now = e.now.add(const Duration(minutes: 1));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('걷는 중'), findsOneWidget);
+        expect(find.text('0.0 km/h'), findsOneWidget);
+        await _end(tester, e);
+      });
+
+      testWidgets('센서가 없는 기기(오류)면 health 값만 쓴다', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        e.live.pushError();
+        await tester.pump();
+        expect(e.live.listeners, 0);
+
+        await walkAndRefresh(tester, e, 10, 150);
+        expect(find.text('1,500보'), findsOneWidget);
+        expect(find.text('달리는 중'), findsOneWidget);
+        await _end(tester, e);
+      });
+
+      testWidgets('걷기 마치기로 나가면 센서 읽기를 멈춘다', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        expect(e.live.listeners, 1);
+
+        await tester.tap(find.text('걷기 마치기'));
+        await _transition(tester);
+        expect(e.live.listeners, 0);
+        await _end(tester, e);
+      });
+
+      testWidgets('앱이 뒤로 갔다 오면 새 기준값부터 센다 (꺼져 있던 동안의 걸음은 화면에 안 들어간다)',
+          (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        e.live.push(1000);
+        await sensorTo(tester, e, 5, 1010);
+        expect(find.text('10보'), findsOneWidget);
+
+        for (final s in [
+          AppLifecycleState.inactive,
+          AppLifecycleState.hidden,
+          AppLifecycleState.paused,
+          AppLifecycleState.hidden,
+          AppLifecycleState.inactive,
+          AppLifecycleState.resumed,
+        ]) {
+          tester.binding.handleAppLifecycleStateChanged(s);
+        }
+        expect(e.live.subscriptions, 2);
+
+        e.live.push(5000);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('10보'), findsOneWidget);
+        await sensorTo(tester, e, 5, 5005);
+        expect(find.text('15보'), findsOneWidget);
+        await _end(tester, e);
+      });
+
+      testWidgets('권한이 없으면 처음 들어올 때 한 번 묻고, 허용되면 센서를 읽는다', (tester) async {
+        final e = _Env();
+        e.live.permitted = false;
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+
+        expect(e.live.permissionRequests, 1);
+        expect(e.live.listeners, 1);
+        await _end(tester, e);
+      });
+
+      testWidgets('거부하면 health 값만 쓰고, 이 앱이 켜져 있는 동안 다시 들어와도 다시 묻지 않는다', (tester) async {
+        final e = _Env();
+        e.live
+          ..permitted = false
+          ..grantOnRequest = false;
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        expect(e.live.permissionRequests, 1);
+        expect(e.live.listeners, 0);
+
+        await walkAndRefresh(tester, e, 10, 100);
+        expect(find.text('1,000보'), findsOneWidget);
+        expect(find.text('걷는 중'), findsOneWidget);
+
+        // 걷기 마치기 → 쉼터로 → 출발하기로 다시 들어온다
+        await tester.tap(find.text('걷기 마치기'));
+        await _transition(tester);
+        await _settle(tester, () => find.text('쉼터로').evaluate().isNotEmpty);
+        await tester.tap(find.text('쉼터로'));
+        await _transition(tester);
+        await tester.tap(find.text('출발하기'));
+        await _transition(tester);
+        await _wait(tester);
+        expect(find.text('걷기 마치기'), findsOneWidget);
+
+        expect(e.live.permissionRequests, 1);
+        expect(e.live.listeners, 0);
+        await _end(tester, e);
+      });
     });
   });
 

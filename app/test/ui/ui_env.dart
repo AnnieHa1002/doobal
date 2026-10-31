@@ -2,6 +2,7 @@ import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/app_settings_opener.dart';
 import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/data/live_steps.dart';
 import 'package:doobal/data/notifier.dart';
 import 'package:doobal/data/painting_sharer.dart';
 import 'package:doobal/data/step_source.dart';
@@ -42,10 +43,16 @@ StepRecord walkRecord(DateTime start, int minutes, int spm) => StepRecord(
 /// (두 번째 testWidgets부터는 rootBundle 에셋이 로드되지 않는다)
 class UiEnv {
   /// [appRules]를 주면 config.json 대신 그 규칙으로 앱이 돈다 (config 숫자가 화면에 나오는지 볼 때).
-  /// [appLandmarks]를 주면 화면이 읽는 명소 목록(landmarksProvider)만 그것으로 바뀐다 (서비스는 101곳 그대로)
-  UiEnv({FakeStepSource? source, Rules? appRules, List<Landmark>? appLandmarks})
-      : db = AppDb(NativeDatabase.memory()),
+  /// [appLandmarks]를 주면 화면이 읽는 명소 목록(landmarksProvider)만 그것으로 바뀐다 (서비스는 101곳 그대로).
+  /// [live]를 주면 기기 걸음 센서가 그것으로 바뀐다
+  UiEnv({
+    FakeStepSource? source,
+    Rules? appRules,
+    List<Landmark>? appLandmarks,
+    FakeLiveSteps? live,
+  })  : db = AppDb(NativeDatabase.memory()),
         source = source ?? FakeStepSource(),
+        live = live ?? FakeLiveSteps(),
         appRules = appRules ?? rules,
         appLandmarks = appLandmarks ?? landmarks,
         now = t1 {
@@ -62,6 +69,9 @@ class UiEnv {
 
   final AppDb db;
   final FakeStepSource source;
+
+  /// 기기 걸음 센서 (테스트가 값을 밀어 넣는다). 권한은 처음부터 있다
+  final FakeLiveSteps live;
   final Rules appRules;
   final List<Landmark> appLandmarks;
   late final SyncService svc;
@@ -93,6 +103,7 @@ class UiEnv {
         lookPaletteProvider.overrideWith((ref) => lookPalette),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
+        liveStepsProvider.overrideWithValue(live),
         clockProvider.overrideWithValue(() => now),
       ];
 

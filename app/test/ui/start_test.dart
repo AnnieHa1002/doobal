@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:doobal/app/auto_sync.dart';
 import 'package:doobal/app/profile_service.dart';
 import 'package:doobal/app/providers.dart';
+import 'package:doobal/data/live_steps.dart';
 import 'package:doobal/data/notification_permission.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/data/db/app_db.dart';
@@ -54,6 +55,17 @@ class _ThrowingSource extends FakeStepSource {
   Future<bool> requestPermission() async {
     permissionRequests++;
     throw StateError('건강 앱이 없다');
+  }
+}
+
+/// 걸음 센서 권한을 묻다가 예외가 나는 기기 (동작 정보 채널이 없다)
+class _ThrowingLive extends FakeLiveSteps {
+  _ThrowingLive() : super(permitted: false);
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    throw StateError('채널이 없다');
   }
 }
 
@@ -662,6 +674,99 @@ void main() {
       expect(allow(), findsOneWidget);
       expect(_enabled(tester, '쉼터로 가기'), isTrue);
       await end(tester, e);
+    });
+
+    group('걸음 센서 권한 (안드로이드 ACTIVITY_RECOGNITION): health 권한 다음에 이어서 묻는다', () {
+      /// 지금 앱 실행 중 센서 권한을 거부당했다고 적혀 있는가
+      bool denied(WidgetTester tester) =>
+          ProviderScope.containerOf(tester.element(find.byType(PermissionScreen)))
+              .read(liveDeniedProvider);
+
+      testWidgets('걸음 "허용하기" 하나로 health 다음에 센서 권한도 묻고, 둘 다 허용되면 갈 수 있다', (tester) async {
+        final e = UiEnv();
+        e.live.permitted = false;
+        await openPermission(tester, e);
+        expect(e.live.permissionRequests, 0);
+
+        await tester.tap(allow().first);
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 1);
+        expect(e.live.permissionRequests, 1);
+        expect(find.text('허용됨'), findsOneWidget);
+        expect(_enabled(tester, '쉼터로 가기'), isTrue);
+        expect(denied(tester), isFalse);
+        await end(tester, e);
+      });
+
+      testWidgets('센서 권한을 거부해도 걸음 줄은 허용됨이고 다음으로 갈 수 있다 (거부는 기억해 둔다)', (tester) async {
+        final e = UiEnv();
+        e.live
+          ..permitted = false
+          ..grantOnRequest = false;
+        await openPermission(tester, e);
+
+        await tester.tap(allow().first);
+        await tester.pump();
+        await tester.pump();
+        expect(e.live.permissionRequests, 1);
+        expect(find.text('허용됨'), findsOneWidget);
+        expect(_button('설정에서 켜기'), findsNothing);
+        expect(_enabled(tester, '쉼터로 가기'), isTrue);
+        expect(denied(tester), isTrue);
+        await end(tester, e);
+      });
+
+      testWidgets('health를 거부하면 센서 권한은 묻지 않고, 나중에 허용되면 그때 묻는다', (tester) async {
+        final e = UiEnv();
+        e.live.permitted = false;
+        e.source.granted = false;
+        await openPermission(tester, e);
+
+        await tester.tap(allow().first);
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 1);
+        expect(e.live.permissionRequests, 0);
+
+        e.source.granted = true;
+        await tester.tap(_button('설정에서 켜기'));
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 2);
+        expect(e.live.permissionRequests, 1);
+        expect(_enabled(tester, '쉼터로 가기'), isTrue);
+        await end(tester, e);
+      });
+
+      testWidgets('이미 센서 권한이 있으면(iOS 포함) 다시 묻지 않는다', (tester) async {
+        final e = UiEnv();
+        await openPermission(tester, e);
+
+        await tester.tap(allow().first);
+        await tester.pump();
+        await tester.pump();
+        expect(e.source.permissionRequests, 1);
+        expect(e.live.permissionRequests, 0);
+        expect(_enabled(tester, '쉼터로 가기'), isTrue);
+        expect(denied(tester), isFalse);
+        await end(tester, e);
+      });
+
+      testWidgets('센서 권한을 묻다가 예외가 나도 걸음 줄은 허용됨이다 (거부로 적지 않는다)', (tester) async {
+        final live = _ThrowingLive();
+        final e = UiEnv(live: live);
+        await openPermission(tester, e);
+
+        await tester.tap(allow().first);
+        await tester.pump();
+        await tester.pump();
+        expect(live.permissionRequests, 1);
+        expect(find.text('허용됨'), findsOneWidget);
+        expect(_enabled(tester, '쉼터로 가기'), isTrue);
+        expect(denied(tester), isFalse);
+        await end(tester, e);
+      });
     });
 
     testWidgets('걸음을 거부하면 "설정에서 켜기"가 나오고 다음으로 못 간다', (tester) async {

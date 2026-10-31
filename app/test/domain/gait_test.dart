@@ -25,6 +25,15 @@ void main() {
     });
   });
 
+  test('judgeGait: 130 이하 walk, 140 이상 run, 131~139와 0은 직전 상태', () {
+    expect(judgeGait(130, Gait.run, rules), Gait.walk);
+    expect(judgeGait(140, Gait.walk, rules), Gait.run);
+    expect(judgeGait(135, Gait.walk, rules), Gait.walk);
+    expect(judgeGait(135, Gait.run, rules), Gait.run);
+    expect(judgeGait(0, Gait.run, rules), Gait.run);
+    expect(judgeGait(0, Gait.walk, rules), Gait.walk);
+  });
+
   test('걸음 0인 분은 상태를 바꾸지 않고, 빈 분이 3분 이상이면 walk로 다시 시작', () {
     expect(_gaits([145, 0, 0, 135]), [Gait.run, Gait.run, Gait.run, Gait.run]);
     expect(_gaits([145, 0, 0, 0, 135]),

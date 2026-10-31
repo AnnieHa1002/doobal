@@ -90,6 +90,7 @@ class Rules {
     required this.sessionMaxPerDay,
     required this.refetchHours,
     required this.walkingRefreshSec,
+    required this.liveCadenceWindowSec,
     required this.seaFactor,
     required this.earthRadiusKm,
     required this.ports,
@@ -153,6 +154,9 @@ class Rules {
 
   /// 걷는 중 화면이 동기화하는 간격(초)
   final int walkingRefreshSec;
+
+  /// 걸음 센서로 분당 걸음을 낼 때 보는 최근 시간(초) (config live.cadenceWindowSec)
+  final int liveCadenceWindowSec;
 
   final double seaFactor;
   final double earthRadiusKm;
@@ -264,6 +268,7 @@ class Rules {
     final gait = j['gait'] as Map<String, dynamic>;
     final session = j['session'] as Map<String, dynamic>;
     final sync = j['sync'] as Map<String, dynamic>;
+    final live = j['live'] as Map<String, dynamic>;
     final route = j['route'] as Map<String, dynamic>;
     final journey = j['journey'] as Map<String, dynamic>;
     final frame = journey['frame'] as Map<String, dynamic>;
@@ -313,6 +318,7 @@ class Rules {
       sessionMaxPerDay: session['maxPerDay'] as int,
       refetchHours: sync['refetchHours'] as int,
       walkingRefreshSec: sync['walkingRefreshSec'] as int,
+      liveCadenceWindowSec: live['cadenceWindowSec'] as int,
       seaFactor: _d(route['seaFactor']),
       earthRadiusKm: _d(route['earthRadiusKm']),
       ports: (route['ports'] as Map<String, dynamic>)

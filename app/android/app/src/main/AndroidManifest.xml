@@ -2,6 +2,8 @@
     <!-- 걸음: Health Connect 읽기만. 백그라운드 동기화(WorkManager)용 권한 포함 (기술 설계서 3장) -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+    <!-- 걷는 중 화면의 실시간 걸음: 기기 걸음 센서(STEP_COUNTER) 읽기. 안드로이드 10 이상은 런타임 권한 -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
     <application
         android:label="두발"

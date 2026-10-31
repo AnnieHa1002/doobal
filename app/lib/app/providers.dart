@@ -9,6 +9,7 @@ import '../data/backup_store.dart';
 import '../data/config_loader.dart';
 import '../data/db/app_db.dart';
 import '../data/landmark_loader.dart';
+import '../data/live_steps.dart';
 import '../data/map_loader.dart';
 import '../data/milestone_loader.dart';
 import '../data/notice_loader.dart';
@@ -86,6 +87,22 @@ final dbProvider = Provider<AppDb>((ref) {
 });
 
 final stepSourceProvider = Provider<StepSource>((ref) => HealthStepSource());
+
+/// 기기 걸음 센서. 걷는 중 화면의 실시간 걸음에만 쓴다 (진행·보상은 stepSourceProvider의 health 값)
+final liveStepsProvider = Provider<LiveSteps>((ref) => const PedometerLiveSteps());
+
+/// 이번 앱 실행 중 기기 걸음 센서 권한을 거부당했는가. 거부하면 걷는 중 화면이 다시 묻지 않는다.
+/// 메모리에만 두어서 앱을 다시 켜면 처음부터 다시 물을 수 있다
+class LiveDenied extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  bool get denied => state;
+
+  void set(bool denied) => state = denied;
+}
+
+final liveDeniedProvider = NotifierProvider<LiveDenied, bool>(LiveDenied.new);
 
 /// 휴대폰 설정 앱 열기 (권한을 거부한 사용자를 설정으로 보낸다)
 final appSettingsOpenerProvider =

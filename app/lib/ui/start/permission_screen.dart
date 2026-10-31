@@ -12,6 +12,8 @@ enum _Ask { none, granted, denied }
 
 /// 시작 ④ 권한: 걸음(필수)과 알림(선택) 두 줄. 위치 권한은 묻지 않는다.
 /// 걸음을 허용해야 "쉼터로 가기"가 켜진다. 알림은 거부해도 그대로 간다.
+/// 걸음 "허용하기"는 health 권한 다음에 걸음 센서 권한(안드로이드 ACTIVITY_RECOGNITION)도 이어서
+/// 묻는데, 이쪽은 거부해도 그대로 간다 (걷는 중 화면이 health 걸음만 쓴다).
 /// 권한은 각 줄의 버튼을 눌렀을 때만 묻는다 (화면이 뜬다고 묻지 않는다).
 /// "쉼터로 가기"는 시작 흐름을 끝내고 첫 여정 '내 동네 스케치'를 정한다
 class PermissionScreen extends ConsumerStatefulWidget {
@@ -60,8 +62,25 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
     if (mounted) setState(() => set(ok ? _Ask.granted : _Ask.denied));
   }
 
-  Future<void> _askSteps() =>
-      _ask(ref.read(stepSourceProvider).requestPermission, (a) => _steps = a);
+  Future<void> _askSteps() => _ask(_requestSteps, (a) => _steps = a);
+
+  /// health 걸음 권한. 허용되면 이어서 걸음 센서 권한도 묻는다 (결과는 걸음 줄에 영향이 없다)
+  Future<bool> _requestSteps() async {
+    final ok = await ref.read(stepSourceProvider).requestPermission();
+    if (ok && mounted) await _askSensor();
+    return ok;
+  }
+
+  /// 걸음 센서 권한. 거부하면 이번 앱 실행 중에는 걷는 중 화면도 다시 묻지 않는다
+  Future<void> _askSensor() async {
+    final live = ref.read(liveStepsProvider);
+    final denied = ref.read(liveDeniedProvider.notifier);
+    try {
+      if (!await live.hasPermission() && !await live.requestPermission()) denied.set(true);
+    } catch (e) {
+      debugPrint('걸음 센서 권한 요청 실패: $e');
+    }
+  }
 
   /// 거부된 뒤의 "설정에서 켜기". 플랫폼마다 켜는 길이 달라서 갈린다 (stepFixOpensSettingsProvider).
   /// iOS: 한 번 답하면 권한 창이 다시 뜨지 않아서 앱 설정을 열고, 돌아오면 다시 확인한다.

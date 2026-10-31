@@ -11,6 +11,14 @@ class GaitMinute {
   final Gait gait;
 }
 
+/// 분당 걸음 하나의 걷기/뛰기. 경계 사이(131~139)와 걸음 0은 직전 상태 [prev]를 따른다
+Gait judgeGait(int stepsPerMin, Gait prev, Rules rules) {
+  if (stepsPerMin <= 0) return prev;
+  if (stepsPerMin <= rules.walkMaxSpm) return Gait.walk;
+  if (stepsPerMin >= rules.runMinSpm) return Gait.run;
+  return prev;
+}
+
 /// 시간순 분 목록의 걷기/뛰기. 분당 걸음 = 그 분의 걸음.
 /// 경계 사이(131~139)와 걸음 0인 분은 직전 상태를 따른다.
 /// 빈 분이 sessionMaxGapMin보다 길면 새 걷기 구간이라 walk로 다시 시작한다
@@ -27,11 +35,7 @@ List<GaitMinute> classifyGait(
       if (lastActive != null && m.minute - lastActive - 1 > rules.sessionMaxGapMin) {
         state = Gait.walk;
       }
-      if (m.steps <= rules.walkMaxSpm) {
-        state = Gait.walk;
-      } else if (m.steps >= rules.runMinSpm) {
-        state = Gait.run;
-      }
+      state = judgeGait(m.steps, state, rules);
       lastActive = m.minute;
     }
     out.add(GaitMinute(m.minute, m.steps, state));

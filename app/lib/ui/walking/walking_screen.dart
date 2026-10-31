@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/live_walker.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/follow.dart';
 import '../../domain/gait.dart';
 import '../../domain/journey.dart';
+import '../../domain/live_walk.dart';
 import '../../domain/milestones.dart';
 import '../../domain/rules.dart';
 import '../../domain/walk_record.dart';
@@ -23,7 +25,8 @@ import '../walk_record/walk_record_screen.dart';
 
 /// 걷는 중. 열 때 걷기 시작 시각을 적고, rules.walkingRefreshSec마다 동기화해서
 /// 이번 걷기의 걸음·거리를 새로 받는다. 보이는 거리는 새 값을 향해 부드럽게 따라간다.
-/// 걸음 센서를 바로 읽는 방식은 나중에 붙인다
+/// health 기록은 늦게 들어오므로, 기기 걸음 센서(LiveWalker)가 있으면 걸음·거리는 둘 중 큰 쪽,
+/// 분당 걸음과 걷기/뛰기는 센서 기준으로 보여 준다. 진행 바·남은 km·도착은 동기화 값 그대로
 class WalkingScreen extends ConsumerStatefulWidget {
   const WalkingScreen({super.key});
 
@@ -42,6 +45,9 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   /// 화면에 보이는 이번 걷기 거리(m)와 마지막으로 받은 이번 걷기 기록
   var _shownM = 0.0;
   WalkRecord? _record;
+
+  /// 기기 걸음 센서. 센서나 권한이 없으면 값이 오지 않는다
+  LiveWalker? _live;
 
   /// 새 기록이 왔을 때 그때 남은 거리를 한 주기에 메우는 속도(m/s).
   /// 걷는 속도보다 크면 이 속도로 따라가서 한 주기 안에 목표에 닿는다
@@ -70,6 +76,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   @override
   void dispose() {
+    _live?.dispose();
     _timer?.cancel();
     _ticker.dispose();
     super.dispose();
@@ -79,6 +86,14 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     try {
       final rules = await ref.read(rulesProvider.future);
       if (!mounted) return;
+      final denied = ref.read(liveDeniedProvider.notifier);
+      _live = LiveWalker(
+        steps: ref.read(liveStepsProvider),
+        rules: rules,
+        clock: ref.read(clockProvider),
+        denied: () => denied.denied,
+        onDenied: () => denied.set(true),
+      )..start();
       _timer = Timer.periodic(Duration(seconds: rules.walkingRefreshSec), (_) => _refresh());
       await _refresh();
     } catch (e) {
@@ -128,13 +143,21 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     });
   }
 
+  /// 화면에 보이는 이번 걷기 숫자 (센서가 있으면 센서 값과 합친다)
+  WalkSummary? _summaryAt(DateTime now) {
+    final live = _live?.walk;
+    final health = _record?.summary;
+    return live == null ? health : liveSummary(health, live, now);
+  }
+
   void _onTick(Duration elapsed) {
     final rules = ref.read(rulesProvider).value;
     final dt = (elapsed - _lastTick).inMicroseconds / Duration.microsecondsPerSecond;
     _lastTick = elapsed;
     if (rules == null) return;
 
-    final summary = _record?.summary;
+    final now = ref.read(clockProvider)();
+    final summary = _summaryAt(now);
     final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
     final shown = followDistance(
       _shownM,
@@ -143,7 +166,6 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
       dt,
       rules.walkingRefreshSec.toDouble(),
     );
-    final now = ref.read(clockProvider)();
     // 거리가 움직이거나 초가 바뀔 때만 다시 그린다
     final secondChanged =
         now.difference(_start).inSeconds != _now.difference(_start).inSeconds;
@@ -175,7 +197,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     if (rules == null || landmarks == null || snap == null || position == null) {
       return const Scaffold(body: SizedBox.expand());
     }
-    final summary = _record?.summary;
+    final summary = _summaryAt(_now);
     final running = summary != null && summary.lastSteps > 0 && summary.lastGait == Gait.run;
 
     return Scaffold(

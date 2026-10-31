@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>걸은 만큼 화가가 명소로 여행할 수 있도록 건강 앱의 걸음 수를 읽어요.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>걸으면서 걸음 수를 바로 보여 주려고 동작 정보를 읽어요</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

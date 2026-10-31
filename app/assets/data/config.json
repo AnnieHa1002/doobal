@@ -3,6 +3,7 @@
  "gait": { "walkMaxSpm": 130, "runMinSpm": 140, "walkStrideM": 0.7, "runStrideM": 1.0 },
  "session": { "maxGapMin": 2, "minMin": 10, "minSteps": 1000, "maxPerDay": 3 },
  "sync": { "refetchHours": 48, "walkingRefreshSec": 30 },
+ "live": { "cadenceWindowSec": 30 },
  "route": {
   "seaFactor": 0.3333333333,
   "earthRadiusKm": 6371.0088,
