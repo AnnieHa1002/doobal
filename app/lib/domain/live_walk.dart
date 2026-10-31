@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'bucket.dart';
 import 'gait.dart';
 import 'rules.dart';
 import 'walk_record.dart';
@@ -27,6 +28,9 @@ class LiveWalk {
   DateTime? _lastStepAt;
   final _gains = <_Gain>[];
 
+  /// (UTC epoch 분, 걷기/뛰기)별로 쌓은 걸음. 걷기 기록이 health 대신 쓰는 분 단위 값
+  final _buckets = <(int, Gait), int>{};
+
   /// 기준값을 잡았는가 (센서가 값을 주고 있다)
   bool get active => _last != null;
 
@@ -35,6 +39,16 @@ class LiveWalk {
 
   /// 늘어난 걸음 × 그때의 보폭을 쌓은 거리(m)
   double get distanceM => _distanceM;
+
+  /// 센 걸음을 분(UTC epoch 분)·걷기/뛰기별로 쌓은 목록, 분 순서(같은 분이면 걷기가 먼저).
+  /// 증가분의 보폭을 정한 걷기/뛰기로 나눠 담아서, 한 분 안에서 걷기/뛰기가 바뀌면 그 분이 두 번 나온다
+  /// (그래야 Σ 걸음 × 보폭이 [distanceM]과 정확히 같다). [rebase]로 기준을 다시 잡아도 쌓인 값은 그대로.
+  /// 걷기 기록(summarizeWalk·splitLaps)이 health 기록이 늦을 때 이 값을 쓴다
+  List<GaitMinute> get minutes {
+    final keys = _buckets.keys.toList()
+      ..sort((a, b) => a.$1 != b.$1 ? a.$1.compareTo(b.$1) : a.$2.index.compareTo(b.$2.index));
+    return [for (final k in keys) GaitMinute(k.$1, _buckets[k]!, k.$2)];
+  }
 
   /// 마지막으로 판정한 걷기/뛰기. 걸음이 없던 동안에는 그대로 둔다 (그래서 달리는 중인지는 분당 걸음 > 0도 본다)
   Gait get gait => _gait;
@@ -59,6 +73,7 @@ class LiveWalk {
       ..removeWhere((g) => !_inWindow(g.at, at))
       ..add(_Gain(at, gain));
     _gait = judgeGait(stepsPerMin(at), _gait, rules);
+    _buckets.update((epochMinute(at), _gait), (n) => n + gain, ifAbsent: () => gain);
     _steps += gain;
     _distanceM += gain * strideM(_gait, rules);
   }

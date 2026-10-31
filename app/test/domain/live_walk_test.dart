@@ -1,3 +1,4 @@
+import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/gait.dart';
 import 'package:doobal/domain/live_walk.dart';
 import 'package:doobal/domain/walk_record.dart';
@@ -209,6 +210,110 @@ void main() {
       w.rebase();
       _feed(w, 90, 900);
       expect(w.distanceM, closeTo(20 * 0.7, 1e-9));
+    });
+  });
+
+  group('minutes: 분·걷기/뛰기별로 쌓은 걸음 (걷기 기록이 health 대신 쓴다)', () {
+    // _t0 = 01:00:00. 분 번호는 첫 분 기준 상대값으로 본다
+    final m0 = epochMinute(_t0);
+
+    /// (분 - m0, 걸음, 걷기/뛰기)로 줄여서 비교한다
+    List<(int, int, Gait)> shape(LiveWalk w) =>
+        [for (final m in w.minutes) (m.minute - m0, m.steps, m.gait)];
+
+    test('센 게 없거나 기준값만 받았으면 비어 있다 (첫 값은 버킷을 만들지 않는다)', () {
+      final w = LiveWalk(rules);
+      expect(w.minutes, isEmpty);
+      _feed(w, 0, 123456);
+      expect(w.minutes, isEmpty);
+      // 같은 값이 또 와도 증가가 없다
+      _feed(w, 5, 123456);
+      expect(w.minutes, isEmpty);
+    });
+
+    test('다른 두 분의 증가는 버킷 둘: 0분 10+15 = 25보, 1분 20보', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 10, 1010);
+      _feed(w, 50, 1025);
+      // 60초부터는 1분
+      _feed(w, 70, 1045);
+      expect(shape(w), [(0, 25, Gait.walk), (1, 20, Gait.walk)]);
+      expect(w.steps, 45);
+    });
+
+    test('한 분 안에서 걷기에서 뛰기로 바뀌면 그 분이 두 번 나온다 (걷기 먼저)', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      // 10초에 35보: 창 35보 → 70 → 걷기. 20초에 35보 더: 창 70보 → 140 → 뛰기
+      _feed(w, 10, 35);
+      _feed(w, 20, 70);
+      // 25초에 10보 더: 창 80보 → 160 → 뛰기
+      _feed(w, 25, 80);
+      expect(shape(w), [(0, 35, Gait.walk), (0, 45, Gait.run)]);
+    });
+
+    test('Σ 걸음 × 보폭은 distanceM과 같다: 35 × 0.7 + 45 × 1.0 = 24.5 + 45 = 69.5m', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      _feed(w, 10, 35);
+      _feed(w, 20, 70);
+      _feed(w, 25, 80);
+      expect(w.distanceM, closeTo(69.5, 1e-9));
+      expect(distanceM(w.minutes, rules), closeTo(69.5, 1e-9));
+      expect(w.minutes.fold(0, (sum, m) => sum + m.steps), w.steps);
+    });
+
+    test('분 순서로 돌려주고, 같은 분이면 걷기가 먼저다 (뛰다가 걷기로 내려와도)', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      _feed(w, 10, 35); // 창 35보 → 70 → 걷기: 0분 걷기 35
+      _feed(w, 20, 70); // 창 70보 → 140 → 뛰기: 0분 뛰기 35
+      _feed(w, 40, 103); // 10초 증가는 창 밖, 20초(35) + 33 = 68보 → 136 → 직전(뛰기): 0분 뛰기 +33
+      _feed(w, 60, 143); // 20초 증가도 창 밖, 40초(33) + 40 = 73보 → 146 → 뛰기: 1분 뛰기 40
+      _feed(w, 75, 168); // 40초(33)도 창 밖, 60초(40) + 25 = 65보 → 130 → 걷기: 1분 걷기 25
+      // 1분은 뛰기가 먼저 들어왔지만 걷기를 앞에 둔다
+      expect(shape(w), [
+        (0, 35, Gait.walk),
+        (0, 68, Gait.run),
+        (1, 25, Gait.walk),
+        (1, 40, Gait.run),
+      ]);
+      // 35 × 0.7 + 68 × 1.0 + 25 × 0.7 + 40 × 1.0 = 24.5 + 68 + 17.5 + 40 = 150m
+      expect(w.distanceM, closeTo(150, 1e-9));
+      expect(distanceM(w.minutes, rules), closeTo(150, 1e-9));
+      expect(w.steps, 168);
+    });
+
+    test('rebase·재부팅 뒤에도 쌓인 버킷은 그대로, 새로 센 것은 이어서 쌓인다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 10, 1010);
+      expect(shape(w), [(0, 10, Gait.walk)]);
+
+      w.rebase();
+      expect(shape(w), [(0, 10, Gait.walk)]);
+      // 한 시간 뒤 돌아온 첫 값은 기준값이라 버킷이 늘지 않는다
+      _feed(w, 3600, 1810);
+      expect(shape(w), [(0, 10, Gait.walk)]);
+      // 그다음 증가는 61분 버킷
+      _feed(w, 3605, 1820);
+      expect(shape(w), [(0, 10, Gait.walk), (60, 10, Gait.walk)]);
+
+      // 재부팅(값이 작아짐)도 기준만 다시 잡는다
+      _feed(w, 3610, 5);
+      _feed(w, 3615, 12);
+      expect(shape(w), [(0, 10, Gait.walk), (60, 17, Gait.walk)]);
+    });
+
+    test('돌려준 목록은 그 시점의 복사본이다 (이후 센 걸음이 섞이지 않는다)', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      _feed(w, 10, 20);
+      final snapshot = w.minutes;
+      _feed(w, 20, 50);
+      expect(snapshot.single.steps, 20);
+      expect(w.minutes.single.steps, 50);
     });
   });
 

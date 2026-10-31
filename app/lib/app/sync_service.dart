@@ -1070,8 +1070,16 @@ class SyncService {
 
   /// 걷기 기록: [fromUtc, toUtc)와 겹치는 분의 걸음·거리·걷기/달리기와 걷기 1번 인정 여부.
   /// 동기화는 하지 않는다. 부른 쪽이 먼저 sync 한다.
-  /// 하루 계산(_recomputeDays)처럼 전날 0시부터 불러 걷기/뛰기 상태를 이어 판정한다
-  Future<WalkRecord> walkRecord(DateTime fromUtc, DateTime toUtc) async {
+  /// 하루 계산(_recomputeDays)처럼 전날 0시부터 불러 걷기/뛰기 상태를 이어 판정한다.
+  /// [live]는 걷는 중 화면 센서가 센 이번 걷기의 분 단위 걸음(LiveWalk.minutes). health 기록은
+  /// 늦게 들어와서 걷기를 마친 직후엔 걷는 중 화면보다 모자랄 수 있으므로, 센서 쪽 걸음이 더 많으면
+  /// 걸음·거리·걸은 분·뛴 비율·랩을 통째로 센서 값으로 낸다 (센서는 앱이 앞에 있는 동안만 세서
+  /// 거꾸로 health가 더 많을 수도 있다). 걷기 1번 인정(sessions)과 오늘 인정 수는 저장된 값 그대로다
+  Future<WalkRecord> walkRecord(
+    DateTime fromUtc,
+    DateTime toUtc, {
+    List<GaitMinute> live = const [],
+  }) async {
     final fromMin = epochMinute(fromUtc);
     // 끝 시각이 걸친 분도 포함 (올림)
     final toMin = (toUtc.millisecondsSinceEpoch + Duration.millisecondsPerMinute - 1) ~/
@@ -1080,9 +1088,13 @@ class SyncService {
       epochMinute(kstDayStartUtc(addDays(kstDayKey(fromUtc), -1))),
       beforeMinute: toMin,
     );
-    final gaits = classifyGait(minutes, rules);
-    final summary = summarizeWalk(gaits, fromMin, toMin, rules);
-    final laps = splitLaps(gaits, fromMin, toMin, rules);
+    final numbers = pickWalkNumbers(
+      health: classifyGait(minutes, rules),
+      live: live,
+      fromMinute: fromMin,
+      toMinute: toMin,
+      rules: rules,
+    );
 
     final fromMs = fromMin * Duration.millisecondsPerMinute;
     final toMs = toMin * Duration.millisecondsPerMinute;
@@ -1095,10 +1107,10 @@ class SyncService {
         .getSingleOrNull();
 
     return WalkRecord(
-      summary,
+      numbers.summary,
       [for (final r in rows) _sessionOf(r)],
       today?.countedSessions ?? 0,
-      laps: laps,
+      laps: numbers.laps,
     );
   }
 

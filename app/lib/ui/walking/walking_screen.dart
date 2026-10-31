@@ -183,6 +183,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
         start: _start,
         end: ref.read(clockProvider)(),
         ratioBefore: _ratioBefore,
+        liveMinutes: _live?.walk.minutes ?? const [],
       ),
     ));
   }

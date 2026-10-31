@@ -5,6 +5,7 @@ import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/domain/bucket.dart';
+import 'package:doobal/domain/gait.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/landmark.dart';
@@ -448,6 +449,86 @@ void main() {
       expect(r.summary.steps, 675);
       expect(r.summary.runRatio, 1.0);
       expect(r.summary.distanceM, closeTo(675, 1e-9));
+    });
+
+    group('센서(live)가 넘긴 이번 걷기의 분 단위 걸음', () {
+      /// start부터 분당 [steps]보로 [count]분 센 센서 값
+      List<GaitMinute> sensor(DateTime start, int count, int steps, Gait gait) => [
+            for (var i = 0; i < count; i++) GaitMinute(epochMinute(start) + i, steps, gait),
+          ];
+
+      test('health가 모자라면 걸음·거리·걸은 분·랩이 모두 센서 값이다 (걷기 1번 인정은 health 그대로)', () async {
+        final e = await _env();
+        await e.svc.sync(_t0);
+        // health는 아직 100보/분 10분 = 1,000보, 700m뿐
+        e.source.records.add(_walk(t1, 10, 100));
+        await e.svc.sync(t2);
+
+        // 센서: 100보/분 10분 + 150보/분 5분 = 1,000 + 750 = 1,750보, 700 + 750 = 1,450m
+        final live = [...sensor(t1, 10, 100, Gait.walk), ...sensor(at(10), 5, 150, Gait.run)];
+        final r = await e.svc.walkRecord(t1, at(15), live: live);
+        expect(r.summary.steps, 1750);
+        expect(r.summary.distanceM, closeTo(1450, 1e-9));
+        expect(r.summary.activeMinutes, 15);
+        expect(r.summary.runSteps, 750);
+        // 1km는 12분 끝(720초, 걸음 1,300), 남은 450m는 900 - 720 = 180초, 걸음 450
+        expect(r.laps.map((l) => l.duration.inSeconds), [720, 180]);
+        expect(r.laps.map((l) => l.steps), [1300, 450]);
+        // 걷기 구간은 저장된 health 기록 그대로 (10분짜리, 인정)
+        final s = r.sessions.single;
+        expect(s.start, t1);
+        expect(s.end, at(10));
+        expect(s.counted, isTrue);
+        expect(r.countedToday, 1);
+      });
+
+      test('health가 아직 하나도 안 들어왔어도 센서 값으로 나오고, 걷기 구간은 없다', () async {
+        final e = await _env();
+        await e.svc.sync(_t0);
+
+        // 100보/분 10분 = 1,000보 = 700m라 1km를 못 채워 부분 랩 하나 (600초, 1,000보)
+        final r = await e.svc.walkRecord(t1, at(10), live: sensor(t1, 10, 100, Gait.walk));
+        expect(r.summary.steps, 1000);
+        expect(r.summary.distanceM, closeTo(700, 1e-9));
+        expect(r.laps, hasLength(1));
+        expect(r.laps.single.partial, isTrue);
+        expect(r.laps.single.duration, const Duration(seconds: 600));
+        expect(r.laps.single.steps, 1000);
+        expect(r.sessions, isEmpty);
+        expect(r.countedToday, 0);
+      });
+
+      test('health가 더 많으면 health 값 그대로 (센서는 앱이 앞에 있는 동안만 센다)', () async {
+        final e = await _env();
+        await e.svc.sync(_t0);
+        e.source.records.add(_walk(t1, 15, 100));
+        await e.svc.sync(t2);
+
+        // 센서는 100보/분 14분 = 1,400보(뛰기로 쌓여 1,400m)로 health의 1,500보보다 적다
+        // → health: 1,500보, 1,050m, 랩 857초 + 43초
+        final r = await e.svc.walkRecord(t1, at(15), live: sensor(t1, 14, 100, Gait.run));
+        expect(r.summary.steps, 1500);
+        expect(r.summary.distanceM, closeTo(1050, 1e-9));
+        expect(r.summary.runSteps, 0);
+        expect(r.laps.map((l) => l.duration.inSeconds), [857, 43]);
+        expect(r.laps.map((l) => l.steps), [1429, 71]);
+      });
+
+      test('걸음이 같으면 health, live를 안 넘기면 health만', () async {
+        final e = await _env();
+        await e.svc.sync(_t0);
+        e.source.records.add(_walk(t1, 10, 100));
+        await e.svc.sync(t2);
+
+        // 센서도 1,000보지만 뛰기로 쌓여 1,000m: 같으면 health의 700m
+        final tie = await e.svc.walkRecord(t1, at(10), live: sensor(t1, 10, 100, Gait.run));
+        expect(tie.summary.steps, 1000);
+        expect(tie.summary.distanceM, closeTo(700, 1e-9));
+
+        final none = await e.svc.walkRecord(t1, at(10));
+        expect(none.summary.steps, 1000);
+        expect(none.summary.distanceM, closeTo(700, 1e-9));
+      });
     });
 
     test('자정을 넘어도 전날 분까지 불러 상태를 이어 본다', () async {

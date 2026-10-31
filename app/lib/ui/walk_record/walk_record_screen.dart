@@ -25,7 +25,9 @@ const _barDuration = Duration(milliseconds: 1200);
 /// 걷기 기록 (걷기 마치기 직후). 열자마자 동기화를 한 번 하고 [start, end)의 기록을 계산한다.
 /// [ratioBefore]는 걷기 전 여정 진행 비율 (여정이 없으면 null).
 /// [review]는 노트에서 지난 걷기를 다시 보는 모드: 동기화하지 않고(마지막 동기화 시각이 과거로
-/// 돌아가지 않게), 진행 막대 연출과 `쉼터로` 대신 뒤로 가기만 둔다
+/// 돌아가지 않게), 진행 막대 연출과 `쉼터로` 대신 뒤로 가기만 둔다.
+/// [liveMinutes]는 걷는 중 화면 센서가 센 이번 걷기의 분 단위 걸음: health 기록이 아직 모자라면
+/// 이 값이 걸음·거리·랩이 된다 (다시 볼 때는 health가 다 들어와 있어서 넘기지 않는다)
 class WalkRecordScreen extends ConsumerStatefulWidget {
   const WalkRecordScreen({
     super.key,
@@ -33,12 +35,14 @@ class WalkRecordScreen extends ConsumerStatefulWidget {
     required this.end,
     required this.ratioBefore,
     this.review = false,
+    this.liveMinutes = const [],
   });
 
   final DateTime start;
   final DateTime end;
   final double? ratioBefore;
   final bool review;
+  final List<GaitMinute> liveMinutes;
 
   @override
   ConsumerState<WalkRecordScreen> createState() => _WalkRecordScreenState();
@@ -62,7 +66,7 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
     try {
       final svc = await ref.read(syncServiceProvider.future);
       if (!widget.review) await svc.sync(widget.end);
-      final record = await svc.walkRecord(widget.start, widget.end);
+      final record = await svc.walkRecord(widget.start, widget.end, live: widget.liveMinutes);
       final nth =
           widget.review ? await ref.read(statsServiceProvider).countedNth(widget.start) : null;
       // 기다리는 동안 화면을 떠났으면 ref를 더 쓰지 않는다

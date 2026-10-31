@@ -561,6 +561,56 @@ void main() {
         await _end(tester, e);
       });
 
+      testWidgets('걷기 마치기 직후 걷기 기록은 센서 걸음을 보인다 (health 기록이 아직 모자라도)',
+          (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+
+        // 14초마다 20보씩 4번: 80보 = 56m, 한 분 안이라 걸은 분은 1분 (분당 80보)
+        e.live.push(0);
+        for (var i = 1; i <= 4; i++) {
+          await sensorTo(tester, e, 14, i * 20);
+        }
+        expect(find.text('80보'), findsOneWidget);
+        // health(Health Connect)는 아직 30보만 들어왔다 (21m)
+        e.source.records.add(_walk(_t1, 1, 30));
+
+        await tester.tap(find.text('걷기 마치기'));
+        await _transition(tester);
+        await _settle(tester, () => find.text('80').evaluate().isNotEmpty);
+
+        expect(find.text('걷기 기록'), findsOneWidget);
+        expect(find.text('80'), findsOneWidget);
+        expect(find.text('0.06 km'), findsOneWidget);
+        // 평균 줄도 센서 기준: 56초에 56m라 1,000초/km = 16'40", 80보 ÷ 1분
+        expect(find.text('평균 페이스 16\'40"/km · 평균 분당 걸음 80보'), findsOneWidget);
+        expect(find.text('30'), findsNothing);
+        await _end(tester, e);
+      });
+
+      testWidgets('걷기 마치기 직후 health 걸음이 센서보다 많으면 걷기 기록은 health 값이다', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+
+        e.live.push(0);
+        await sensorTo(tester, e, 5, 30);
+        expect(find.text('30보'), findsOneWidget);
+        // 10분 × 100보 = 1,000보, 700m가 들어와서 센서(30보)보다 크다
+        await walkAndRefresh(tester, e, 10, 100);
+        expect(find.text('1,000보'), findsOneWidget);
+
+        await tester.tap(find.text('걷기 마치기'));
+        await _transition(tester);
+        await _settle(tester, () => find.text('1,000').evaluate().isNotEmpty);
+
+        expect(find.text('1,000'), findsOneWidget);
+        expect(find.text('0.70 km'), findsOneWidget);
+        expect(find.text('30'), findsNothing);
+        await _end(tester, e);
+      });
+
       testWidgets('앱이 뒤로 갔다 오면 새 기준값부터 센다 (꺼져 있던 동안의 걸음은 화면에 안 들어간다)',
           (tester) async {
         final e = _Env();
