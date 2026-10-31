@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
     <!-- 걷는 중 화면의 실시간 걸음: 기기 걸음 센서(STEP_COUNTER) 읽기. 안드로이드 10 이상은 런타임 권한 -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- 걷는 중 상시 알림: 포그라운드 서비스(건강 유형)로 앱을 살려 둔다. 안드로이드 14 이상은 유형별 권한이 따로 필요 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <!-- 알림 표시: 안드로이드 13 이상은 런타임 권한 (시작 흐름의 알림 권한 화면에서 묻는다) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:label="두발"
@@ -47,6 +52,13 @@
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity-alias>
+        <!-- 걷는 중 상시 알림의 포그라운드 서비스 (flutter_local_notifications가 제공).
+             stopWithTask: 앱을 화면에서 밀어 끄면 서비스(와 알림)도 끝난다. 앱이 종료되면 본격 걷기도 끝난다 -->
+        <service
+            android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="health"
+            android:stopWithTask="true" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

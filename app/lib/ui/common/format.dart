@@ -2,16 +2,8 @@ import '../../domain/arrival.dart';
 import '../../domain/journey.dart' show Frame;
 import '../../domain/time_kst.dart';
 
-/// 1234567 → '1,234,567'
-String formatInt(int n) {
-  final digits = n.abs().toString();
-  final out = StringBuffer(n < 0 ? '-' : '');
-  for (var i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 == 0) out.write(',');
-    out.write(digits[i]);
-  }
-  return out.toString();
-}
+// formatInt는 data(알림 문구)도 써서 domain에 두고, 화면은 이 파일에서 그대로 쓴다
+export '../../domain/format_int.dart';
 
 /// 12.34 → '12.3 km'
 String formatKm(double km, {int digits = 1}) => '${km.toStringAsFixed(digits)} km';

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/live_walker.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../data/walk_notice.dart';
 import '../../domain/follow.dart';
 import '../../domain/gait.dart';
 import '../../domain/journey.dart';
@@ -27,7 +28,8 @@ import '../walk_record/walk_record_screen.dart';
 /// 이번 걷기의 걸음·거리를 새로 받는다. 보이는 거리는 새 값을 향해 부드럽게 따라간다.
 /// health 기록은 늦게 들어오므로, 기기 걸음 센서(LiveWalker)가 있으면 걸음·거리는 둘 중 큰 쪽,
 /// 분당 걸음과 걷기/뛰기는 센서 기준으로 보여 준다. 진행 바·남은 km·도착은 동기화 값 그대로.
-/// 화면이 꺼져 있던 동안 센 걸음은 앱이 돌아올 때 한꺼번에 들어오고, 그때 거리는 바로 맞춘다
+/// 화면이 꺼져 있던 동안 센 걸음은 앱이 돌아올 때 한꺼번에 들어오고, 그때 거리는 바로 맞춘다.
+/// 안드로이드는 걷는 동안 상시 알림(포그라운드 서비스)으로 앱을 살려 두고, 알림에 걸음을 보여 준다
 class WalkingScreen extends ConsumerStatefulWidget {
   const WalkingScreen({super.key});
 
@@ -50,6 +52,13 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   /// 기기 걸음 센서. 센서나 권한이 없으면 값이 오지 않는다
   LiveWalker? _live;
 
+  /// 걷는 중 상시 알림. 켰을 때만(_noticeOn) 마지막으로 새로 쓴 걸음과 그 시각을 적어 두고,
+  /// rules.liveNoticeUpdateSec초에 한 번까지만 새로 쓴다
+  late final WalkNotice _notice;
+  var _noticeOn = false;
+  var _noticeSteps = 0;
+  DateTime? _noticeAt;
+
   /// 마지막으로 본 LiveWalk.catchUps. 바뀌면 숨어 있던 동안의 걸음이 들어온 것이라 거리를 바로 맞춘다
   var _catchUps = 0;
 
@@ -68,6 +77,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   void initState() {
     super.initState();
     final clock = ref.read(clockProvider);
+    _notice = ref.read(walkNoticeProvider);
     _start = _now = clock();
     _ratioBefore = ref.read(snapshotProvider).value?.journey?.progress.ratio;
     _ticker = createTicker(_onTick)..start();
@@ -80,6 +90,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   @override
   void dispose() {
+    _noticeOn = false;
+    _notice.stop();
     _live?.dispose();
     _timer?.cancel();
     _ticker.dispose();
@@ -91,18 +103,47 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
       final rules = await ref.read(rulesProvider.future);
       if (!mounted) return;
       final denied = ref.read(liveDeniedProvider.notifier);
-      _live = LiveWalker(
+      final live = _live = LiveWalker(
         steps: ref.read(liveStepsProvider),
         rules: rules,
         clock: ref.read(clockProvider),
         denied: () => denied.denied,
         onDenied: () => denied.set(true),
-      )..start();
+        // 화면이 꺼져 있는 동안은 센서가 센 걸음으로 알림만 새로 쓴다 (줄어들지는 않게)
+        onHiddenSteps: (steps) => _pushNotice(math.max(_noticeSteps, steps)),
+      );
+      live.start().then((_) => _startNotice(live));
       _timer = Timer.periodic(Duration(seconds: rules.walkingRefreshSec), (_) => _refresh());
       await _refresh();
     } catch (e) {
       debugPrint('걷는 중 시작 실패: $e');
     }
+  }
+
+  /// 센서를 읽을 수 있으면 상시 알림을 시작한다 (센서 권한이 없으면 안드로이드 14가
+  /// 건강 서비스를 못 띄우게 하므로 시작하지 않는다)
+  void _startNotice(LiveWalker live) {
+    if (!mounted || !live.ready) return;
+    final now = ref.read(clockProvider)();
+    _noticeSteps = _summaryAt(now)?.steps ?? 0;
+    _noticeAt = now;
+    _noticeOn = true;
+    _notice.start(_start, _noticeSteps);
+  }
+
+  /// 알림의 걸음을 [steps]로 새로 쓴다. 바뀐 값만, rules.liveNoticeUpdateSec초에 한 번까지
+  void _pushNotice(int steps) {
+    if (!_noticeOn || steps == _noticeSteps) return;
+    final rules = ref.read(rulesProvider).value;
+    final now = ref.read(clockProvider)();
+    final last = _noticeAt;
+    if (rules == null ||
+        (last != null && now.difference(last) < Duration(seconds: rules.liveNoticeUpdateSec))) {
+      return;
+    }
+    _noticeAt = now;
+    _noticeSteps = steps;
+    _notice.update(steps);
   }
 
   Future<void> _refresh() async {
@@ -162,6 +203,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
     final now = ref.read(clockProvider)();
     final summary = _summaryAt(now);
+    _pushNotice(summary?.steps ?? 0);
     final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
     var shown = followDistance(
       _shownM,
@@ -187,6 +229,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   }
 
   void _finish() {
+    _noticeOn = false;
+    _notice.stop();
     // 이 화면을 걷기 기록으로 바꾼다. 마지막 동기화와 기록 계산은 걷기 기록 화면이 한다
     Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
       builder: (_) => WalkRecordScreen(

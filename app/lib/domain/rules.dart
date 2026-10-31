@@ -91,6 +91,7 @@ class Rules {
     required this.refetchHours,
     required this.walkingRefreshSec,
     required this.liveCadenceWindowSec,
+    required this.liveNoticeUpdateSec,
     required this.lapKm,
     required this.seaFactor,
     required this.earthRadiusKm,
@@ -158,6 +159,9 @@ class Rules {
 
   /// 걸음 센서로 분당 걸음을 낼 때 보는 최근 시간(초) (config live.cadenceWindowSec)
   final int liveCadenceWindowSec;
+
+  /// 걷는 중 상시 알림(안드로이드)의 걸음 수를 새로 쓰는 가장 짧은 간격(초) (config live.noticeUpdateSec)
+  final int liveNoticeUpdateSec;
 
   /// 걷기 기록의 랩 길이(km) (config record.lapKm)
   final double lapKm;
@@ -327,6 +331,7 @@ class Rules {
       refetchHours: sync['refetchHours'] as int,
       walkingRefreshSec: sync['walkingRefreshSec'] as int,
       liveCadenceWindowSec: live['cadenceWindowSec'] as int,
+      liveNoticeUpdateSec: live['noticeUpdateSec'] as int,
       lapKm: _d(record['lapKm']),
       seaFactor: _d(route['seaFactor']),
       earthRadiusKm: _d(route['earthRadiusKm']),

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 릴리스 빌드가 안 쓰는 리소스를 지울 때 알림 아이콘을 남긴다 (Dart에서 이름 문자열로만 부른다) -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_walk" />

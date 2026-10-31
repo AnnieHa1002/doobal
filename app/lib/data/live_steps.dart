@@ -21,8 +21,9 @@ abstract class LiveSteps {
 /// 안드로이드 STEP_COUNTER / iOS CMPedometer (pedometer 패키지).
 /// 안드로이드 ACTIVITY_RECOGNITION 런타임 권한은 MainActivity의 채널로 묻는다.
 /// iOS는 따로 묻지 않고 구독할 때 시스템이 동작 권한을 묻는다 (거부하면 값이 오지 않는다).
-/// 앱이 숨어 있던 동안의 걸음은 다시 구독해서 받는 값에 들어 있다. 숨어 있는 사이 앱 프로세스가
-/// 종료되면 이 센서는 그 걸음을 놓친다 (health에는 남는다).
+/// 앱이 숨어 있어도 구독을 이어 가면 값이 계속 온다 (안드로이드는 걷는 중 상시 알림이 앱을 살려 둔다.
+/// iOS는 앱이 멈춰 있는 동안 오지 않고, 돌아오면 누적값에 그 사이 걸음이 들어 있다).
+/// 숨어 있는 사이 앱 프로세스가 종료되면 이 센서는 그 걸음을 놓친다 (health에는 남는다).
 /// 휴대폰이 아닌 곳(테스트·데스크톱)에서는 센서도 권한도 없다
 class PedometerLiveSteps implements LiveSteps {
   const PedometerLiveSteps();

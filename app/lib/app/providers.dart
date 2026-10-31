@@ -10,6 +10,7 @@ import '../data/config_loader.dart';
 import '../data/db/app_db.dart';
 import '../data/landmark_loader.dart';
 import '../data/live_steps.dart';
+import '../data/local_notifications.dart';
 import '../data/map_loader.dart';
 import '../data/milestone_loader.dart';
 import '../data/notice_loader.dart';
@@ -21,6 +22,7 @@ import '../data/prop_loader.dart';
 import '../data/sigungu_loader.dart';
 import '../data/step_source.dart';
 import '../data/theme_loader.dart';
+import '../data/walk_notice.dart';
 import '../domain/camp_theme.dart';
 import '../domain/landmark.dart';
 import '../domain/look.dart';
@@ -122,9 +124,19 @@ final paintingSharerProvider =
 /// TODO(M5): Firestore config/moderation에서 받은 목록으로 바꾼다
 final extraBlockedWordsProvider = Provider<List<String>>((ref) => starterWords);
 
-/// M6에서 flutter_local_notifications로 바꾼다 (지금은 늘 거부로 답하는 자리표시)
-final notificationPermissionProvider =
-    Provider<NotificationPermission>((ref) => const PlaceholderNotificationPermission());
+/// 앱이 같이 쓰는 flutter_local_notifications 플러그인 하나 (알림 권한, 걷는 중 상시 알림).
+/// 처음 쓸 때 한 번 초기화한다
+final localNotificationsProvider = Provider<LocalNotifications>((ref) => LocalNotifications());
+
+/// 알림 권한 묻기. 휴대폰이 아닌 곳에서는 묻지 않고 거부로 답한다
+final notificationPermissionProvider = Provider<NotificationPermission>(
+    (ref) => LocalNotificationPermission(ref.watch(localNotificationsProvider)));
+
+/// 걷는 중 상시 알림 + 포그라운드 서비스(안드로이드). 걷는 동안 앱이 백그라운드에서 죽지 않게 한다.
+/// iOS·그 밖에서는 아무것도 하지 않는다
+final walkNoticeProvider = Provider<WalkNotice>((ref) => Platform.isAndroid
+    ? AndroidWalkNotice(ref.watch(localNotificationsProvider), ref.watch(liveStepsProvider))
+    : const NoopWalkNotice());
 
 /// 지금 알림 권한이 허용돼 있는가. 모르면 null (설정 화면의 권한 줄). 권한을 다시 물은 뒤에는 invalidate 한다
 final notificationGrantedProvider = FutureProvider.autoDispose<bool?>(

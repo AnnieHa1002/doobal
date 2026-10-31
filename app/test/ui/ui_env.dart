@@ -6,6 +6,7 @@ import 'package:doobal/data/live_steps.dart';
 import 'package:doobal/data/notifier.dart';
 import 'package:doobal/data/painting_sharer.dart';
 import 'package:doobal/data/step_source.dart';
+import 'package:doobal/data/walk_notice.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
@@ -80,6 +81,9 @@ class UiEnv {
   /// 앱이 보내거나 예약한 시스템 알림 (아무것도 안 띄우는 자리표시가 받은 부름)
   final notifier = PlaceholderNotifier();
 
+  /// 걷는 중 상시 알림 (실제로는 띄우지 않고 부름만 기록한다)
+  final walkNotice = FakeWalkNotice();
+
   /// 앱이 연 휴대폰 설정 (실제로는 열지 않는다)
   final appSettings = FakeAppSettingsOpener();
 
@@ -104,6 +108,7 @@ class UiEnv {
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
         liveStepsProvider.overrideWithValue(live),
+        walkNoticeProvider.overrideWithValue(walkNotice),
         clockProvider.overrideWithValue(() => now),
       ];
 

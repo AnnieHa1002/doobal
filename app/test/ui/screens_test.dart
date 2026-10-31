@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:doobal/app/auto_sync.dart';
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/live_steps.dart';
 import 'package:doobal/data/step_source.dart';
+import 'package:doobal/data/walk_notice.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/route.dart';
@@ -38,10 +41,27 @@ StepRecord _walk(DateTime start, int minutes, int spm) => StepRecord(
       method: RecordingMethod.automatic,
     );
 
+/// 권한을 묻는 창의 답이 늦게 오는 센서 ([answer]를 끝내야 답한다)
+class _SlowLive extends FakeLiveSteps {
+  _SlowLive() : super(permitted: false);
+
+  final answer = Completer<bool>();
+
+  @override
+  Future<bool> requestPermission() {
+    permissionRequests++;
+    return answer.future;
+  }
+}
+
 /// 메모리 DB + 가짜 걸음 + 바꿀 수 있는 시계. 에셋은 모두 직접 넣는다
 /// (두 번째 testWidgets부터는 rootBundle 에셋이 로드되지 않는다)
 class _Env {
-  _Env() : db = AppDb(NativeDatabase.memory()), source = FakeStepSource(), now = _t1 {
+  _Env([FakeLiveSteps? live])
+      : db = AppDb(NativeDatabase.memory()),
+        source = FakeStepSource(),
+        live = live ?? FakeLiveSteps(),
+        now = _t1 {
     svc = SyncService(
       db: db,
       source: source,
@@ -56,7 +76,10 @@ class _Env {
   final FakeStepSource source;
 
   /// 기기 걸음 센서 (테스트가 값을 밀어 넣는다). 권한은 처음부터 있다
-  final live = FakeLiveSteps();
+  final FakeLiveSteps live;
+
+  /// 걷는 중 상시 알림 (부름만 기록한다)
+  final notice = FakeWalkNotice();
   late final SyncService svc;
   DateTime now;
 
@@ -74,6 +97,7 @@ class _Env {
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
         liveStepsProvider.overrideWithValue(live),
+        walkNoticeProvider.overrideWithValue(notice),
         clockProvider.overrideWithValue(() => now),
       ];
 
@@ -636,9 +660,10 @@ void main() {
         ]) {
           tester.binding.handleAppLifecycleStateChanged(s);
         }
-        expect(e.live.subscriptions, 2);
+        // 숨어 있어도 센서 구독은 그대로다 (센서 값이 오지 않았으니 처음 늘어나는 값이 따라잡는다)
+        expect(e.live.subscriptions, 1);
 
-        // 다시 읽으며 받은 값: 숨은 20분(1,200초)에 1,000보 → 분당 50 → 걷기 → 700m
+        // 앞으로 온 뒤 받은 값: 숨은 20분(1,200초)에 1,000보 → 분당 50 → 걷기 → 700m
         e.live.push(2010);
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
@@ -691,6 +716,221 @@ void main() {
 
         expect(e.live.permissionRequests, 1);
         expect(e.live.listeners, 0);
+        await _end(tester, e);
+      });
+    });
+
+    group('걷는 중 상시 알림', () {
+      /// 시계가 [sec]초 흐른 뒤 센서가 누적 걸음 [total]을 준다
+      Future<void> sensorTo(WidgetTester tester, _Env e, int sec, int total) async {
+        e.now = e.now.add(Duration(seconds: sec));
+        e.live.push(total);
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      /// 앱을 뒤로 보낸다 / 다시 앞으로 가져온다
+      void leave(WidgetTester tester) {
+        for (final s in [
+          AppLifecycleState.inactive,
+          AppLifecycleState.hidden,
+          AppLifecycleState.paused,
+        ]) {
+          tester.binding.handleAppLifecycleStateChanged(s);
+        }
+      }
+
+      void back(WidgetTester tester) {
+        for (final s in [
+          AppLifecycleState.hidden,
+          AppLifecycleState.inactive,
+          AppLifecycleState.resumed,
+        ]) {
+          tester.binding.handleAppLifecycleStateChanged(s);
+        }
+      }
+
+      testWidgets('센서 권한이 있으면 걷는 중에 들어올 때 알림을 시작한다 (걷기 시작 시각과 그때 걸음)',
+          (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+
+        expect(e.notice.starts, [(_t1, 0)]);
+        expect(e.notice.running, isTrue);
+        expect(e.notice.updates, isEmpty);
+        await _end(tester, e);
+      });
+
+      testWidgets('권한이 없으면 묻고, 허용되면 그 뒤에 알림을 시작한다', (tester) async {
+        final e = _Env(FakeLiveSteps(permitted: false));
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+
+        expect(e.live.permissionRequests, 1);
+        expect(e.notice.starts, [(_t1, 0)]);
+        await _end(tester, e);
+      });
+
+      testWidgets('센서 권한을 거부하면 알림을 시작하지 않고, 걸어도 건드리지 않는다', (tester) async {
+        final e = _Env(FakeLiveSteps(permitted: false, grantOnRequest: false));
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        expect(e.live.permissionRequests, 1);
+        expect(e.notice.starts, isEmpty);
+
+        // health 기록만으로 걸음이 올라가도 알림은 그대로다
+        await walkAndRefresh(tester, e, 10, 100);
+        expect(find.text('1,000보'), findsOneWidget);
+        expect(e.notice.starts, isEmpty);
+        expect(e.notice.updates, isEmpty);
+        expect(e.notice.running, isFalse);
+        await _end(tester, e);
+      });
+
+      testWidgets('걸음 갱신은 바뀐 값만, 5초(config)에 한 번까지 보낸다', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        expect(rules.liveNoticeUpdateSec, 5);
+
+        e.live.push(0); // 기준값 (0초)
+        await sensorTo(tester, e, 1, 10); // 1초: 마지막 갱신(시작, 0초) 뒤 1초라 아직
+        await sensorTo(tester, e, 3, 30); // 4초: 아직
+        expect(find.text('30보'), findsOneWidget);
+        expect(e.notice.updates, isEmpty);
+
+        await sensorTo(tester, e, 1, 40); // 5초: 5초가 찼다 → 40
+        expect(e.notice.updates, [40]);
+        await sensorTo(tester, e, 2, 60); // 7초: 갱신(5초) 뒤 2초라 아직
+        expect(find.text('60보'), findsOneWidget);
+        expect(e.notice.updates, [40]);
+
+        await sensorTo(tester, e, 3, 80); // 10초: 갱신(5초) 뒤 5초 → 80
+        expect(e.notice.updates, [40, 80]);
+
+        // 걸음이 그대로면 시간이 한참 지나도 보내지 않는다
+        await sensorTo(tester, e, 20, 80); // 30초
+        await sensorTo(tester, e, 20, 80); // 50초
+        expect(e.notice.updates, [40, 80]);
+        await _end(tester, e);
+      });
+
+      testWidgets('health 걸음이 더 크면 그 값(화면에 보이는 값)을 보낸다', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        e.live.push(0);
+        await sensorTo(tester, e, 5, 30);
+        expect(e.notice.updates, [30]);
+
+        // 10분 × 100보 = 1,000보가 health에 들어왔다
+        await walkAndRefresh(tester, e, 10, 100);
+        expect(find.text('1,000보'), findsOneWidget);
+        expect(e.notice.updates, [30, 1000]);
+        await _end(tester, e);
+      });
+
+      testWidgets('숨어 있는 동안은 센서 값으로 미리본 걸음을 같은 간격으로 보낸다', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        e.live.push(1000); // 기준값 (0초)
+        await sensorTo(tester, e, 6, 1010); // 6초: 10보 → 갱신
+        expect(e.notice.updates, [10]);
+
+        leave(tester); // 6초에 숨는다
+        // 9초: 센 10 + (1,060 - 1,010) = 60보지만 갱신(6초) 뒤 3초라 아직
+        e.now = e.now.add(const Duration(seconds: 3));
+        e.live.push(1060);
+        await tester.pump();
+        expect(e.notice.updates, [10]);
+
+        // 12초: 10 + (1,100 - 1,010) = 100보 → 갱신 뒤 6초라 보낸다
+        e.now = e.now.add(const Duration(seconds: 3));
+        e.live.push(1100);
+        await tester.pump();
+        expect(e.notice.updates, [10, 100]);
+        // 걷는 중 화면의 걸음은 그대로다 (돌아올 때 들어온다)
+        expect(find.text('10보'), findsOneWidget);
+
+        // 앞으로 오면 마지막 값(12초, 1,100)이 들어와서 화면 걸음이 알림과 같아진다
+        back(tester);
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('100보'), findsOneWidget);
+        expect(e.notice.updates, [10, 100]);
+        await _end(tester, e);
+      });
+
+      testWidgets('숨어 있는 동안 미리본 걸음이 이미 보낸 값보다 작으면 보내지 않는다 (줄어들지 않게)',
+          (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        e.live.push(0);
+        await sensorTo(tester, e, 5, 30); // 5초: 30보 → 갱신
+        // health에 1,000보가 들어와서 1,000을 보냈다
+        await walkAndRefresh(tester, e, 10, 100);
+        expect(e.notice.updates, [30, 1000]);
+
+        leave(tester);
+        // 센서 미리보기는 30 + (80 - 30) = 80보로 1,000보다 작다
+        e.now = e.now.add(const Duration(seconds: 10));
+        e.live.push(80);
+        await tester.pump();
+        expect(e.notice.updates, [30, 1000]);
+        await _end(tester, e);
+      });
+
+      testWidgets('걷기 마치기를 누르면 알림을 끄고, 그 뒤로는 갱신하지 않는다', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        expect(e.notice.running, isTrue);
+        expect(e.notice.stops, 0);
+
+        await tester.tap(find.text('걷기 마치기'));
+        await _transition(tester);
+        expect(e.notice.running, isFalse);
+        expect(e.notice.stops, greaterThanOrEqualTo(1));
+
+        // 센서 값이 더 와도 (화면이 나갔으니) 알림은 그대로다
+        e.live.push(1);
+        e.now = e.now.add(const Duration(seconds: 30));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(e.notice.updates, isEmpty);
+        await _end(tester, e);
+      });
+
+      testWidgets('걷는 중 화면이 사라지면(걷기 마치기 없이) 알림을 끈다', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        expect(e.notice.running, isTrue);
+        expect(e.notice.stops, 0);
+
+        await tester.pumpWidget(const SizedBox());
+        expect(e.notice.running, isFalse);
+        expect(e.notice.stops, 1);
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.runAsync(e.db.close);
+      });
+
+      testWidgets('센서 권한 답을 기다리는 사이 화면을 나가면 알림을 시작하지 않는다', (tester) async {
+        final live = _SlowLive();
+        final e = _Env(live);
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        expect(live.permissionRequests, 1);
+
+        await tester.tap(find.text('걷기 마치기'));
+        await _transition(tester);
+        live.answer.complete(true);
+        await _wait(tester);
+
+        expect(e.notice.starts, isEmpty);
+        expect(live.listeners, 0);
         await _end(tester, e);
       });
     });

@@ -24,6 +24,51 @@ void main() {
     expect(rules.liveCadenceWindowSec, 30);
   });
 
+  test('config의 알림 걸음 갱신 간격은 5초', () {
+    expect(rules.liveNoticeUpdateSec, 5);
+  });
+
+  group('previewSteps: 숨어 있는 동안 본 센서 값으로 낸 걸음 (상태는 그대로)', () {
+    test('기준을 받기 전에는 센 걸음(0) 그대로', () {
+      final w = LiveWalk(rules);
+      expect(w.previewSteps(5000), 0);
+      expect(w.active, isFalse);
+    });
+
+    test('센 걸음 + 기준 뒤 늘어난 만큼: 10 + (1,500 - 1,010) = 500', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 5, 1010);
+      w.pause(_at(10));
+      expect(w.previewSteps(1010), 10); // 늘지 않았으면 센 걸음 그대로
+      expect(w.previewSteps(1500), 500);
+      expect(w.previewSteps(2510), 1510);
+    });
+
+    test('기준보다 작으면(재부팅) 더하지 않는다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 50000);
+      _feed(w, 5, 50020);
+      expect(w.previewSteps(30), 20);
+      expect(w.previewSteps(0), 20);
+    });
+
+    test('부르기만 해서는 걸음·기준·숨은 상태가 바뀌지 않는다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 5, 1010);
+      w.pause(_at(10));
+      w.previewSteps(1500);
+
+      expect(w.steps, 10);
+      expect(w.catchUps, 0);
+      // 기준은 그대로 1,010이라 1,500이 오면 490보를 숨은 시각(10초)부터 따라잡는다
+      _feed(w, 710, 1500);
+      expect(w.steps, 500);
+      expect(w.catchUps, 1);
+    });
+  });
+
   group('기준값과 증가', () {
     test('처음 받은 값은 기준값이라 세지 않는다', () {
       final w = LiveWalk(rules);
