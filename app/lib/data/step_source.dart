@@ -26,6 +26,13 @@ class HealthStepSource implements StepSource {
   @override
   Future<bool> requestPermission() async {
     await _configure();
+    // 안드로이드 13 이하는 Health Connect 앱이 없거나 낡았을 수 있다: 설치·업데이트 화면을 열고
+    // 이번 요청은 거부로 본다 (돌아와서 다시 누르면 권한 창이 뜬다). iOS는 null
+    final sdk = await _health.getHealthConnectSdkStatus();
+    if (sdk != null && sdk != hp.HealthConnectSdkStatus.sdkAvailable) {
+      await _health.installHealthConnect();
+      return false;
+    }
     final ok = await _health.requestAuthorization(_types, permissions: _read);
     // 안드로이드 백그라운드 동기화용. 거부해도 앱을 열 때는 동기화된다
     if (ok && await _health.isHealthDataInBackgroundAvailable()) {
