@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../ui/arrival/arrival_screen.dart';
+import 'notification_service.dart';
 import 'providers.dart';
 import 'sync_service.dart';
 
@@ -13,6 +14,8 @@ const _toastMinKm = 0.1;
 
 /// 앱을 켤 때와 백그라운드에서 돌아올 때 한 번씩 동기화하고 상태를 새로 읽는다.
 /// 권한이 없는 등 실패는 조용히 넘어간다.
+/// 앱이 앞에 있는지도 알려 준다 (알림 판단이 앞이면 화면 안 표시만 한다). 앱을 열 때는 예약해 둔
+/// '다시 부르기' 알림(N5)을 취소하고, 백그라운드로 갈 때는 다시 예약한다.
 /// 도착했는데 도착 화면을 아직 안 봤으면(앱을 켜기 전에 도착했거나, 걷는 중 화면이 새로 읽다가
 /// 도착을 알게 됐을 때) 열려 있는 화면 위에 도착 화면을 띄운다. 이 위젯이 home이라
 /// 어느 화면 위에서든 같은 Navigator에 올릴 수 있다
@@ -35,9 +38,16 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   @override
   void initState() {
     super.initState();
-    _lifecycle = AppLifecycleListener(onResume: _sync);
+    // 숨김과 일시정지가 연달아 와도 N5는 한 번만 예약된다 (이미 예약돼 있으면 그대로 둔다)
+    _lifecycle = AppLifecycleListener(
+      onResume: _onForeground,
+      onHide: _onBackground,
+      onPause: _onBackground,
+    );
     ref.listenManual(snapshotProvider, (_, next) => _checkArrival(next.value),
         fireImmediately: true);
+    // 앱을 새로 켠 것도 연 것이다 (앞 실행이 백그라운드에서 끝났으면 예약된 N5가 남아 있다)
+    _notice((svc, now) => svc.onOpen(now));
     _sync();
   }
 
@@ -45,6 +55,29 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   void dispose() {
     _lifecycle.dispose();
     super.dispose();
+  }
+
+  /// 앞으로 나왔다: 화면 안 표시 모드로 바꾸고 N5 예약을 취소·초기화한 뒤 동기화한다
+  void _onForeground() {
+    ref.read(appForegroundProvider.notifier).set(true);
+    _notice((svc, now) => svc.onOpen(now));
+    _sync();
+  }
+
+  /// 백그라운드로 갔다: 이제부터 동기화는 시스템 알림 대상이고, N5를 예약한다
+  void _onBackground() {
+    ref.read(appForegroundProvider.notifier).set(false);
+    _notice((svc, now) => svc.onBackground(now));
+  }
+
+  /// 알림 판단에 지금 시각으로 일을 시킨다. 실패해도 앱 흐름은 그대로다
+  Future<void> _notice(Future<void> Function(NotificationService svc, DateTime now) job) async {
+    try {
+      final svc = await ref.read(notificationServiceProvider.future);
+      await job(svc, ref.read(clockProvider)());
+    } catch (e) {
+      debugPrint('알림 상태 갱신 실패: $e');
+    }
   }
 
   void _checkArrival(Snapshot? snap) {

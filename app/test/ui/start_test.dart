@@ -43,6 +43,9 @@ class _FakeNotification implements NotificationPermission {
     requests++;
     return granted;
   }
+
+  @override
+  Future<bool?> isGranted() async => requests == 0 ? null : granted;
 }
 
 /// 묻다가 예외가 나는 걸음 출처 (건강 앱이 없는 기기)

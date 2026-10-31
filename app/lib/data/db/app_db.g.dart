@@ -5045,6 +5045,802 @@ class GuestbookPostsCompanion extends UpdateCompanion<GuestbookPostRow> {
   }
 }
 
+class $NotificationLogTable extends NotificationLog
+    with TableInfo<$NotificationLogTable, NotificationLogRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NotificationLogTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<NoticeKind, String> kind =
+      GeneratedColumn<String>(
+        'kind',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<NoticeKind>($NotificationLogTable.$converterkind);
+  static const VerificationMeta _refKeyMeta = const VerificationMeta('refKey');
+  @override
+  late final GeneratedColumn<String> refKey = GeneratedColumn<String>(
+    'ref_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _atUtcMeta = const VerificationMeta('atUtc');
+  @override
+  late final GeneratedColumn<int> atUtc = GeneratedColumn<int>(
+    'at_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<NoticeStatus, String> status =
+      GeneratedColumn<String>(
+        'status',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<NoticeStatus>($NotificationLogTable.$converterstatus);
+  @override
+  List<GeneratedColumn> get $columns => [id, kind, refKey, atUtc, status];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'notification_log';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NotificationLogRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('ref_key')) {
+      context.handle(
+        _refKeyMeta,
+        refKey.isAcceptableOrUnknown(data['ref_key']!, _refKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_refKeyMeta);
+    }
+    if (data.containsKey('at_utc')) {
+      context.handle(
+        _atUtcMeta,
+        atUtc.isAcceptableOrUnknown(data['at_utc']!, _atUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_atUtcMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  NotificationLogRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NotificationLogRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      kind: $NotificationLogTable.$converterkind.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}kind'],
+        )!,
+      ),
+      refKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ref_key'],
+      )!,
+      atUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}at_utc'],
+      )!,
+      status: $NotificationLogTable.$converterstatus.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}status'],
+        )!,
+      ),
+    );
+  }
+
+  @override
+  $NotificationLogTable createAlias(String alias) {
+    return $NotificationLogTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<NoticeKind, String, String> $converterkind =
+      const EnumNameConverter<NoticeKind>(NoticeKind.values);
+  static JsonTypeConverter2<NoticeStatus, String, String> $converterstatus =
+      const EnumNameConverter<NoticeStatus>(NoticeStatus.values);
+}
+
+class NotificationLogRow extends DataClass
+    implements Insertable<NotificationLogRow> {
+  final int id;
+  final NoticeKind kind;
+  final String refKey;
+  final int atUtc;
+  final NoticeStatus status;
+  const NotificationLogRow({
+    required this.id,
+    required this.kind,
+    required this.refKey,
+    required this.atUtc,
+    required this.status,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    {
+      map['kind'] = Variable<String>(
+        $NotificationLogTable.$converterkind.toSql(kind),
+      );
+    }
+    map['ref_key'] = Variable<String>(refKey);
+    map['at_utc'] = Variable<int>(atUtc);
+    {
+      map['status'] = Variable<String>(
+        $NotificationLogTable.$converterstatus.toSql(status),
+      );
+    }
+    return map;
+  }
+
+  NotificationLogCompanion toCompanion(bool nullToAbsent) {
+    return NotificationLogCompanion(
+      id: Value(id),
+      kind: Value(kind),
+      refKey: Value(refKey),
+      atUtc: Value(atUtc),
+      status: Value(status),
+    );
+  }
+
+  factory NotificationLogRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NotificationLogRow(
+      id: serializer.fromJson<int>(json['id']),
+      kind: $NotificationLogTable.$converterkind.fromJson(
+        serializer.fromJson<String>(json['kind']),
+      ),
+      refKey: serializer.fromJson<String>(json['refKey']),
+      atUtc: serializer.fromJson<int>(json['atUtc']),
+      status: $NotificationLogTable.$converterstatus.fromJson(
+        serializer.fromJson<String>(json['status']),
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'kind': serializer.toJson<String>(
+        $NotificationLogTable.$converterkind.toJson(kind),
+      ),
+      'refKey': serializer.toJson<String>(refKey),
+      'atUtc': serializer.toJson<int>(atUtc),
+      'status': serializer.toJson<String>(
+        $NotificationLogTable.$converterstatus.toJson(status),
+      ),
+    };
+  }
+
+  NotificationLogRow copyWith({
+    int? id,
+    NoticeKind? kind,
+    String? refKey,
+    int? atUtc,
+    NoticeStatus? status,
+  }) => NotificationLogRow(
+    id: id ?? this.id,
+    kind: kind ?? this.kind,
+    refKey: refKey ?? this.refKey,
+    atUtc: atUtc ?? this.atUtc,
+    status: status ?? this.status,
+  );
+  NotificationLogRow copyWithCompanion(NotificationLogCompanion data) {
+    return NotificationLogRow(
+      id: data.id.present ? data.id.value : this.id,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      refKey: data.refKey.present ? data.refKey.value : this.refKey,
+      atUtc: data.atUtc.present ? data.atUtc.value : this.atUtc,
+      status: data.status.present ? data.status.value : this.status,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NotificationLogRow(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('refKey: $refKey, ')
+          ..write('atUtc: $atUtc, ')
+          ..write('status: $status')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, kind, refKey, atUtc, status);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NotificationLogRow &&
+          other.id == this.id &&
+          other.kind == this.kind &&
+          other.refKey == this.refKey &&
+          other.atUtc == this.atUtc &&
+          other.status == this.status);
+}
+
+class NotificationLogCompanion extends UpdateCompanion<NotificationLogRow> {
+  final Value<int> id;
+  final Value<NoticeKind> kind;
+  final Value<String> refKey;
+  final Value<int> atUtc;
+  final Value<NoticeStatus> status;
+  const NotificationLogCompanion({
+    this.id = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.refKey = const Value.absent(),
+    this.atUtc = const Value.absent(),
+    this.status = const Value.absent(),
+  });
+  NotificationLogCompanion.insert({
+    this.id = const Value.absent(),
+    required NoticeKind kind,
+    required String refKey,
+    required int atUtc,
+    required NoticeStatus status,
+  }) : kind = Value(kind),
+       refKey = Value(refKey),
+       atUtc = Value(atUtc),
+       status = Value(status);
+  static Insertable<NotificationLogRow> custom({
+    Expression<int>? id,
+    Expression<String>? kind,
+    Expression<String>? refKey,
+    Expression<int>? atUtc,
+    Expression<String>? status,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kind != null) 'kind': kind,
+      if (refKey != null) 'ref_key': refKey,
+      if (atUtc != null) 'at_utc': atUtc,
+      if (status != null) 'status': status,
+    });
+  }
+
+  NotificationLogCompanion copyWith({
+    Value<int>? id,
+    Value<NoticeKind>? kind,
+    Value<String>? refKey,
+    Value<int>? atUtc,
+    Value<NoticeStatus>? status,
+  }) {
+    return NotificationLogCompanion(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      refKey: refKey ?? this.refKey,
+      atUtc: atUtc ?? this.atUtc,
+      status: status ?? this.status,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(
+        $NotificationLogTable.$converterkind.toSql(kind.value),
+      );
+    }
+    if (refKey.present) {
+      map['ref_key'] = Variable<String>(refKey.value);
+    }
+    if (atUtc.present) {
+      map['at_utc'] = Variable<int>(atUtc.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(
+        $NotificationLogTable.$converterstatus.toSql(status.value),
+      );
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NotificationLogCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('refKey: $refKey, ')
+          ..write('atUtc: $atUtc, ')
+          ..write('status: $status')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $NotificationSettingsTable extends NotificationSettings
+    with TableInfo<$NotificationSettingsTable, NotificationSettingsRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NotificationSettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _allOnMeta = const VerificationMeta('allOn');
+  @override
+  late final GeneratedColumn<bool> allOn = GeneratedColumn<bool>(
+    'all_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("all_on" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _n1OnMeta = const VerificationMeta('n1On');
+  @override
+  late final GeneratedColumn<bool> n1On = GeneratedColumn<bool>(
+    'n1_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("n1_on" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _n2OnMeta = const VerificationMeta('n2On');
+  @override
+  late final GeneratedColumn<bool> n2On = GeneratedColumn<bool>(
+    'n2_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("n2_on" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _n3OnMeta = const VerificationMeta('n3On');
+  @override
+  late final GeneratedColumn<bool> n3On = GeneratedColumn<bool>(
+    'n3_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("n3_on" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _n4OnMeta = const VerificationMeta('n4On');
+  @override
+  late final GeneratedColumn<bool> n4On = GeneratedColumn<bool>(
+    'n4_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("n4_on" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _n5OnMeta = const VerificationMeta('n5On');
+  @override
+  late final GeneratedColumn<bool> n5On = GeneratedColumn<bool>(
+    'n5_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("n5_on" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    allOn,
+    n1On,
+    n2On,
+    n3On,
+    n4On,
+    n5On,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'notification_settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NotificationSettingsRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('all_on')) {
+      context.handle(
+        _allOnMeta,
+        allOn.isAcceptableOrUnknown(data['all_on']!, _allOnMeta),
+      );
+    }
+    if (data.containsKey('n1_on')) {
+      context.handle(
+        _n1OnMeta,
+        n1On.isAcceptableOrUnknown(data['n1_on']!, _n1OnMeta),
+      );
+    }
+    if (data.containsKey('n2_on')) {
+      context.handle(
+        _n2OnMeta,
+        n2On.isAcceptableOrUnknown(data['n2_on']!, _n2OnMeta),
+      );
+    }
+    if (data.containsKey('n3_on')) {
+      context.handle(
+        _n3OnMeta,
+        n3On.isAcceptableOrUnknown(data['n3_on']!, _n3OnMeta),
+      );
+    }
+    if (data.containsKey('n4_on')) {
+      context.handle(
+        _n4OnMeta,
+        n4On.isAcceptableOrUnknown(data['n4_on']!, _n4OnMeta),
+      );
+    }
+    if (data.containsKey('n5_on')) {
+      context.handle(
+        _n5OnMeta,
+        n5On.isAcceptableOrUnknown(data['n5_on']!, _n5OnMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  NotificationSettingsRow map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NotificationSettingsRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      allOn: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}all_on'],
+      )!,
+      n1On: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}n1_on'],
+      )!,
+      n2On: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}n2_on'],
+      )!,
+      n3On: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}n3_on'],
+      )!,
+      n4On: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}n4_on'],
+      )!,
+      n5On: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}n5_on'],
+      )!,
+    );
+  }
+
+  @override
+  $NotificationSettingsTable createAlias(String alias) {
+    return $NotificationSettingsTable(attachedDatabase, alias);
+  }
+}
+
+class NotificationSettingsRow extends DataClass
+    implements Insertable<NotificationSettingsRow> {
+  final int id;
+  final bool allOn;
+  final bool n1On;
+  final bool n2On;
+  final bool n3On;
+  final bool n4On;
+  final bool n5On;
+  const NotificationSettingsRow({
+    required this.id,
+    required this.allOn,
+    required this.n1On,
+    required this.n2On,
+    required this.n3On,
+    required this.n4On,
+    required this.n5On,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['all_on'] = Variable<bool>(allOn);
+    map['n1_on'] = Variable<bool>(n1On);
+    map['n2_on'] = Variable<bool>(n2On);
+    map['n3_on'] = Variable<bool>(n3On);
+    map['n4_on'] = Variable<bool>(n4On);
+    map['n5_on'] = Variable<bool>(n5On);
+    return map;
+  }
+
+  NotificationSettingsCompanion toCompanion(bool nullToAbsent) {
+    return NotificationSettingsCompanion(
+      id: Value(id),
+      allOn: Value(allOn),
+      n1On: Value(n1On),
+      n2On: Value(n2On),
+      n3On: Value(n3On),
+      n4On: Value(n4On),
+      n5On: Value(n5On),
+    );
+  }
+
+  factory NotificationSettingsRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NotificationSettingsRow(
+      id: serializer.fromJson<int>(json['id']),
+      allOn: serializer.fromJson<bool>(json['allOn']),
+      n1On: serializer.fromJson<bool>(json['n1On']),
+      n2On: serializer.fromJson<bool>(json['n2On']),
+      n3On: serializer.fromJson<bool>(json['n3On']),
+      n4On: serializer.fromJson<bool>(json['n4On']),
+      n5On: serializer.fromJson<bool>(json['n5On']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'allOn': serializer.toJson<bool>(allOn),
+      'n1On': serializer.toJson<bool>(n1On),
+      'n2On': serializer.toJson<bool>(n2On),
+      'n3On': serializer.toJson<bool>(n3On),
+      'n4On': serializer.toJson<bool>(n4On),
+      'n5On': serializer.toJson<bool>(n5On),
+    };
+  }
+
+  NotificationSettingsRow copyWith({
+    int? id,
+    bool? allOn,
+    bool? n1On,
+    bool? n2On,
+    bool? n3On,
+    bool? n4On,
+    bool? n5On,
+  }) => NotificationSettingsRow(
+    id: id ?? this.id,
+    allOn: allOn ?? this.allOn,
+    n1On: n1On ?? this.n1On,
+    n2On: n2On ?? this.n2On,
+    n3On: n3On ?? this.n3On,
+    n4On: n4On ?? this.n4On,
+    n5On: n5On ?? this.n5On,
+  );
+  NotificationSettingsRow copyWithCompanion(
+    NotificationSettingsCompanion data,
+  ) {
+    return NotificationSettingsRow(
+      id: data.id.present ? data.id.value : this.id,
+      allOn: data.allOn.present ? data.allOn.value : this.allOn,
+      n1On: data.n1On.present ? data.n1On.value : this.n1On,
+      n2On: data.n2On.present ? data.n2On.value : this.n2On,
+      n3On: data.n3On.present ? data.n3On.value : this.n3On,
+      n4On: data.n4On.present ? data.n4On.value : this.n4On,
+      n5On: data.n5On.present ? data.n5On.value : this.n5On,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NotificationSettingsRow(')
+          ..write('id: $id, ')
+          ..write('allOn: $allOn, ')
+          ..write('n1On: $n1On, ')
+          ..write('n2On: $n2On, ')
+          ..write('n3On: $n3On, ')
+          ..write('n4On: $n4On, ')
+          ..write('n5On: $n5On')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, allOn, n1On, n2On, n3On, n4On, n5On);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NotificationSettingsRow &&
+          other.id == this.id &&
+          other.allOn == this.allOn &&
+          other.n1On == this.n1On &&
+          other.n2On == this.n2On &&
+          other.n3On == this.n3On &&
+          other.n4On == this.n4On &&
+          other.n5On == this.n5On);
+}
+
+class NotificationSettingsCompanion
+    extends UpdateCompanion<NotificationSettingsRow> {
+  final Value<int> id;
+  final Value<bool> allOn;
+  final Value<bool> n1On;
+  final Value<bool> n2On;
+  final Value<bool> n3On;
+  final Value<bool> n4On;
+  final Value<bool> n5On;
+  const NotificationSettingsCompanion({
+    this.id = const Value.absent(),
+    this.allOn = const Value.absent(),
+    this.n1On = const Value.absent(),
+    this.n2On = const Value.absent(),
+    this.n3On = const Value.absent(),
+    this.n4On = const Value.absent(),
+    this.n5On = const Value.absent(),
+  });
+  NotificationSettingsCompanion.insert({
+    this.id = const Value.absent(),
+    this.allOn = const Value.absent(),
+    this.n1On = const Value.absent(),
+    this.n2On = const Value.absent(),
+    this.n3On = const Value.absent(),
+    this.n4On = const Value.absent(),
+    this.n5On = const Value.absent(),
+  });
+  static Insertable<NotificationSettingsRow> custom({
+    Expression<int>? id,
+    Expression<bool>? allOn,
+    Expression<bool>? n1On,
+    Expression<bool>? n2On,
+    Expression<bool>? n3On,
+    Expression<bool>? n4On,
+    Expression<bool>? n5On,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (allOn != null) 'all_on': allOn,
+      if (n1On != null) 'n1_on': n1On,
+      if (n2On != null) 'n2_on': n2On,
+      if (n3On != null) 'n3_on': n3On,
+      if (n4On != null) 'n4_on': n4On,
+      if (n5On != null) 'n5_on': n5On,
+    });
+  }
+
+  NotificationSettingsCompanion copyWith({
+    Value<int>? id,
+    Value<bool>? allOn,
+    Value<bool>? n1On,
+    Value<bool>? n2On,
+    Value<bool>? n3On,
+    Value<bool>? n4On,
+    Value<bool>? n5On,
+  }) {
+    return NotificationSettingsCompanion(
+      id: id ?? this.id,
+      allOn: allOn ?? this.allOn,
+      n1On: n1On ?? this.n1On,
+      n2On: n2On ?? this.n2On,
+      n3On: n3On ?? this.n3On,
+      n4On: n4On ?? this.n4On,
+      n5On: n5On ?? this.n5On,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (allOn.present) {
+      map['all_on'] = Variable<bool>(allOn.value);
+    }
+    if (n1On.present) {
+      map['n1_on'] = Variable<bool>(n1On.value);
+    }
+    if (n2On.present) {
+      map['n2_on'] = Variable<bool>(n2On.value);
+    }
+    if (n3On.present) {
+      map['n3_on'] = Variable<bool>(n3On.value);
+    }
+    if (n4On.present) {
+      map['n4_on'] = Variable<bool>(n4On.value);
+    }
+    if (n5On.present) {
+      map['n5_on'] = Variable<bool>(n5On.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NotificationSettingsCompanion(')
+          ..write('id: $id, ')
+          ..write('allOn: $allOn, ')
+          ..write('n1On: $n1On, ')
+          ..write('n2On: $n2On, ')
+          ..write('n3On: $n3On, ')
+          ..write('n4On: $n4On, ')
+          ..write('n5On: $n5On')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -5062,6 +5858,11 @@ abstract class _$AppDb extends GeneratedDatabase {
     this,
   );
   late final $GuestbookPostsTable guestbookPosts = $GuestbookPostsTable(this);
+  late final $NotificationLogTable notificationLog = $NotificationLogTable(
+    this,
+  );
+  late final $NotificationSettingsTable notificationSettings =
+      $NotificationSettingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5079,6 +5880,8 @@ abstract class _$AppDb extends GeneratedDatabase {
     wallSlots,
     guestbookTickets,
     guestbookPosts,
+    notificationLog,
+    notificationSettings,
   ];
 }
 
@@ -7781,6 +8584,471 @@ typedef $$GuestbookPostsTableProcessedTableManager =
       GuestbookPostRow,
       PrefetchHooks Function()
     >;
+typedef $$NotificationLogTableCreateCompanionBuilder =
+    NotificationLogCompanion Function({
+      Value<int> id,
+      required NoticeKind kind,
+      required String refKey,
+      required int atUtc,
+      required NoticeStatus status,
+    });
+typedef $$NotificationLogTableUpdateCompanionBuilder =
+    NotificationLogCompanion Function({
+      Value<int> id,
+      Value<NoticeKind> kind,
+      Value<String> refKey,
+      Value<int> atUtc,
+      Value<NoticeStatus> status,
+    });
+
+class $$NotificationLogTableFilterComposer
+    extends Composer<_$AppDb, $NotificationLogTable> {
+  $$NotificationLogTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<NoticeKind, NoticeKind, String> get kind =>
+      $composableBuilder(
+        column: $table.kind,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get refKey => $composableBuilder(
+    column: $table.refKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get atUtc => $composableBuilder(
+    column: $table.atUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<NoticeStatus, NoticeStatus, String>
+  get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+}
+
+class $$NotificationLogTableOrderingComposer
+    extends Composer<_$AppDb, $NotificationLogTable> {
+  $$NotificationLogTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get refKey => $composableBuilder(
+    column: $table.refKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get atUtc => $composableBuilder(
+    column: $table.atUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$NotificationLogTableAnnotationComposer
+    extends Composer<_$AppDb, $NotificationLogTable> {
+  $$NotificationLogTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<NoticeKind, String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get refKey =>
+      $composableBuilder(column: $table.refKey, builder: (column) => column);
+
+  GeneratedColumn<int> get atUtc =>
+      $composableBuilder(column: $table.atUtc, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<NoticeStatus, String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+}
+
+class $$NotificationLogTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $NotificationLogTable,
+          NotificationLogRow,
+          $$NotificationLogTableFilterComposer,
+          $$NotificationLogTableOrderingComposer,
+          $$NotificationLogTableAnnotationComposer,
+          $$NotificationLogTableCreateCompanionBuilder,
+          $$NotificationLogTableUpdateCompanionBuilder,
+          (
+            NotificationLogRow,
+            BaseReferences<_$AppDb, $NotificationLogTable, NotificationLogRow>,
+          ),
+          NotificationLogRow,
+          PrefetchHooks Function()
+        > {
+  $$NotificationLogTableTableManager(_$AppDb db, $NotificationLogTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NotificationLogTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$NotificationLogTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$NotificationLogTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<NoticeKind> kind = const Value.absent(),
+                Value<String> refKey = const Value.absent(),
+                Value<int> atUtc = const Value.absent(),
+                Value<NoticeStatus> status = const Value.absent(),
+              }) => NotificationLogCompanion(
+                id: id,
+                kind: kind,
+                refKey: refKey,
+                atUtc: atUtc,
+                status: status,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required NoticeKind kind,
+                required String refKey,
+                required int atUtc,
+                required NoticeStatus status,
+              }) => NotificationLogCompanion.insert(
+                id: id,
+                kind: kind,
+                refKey: refKey,
+                atUtc: atUtc,
+                status: status,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$NotificationLogTable, NotificationLogRow>(table),
+                  BaseReferences<
+                    _$AppDb,
+                    $NotificationLogTable,
+                    NotificationLogRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$NotificationLogTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $NotificationLogTable,
+      NotificationLogRow,
+      $$NotificationLogTableFilterComposer,
+      $$NotificationLogTableOrderingComposer,
+      $$NotificationLogTableAnnotationComposer,
+      $$NotificationLogTableCreateCompanionBuilder,
+      $$NotificationLogTableUpdateCompanionBuilder,
+      (
+        NotificationLogRow,
+        BaseReferences<_$AppDb, $NotificationLogTable, NotificationLogRow>,
+      ),
+      NotificationLogRow,
+      PrefetchHooks Function()
+    >;
+typedef $$NotificationSettingsTableCreateCompanionBuilder =
+    NotificationSettingsCompanion Function({
+      Value<int> id,
+      Value<bool> allOn,
+      Value<bool> n1On,
+      Value<bool> n2On,
+      Value<bool> n3On,
+      Value<bool> n4On,
+      Value<bool> n5On,
+    });
+typedef $$NotificationSettingsTableUpdateCompanionBuilder =
+    NotificationSettingsCompanion Function({
+      Value<int> id,
+      Value<bool> allOn,
+      Value<bool> n1On,
+      Value<bool> n2On,
+      Value<bool> n3On,
+      Value<bool> n4On,
+      Value<bool> n5On,
+    });
+
+class $$NotificationSettingsTableFilterComposer
+    extends Composer<_$AppDb, $NotificationSettingsTable> {
+  $$NotificationSettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get allOn => $composableBuilder(
+    column: $table.allOn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get n1On => $composableBuilder(
+    column: $table.n1On,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get n2On => $composableBuilder(
+    column: $table.n2On,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get n3On => $composableBuilder(
+    column: $table.n3On,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get n4On => $composableBuilder(
+    column: $table.n4On,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get n5On => $composableBuilder(
+    column: $table.n5On,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$NotificationSettingsTableOrderingComposer
+    extends Composer<_$AppDb, $NotificationSettingsTable> {
+  $$NotificationSettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get allOn => $composableBuilder(
+    column: $table.allOn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get n1On => $composableBuilder(
+    column: $table.n1On,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get n2On => $composableBuilder(
+    column: $table.n2On,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get n3On => $composableBuilder(
+    column: $table.n3On,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get n4On => $composableBuilder(
+    column: $table.n4On,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get n5On => $composableBuilder(
+    column: $table.n5On,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$NotificationSettingsTableAnnotationComposer
+    extends Composer<_$AppDb, $NotificationSettingsTable> {
+  $$NotificationSettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<bool> get allOn =>
+      $composableBuilder(column: $table.allOn, builder: (column) => column);
+
+  GeneratedColumn<bool> get n1On =>
+      $composableBuilder(column: $table.n1On, builder: (column) => column);
+
+  GeneratedColumn<bool> get n2On =>
+      $composableBuilder(column: $table.n2On, builder: (column) => column);
+
+  GeneratedColumn<bool> get n3On =>
+      $composableBuilder(column: $table.n3On, builder: (column) => column);
+
+  GeneratedColumn<bool> get n4On =>
+      $composableBuilder(column: $table.n4On, builder: (column) => column);
+
+  GeneratedColumn<bool> get n5On =>
+      $composableBuilder(column: $table.n5On, builder: (column) => column);
+}
+
+class $$NotificationSettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $NotificationSettingsTable,
+          NotificationSettingsRow,
+          $$NotificationSettingsTableFilterComposer,
+          $$NotificationSettingsTableOrderingComposer,
+          $$NotificationSettingsTableAnnotationComposer,
+          $$NotificationSettingsTableCreateCompanionBuilder,
+          $$NotificationSettingsTableUpdateCompanionBuilder,
+          (
+            NotificationSettingsRow,
+            BaseReferences<
+              _$AppDb,
+              $NotificationSettingsTable,
+              NotificationSettingsRow
+            >,
+          ),
+          NotificationSettingsRow,
+          PrefetchHooks Function()
+        > {
+  $$NotificationSettingsTableTableManager(
+    _$AppDb db,
+    $NotificationSettingsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NotificationSettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$NotificationSettingsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$NotificationSettingsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<bool> allOn = const Value.absent(),
+                Value<bool> n1On = const Value.absent(),
+                Value<bool> n2On = const Value.absent(),
+                Value<bool> n3On = const Value.absent(),
+                Value<bool> n4On = const Value.absent(),
+                Value<bool> n5On = const Value.absent(),
+              }) => NotificationSettingsCompanion(
+                id: id,
+                allOn: allOn,
+                n1On: n1On,
+                n2On: n2On,
+                n3On: n3On,
+                n4On: n4On,
+                n5On: n5On,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<bool> allOn = const Value.absent(),
+                Value<bool> n1On = const Value.absent(),
+                Value<bool> n2On = const Value.absent(),
+                Value<bool> n3On = const Value.absent(),
+                Value<bool> n4On = const Value.absent(),
+                Value<bool> n5On = const Value.absent(),
+              }) => NotificationSettingsCompanion.insert(
+                id: id,
+                allOn: allOn,
+                n1On: n1On,
+                n2On: n2On,
+                n3On: n3On,
+                n4On: n4On,
+                n5On: n5On,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $NotificationSettingsTable,
+                    NotificationSettingsRow
+                  >(table),
+                  BaseReferences<
+                    _$AppDb,
+                    $NotificationSettingsTable,
+                    NotificationSettingsRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$NotificationSettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $NotificationSettingsTable,
+      NotificationSettingsRow,
+      $$NotificationSettingsTableFilterComposer,
+      $$NotificationSettingsTableOrderingComposer,
+      $$NotificationSettingsTableAnnotationComposer,
+      $$NotificationSettingsTableCreateCompanionBuilder,
+      $$NotificationSettingsTableUpdateCompanionBuilder,
+      (
+        NotificationSettingsRow,
+        BaseReferences<
+          _$AppDb,
+          $NotificationSettingsTable,
+          NotificationSettingsRow
+        >,
+      ),
+      NotificationSettingsRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -7809,4 +9077,8 @@ class $AppDbManager {
       $$GuestbookTicketsTableTableManager(_db, _db.guestbookTickets);
   $$GuestbookPostsTableTableManager get guestbookPosts =>
       $$GuestbookPostsTableTableManager(_db, _db.guestbookPosts);
+  $$NotificationLogTableTableManager get notificationLog =>
+      $$NotificationLogTableTableManager(_db, _db.notificationLog);
+  $$NotificationSettingsTableTableManager get notificationSettings =>
+      $$NotificationSettingsTableTableManager(_db, _db.notificationSettings);
 }

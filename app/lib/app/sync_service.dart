@@ -12,6 +12,7 @@ import '../domain/geo.dart';
 import '../domain/guestbook.dart';
 import '../domain/journey.dart';
 import '../domain/landmark.dart';
+import '../domain/notification_policy.dart';
 import '../domain/prop.dart';
 import '../domain/route.dart';
 import '../domain/rules.dart';
@@ -21,10 +22,17 @@ import '../domain/sketch.dart';
 import '../domain/time_kst.dart';
 import '../domain/walk_record.dart';
 import '../domain/wall.dart';
+import 'notification_service.dart';
 
 /// 한 번 가져온 결과. 출처별 걸음은 허용 목록을 정하는 실기기 확인용
 class SyncReport {
-  const SyncReport(this.records, this.dropped, this.stepsBySource, {this.advancedKm = 0});
+  const SyncReport(
+    this.records,
+    this.dropped,
+    this.stepsBySource, {
+    this.advancedKm = 0,
+    this.notices = const [],
+  });
 
   final int records;
 
@@ -36,6 +44,10 @@ class SyncReport {
   /// 없었으면 여행 경비의 증가(상한에서 멈춤). 같은 기록으로 또 돌리면 0.
   /// 디버그 거리 배수가 켜져 있으면 진행 거리의 증가에는 그 배수가 곱해져 있다
   final double advancedKm;
+
+  /// 이번 동기화에서 새로 생긴 일 (알림 후보 N1·N2·N4). 앱이 켜져 있는지·꺼진 종류인지·하루 최대는
+  /// 아직 안 따진 것이다 (NotificationService가 이어서 정한다)
+  final List<NoticeCandidate> notices;
 }
 
 /// 걷기 마치기 직후 걷기 기록 화면의 내용
@@ -364,6 +376,7 @@ class SyncService {
     this.milestones = const [],
     this.onLand = _anywhere,
     this.distanceScale = 1.0,
+    this.notificationService,
   }) : assert(distanceScale > 0);
 
   final AppDb db;
@@ -389,6 +402,9 @@ class SyncService {
   /// 여행 경비·하루 요약·걸음 숫자는 그대로다 (앱은 디버그 빌드에서만 1이 아닌 값을 넣는다)
   final double distanceScale;
 
+  /// 동기화가 끝나면 새로 생긴 일을 넘겨 알림을 판단하는 곳. 없으면 알림 판단을 하지 않는다
+  final NotificationService? notificationService;
+
   Future<SyncReport> sync(DateTime now) async {
     final state = await _ensureState(now);
     final install = _utc(state.installUtc);
@@ -407,9 +423,11 @@ class SyncService {
         .toList();
 
     var advancedKm = 0.0;
+    final candidates = <NoticeCandidate>[];
     await db.transaction(() async {
       final activeBefore = await _activeJourney();
-      final before = await _creditedKm(activeBefore);
+      final progressBefore = await _progressOf(activeBefore);
+      final before = progressBefore?.progressKm ?? (await _fund()).km;
       await (db.delete(db.stepMinutes)
             ..where((t) => t.minuteUtc.isBetweenValues(fromMin, toMin)))
           .go();
@@ -420,7 +438,7 @@ class SyncService {
       await _recomputeDays(kstDayKey(from), kstDayKey(to));
       await _advanceJourney(to);
       await _unlockProps(to);
-      await _updateGuestbookTickets(to);
+      final newMilestones = await _updateGuestbookTickets(to);
       await (db.update(db.syncState)..where((t) => t.id.equals(1)))
           .write(SyncStateCompanion(lastFetchedUtc: Value(to.millisecondsSinceEpoch)));
       // 도착한 여정은 더 이상 active가 아니라서 id로 다시 읽는다
@@ -428,9 +446,34 @@ class SyncService {
           ? null
           : await (db.select(db.journeys)..where((t) => t.id.equals(activeBefore.id)))
               .getSingle();
-      advancedKm = math.max(0.0, await _creditedKm(journeyAfter) - before);
+      final progressAfter = await _progressOf(journeyAfter);
+      advancedKm = math.max(0.0, (progressAfter?.progressKm ?? (await _fund()).km) - before);
+
+      // 알림 후보: 이번에 새로 생긴 일만 (N3 이야기 새 장은 M4에서)
+      if (journeyAfter != null) {
+        final dest = _placeNameOf(journeyAfter.destId);
+        if (journeyAfter.status == JourneyStatus.arrived) {
+          candidates.add(
+              NoticeCandidate(NoticeKind.n2, key: journeyAfter.id, vars: {'dest': dest}));
+        } else if (journeyAfter.status == JourneyStatus.active &&
+            enteredNearDest(
+              remainingBefore: progressBefore!.remainingKm,
+              remainingAfter: progressAfter!.remainingKm,
+              nearKm: rules.notificationNearDestKm,
+            )) {
+          candidates.add(NoticeCandidate(NoticeKind.n4,
+              key: journeyAfter.id,
+              vars: {'dest': dest, 'remainingKm': progressAfter.remainingKm}));
+        }
+      }
+      // 한꺼번에 여럿 넘었으면 가장 최근에 넘은 숫자가 앞 (같은 종류는 앞에 온 것을 쓴다)
+      for (final m in newMilestones.reversed) {
+        candidates.add(NoticeCandidate(NoticeKind.n1,
+            key: milestoneTicketId(m), vars: {'milestone': m}));
+      }
     });
-    return _report(raw, kept, advancedKm: advancedKm);
+    await notificationService?.afterSync(candidates, to);
+    return _report(raw, kept, advancedKm: advancedKm, notices: candidates);
   }
 
   /// 저장하지 않고 출처만 본다 (허용 목록을 정할 때)
@@ -662,9 +705,11 @@ class SyncService {
   /// 닫기: 열린 뒤 [to]까지 저장된 걸음이 창(guestbook.milestoneWindowSteps) 이상이면 닫는다.
   /// 열기: 설치 이후 걸음(하루 요약의 합)이 넘은 걸음 숫자인데 기회가 없으면 만든다.
   /// 한 번에 여러 개를 넘으면 각각 만든다. 열린 시각은 이번 동기화 시각이다 (알림이 있으면
-  /// 알림이 뜬 시각이지만 알림이 꺼진 경우와 같게 본다).
-  /// TODO(M6): 알림이 뜬 시각을 열린 시각으로 쓴다
-  Future<void> _updateGuestbookTickets(DateTime to) async {
+  /// 알림이 뜬 시각이지만 알림이 꺼진 경우와 같게 본다). 이번에 새로 만든 걸음 숫자를 오름차순으로 돌려준다.
+  /// TODO(M6): 알림이 실제로 뜨면 열린 시각을 알림이 뜬 시각으로 쓴다. 알림 판단(NotificationService)이
+  /// 조용한 시간에 08:00으로 예약했으면 그 예약 시각, 알림이 꺼져 있거나 하루 최대에 막혔으면 지금처럼
+  /// 다음에 앱을 연 시각이다. 알림이 아직 실제로 뜨지 않아서 지금 예약 시각으로 바꾸면 500보 창만 틀어진다
+  Future<List<int>> _updateGuestbookTickets(DateTime to) async {
     final at = to.toUtc().millisecondsSinceEpoch;
     final rows = await db.select(db.guestbookTickets).get();
     for (final r in rows) {
@@ -675,16 +720,20 @@ class SyncService {
     }
     final total = (await db.select(db.daySummaries).get()).fold(0, (sum, d) => sum + d.steps);
     final have = {for (final r in rows) r.id};
+    final opened = [
+      for (final m in milestonesReached(total, milestones))
+        if (!have.contains(milestoneTicketId(m))) m,
+    ];
     await db.batch((b) => b.insertAll(db.guestbookTickets, [
-          for (final m in milestonesReached(total, milestones))
-            if (!have.contains(milestoneTicketId(m)))
-              GuestbookTicketsCompanion.insert(
-                id: milestoneTicketId(m),
-                kind: TicketKind.milestone,
-                scope: milestoneScope(m),
-                openedUtc: at,
-              ),
+          for (final m in opened)
+            GuestbookTicketsCompanion.insert(
+              id: milestoneTicketId(m),
+              kind: TicketKind.milestone,
+              scope: milestoneScope(m),
+              openedUtc: at,
+            ),
         ]));
+    return opened;
   }
 
   /// [openedUtc] 다음 분부터 [upTo]가 속한 분까지 저장된 걸음의 합 (기회가 열린 분은 세지 않는다.
@@ -1332,13 +1381,13 @@ class SyncService {
   Future<double> _walkedKmOnJourney(JourneyRow journey) async =>
       await _distanceKmFrom(_minuteOf(journey.startUtc)) * distanceScale;
 
-  /// 동기화 전후로 비교하는 값: 여정이 있으면 그 진행 거리(도착 뒤에도 넘친 만큼 포함),
-  /// 없으면 여행 경비. 여정이 있는 동안 경비는 도착할 때 넘친 거리만 늘고 그건 진행 거리에
-  /// 이미 들어 있으니, 둘을 더하면 두 번 세게 된다
-  Future<double> _creditedKm(JourneyRow? journey) async {
-    if (journey == null) return (await _fund()).km;
-    return progress(_toJourney(journey), await _walkedKmOnJourney(journey), rules).progressKm;
-  }
+  /// 여정의 지금 진행 (도착 뒤에도 넘친 만큼 포함). 여정이 없으면 null.
+  /// 동기화 전후로 비교하는 값은 여정이 있으면 이 진행 거리, 없으면 여행 경비다.
+  /// 여정이 있는 동안 경비는 도착할 때 넘친 거리만 늘고 그건 진행 거리에 이미 들어 있으니,
+  /// 둘을 더하면 두 번 세게 된다
+  Future<JourneyProgress?> _progressOf(JourneyRow? journey) async => journey == null
+      ? null
+      : progress(_toJourney(journey), await _walkedKmOnJourney(journey), rules);
 
   Future<TravelFundRow> _fund() =>
       (db.select(db.travelFund)..where((t) => t.id.equals(1))).getSingle();
@@ -1391,12 +1440,18 @@ class SyncService {
         counted: r.counted,
       );
 
-  SyncReport _report(List<StepRecord> raw, List<StepRecord> kept, {double advancedKm = 0}) {
+  SyncReport _report(
+    List<StepRecord> raw,
+    List<StepRecord> kept, {
+    double advancedKm = 0,
+    List<NoticeCandidate> notices = const [],
+  }) {
     final bySource = <String, int>{};
     for (final r in raw) {
       bySource[r.sourceId] = (bySource[r.sourceId] ?? 0) + r.steps;
     }
-    return SyncReport(raw.length, raw.length - kept.length, bySource, advancedKm: advancedKm);
+    return SyncReport(raw.length, raw.length - kept.length, bySource,
+        advancedKm: advancedKm, notices: notices);
   }
 }
 

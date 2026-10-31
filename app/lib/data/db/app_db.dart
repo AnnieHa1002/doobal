@@ -2,12 +2,14 @@ import 'package:drift/drift.dart';
 
 import '../../domain/guestbook.dart' show TicketKind;
 import '../../domain/journey.dart' show Frame;
+import '../../domain/notification_policy.dart' show NoticeKind;
 
 part 'app_db.g.dart';
 
 // M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝) + 스키마 3 (프로필: 출발 동네)
 // + 스키마 4 (화집 벽) + 스키마 5 (새 그림 표시) + 스키마 6 (프로필: 시작 흐름)
-// + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지) + 스키마 8 (방명록 쓸 기회·쓴 글).
+// + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지) + 스키마 8 (방명록 쓸 기회·쓴 글)
+// + 스키마 9 (알림 기록·알림 켜고 끄기).
 // 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
@@ -218,6 +220,39 @@ class GuestbookPosts extends Table {
   Set<Column> get primaryKey => {ticketId};
 }
 
+/// 알림 기록 상태: sent는 시스템 알림을 지금 보냈다, scheduled는 atUtc에 뜨도록 예약해 뒀다
+/// (그 시각이 지났으면 울린 것으로 본다), cancelled는 예약을 취소했다(앱을 다시 열었거나 더 높은 걸로
+/// 바꿨다), inApp은 앱이 켜져 있어서 화면 안 표시만 했다, dropped는 고르지 못했다
+/// (꺼진 종류·우선순위에서 밀림·하루 최대에 막힘)
+enum NoticeStatus { sent, scheduled, cancelled, inApp, dropped }
+
+/// 알림 기록. 후보 하나가 어떻게 됐는지 한 줄씩 남긴다. atUtc는 보낸 시각, 예약이면 뜨기로 한 시각,
+/// 나머지 상태는 판정한 시각. refKey는 그 일을 가리키는 값(N1은 기회 id, N2·N4는 여정 id, N5는 빈 값).
+/// 하루 최대는 sent·scheduled(취소 빼고)를 atUtc의 한국 날짜로 세고, 같은 (kind, refKey)로는 다시 알리지 않는다
+@DataClassName('NotificationLogRow')
+class NotificationLog extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get kind => textEnum<NoticeKind>()();
+  TextColumn get refKey => text()();
+  IntColumn get atUtc => integer()();
+  TextColumn get status => textEnum<NoticeStatus>()();
+}
+
+/// 알림 켜고 끄기 1행(id = 1). 전체와 종류별 다섯. 행이 없으면 모두 켠 것이다
+@DataClassName('NotificationSettingsRow')
+class NotificationSettings extends Table {
+  IntColumn get id => integer()();
+  BoolColumn get allOn => boolean().withDefault(const Constant(true))();
+  BoolColumn get n1On => boolean().withDefault(const Constant(true))();
+  BoolColumn get n2On => boolean().withDefault(const Constant(true))();
+  BoolColumn get n3On => boolean().withDefault(const Constant(true))();
+  BoolColumn get n4On => boolean().withDefault(const Constant(true))();
+  BoolColumn get n5On => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     StepMinutes,
@@ -232,13 +267,15 @@ class GuestbookPosts extends Table {
     WallSlots,
     GuestbookTickets,
     GuestbookPosts,
+    NotificationLog,
+    NotificationSettings,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -286,6 +323,10 @@ class AppDb extends _$AppDb {
           if (from < 8) {
             await m.createTable(guestbookTickets);
             await m.createTable(guestbookPosts);
+          }
+          if (from < 9) {
+            await m.createTable(notificationLog);
+            await m.createTable(notificationSettings);
           }
         },
       );

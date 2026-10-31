@@ -126,6 +126,10 @@ class Rules {
     required this.nicknameMin,
     required this.nicknameMax,
     required this.notificationDailyMax,
+    required this.notificationQuietFromHour,
+    required this.notificationQuietToHour,
+    required this.notificationNearDestKm,
+    required this.notificationInactiveHours,
     required this.guestbookMaxChars,
     required this.guestbookWindowSteps,
     required this.allowedSourcesIos,
@@ -221,6 +225,14 @@ class Rules {
 
   /// 알림은 하루 이만큼까지만 (config notifications.dailyMax). 시작 화면의 알림 권한 설명에도 쓴다
   final int notificationDailyMax;
+
+  /// 알림을 안 보내는 조용한 시간 (한국 시간, quietFromHour시 정각부터 quietToHour시 정각 전까지),
+  /// '거의 다 왔어' 알림의 남은 거리(km), '다시 부르기' 알림까지 안 연 시간
+  /// (config notifications.quietFromHour·quietToHour·nearDestKm·inactiveHours)
+  final int notificationQuietFromHour;
+  final int notificationQuietToHour;
+  final double notificationNearDestKm;
+  final int notificationInactiveHours;
 
   /// 방명록 글 길이 상한(글자 수)과, 걸음 숫자 기회가 열린 뒤 쓸 수 있는 걸음 수
   /// (config guestbook.maxChars·milestoneWindowSteps)
@@ -348,6 +360,10 @@ class Rules {
       nicknameMin: profile['nicknameMin'] as int,
       nicknameMax: profile['nicknameMax'] as int,
       notificationDailyMax: notifications['dailyMax'] as int,
+      notificationQuietFromHour: notifications['quietFromHour'] as int,
+      notificationQuietToHour: notifications['quietToHour'] as int,
+      notificationNearDestKm: _d(notifications['nearDestKm']),
+      notificationInactiveHours: notifications['inactiveHours'] as int,
       guestbookMaxChars: guestbook['maxChars'] as int,
       guestbookWindowSteps: guestbook['milestoneWindowSteps'] as int,
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),

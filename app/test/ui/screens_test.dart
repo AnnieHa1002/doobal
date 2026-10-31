@@ -61,6 +61,7 @@ class _Env {
         landmarksProvider.overrideWith((ref) => landmarks),
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
+        noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
         campThemeProvider.overrideWith((ref) => campTheme),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),
@@ -267,6 +268,8 @@ void main() {
 
       await _tapIcon(tester, Icons.settings);
       expect(find.text('설정'), findsOneWidget);
+      // 알림 줄이 늘어서 개발자 화면 줄은 스크롤해야 보인다
+      await tester.scrollUntilVisible(find.text('개발자 화면'), 300);
       await tester.tap(find.text('개발자 화면'));
       await _transition(tester);
       expect(find.text('두발 디버그'), findsOneWidget);

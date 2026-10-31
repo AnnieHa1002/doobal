@@ -65,6 +65,7 @@ class _Env {
         landmarksProvider.overrideWith((ref) => landmarks),
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
+        noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
         campThemeProvider.overrideWith((ref) => campTheme),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),

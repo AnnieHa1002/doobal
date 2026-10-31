@@ -9,7 +9,9 @@ import '../data/db/app_db.dart';
 import '../data/landmark_loader.dart';
 import '../data/map_loader.dart';
 import '../data/milestone_loader.dart';
+import '../data/notice_loader.dart';
 import '../data/notification_permission.dart';
+import '../data/notifier.dart';
 import '../data/palette_loader.dart';
 import '../data/prop_loader.dart';
 import '../data/sigungu_loader.dart';
@@ -22,12 +24,14 @@ import '../domain/look_palette.dart';
 import '../domain/map_land.dart';
 import '../domain/map_projection.dart';
 import '../domain/map_regions.dart';
+import '../domain/notification_policy.dart';
 import '../domain/onboarding.dart';
 import '../domain/prop.dart';
 import '../domain/rules.dart';
 import '../domain/session.dart';
 import '../domain/sigungu.dart';
 import '../domain/walk_history.dart';
+import 'notification_service.dart';
 import 'profile_service.dart';
 import 'stats_service.dart';
 import 'sync_service.dart';
@@ -80,6 +84,43 @@ final stepSourceProvider = Provider<StepSource>((ref) => HealthStepSource());
 /// M6에서 flutter_local_notifications로 바꾼다 (지금은 늘 거부로 답하는 자리표시)
 final notificationPermissionProvider =
     Provider<NotificationPermission>((ref) => const PlaceholderNotificationPermission());
+
+/// 지금 알림 권한이 허용돼 있는가. 모르면 null (설정 화면의 권한 줄). 권한을 다시 물은 뒤에는 invalidate 한다
+final notificationGrantedProvider = FutureProvider.autoDispose<bool?>(
+    (ref) => ref.watch(notificationPermissionProvider).isGranted());
+
+/// 알림 종류별 우선순위와 문구 (notifications.json)
+final noticeCatalogProvider = FutureProvider<NoticeCatalog>((ref) => loadNoticeCatalog());
+
+/// 시스템 알림을 띄우는 곳. M6에서 flutter_local_notifications로 바꾼다 (지금은 아무것도 안 띄우는 자리표시)
+final systemNotifierProvider = Provider<SystemNotifier>((ref) => PlaceholderNotifier());
+
+/// 앱이 앞에 있는가 (알림 판단이 앞이면 화면 안 표시만 하려고 읽는다). AutoSync가 lifecycle에 따라 바꾼다.
+/// 앞에서 시작한다. TODO(M6): 백그라운드 동기화는 앱 화면 없이 도니까 거기서는 false로 덮어쓴다
+class AppForeground extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void set(bool foreground) => state = foreground;
+}
+
+final appForegroundProvider = NotifierProvider<AppForeground, bool>(AppForeground.new);
+
+/// 알림 판단(어떤 알림을 보내거나 예약할지)과 알림 기록·켜고 끄기
+final notificationServiceProvider = FutureProvider<NotificationService>((ref) async {
+  return NotificationService(
+    db: ref.watch(dbProvider),
+    rules: await ref.watch(rulesProvider.future),
+    catalog: await ref.watch(noticeCatalogProvider.future),
+    notifier: ref.watch(systemNotifierProvider),
+    inForeground: () => ref.read(appForegroundProvider),
+  );
+});
+
+/// 설정 화면의 알림 켜고 끄기. 바꾼 뒤에는 invalidate 해서 다시 읽는다
+final noticeSettingsProvider = FutureProvider.autoDispose<NoticeSettings>((ref) async {
+  return (await ref.watch(notificationServiceProvider.future)).settings();
+});
 
 /// 프로필(사용자 자신의 정보) 읽기·쓰기. 걸음·여정이 아니라서 SyncService와 따로 둔다
 final profileServiceProvider =
@@ -139,6 +180,7 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
     milestones: milestones,
     onLand: (p, island) => onIsland(p, island, projection, regions),
     distanceScale: distanceScale,
+    notificationService: await ref.watch(notificationServiceProvider.future),
   );
 });
 

@@ -18,6 +18,21 @@ void main() {
     expect(formatKm(1.05, digits: 2), '1.05 km');
   });
 
+  test('formatHourKo: 시를 말하듯이 (밤 10시, 아침 8시)', () {
+    expect(formatHourKo(22), '밤 10시');
+    expect(formatHourKo(8), '아침 8시');
+    expect(formatHourKo(0), '밤 12시');
+    expect(formatHourKo(3), '새벽 3시');
+    expect(formatHourKo(6), '아침 6시');
+    expect(formatHourKo(11), '아침 11시');
+    expect(formatHourKo(12), '낮 12시');
+    expect(formatHourKo(13), '낮 1시');
+    expect(formatHourKo(17), '낮 5시');
+    expect(formatHourKo(18), '저녁 6시');
+    expect(formatHourKo(21), '밤 9시');
+    expect(formatHourKo(23), '밤 11시');
+  });
+
   test('formatDuration: m:ss, 1시간 이상은 h:mm:ss, 음수는 0', () {
     expect(formatDuration(const Duration(seconds: 5)), '0:05');
     expect(formatDuration(const Duration(seconds: 65)), '1:05');

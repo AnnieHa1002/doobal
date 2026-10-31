@@ -1,10 +1,12 @@
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/data/notifier.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
+import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -36,14 +38,16 @@ StepRecord walkRecord(DateTime start, int minutes, int spm) => StepRecord(
 /// 메모리 DB + 가짜 걸음(원하면 [source]를 넣는다) + 바꿀 수 있는 시계. 에셋은 모두 직접 넣는다
 /// (두 번째 testWidgets부터는 rootBundle 에셋이 로드되지 않는다)
 class UiEnv {
-  UiEnv({FakeStepSource? source})
+  /// [appRules]를 주면 config.json 대신 그 규칙으로 앱이 돈다 (config 숫자가 화면에 나오는지 볼 때)
+  UiEnv({FakeStepSource? source, Rules? appRules})
       : db = AppDb(NativeDatabase.memory()),
         source = source ?? FakeStepSource(),
+        appRules = appRules ?? rules,
         now = t1 {
     svc = SyncService(
       db: db,
       source: this.source,
-      rules: rules,
+      rules: this.appRules,
       allowedSources: const [],
       landmarks: byId,
       props: props,
@@ -53,14 +57,20 @@ class UiEnv {
 
   final AppDb db;
   final FakeStepSource source;
+  final Rules appRules;
   late final SyncService svc;
   DateTime now;
 
+  /// 앱이 보내거나 예약한 시스템 알림 (아무것도 안 띄우는 자리표시가 받은 부름)
+  final notifier = PlaceholderNotifier();
+
   List<Override> get overrides => [
-        rulesProvider.overrideWith((ref) => rules),
+        rulesProvider.overrideWith((ref) => appRules),
         landmarksProvider.overrideWith((ref) => landmarks),
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
+        noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
+        systemNotifierProvider.overrideWithValue(notifier),
         campThemeProvider.overrideWith((ref) => campTheme),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),
@@ -218,10 +228,11 @@ Future<void> openOnTop(
   Widget screen, {
   bool Function()? ready,
   double height = 844,
+  List<Override> extra = const [],
 }) async {
   phone(tester, height: height);
   await tester.pumpWidget(ProviderScope(
-    overrides: e.overrides,
+    overrides: [...e.overrides, ...extra],
     child: MaterialApp(
       home: Builder(
         builder: (context) => Scaffold(

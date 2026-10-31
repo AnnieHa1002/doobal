@@ -1,6 +1,7 @@
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/guestbook.dart';
 import 'package:doobal/domain/journey.dart';
+import 'package:doobal/domain/notification_policy.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,10 +43,26 @@ Future<void> _insertGuestbook(AppDb db) async {
       ));
 }
 
+/// 알림 기록 두 줄: 보낸 N2와 예약한 N5
+Future<void> _insertNotice(AppDb db) async {
+  await db.into(db.notificationLog).insert(NotificationLogCompanion.insert(
+        kind: NoticeKind.n2,
+        refKey: 'j1',
+        atUtc: 10,
+        status: NoticeStatus.sent,
+      ));
+  await db.into(db.notificationLog).insert(NotificationLogCompanion.insert(
+        kind: NoticeKind.n5,
+        refKey: '',
+        atUtc: 20,
+        status: NoticeStatus.scheduled,
+      ));
+}
+
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
-  test('새 DB는 스키마 8로 열리고 새 표를 바로 쓸 수 있다', () async {
+  test('새 DB는 스키마 9로 열리고 새 표를 바로 쓸 수 있다', () async {
     final db = AppDb(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -53,7 +70,7 @@ void main() {
     expect(await db.select(db.propsOwned).get(), isEmpty);
     expect(await db.select(db.profile).get(), isEmpty);
     expect(await db.select(db.wallSlots).get(), isEmpty);
-    expect(await _userVersion(db), 8);
+    expect(await _userVersion(db), 9);
 
     await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
           landmarkId: 'kr001',
@@ -151,6 +168,27 @@ void main() {
         ['id', 'kind', 'scope', 'opened_utc', 'used_utc', 'closed_utc']);
     expect(await _columns(db, 'guestbook_posts'),
         ['ticket_id', 'scope', 'body', 'created_utc', 'status']);
+
+    // 알림 기록은 쌓기만 하고(id가 저절로 붙는다), 켜고 끄기는 1행이다 (열 기본값은 모두 켬)
+    expect(await db.select(db.notificationLog).get(), isEmpty);
+    expect(await db.select(db.notificationSettings).get(), isEmpty);
+    await _insertNotice(db);
+    final notices = await db.select(db.notificationLog).get();
+    expect(notices.map((r) => (r.kind, r.refKey, r.atUtc, r.status)), [
+      (NoticeKind.n2, 'j1', 10, NoticeStatus.sent),
+      (NoticeKind.n5, '', 20, NoticeStatus.scheduled),
+    ]);
+    expect(notices[0].id, isNot(notices[1].id));
+    await db
+        .into(db.notificationSettings)
+        .insert(NotificationSettingsCompanion.insert(id: const Value(1)));
+    final settings = await db.select(db.notificationSettings).getSingle();
+    expect(
+        [settings.allOn, settings.n1On, settings.n2On, settings.n3On, settings.n4On, settings.n5On],
+        everyElement(isTrue));
+    expect(await _columns(db, 'notification_log'), ['id', 'kind', 'ref_key', 'at_utc', 'status']);
+    expect(await _columns(db, 'notification_settings'),
+        ['id', 'all_on', 'n1_on', 'n2_on', 'n3_on', 'n4_on', 'n5_on']);
   });
 
   test('insertOnConflictUpdate는 companion에 없는 열(seen)을 갱신하지 않는다', () async {
@@ -183,7 +221,7 @@ void main() {
     expect(await row(), (4, true));
   });
 
-  test('스키마 1(여정 표만 있던 때)에서 열면 8로 올라가고 옛 행이 남는다', () async {
+  test('스키마 1(여정 표만 있던 때)에서 열면 9로 올라가고 옛 행이 남는다', () async {
     // 스키마 1의 journeys 표와 행 둘(도착, 멈춤)을 직접 만들어 두고 user_version = 1로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -200,7 +238,7 @@ void main() {
     addTearDown(db.close);
 
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
-    expect(await _userVersion(db), 8);
+    expect(await _userVersion(db), 9);
     expect(rows.keys, {'j1', 'j2'});
     // 새 열은 비어 있고, 옛 도착 여정은 도착 화면을 이미 본 것으로 둔다
     expect(rows['j1']!.endLat, isNull);
@@ -245,7 +283,7 @@ void main() {
     expect(await _columns(db, 'paintings_owned'), _paintingColumns);
   });
 
-  test('스키마 2(프로필 표가 없던 때)에서 열면 8로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 2(프로필 표가 없던 때)에서 열면 9로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 2의 journeys 표(새 열 포함)·그림·소품 표와 행을 직접 만들어 두고 user_version = 2로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -281,7 +319,7 @@ void main() {
     addTearDown(db.close);
 
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
-    expect(await _userVersion(db), 8);
+    expect(await _userVersion(db), 9);
     expect(rows.keys, {'j1', 'j2'});
     expect(rows['j1']!.status, JourneyStatus.arrived);
     expect(rows['j1']!.newFrame, Frame.wood);
@@ -314,7 +352,7 @@ void main() {
     expect(await db.select(db.wallSlots).get(), isEmpty);
   });
 
-  test('스키마 3(화집 벽 표가 없던 때)에서 열면 8로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 3(화집 벽 표가 없던 때)에서 열면 9로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 3의 journeys·그림·소품·프로필 표와 행을 직접 만들어 두고 user_version = 3으로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -353,7 +391,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 8);
+    expect(await _userVersion(db), 9);
     final j = await db.select(db.journeys).getSingle();
     expect((j.id, j.status, j.visitNo, j.newFrame, j.arrivalShown),
         ('j1', JourneyStatus.arrived, 1, Frame.wood, false));
@@ -381,7 +419,7 @@ void main() {
     expect(wall, {1: 'kr003', 3: 'kr002'});
   });
 
-  test('스키마 4(그림 표에 seen 열이 없던 때)에서 열면 8로 올라가고 옛 그림은 본 것이다', () async {
+  test('스키마 4(그림 표에 seen 열이 없던 때)에서 열면 9로 올라가고 옛 그림은 본 것이다', () async {
     // 스키마 4의 journeys·그림·소품·프로필·벽 표와 행을 직접 만들어 두고 user_version = 4로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -425,7 +463,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 8);
+    expect(await _userVersion(db), 9);
     // 옛 그림은 모두 본 것으로 두고, 다른 열은 그대로
     final paintings = {for (final r in await db.select(db.paintingsOwned).get()) r.landmarkId: r};
     expect(paintings.keys, {'kr001', 'kr002'});
@@ -461,7 +499,7 @@ void main() {
     expect(all, {'kr001': true, 'kr002': true, 'kr003': false, 'kr004': true});
   });
 
-  test('스키마 5(프로필에 시작 흐름 열이 없던 때)에서 열면 8로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 5(프로필에 시작 흐름 열이 없던 때)에서 열면 9로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 5의 여정·그림·프로필·벽 표와 행을 직접 만들어 두고 user_version = 5로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -499,7 +537,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 8);
+    expect(await _userVersion(db), 9);
     // 옛 프로필 행은 그대로고 새 열 여덟 개는 비어 있다
     var profile = await db.select(db.profile).getSingle();
     expect((profile.id, profile.homeName, profile.homeLat, profile.homeLng),
@@ -541,7 +579,7 @@ void main() {
     expect(profile.look, '{"hair":1}');
   });
 
-  test('스키마 6(가상 목적지·스케치 열이 없던 때)에서 열면 8로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 6(가상 목적지·스케치 열이 없던 때)에서 열면 9로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 6의 여정·그림·프로필 표와 행을 직접 만들어 두고 user_version = 6으로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -578,7 +616,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 8);
+    expect(await _userVersion(db), 9);
     // 옛 행은 그대로고 새 열은 비어 있다
     var journey = await db.select(db.journeys).getSingle();
     expect((journey.id, journey.destId, journey.status, journey.visitNo, journey.arrivalShown),
@@ -611,7 +649,7 @@ void main() {
     expect((painting.visits, painting.frame, painting.seen), (1, Frame.wood, false));
   });
 
-  test('스키마 7(방명록 표가 없던 때)에서 열면 8로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 7(방명록 표가 없던 때)에서 열면 9로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 7의 여정·그림·프로필 표와 행을 직접 만들어 두고 user_version = 7로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       raw.execute('''
@@ -649,7 +687,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 8);
+    expect(await _userVersion(db), 9);
     // 옛 행은 그대로 (v8은 새 표만 더한다)
     final journey = await db.select(db.journeys).getSingle();
     expect((journey.id, journey.destId, journey.status, journey.destLat),
@@ -676,5 +714,47 @@ void main() {
     expect((tickets['m:100']!.usedUtc, tickets['m:100']!.closedUtc), (null, null));
     expect(tickets['m:100']!.kind, TicketKind.milestone);
     expect((await db.select(db.guestbookPosts).getSingle()).status, PostStatus.pending);
+  });
+
+  test('스키마 8(알림 표가 없던 때)에서 열면 9로 올라가고 옛 행이 그대로 남는다', () async {
+    // 스키마 8의 방명록 표와 행을 직접 만들어 두고 user_version = 8로 연다
+    final db = AppDb(NativeDatabase.memory(setup: (raw) {
+      raw.execute('''
+        CREATE TABLE guestbook_tickets (
+          id TEXT NOT NULL, kind TEXT NOT NULL, scope TEXT NOT NULL,
+          opened_utc INTEGER NOT NULL, used_utc INTEGER NULL, closed_utc INTEGER NULL,
+          PRIMARY KEY (id))
+      ''');
+      raw.execute("INSERT INTO guestbook_tickets VALUES ('m:100', 'milestone', 'steps:100', 5, "
+          'NULL, NULL)');
+      raw.execute('''
+        CREATE TABLE guestbook_posts (
+          ticket_id TEXT NOT NULL, scope TEXT NOT NULL, body TEXT NOT NULL,
+          created_utc INTEGER NOT NULL, status TEXT NOT NULL, PRIMARY KEY (ticket_id))
+      ''');
+      raw.execute("INSERT INTO guestbook_posts VALUES ('m:100', 'steps:100', '좋아요', 6, 'pending')");
+      raw.execute('PRAGMA user_version = 8');
+    }));
+    addTearDown(db.close);
+
+    expect(await _userVersion(db), 9);
+    // 옛 행은 그대로 (v9는 새 표만 더한다)
+    final ticket = await db.select(db.guestbookTickets).getSingle();
+    expect((ticket.id, ticket.kind, ticket.openedUtc), ('m:100', TicketKind.milestone, 5));
+    expect((await db.select(db.guestbookPosts).getSingle()).body, '좋아요');
+
+    // 알림 표 둘이 새로 생겼고 비어 있다. 쓸 수 있다
+    expect(await db.select(db.notificationLog).get(), isEmpty);
+    expect(await db.select(db.notificationSettings).get(), isEmpty);
+    await _insertNotice(db);
+    expect((await db.select(db.notificationLog).get()).map((r) => r.status),
+        [NoticeStatus.sent, NoticeStatus.scheduled]);
+    await db.into(db.notificationSettings).insert(NotificationSettingsCompanion.insert(
+          id: const Value(1),
+          allOn: const Value(false),
+          n3On: const Value(false),
+        ));
+    final settings = await db.select(db.notificationSettings).getSingle();
+    expect((settings.allOn, settings.n1On, settings.n3On), (false, true, false));
   });
 }
