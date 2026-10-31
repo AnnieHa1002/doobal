@@ -226,8 +226,10 @@ class _SigunguRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        // 44pt가 최소 높이다. 글자 크기를 키워 이름이 줄바꿈되면 줄이 같이 커진다
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        alignment: Alignment.centerLeft,
         color: selected ? Palette.terracotta.withValues(alpha: 0.18) : null,
         child: Row(
           children: [

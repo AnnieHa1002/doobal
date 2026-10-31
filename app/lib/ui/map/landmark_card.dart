@@ -43,9 +43,10 @@ class LandmarkCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 한 줄이 기본이고, 글자 크기를 키워 이름이 길어지면 두 줄까지 보여 준다
           Text(
             landmark.name,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
           ),
@@ -55,9 +56,9 @@ class LandmarkCard extends StatelessWidget {
             style: const TextStyle(fontSize: 14, color: Palette.subInk),
           ),
           const SizedBox(height: 8),
-          // 계산 중에도 줄 높이는 그대로 둔다
-          SizedBox(
-            height: 20,
+          // 계산 중에도 줄 높이는 그대로 둔다 (글자 크기를 키워 줄이 늘면 같이 늘어난다)
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 20),
             child: Text(
               distance ?? '',
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Palette.ink),
@@ -74,12 +75,15 @@ class LandmarkCard extends StatelessWidget {
               const PaintingSlot(),
               if (f != null) ...[
                 const SizedBox(width: 12),
-                Text(
-                  frameLabel(f),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Palette.ink,
+                // 좁은 화면에서 글자가 커지면 줄바꿈한다
+                Flexible(
+                  child: Text(
+                    frameLabel(f),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Palette.ink,
+                    ),
                   ),
                 ),
               ],

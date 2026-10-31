@@ -7,7 +7,8 @@ const _shadow = 4.0;
 const _pressDuration = Duration(milliseconds: 80);
 
 /// 잉크 테두리 + 아래로 4pt 그림자. 누르면 그림자가 0이 되고 4pt 내려간다 (0.08초).
-/// 높이는 그림자 자리까지 [height] + 4. [onPressed]가 null이면 눌리지 않는 비활성
+/// 높이는 그림자 자리까지 [height] + 4이고, 안의 글자가 커지면(글자 크기 설정) 그만큼 늘어난다.
+/// [onPressed]가 null이면 눌리지 않는 비활성
 class InkPress extends StatefulWidget {
   const InkPress({
     super.key,
@@ -23,6 +24,8 @@ class InkPress extends StatefulWidget {
   final VoidCallback? onPressed;
   final Color fill;
   final Widget child;
+
+  /// 이 높이가 최소다 (그림자 자리는 따로 4pt)
   final double height;
 
   /// null이면 부모 너비를 꽉 채운다
@@ -62,15 +65,14 @@ class _InkPressState extends State<InkPress> {
         onTap: widget.onPressed,
         child: SizedBox(
           width: widget.width,
-          height: widget.height + _shadow,
-          child: Align(
-            alignment: Alignment.topCenter,
+          // 눌리면 4pt 내려간다. 위아래 합이 늘 4pt라 전체 높이는 그대로다
+          child: AnimatedPadding(
+            duration: _pressDuration,
+            padding: EdgeInsets.only(top: _pressed ? _shadow : 0, bottom: _pressed ? 0 : _shadow),
             child: AnimatedContainer(
               duration: _pressDuration,
               width: widget.width ?? double.infinity,
-              height: widget.height,
-              margin: EdgeInsets.only(top: _pressed ? _shadow : 0),
-              alignment: Alignment.center,
+              constraints: BoxConstraints(minHeight: widget.height),
               decoration: BoxDecoration(
                 color: widget.fill,
                 shape: widget.circle ? BoxShape.circle : BoxShape.rectangle,
@@ -83,7 +85,8 @@ class _InkPressState extends State<InkPress> {
                   ),
                 ],
               ),
-              child: widget.child,
+              // 안이 최소 높이보다 작으면 가운데, 크면 안이 높이를 정한다
+              child: Center(heightFactor: 1, child: widget.child),
             ),
           ),
         ),

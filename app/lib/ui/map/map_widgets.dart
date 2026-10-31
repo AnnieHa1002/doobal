@@ -20,7 +20,8 @@ class MapSearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 44,
+      // 44pt가 최소 높이다. 글자 크기를 키우면 입력 줄이 커져서 칸도 같이 커진다
+      constraints: const BoxConstraints(minHeight: 44),
       padding: const EdgeInsets.only(left: 12),
       decoration: BoxDecoration(
         color: Palette.card,
@@ -52,6 +53,8 @@ class MapSearchField extends StatelessWidget {
             builder: (context, _) => controller.text.isEmpty
                 ? const SizedBox(width: 12)
                 : IconButton(
+                    // 칸이 최소 높이만 정해 두므로 지우기 버튼이 칸을 키우지 않게 (넓이 48, 높이 39)
+                    constraints: const BoxConstraints(minWidth: 48, minHeight: 39),
                     icon: const Icon(Icons.close, size: 18, color: Palette.subInk),
                     onPressed: () {
                       controller.clear();

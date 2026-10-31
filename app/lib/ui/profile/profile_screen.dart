@@ -159,8 +159,9 @@ class _ProfileCard extends StatelessWidget {
                   style: AppText.cardTitle,
                 ),
                 const SizedBox(height: 8),
+                // 너비 120pt는 글자 크기를 키우면 같이 넓어진다 (칸이 모자라면 칸만큼에서 멈춘다)
                 SizedBox(
-                  width: 120,
+                  width: MediaQuery.textScalerOf(context).scale(120),
                   child: GameButton(
                     label: '꾸미기',
                     kind: GameButtonKind.secondary,
@@ -235,12 +236,16 @@ class _DaysCard extends StatelessWidget {
             children: [
               for (final b in bars)
                 Expanded(
-                  child: Text(
-                    _weekdayLabels[dayFromKey(b.day).weekday - 1],
-                    textAlign: TextAlign.center,
-                    style: b.day == today
-                        ? AppText.label.copyWith(fontWeight: FontWeight.w800, color: Palette.ink)
-                        : AppText.label,
+                  // 14칸이라 칸이 좁다. 글자 크기를 키워 요일 글자가 칸보다 커지면 칸에 맞게 줄인다
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _weekdayLabels[dayFromKey(b.day).weekday - 1],
+                      textAlign: TextAlign.center,
+                      style: b.day == today
+                          ? AppText.label.copyWith(fontWeight: FontWeight.w800, color: Palette.ink)
+                          : AppText.label,
+                    ),
                   ),
                 ),
             ],

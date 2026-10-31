@@ -4,12 +4,40 @@ import '../../app/sync_service.dart';
 import '../../domain/landmark.dart';
 import '../../domain/prop.dart';
 import '../../domain/sketch.dart';
+import '../common/app_text.dart' show badgeMaxTextScale;
 import '../common/framed_painting.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
 
 /// 벽 한 칸의 크기 비율 (너비 : 높이 = 4 : 5)
 const _wallSlotAspect = 0.8;
+
+/// 그림 칸 격자: 3열, 칸 너비 : (그림 + 이름 줄) 높이 = 0.78, 좌우 여백 16pt·칸 사이 8pt
+const _cellColumns = 3;
+const _cellAspect = 0.78;
+const _gridGutter = 16.0;
+const _gridGap = 8.0;
+
+/// 그림 칸 이름 줄의 기본 높이: 두 줄 (12pt, 줄 높이 1.25) + 2pt
+const _labelHeight = 32.0;
+
+/// 이름 줄 높이: 글자 크기를 키우면 두 줄이 같이 커진다 (기본 크기에서는 32pt)
+double paintingLabelHeight(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(12) * 1.25 * 2 + 2;
+
+/// 그림 칸 3열 격자. 칸 높이는 기본 크기에서 너비 : 높이 = 0.78이고,
+/// 글자 크기를 키우면 이름 줄이 커진 만큼 칸이 길어져서 그림 크기는 그대로다
+SliverGridDelegate paintingGridDelegate(BuildContext context) {
+  final cellWidth =
+      (MediaQuery.sizeOf(context).width - 2 * _gridGutter - (_cellColumns - 1) * _gridGap) /
+          _cellColumns;
+  return SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: _cellColumns,
+    mainAxisSpacing: 12,
+    crossAxisSpacing: _gridGap,
+    mainAxisExtent: cellWidth / _cellAspect + paintingLabelHeight(context) - _labelHeight,
+  );
+}
 
 /// 화집 벽: 액자 [wall].length칸을 한 줄로. 건 칸은 색 액자(첫 그림은 나무 액자), 빈 칸은 빈 액자.
 /// [replacing]이면 칸마다 테라코타 테두리를 둘러 눌러서 고르게 한다
@@ -261,7 +289,7 @@ class PaintingCell extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               SizedBox(
-                height: 32,
+                height: paintingLabelHeight(context),
                 child: Text(
                   landmark.name,
                   maxLines: 2,
@@ -316,7 +344,7 @@ class FirstPackCell extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               SizedBox(
-                height: 32,
+                height: paintingLabelHeight(context),
                 child: Text(
                   firstPackLabel,
                   maxLines: 2,
@@ -376,6 +404,8 @@ class PropRow extends StatelessWidget {
             ),
             child: Text(
               prop.name.substring(0, 1),
+              // 40pt 동그라미 안이라 글자 배율 상한을 둔다
+              textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: badgeMaxTextScale),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
             ),
           ),
@@ -422,12 +452,7 @@ Future<String?> showPaintingPicker(BuildContext context, List<OwnedPaintingView>
         child: GridView.builder(
           shrinkWrap: true,
           padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 8,
-            childAspectRatio: 0.78,
-          ),
+          gridDelegate: paintingGridDelegate(context),
           itemCount: paintings.length,
           itemBuilder: (context, i) {
             final p = paintings[i];

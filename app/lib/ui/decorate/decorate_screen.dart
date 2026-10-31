@@ -315,11 +315,12 @@ class _TabChip extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
           );
         },
-        child: SizedBox(
-          height: 44,
+        // 누르는 자리는 44pt, 눈에 보이는 칩은 36pt가 최소다 (글자 크기를 키우면 같이 커진다)
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
           child: Center(
             child: Container(
-              height: 36,
+              constraints: const BoxConstraints(minHeight: 36),
               padding: const EdgeInsets.symmetric(horizontal: 12),
               alignment: Alignment.center,
               decoration: BoxDecoration(

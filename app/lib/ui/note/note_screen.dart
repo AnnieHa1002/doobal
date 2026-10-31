@@ -82,7 +82,9 @@ class _Tab extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          height: 44,
+          // 44pt가 최소 높이다. 글자 크기를 키워 탭 이름이 줄바꿈되면 같이 커진다
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? Palette.terracotta : Palette.card,
@@ -91,6 +93,7 @@ class _Tab extends StatelessWidget {
           ),
           child: Text(
             label,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -152,13 +155,14 @@ class _PostCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            // 태그는 왼쪽, 날짜는 오른쪽. 글자가 커져서 한 줄에 안 들어가면 날짜가 아래로 내려간다
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
               children: [
-                Flexible(
-                  child: GuestbookTagPill(guestbookPostTag(post), color: Palette.paper),
-                ),
-                const SizedBox(width: 8),
-                const Spacer(),
+                GuestbookTagPill(guestbookPostTag(post), color: Palette.paper),
                 Text(formatMonthDay(kstDateTime(post.createdAt)), style: AppText.label),
               ],
             ),
@@ -250,20 +254,54 @@ class _WalkRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Palette.ink, width: 2.5),
             ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 56,
-                  child: Text(
-                    formatKstClock(session.start),
-                    style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+            // 시각·걸음은 왼쪽, 거리·화살표는 오른쪽 끝. 글자 크기를 키워 한 줄에 안 들어가면
+            // 줄 전체가 줄어든다 (들어가면 줄 너비만큼 그대로 펴진다)
+            child: LayoutBuilder(
+              builder: (context, box) => FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: box.maxWidth),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // 오른쪽 거리와 8pt 이상 떨어진다
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // 시각 칸은 56pt가 최소다 (글자가 커지면 시각 + 8pt까지 넓어진다)
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: 56),
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: Text(
+                                  formatKstClock(session.start),
+                                  style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                            Text('${formatInt(session.steps)}보', style: AppText.body),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            formatKm(session.distanceM / 1000, digits: 2),
+                            style: AppText.bodySub,
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right, color: Palette.ink),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                Expanded(child: Text('${formatInt(session.steps)}보', style: AppText.body)),
-                Text(formatKm(session.distanceM / 1000, digits: 2), style: AppText.bodySub),
-                const SizedBox(width: 4),
-                const Icon(Icons.chevron_right, color: Palette.ink),
-              ],
+              ),
             ),
           ),
         ),

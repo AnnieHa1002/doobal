@@ -188,12 +188,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         sliver: SliverGrid.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 8,
-            childAspectRatio: 0.78,
-          ),
+          gridDelegate: paintingGridDelegate(context),
           itemCount: shown.length + (withFirstPack ? 1 : 0),
           itemBuilder: (context, i) {
             if (withFirstPack && i == 0) {

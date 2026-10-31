@@ -10,6 +10,7 @@ import '../../domain/journey.dart' show Frame;
 import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
 import '../album/album_screen.dart';
+import '../common/app_text.dart' show badgeMaxTextScale;
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/frame_style.dart';
@@ -311,6 +312,8 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
             ),
             child: Text(
               prop.name.substring(0, 1),
+              // 40pt 동그라미 안이라 글자 배율 상한을 둔다
+              textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: badgeMaxTextScale),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
             ),
           ),

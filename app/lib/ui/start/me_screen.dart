@@ -68,9 +68,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           onChanged: (_) => setState(() {}),
           onSubmitted: (_) => _submit(),
         ),
-        // 금칙어 안내도 여기 (M5 금칙어 문서가 나오면). 빨간색 대신 테라코타 글자
-        SizedBox(
-          height: 24,
+        // 금칙어 안내도 여기 (M5 금칙어 문서가 나오면). 빨간색 대신 테라코타 글자.
+        // 글자 크기를 키워 줄이 늘면 칸도 같이 늘어난다
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 24),
           child: check.ok
               ? null
               : Padding(

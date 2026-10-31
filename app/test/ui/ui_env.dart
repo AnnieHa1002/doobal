@@ -188,8 +188,8 @@ class UiEnv {
           ]));
 }
 
-void phone(WidgetTester tester, {double height = 844}) {
-  tester.view.physicalSize = Size(390, height);
+void phone(WidgetTester tester, {double width = 390, double height = 844}) {
+  tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 }
@@ -216,8 +216,14 @@ Future<void> end(WidgetTester tester, UiEnv e) async {
 }
 
 /// 앱 전체(DoobalApp = 시작 관문 → AutoSync + 쉼터)를 폰 크기로 띄운다
-Future<void> pumpDoobal(WidgetTester tester, UiEnv e, Widget app, {double height = 844}) async {
-  phone(tester, height: height);
+Future<void> pumpDoobal(
+  WidgetTester tester,
+  UiEnv e,
+  Widget app, {
+  double width = 390,
+  double height = 844,
+}) async {
+  phone(tester, width: width, height: height);
   await tester.pumpWidget(ProviderScope(overrides: e.overrides, child: app));
 }
 
@@ -227,10 +233,11 @@ Future<void> openOnTop(
   UiEnv e,
   Widget screen, {
   bool Function()? ready,
+  double width = 390,
   double height = 844,
   List<Override> extra = const [],
 }) async {
-  phone(tester, height: height);
+  phone(tester, width: width, height: height);
   await tester.pumpWidget(ProviderScope(
     overrides: [...e.overrides, ...extra],
     child: MaterialApp(
