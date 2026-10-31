@@ -37,3 +37,15 @@ flutter:
     - assets/rive/
     # 지도 경계 SVG와 위경도 투영 (Drive Assets 폴더의 ui_map_*_v01)
     - assets/map/
+
+  # 고운바탕(제목·카드 제목·큰 숫자)·고운돋움(본문), SIL OFL 1.1.
+  # 자주 쓰는 글자만 남긴 판이다. 원본은 Drive Assets/05_UI_화면/fonts, 다시 만들기는 tools/subset_fonts.py
+  fonts:
+    - family: GowunBatang
+      fonts:
+        - asset: assets/fonts/GowunBatang-Regular.ttf
+        - asset: assets/fonts/GowunBatang-Bold.ttf
+          weight: 700
+    - family: GowunDodum
+      fonts:
+        - asset: assets/fonts/GowunDodum-Regular.ttf

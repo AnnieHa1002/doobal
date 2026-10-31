@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/auto_sync.dart';
+import 'app/licenses.dart';
+import 'ui/common/app_text.dart';
 import 'ui/common/palette.dart';
 import 'ui/start/start_gate.dart';
 
 void main() {
+  registerFontLicenses();
   runApp(const ProviderScope(child: DoobalApp()));
 }
 
@@ -19,6 +22,7 @@ class DoobalApp extends StatelessWidget {
       scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        fontFamily: bodyFont,
         colorScheme: ColorScheme.fromSeed(
           seedColor: Palette.terracotta,
           primary: Palette.terracotta,
