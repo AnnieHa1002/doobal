@@ -17,6 +17,9 @@ dependencies:
   drift_flutter: ^0.3.1
   health: ^13.3.2
   rive: ^0.14.11
+  app_settings: ^9.0.1
+  share_plus: ^13.3.1
+  korean_profanity_filter: ^1.0.0
 
 dev_dependencies:
   flutter_test:
