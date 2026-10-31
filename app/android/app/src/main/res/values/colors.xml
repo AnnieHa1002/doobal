@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 종이색 (UI 명세 0장 바탕). 시작 화면과 Flutter 첫 프레임 전 창 바탕 -->
+    <color name="paper">#F2E8D5</color>
+</resources>
