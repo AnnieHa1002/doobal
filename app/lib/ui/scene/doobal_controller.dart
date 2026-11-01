@@ -40,6 +40,9 @@ final class DoobalController extends rive.RiveWidgetController {
   bool get supportsItems => _bones.length == 6;
   void initializeItems() {
     if (itemArt == null || _bones.isNotEmpty) return;
+    if (!itemArt!.supportsSeatedArt) {
+      throw StateError('앉기 전용 파츠가 빠졌어요');
+    }
     advance(0);
     for (final name in [
       'head',
@@ -70,6 +73,9 @@ final class DoobalController extends rive.RiveWidgetController {
     if (image == null) return;
     renderer.save();
     renderer.transform(itemTransform(bone));
+    if (key == 'bag_back') {
+      renderer.translate(-60 * _brushSitProgress, 120 * _brushSitProgress);
+    }
     if (key == 'hand') {
       if (_brushSitProgress > 0) {
         renderer.translate(300, 920);
@@ -79,7 +85,11 @@ final class DoobalController extends rive.RiveWidgetController {
       renderer.transform(rive.Mat2D.fromTranslate(650, 1800));
       renderer.scale(-1, -1);
     }
-    renderer.drawImage(image, ui.BlendMode.srcOver, 1);
+    renderer.drawImage(
+      image,
+      ui.BlendMode.srcOver,
+      key == 'bag_strap' ? 1 - _brushSitProgress : 1,
+    );
     renderer.restore();
   }
 
@@ -98,6 +108,35 @@ final class DoobalController extends rive.RiveWidgetController {
       layoutScaleFactor,
     );
     _item(renderer, 'bag_back', 'motion_root');
+    final blend =
+        _brushSitProgress * _brushSitProgress * (3 - 2 * _brushSitProgress);
+    final art = itemArt!;
+    if (blend > 0) {
+      // 기존 하체만 흐리게 남기고, 상체는 한 번만 불투명하게 그린다.
+      if (blend < 1) {
+        art.setSeatedArt(false);
+        renderer.save();
+        renderer.clipRect(
+          ui.Rect.fromLTRB(
+            0,
+            790 + itemTransform('motion_root')[5],
+            1024,
+            1280,
+          ),
+        );
+        renderer.modulateOpacity(1 - blend);
+        artboard.draw(renderer);
+        renderer.restore();
+      }
+      final lower = art.images['sit_lower_v04']!;
+      renderer.save();
+      renderer.transform(itemTransform('motion_root'));
+      renderer.drawImage(lower, ui.BlendMode.srcOver, blend);
+      renderer.restore();
+      art.setSeatedArt(true);
+    } else {
+      art.setSeatedArt(false);
+    }
     renderer.restore();
     super.paint(renderer, size, paintPixelRatio);
     _item(renderer, 'bag_strap', 'motion_root');
@@ -130,7 +169,7 @@ final class DoobalController extends rive.RiveWidgetController {
   /// 자세 전환 중에도 손 소품이 즉시 꺾이지 않도록 350ms 동안 보간한다.
   double get brushAngle {
     final t = _brushSitProgress;
-    return -pi / 2 * t * t * (3 - 2 * t);
+    return pi / 3 * t * t * (3 - 2 * t);
   }
 
   double _wait = 0;
