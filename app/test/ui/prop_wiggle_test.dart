@@ -237,7 +237,7 @@ void main() {
 
       await _wiggleStarted(tester);
       expect(_tilted(tester), ['map']);
-      await tester.tap(find.byIcon(Icons.map_outlined));
+      await tester.tap(find.byKey(const ValueKey('camp-object-map')));
       await transition(tester);
       expect(find.byType(MapScreen), findsOneWidget);
       await end(tester, e);

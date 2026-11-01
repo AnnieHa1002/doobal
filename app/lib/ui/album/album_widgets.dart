@@ -6,6 +6,7 @@ import '../../app/sync_service.dart';
 import '../../domain/prop.dart';
 import '../../domain/sketch.dart';
 import '../common/app_text.dart' show badgeMaxTextScale;
+import '../common/basic_item_art.dart';
 import '../common/framed_painting.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
@@ -461,12 +462,7 @@ class PropRow extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: Palette.ink, width: 2),
             ),
-            child: Text(
-              prop.name.substring(0, 1),
-              // 40pt 동그라미 안이라 글자 배율 상한을 둔다
-              textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: badgeMaxTextScale),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
-            ),
+            child: BasicItemIcon(id: prop.id, fallback: prop.name.substring(0, 1)),
           ),
           const SizedBox(width: 12),
           Expanded(

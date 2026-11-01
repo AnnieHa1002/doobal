@@ -276,6 +276,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             rules: rules,
             landmarks: landmarks,
             running: running,
+            moving: summary != null && summary.lastSteps > 0,
+            sceneSeed: snap.journey?.dest.id ?? 'home',
           ),
           SafeArea(
             child: Padding(

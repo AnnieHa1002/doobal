@@ -102,6 +102,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
               rules: rules,
               landmarks: landmarks,
               camp: camp,
+              sceneSeed: snap.journey?.dest.id ?? 'home',
             ),
             for (final o in camp.objects)
               _campObject(
@@ -337,7 +338,13 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  _objectBox(o.size, _iconOf(o.id)),
+                  SizedBox(
+                    key: ValueKey('camp-object-${o.id}'),
+                    width: o.size, height: o.size,
+                    child: Image.asset('assets/backgrounds/v11/obj_rest_${o.id}_v11_clean.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, error, stack) => _objectBox(o.size, _iconOf(o.id))),
+                  ),
                   if (o.id == 'backpack' && hasNew)
                     const Positioned(
                       top: -4,

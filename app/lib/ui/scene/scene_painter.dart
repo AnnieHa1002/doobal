@@ -14,6 +14,9 @@ import 'sky_painter.dart';
 
 enum SceneMode { rest, walking }
 
+/// Rive 캐릭터 앞뒤의 그리기 순서. all은 기존 단독 그림 시험용.
+enum ScenePass { all, background, foreground }
+
 /// 캐릭터 그림의 키 (발 0 ~ 베레모 꼭대기, 그림 좌표). 이게 config characterHeightPx가 된다
 const _figureHeight = 135.0;
 
@@ -48,8 +51,10 @@ class ScenePainter extends CustomPainter {
     required this.onSea,
     required this.running,
     this.camp,
+    this.pass = ScenePass.all,
   });
 
+  final ScenePass pass;
   final SceneLook look;
   final SceneMode mode;
 
@@ -79,13 +84,29 @@ class ScenePainter extends CustomPainter {
   double _offset(SceneLayerId id, double k) {
     if (_rest) return 0;
     final layer = _layer(id);
-    return layerOffsetPx(distanceM, layer.speed, rules.groundPxPerM, layer.widthPx!) * k;
+    return layerOffsetPx(
+          distanceM,
+          layer.speed,
+          rules.groundPxPerM,
+          layer.widthPx!,
+        ) *
+        k;
   }
 
   @override
   void paint(Canvas canvas, Size size) {
     final k = size.height / rules.screenHeightPx;
     final u = _unit(k);
+    if (pass == ScenePass.foreground) {
+      if (_rest) {
+        if (camp != null) {
+          _tinted(canvas, size, () => _fire(canvas, size, u, camp!));
+        }
+      } else if (_shown(SceneLayerId.foreground)) {
+        _tinted(canvas, size, () => _foreground(canvas, size, k));
+      }
+      return;
+    }
     _sky(canvas, size, k);
     if (_rest) {
       // 쉼터에 능선·숲·풀밭(L2~L4)을 보일지는 아직 정하지 않았다 (지금은 다 보인다)
@@ -96,12 +117,23 @@ class ScenePainter extends CustomPainter {
           _signpost(canvas, size, u, camp!.signpost);
         }
       });
-      final spot = camp?.character ?? FootSpot(0.5, rules.pathY / rules.screenHeightPx);
-      _character(canvas, k, spot.x * size.width, spot.footY * size.height, standing: true);
-      if (camp != null) _tinted(canvas, size, () => _fire(canvas, size, u, camp!));
+      if (pass == ScenePass.background) return;
+      final spot =
+          camp?.character ?? FootSpot(0.5, rules.pathY / rules.screenHeightPx);
+      _character(
+        canvas,
+        k,
+        spot.x * size.width,
+        spot.footY * size.height,
+        standing: true,
+      );
+      if (camp != null) {
+        _tinted(canvas, size, () => _fire(canvas, size, u, camp!));
+      }
       return;
     }
     _tinted(canvas, size, () => _scenery(canvas, size, k));
+    if (pass == ScenePass.background) return;
     _character(canvas, k, size.width / 2, rules.pathY * k, standing: _sea);
     // 물 위에는 풀이 없다
     if (_shown(SceneLayerId.foreground)) {
@@ -134,15 +166,27 @@ class ScenePainter extends CustomPainter {
   }
 
   Paint _tintPaint(int factor) =>
-      Paint()..colorFilter = ColorFilter.mode(Color(factor), BlendMode.modulate);
+      Paint()
+        ..colorFilter = ColorFilter.mode(Color(factor), BlendMode.modulate);
 
   /// 하늘 (별·빛무리·해·달 포함). 그리는 건 sky_painter.dart, 시간대 색은 입히지 않는다
-  void _sky(Canvas canvas, Size size, double k) =>
-      paintSky(canvas, size, k, sky: look.sky, celestial: look.celestial, rules: rules);
+  void _sky(Canvas canvas, Size size, double k) => paintSky(
+    canvas,
+    size,
+    k,
+    sky: look.sky,
+    celestial: look.celestial,
+    rules: rules,
+  );
 
   /// 한 바퀴([period])마다 되풀이되는 물체의 화면 x들. [worldX]는 레이어 위 위치, [margin]은 물체 반폭
   Iterable<double> _repeats(
-      double worldX, double offset, double period, double width, double margin) sync* {
+    double worldX,
+    double offset,
+    double period,
+    double width,
+    double margin,
+  ) sync* {
     var x = (worldX - offset) % period - period;
     while (x < -margin) {
       x += period;
@@ -155,9 +199,18 @@ class ScenePainter extends CustomPainter {
   /// 윗선이 띠(bandTop~bandBottom) 안에서 오르내리는 실루엣을 [bottom]까지 채운다.
   /// 윗선은 가로 한 바퀴(widthPx)에 [waves] 개수만큼 물결치는 사인 합이라 끊김 없이 이어진다.
   /// [flatten]이 1보다 작으면 띠의 아래쪽에서만 오르내린다
-  void _silhouette(Canvas canvas, Size size, double k, SceneLayer layer, double offset,
-      Color color, double bottom,
-      {List<int> waves = const [3, 7, 13], double phase = 0, double flatten = 1}) {
+  void _silhouette(
+    Canvas canvas,
+    Size size,
+    double k,
+    SceneLayer layer,
+    double offset,
+    Color color,
+    double bottom, {
+    List<int> waves = const [3, 7, 13],
+    double phase = 0,
+    double flatten = 1,
+  }) {
     const step = 12.0;
     final period = layer.widthPx! * k;
     final bandBottom = layer.bandBottom! * k;
@@ -165,7 +218,8 @@ class ScenePainter extends CustomPainter {
     final path = Path()..moveTo(0, bottom);
     for (var x = 0.0; x <= size.width + step; x += step) {
       final t = 2 * math.pi * (x + offset) / period;
-      final h = 0.5 * math.sin(waves[0] * t + phase) +
+      final h =
+          0.5 * math.sin(waves[0] * t + phase) +
           0.35 * math.sin(waves[1] * t + 2 * phase) +
           0.15 * math.sin(waves[2] * t);
       path.lineTo(x, bandBottom - span * (0.5 + 0.5 * h));
@@ -182,18 +236,32 @@ class ScenePainter extends CustomPainter {
     final tint = backdropTints[look.backdrop] ?? fallbackBackdropTint;
     final sea = look.backdrop == seaBackdrop;
     final bottom = math.max(layer.topY! + layer.heightPx!, rules.horizonY) * k;
-    _silhouette(canvas, size, k, layer, _offset(SceneLayerId.backdrop, k),
-        Color.lerp(tint, Color(look.sky.horizon), 0.45)!, bottom,
-        flatten: sea ? _seaHillFlatten : 1);
+    _silhouette(
+      canvas,
+      size,
+      k,
+      layer,
+      _offset(SceneLayerId.backdrop, k),
+      Color.lerp(tint, Color(look.sky.horizon), 0.45)!,
+      bottom,
+      flatten: sea ? _seaHillFlatten : 1,
+    );
   }
 
   /// L2 능선 (모든 지역 공통)
   void _ridge(Canvas canvas, Size size, double k) {
     final layer = _layer(SceneLayerId.ridge);
-    _silhouette(canvas, size, k, layer, _offset(SceneLayerId.ridge, k),
-        Color.lerp(ridgeColor, Color(look.sky.horizon), 0.25)!,
-        (layer.topY! + layer.heightPx!) * k,
-        waves: const [2, 5, 11], phase: 1.7);
+    _silhouette(
+      canvas,
+      size,
+      k,
+      layer,
+      _offset(SceneLayerId.ridge, k),
+      Color.lerp(ridgeColor, Color(look.sky.horizon), 0.25)!,
+      (layer.topY! + layer.heightPx!) * k,
+      waves: const [2, 5, 11],
+      phase: 1.7,
+    );
   }
 
   /// L3 숲: 둥근 나무 덩이들. 덩이 꼭대기는 띠 안에, 아래는 레이어 바닥까지 채운다
@@ -205,7 +273,14 @@ class ScenePainter extends CustomPainter {
     final bandBottom = layer.bandBottom! * k;
     final paint = Paint()..color = groveColors[look.season]!;
     canvas.drawRect(
-        Rect.fromLTRB(0, bandBottom, size.width, (layer.topY! + layer.heightPx!) * k), paint);
+      Rect.fromLTRB(
+        0,
+        bandBottom,
+        size.width,
+        (layer.topY! + layer.heightPx!) * k,
+      ),
+      paint,
+    );
     final spacing = period / _groveCount;
     for (var i = 0; i < _groveCount; i++) {
       // 덩이마다 크기·높이를 다르게 하는 고정된 값 (i로만 정해 항상 같다)
@@ -224,9 +299,17 @@ class ScenePainter extends CustomPainter {
   /// L4 길 뒤 풀밭: 잔물결 치는 풀 띠
   void _meadow(Canvas canvas, Size size, double k) {
     final layer = _layer(SceneLayerId.meadow);
-    _silhouette(canvas, size, k, layer, _offset(SceneLayerId.meadow, k),
-        meadowColors[look.season]!, (layer.topY! + layer.heightPx!) * k,
-        waves: const [6, 11, 23], phase: 0.6);
+    _silhouette(
+      canvas,
+      size,
+      k,
+      layer,
+      _offset(SceneLayerId.meadow, k),
+      meadowColors[look.season]!,
+      (layer.topY! + layer.heightPx!) * k,
+      waves: const [6, 11, 23],
+      phase: 0.6,
+    );
   }
 
   /// 땅: 길 띠(흙)와 그 아래 풀 언덕을 화면 맨 아래까지. 길 위쪽은 비워서 풀밭이 보인다.
@@ -236,16 +319,24 @@ class ScenePainter extends CustomPainter {
     final pathTop = (rules.pathY - _pathHalfWidth) * k;
     final pathBottom = (rules.pathY + _pathHalfWidth) * k;
     final bottom = (layer.topY! + layer.heightPx!) * k;
-    canvas.drawRect(Rect.fromLTRB(0, pathBottom, size.width, bottom),
-        Paint()..color = groundColors[look.season]!);
     canvas.drawRect(
-        Rect.fromLTRB(0, pathTop, size.width, pathBottom), Paint()..color = pathColor);
+      Rect.fromLTRB(0, pathBottom, size.width, bottom),
+      Paint()..color = groundColors[look.season]!,
+    );
+    canvas.drawRect(
+      Rect.fromLTRB(0, pathTop, size.width, pathBottom),
+      Paint()..color = pathColor,
+    );
 
     final period = layer.widthPx! * k;
     final stripeW = period / _groundStripes;
     final offset = _offset(SceneLayerId.ground, k);
     final dark = Paint()..color = Palette.ink.withValues(alpha: 0.10);
-    for (var i = (offset / stripeW).floor(); i * stripeW < offset + size.width; i++) {
+    for (
+      var i = (offset / stripeW).floor();
+      i * stripeW < offset + size.width;
+      i++
+    ) {
       if (i.isEven) continue;
       final x = i * stripeW - offset;
       canvas.drawRect(Rect.fromLTRB(x, pathTop, x + stripeW, bottom), dark);
@@ -254,15 +345,21 @@ class ScenePainter extends CustomPainter {
       ..color = Palette.ink
       ..strokeWidth = 5 * k;
     canvas.drawLine(Offset(0, pathTop), Offset(size.width, pathTop), edge);
-    canvas.drawLine(Offset(0, pathBottom), Offset(size.width, pathBottom), edge);
+    canvas.drawLine(
+      Offset(0, pathBottom),
+      Offset(size.width, pathBottom),
+      edge,
+    );
   }
 
   /// 배 구간: 지평선 아래를 바다색으로 채우고, 땅 자리에 물결을 줄지어 땅과 같은 속도로 흘린다.
   /// 물결은 한 바퀴를 나눠 떨어져야 이어진다
   void _seaGround(Canvas canvas, Size size, double k) {
     final layer = _layer(SceneLayerId.ground);
-    canvas.drawRect(Rect.fromLTRB(0, rules.horizonY * k, size.width, size.height),
-        Paint()..color = seaColor);
+    canvas.drawRect(
+      Rect.fromLTRB(0, rules.horizonY * k, size.width, size.height),
+      Paint()..color = seaColor,
+    );
 
     final period = layer.widthPx! * k;
     final waveLen = period / 16;
@@ -279,7 +376,9 @@ class ScenePainter extends CustomPainter {
       final y = top + (r + 0.5) * rowH;
       final path = Path();
       for (var x = 0.0; x <= size.width + 8; x += 8) {
-        final yy = y + 12 * k * math.sin(2 * math.pi * (x + offset) / waveLen + r * 1.7);
+        final yy =
+            y +
+            12 * k * math.sin(2 * math.pi * (x + offset) / waveLen + r * 1.7);
         x == 0 ? path.moveTo(x, yy) : path.lineTo(x, yy);
       }
       canvas.drawPath(path, wave);
@@ -304,7 +403,11 @@ class ScenePainter extends CustomPainter {
 
     // 돛대와 깃발 (뒤쪽)
     final mastX = cx - halfDeck * 0.8;
-    canvas.drawLine(Offset(mastX, deckY), Offset(mastX, deckY - 120 * u), stroke);
+    canvas.drawLine(
+      Offset(mastX, deckY),
+      Offset(mastX, deckY - 120 * u),
+      stroke,
+    );
     final flag = Path()
       ..moveTo(mastX, deckY - 120 * u)
       ..lineTo(mastX + 34 * u, deckY - 108 * u)
@@ -321,10 +424,13 @@ class ScenePainter extends CustomPainter {
       ..close();
     canvas.drawPath(hull, Paint()..color = boatHull);
     canvas.drawPath(hull, stroke);
-    canvas.drawLine(Offset(cx - halfDeck, deckY), Offset(cx + halfDeck, deckY),
-        Paint()
-          ..color = boatDeck
-          ..strokeWidth = 6 * u);
+    canvas.drawLine(
+      Offset(cx - halfDeck, deckY),
+      Offset(cx + halfDeck, deckY),
+      Paint()
+        ..color = boatDeck
+        ..strokeWidth = 6 * u,
+    );
   }
 
   /// L5 전경 풀: 땅과 같은 속도. 풀 뿌리는 레이어 바닥 가까이, 끝은 띠 안까지 올라온다.
@@ -351,7 +457,11 @@ class ScenePainter extends CustomPainter {
       final tipY = tipTop + (tipBottom - tipTop) * ((i * 53 % 7) / 7);
       for (final x in _repeats(worldX, offset, period, size.width, 60 * k)) {
         for (final dx in const [-18.0, 0.0, 18.0]) {
-          canvas.drawLine(Offset(x + dx * k, baseY), Offset(x + dx * 1.8 * k, tipY), blade);
+          canvas.drawLine(
+            Offset(x + dx * k, baseY),
+            Offset(x + dx * 1.8 * k, tipY),
+            blade,
+          );
         }
         if (look.season != Season.summer) {
           canvas.drawCircle(Offset(x + 32 * k, tipY), 8 * k, speck);
@@ -418,22 +528,40 @@ class ScenePainter extends CustomPainter {
       Offset(x, fy - 18 * u),
       70 * u,
       Paint()
-        ..shader = RadialGradient(colors: [
-          flameOuter.withValues(alpha: glow),
-          flameOuter.withValues(alpha: 0),
-        ]).createShader(Rect.fromCircle(center: Offset(x, fy - 18 * u), radius: 70 * u)),
+        ..shader =
+            RadialGradient(
+              colors: [
+                flameOuter.withValues(alpha: glow),
+                flameOuter.withValues(alpha: 0),
+              ],
+            ).createShader(
+              Rect.fromCircle(center: Offset(x, fy - 18 * u), radius: 70 * u),
+            ),
     );
     final log = Paint()
       ..color = woodColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 7 * u
       ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(x - 22 * u, fy), Offset(x + 18 * u, fy - 8 * u), log);
-    canvas.drawLine(Offset(x + 22 * u, fy), Offset(x - 18 * u, fy - 8 * u), log);
+    canvas.drawLine(
+      Offset(x - 22 * u, fy),
+      Offset(x + 18 * u, fy - 8 * u),
+      log,
+    );
+    canvas.drawLine(
+      Offset(x + 22 * u, fy),
+      Offset(x - 18 * u, fy - 8 * u),
+      log,
+    );
     Path flame(double s) => Path()
       ..moveTo(x - 14 * s * u, fy - 8 * u)
       ..quadraticBezierTo(x - 16 * s * u, fy - 30 * s * u, x, fy - 52 * s * u)
-      ..quadraticBezierTo(x + 16 * s * u, fy - 30 * s * u, x + 14 * s * u, fy - 8 * u)
+      ..quadraticBezierTo(
+        x + 16 * s * u,
+        fy - 30 * s * u,
+        x + 14 * s * u,
+        fy - 8 * u,
+      )
       ..close();
     canvas.drawPath(flame(1), Paint()..color = flameOuter);
     canvas.drawPath(flame(0.55), Paint()..color = flameInner);
@@ -443,7 +571,13 @@ class ScenePainter extends CustomPainter {
   /// 키(발~베레모 꼭대기)가 config characterHeightPx × k가 되게 그림 좌표(135)를 키운다.
   /// 걷기는 다리를 걸음 보폭에 맞춰 흔들고, 달리기는 앞으로 기울고 속도 선이 붙는다.
   /// 서 있을 때(쉼터·배 위)는 다리를 흔들지 않는다
-  void _character(Canvas canvas, double k, double cx, double footY, {required bool standing}) {
+  void _character(
+    Canvas canvas,
+    double k,
+    double cx,
+    double footY, {
+    required bool standing,
+  }) {
     canvas.save();
     canvas.translate(cx, footY);
     canvas.scale(_unit(k));
@@ -451,7 +585,10 @@ class ScenePainter extends CustomPainter {
     final factor = tintFactorAt(look.mix, rules, character: true);
     final tinted = factor != _white;
     if (tinted) {
-      canvas.saveLayer(const Rect.fromLTRB(-100, -160, 70, 20), _tintPaint(factor));
+      canvas.saveLayer(
+        const Rect.fromLTRB(-100, -160, 70, 20),
+        _tintPaint(factor),
+      );
     }
 
     final ink = Paint()
@@ -467,20 +604,27 @@ class ScenePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     // 그림자
-    canvas.drawOval(const Rect.fromLTWH(-30, -5, 60, 10),
-        Paint()..color = Palette.ink.withValues(alpha: 0.18));
+    canvas.drawOval(
+      const Rect.fromLTWH(-30, -5, 60, 10),
+      Paint()..color = Palette.ink.withValues(alpha: 0.18),
+    );
 
     // 걸음 한 쌍(보폭 두 번)마다 다리가 한 바퀴
     final stride = running ? rules.runStrideM : rules.walkStrideM;
-    final swing = standing ? 0.0 : math.sin(2 * math.pi * distanceM / (2 * stride));
+    final swing = standing
+        ? 0.0
+        : math.sin(2 * math.pi * distanceM / (2 * stride));
     final legAngle = swing * (running ? 0.75 : 0.45);
 
     const hipY = -38.0;
     const legLen = 38.0;
     for (final s in const [1.0, -1.0]) {
       final a = legAngle * s;
-      canvas.drawLine(Offset(s * 5, hipY),
-          Offset(s * 5 + math.sin(a) * legLen, hipY + math.cos(a) * legLen), limb);
+      canvas.drawLine(
+        Offset(s * 5, hipY),
+        Offset(s * 5 + math.sin(a) * legLen, hipY + math.cos(a) * legLen),
+        limb,
+      );
     }
 
     // 몸통부터는 엉덩이를 축으로 앞으로 기운다
@@ -491,18 +635,25 @@ class ScenePainter extends CustomPainter {
 
     // 배낭 (뒤)
     final pack = RRect.fromRectAndRadius(
-        const Rect.fromLTRB(-30, -82, -10, -44), const Radius.circular(6));
+      const Rect.fromLTRB(-30, -82, -10, -44),
+      const Radius.circular(6),
+    );
     canvas.drawRRect(pack, Paint()..color = Palette.moss);
     canvas.drawRRect(pack, ink);
 
     // 팔
     final armA = -legAngle * 1.2;
-    canvas.drawLine(const Offset(6, -78),
-        Offset(6 + math.sin(armA) * 28, -78 + math.cos(armA) * 28), limb);
+    canvas.drawLine(
+      const Offset(6, -78),
+      Offset(6 + math.sin(armA) * 28, -78 + math.cos(armA) * 28),
+      limb,
+    );
 
     // 몸통(코트)
     final torso = RRect.fromRectAndRadius(
-        const Rect.fromLTRB(-16, -86, 16, -34), const Radius.circular(10));
+      const Rect.fromLTRB(-16, -86, 16, -34),
+      const Radius.circular(10),
+    );
     canvas.drawRRect(torso, Paint()..color = Palette.terracotta);
     canvas.drawRRect(torso, ink);
 
@@ -510,19 +661,30 @@ class ScenePainter extends CustomPainter {
     const head = Offset(0, -106);
     canvas.drawCircle(head, 24, Paint()..color = Palette.card);
     canvas.drawCircle(head, 24, ink);
-    canvas.drawCircle(const Offset(10, -106), 2.5, Paint()..color = Palette.ink);
+    canvas.drawCircle(
+      const Offset(10, -106),
+      2.5,
+      Paint()..color = Palette.ink,
+    );
     // 베레모
-    final beret = Rect.fromCenter(center: const Offset(2, -126), width: 46, height: 18);
+    final beret = Rect.fromCenter(
+      center: const Offset(2, -126),
+      width: 46,
+      height: 18,
+    );
     canvas.drawOval(beret, Paint()..color = Palette.ink);
     canvas.restore();
 
     if (running && !standing) {
       for (final y in const [-90.0, -70.0, -50.0]) {
-        canvas.drawLine(Offset(-44, y), Offset(-76, y),
-            Paint()
-              ..color = Palette.ink.withValues(alpha: 0.45)
-              ..strokeWidth = 2.5
-              ..strokeCap = StrokeCap.round);
+        canvas.drawLine(
+          Offset(-44, y),
+          Offset(-76, y),
+          Paint()
+            ..color = Palette.ink.withValues(alpha: 0.45)
+            ..strokeWidth = 2.5
+            ..strokeCap = StrokeCap.round,
+        );
       }
     }
     if (tinted) canvas.restore();
@@ -531,6 +693,7 @@ class ScenePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(ScenePainter old) =>
+      old.pass != pass ||
       old.look != look ||
       old.mode != mode ||
       old.distanceM != distanceM ||

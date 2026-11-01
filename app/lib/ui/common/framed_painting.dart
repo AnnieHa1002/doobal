@@ -33,9 +33,13 @@ class FrameBorder extends StatelessWidget {
           border: Border.all(color: lineColor, width: _outerLine),
         ),
         child: DecoratedBox(
-          decoration: BoxDecoration(border: Border.all(color: color, width: thickness)),
+          decoration: BoxDecoration(
+            border: Border.all(color: color, width: thickness),
+          ),
           child: DecoratedBox(
-            decoration: BoxDecoration(border: Border.all(color: lineColor, width: _innerLine)),
+            decoration: BoxDecoration(
+              border: Border.all(color: lineColor, width: _innerLine),
+            ),
             child: const SizedBox.expand(),
           ),
         ),
@@ -44,7 +48,7 @@ class FrameBorder extends StatelessWidget {
   }
 }
 
-/// 그림 자리 표시: 후경 지역 색으로 칠한 종이. [label]이 있으면 아래에 이름을 붙인다.
+/// 명소 수채화. [label]이 있으면 아래에 이름을 붙인다.
 /// 부모를 꽉 채운다
 class PaintingFace extends StatelessWidget {
   const PaintingFace({super.key, required this.landmark, this.label});
@@ -55,53 +59,71 @@ class PaintingFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tint = paintingTint(landmark);
-    return LayoutBuilder(builder: (context, box) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color.lerp(Palette.paper, tint, 0.25)!,
-              Color.lerp(Palette.paper, tint, 0.85)!,
-            ],
-          ),
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: Icon(
-                Icons.landscape_outlined,
-                size: (box.biggest.shortestSide * 0.4).clamp(16.0, 64.0),
-                color: Palette.card.withValues(alpha: 0.7),
-              ),
+    return LayoutBuilder(
+      builder: (context, box) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color.lerp(Palette.paper, tint, 0.25)!,
+                Color.lerp(Palette.paper, tint, 0.85)!,
+              ],
             ),
-            if (label != null)
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Palette.card.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    label!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Palette.ink,
+          ),
+          child: Stack(
+            children: [
+              if (landmark.painting.isNotEmpty)
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/paintings/${landmark.painting}.webp',
+                    fit: BoxFit.contain,
+                    cacheWidth:
+                        (box.maxWidth * MediaQuery.devicePixelRatioOf(context))
+                            .ceil()
+                            .clamp(1, 1536),
+                    semanticLabel: landmark.id == 'kr088'
+                        ? '${landmark.name}, 2025년 산불 이전 모습을 재구성한 그림'
+                        : landmark.name,
+                    errorBuilder: (context, error, stackTrace) => const Center(
+                      child: Icon(
+                        Icons.landscape_outlined,
+                        color: Palette.subInk,
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
-        ),
-      );
-    });
+              if (label != null)
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    margin: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Palette.card.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      label!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Palette.ink,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -113,22 +135,18 @@ const firstPackAsset = 'painting_first_pack_v01';
 /// 같은 그림을 늘 보여 주니 명소처럼 지역 색을 입히지 않는다
 class FirstPackFace extends StatelessWidget {
   const FirstPackFace({super.key});
-
+  static const path = 'assets/paintings/painting_first_pack_v01_clean.webp';
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, box) {
-      return ColoredBox(
-        color: Palette.paper,
-        child: Center(
-          child: Icon(
-            Icons.backpack_outlined,
-            size: (box.biggest.shortestSide * 0.5).clamp(16.0, 96.0),
-            color: Palette.subInk,
-          ),
-        ),
-      );
-    });
-  }
+  Widget build(BuildContext context) => ColoredBox(
+    color: Palette.paper,
+    child: Image.asset(
+      path,
+      fit: BoxFit.contain,
+      excludeFromSemantics: true,
+      filterQuality: FilterQuality.medium,
+      gaplessPlayback: true,
+    ),
+  );
 }
 
 /// 액자에 낀 그림 자리 표시. 부모가 정한 크기를 꽉 채운다.
@@ -144,17 +162,17 @@ class FramedPainting extends StatelessWidget {
   }) : firstPack = false;
 
   const FramedPainting.empty({super.key, this.thickness = 6})
-      : landmark = null,
-        frame = null,
-        label = null,
-        firstPack = false;
+    : landmark = null,
+      frame = null,
+      label = null,
+      firstPack = false;
 
   /// 첫 그림은 등급이 없어서 늘 나무 액자다
   const FramedPainting.firstPack({super.key, this.thickness = 6})
-      : landmark = null,
-        frame = Frame.wood,
-        label = null,
-        firstPack = true;
+    : landmark = null,
+      frame = Frame.wood,
+      label = null,
+      firstPack = true;
 
   final Landmark? landmark;
   final Frame? frame;
@@ -174,8 +192,8 @@ class FramedPainting extends StatelessWidget {
           child: firstPack
               ? const FirstPackFace()
               : l == null
-                  ? const ColoredBox(color: Palette.paper)
-                  : PaintingFace(landmark: l, label: label),
+              ? const ColoredBox(color: Palette.paper)
+              : PaintingFace(landmark: l, label: label),
         ),
         FrameBorder(
           color: f == null ? Palette.card : frameColors[f]!,

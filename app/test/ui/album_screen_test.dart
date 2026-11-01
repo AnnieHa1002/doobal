@@ -754,7 +754,7 @@ void main() {
       expect(find.byType(RestScreen), findsOneWidget);
       expect(dot(), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.backpack_outlined));
+      await tester.tap(find.byKey(const ValueKey('camp-object-backpack')));
       await transition(tester);
       await settle(
           tester, () => find.byKey(const ValueKey('new-painting-kr001')).evaluate().isNotEmpty);
@@ -792,13 +792,11 @@ void main() {
       expect((deco.border! as Border).top.width, 1.5);
       expect(tester.getSize(dot()), const Size(10, 10));
       // 배낭 물건의 오른쪽 위 모서리에 걸쳐 있다
-      final bag = find
-          .ancestor(of: find.byIcon(Icons.backpack_outlined), matching: find.byType(Container))
-          .first;
+      final bag = find.byKey(const ValueKey('camp-object-backpack'));
       final corner = tester.getTopRight(bag);
       expect((tester.getCenter(dot()) - corner).distance, lessThan(8));
 
-      await tester.tap(find.byIcon(Icons.backpack_outlined));
+      await tester.tap(find.byKey(const ValueKey('camp-object-backpack')));
       await transition(tester);
       await settle(tester, () => find.byKey(const ValueKey('tab-props')).evaluate().isNotEmpty);
       expect(find.byType(AlbumScreen), findsOneWidget);

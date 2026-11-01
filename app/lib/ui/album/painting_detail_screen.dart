@@ -139,7 +139,11 @@ class _PaintingDetailScreenState extends ConsumerState<PaintingDetailScreen> {
         const Text(
           '$firstPackLabel · $firstPackName',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Palette.ink),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Palette.ink,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -168,8 +172,20 @@ class _PaintingDetailScreenState extends ConsumerState<PaintingDetailScreen> {
         Text(
           l.name,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Palette.ink),
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Palette.ink,
+          ),
         ),
+        if (l.id == 'kr088') ...[
+          const SizedBox(height: 8),
+          const Text(
+            '2025년 산불 이전 모습을 재구성한 그림이에요.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: Palette.subInk),
+          ),
+        ],
         const SizedBox(height: 4),
         Text(
           '${l.sido} ${l.sigungu} · ${terrainLabels[l.terrain] ?? l.terrain}',
@@ -180,7 +196,11 @@ class _PaintingDetailScreenState extends ConsumerState<PaintingDetailScreen> {
         Text(
           frameLabel(p.frame),
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Palette.ink),
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Palette.ink,
+          ),
         ),
         const SizedBox(height: 16),
         Container(
