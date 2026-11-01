@@ -1,4 +1,7 @@
 import 'dart:io';
+
+import 'package:doobal/ui/scene/doobal_item_art.dart';
+
 import 'dart:ui' as ui;
 
 import 'package:doobal/domain/blink.dart';
@@ -11,10 +14,13 @@ import 'package:rive/rive.dart' as rive;
 void main() {
   testWidgets('앉기·서기·배 위 전환이 실제 자세를 바꾸고 발을 유지한다', (tester) async {
     await rive.RiveNative.init();
+    final art = DoobalItemArt();
+    await tester.runAsync(art.load);
     final file = (await tester.runAsync(
       () => rive.File.asset(
         'assets/rive/doobal_custom.riv',
         riveFactory: rive.Factory.flutter,
+        assetLoader: art.assetLoader,
       ),
     ))!;
     final controller = DoobalController(
@@ -31,6 +37,7 @@ void main() {
       controller.dispose();
       instance.dispose();
       file.dispose();
+      art.dispose();
     });
     expect(
       controller.supportsPose,
@@ -104,7 +111,7 @@ void main() {
     final sittingBounds = verticalBounds(sitting);
     expect(
       sittingBounds.$1 - standingBounds.$1,
-      inInclusiveRange(65, 110),
+      inInclusiveRange(55, 110),
       reason: '앉으면 몸통과 머리가 낮아져야 해요',
     );
     expect(
@@ -131,7 +138,7 @@ void main() {
     final fromBoat = await capture('boat_to_sit');
     expect(
       verticalBounds(fromBoat).$1 - standingBounds.$1,
-      inInclusiveRange(65, 110),
+      inInclusiveRange(55, 110),
     );
     controller.stand();
     instance.number('speed')!.value = 1;

@@ -33,15 +33,15 @@ void main() {
     expect(controller.brushAngle, 0, reason: '자세 입력만으로 붓이 꺾이지 않아야 한다');
     controller.advance(.175);
     final halfway = controller.brushAngle;
-    expect(halfway, greaterThan(-pi / 2));
-    expect(halfway, lessThan(0));
+    expect(halfway, greaterThan(0));
+    expect(halfway, lessThan(pi / 3));
     controller.stand();
     expect(controller.brushAngle, halfway);
     controller.advance(.35);
     expect(controller.brushAngle, 0);
     controller.sit();
     controller.advance(.35);
-    expect(controller.brushAngle, closeTo(-pi / 2, .0001));
+    expect(controller.brushAngle, closeTo(pi / 3, .0001));
     controller.stand();
     controller.advance(.35);
     expect(controller.brushAngle, 0);
