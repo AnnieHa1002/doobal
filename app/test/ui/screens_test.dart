@@ -861,6 +861,28 @@ void main() {
         await _end(tester, e);
       });
 
+      testWidgets('뛰면 알림 제목이 달리는 중으로 바뀐다 (60초 간격은 그대로)', (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        expect(e.notice.startRunning, [false]);
+
+        e.live.push(0);
+        // 60초 동안 걷기(분당 100보 이하): 60초에 첫 갱신, 걷는 중 제목
+        await sensorTo(tester, e, 60, 60);
+        expect(e.notice.updateRunning, [false]);
+        // 그다음 30초 창에 70보(분당 140보) → 뛰기. 갱신 뒤 60초가 지나야 보낸다
+        await sensorTo(tester, e, 5, 130);
+        expect(find.byIcon(Icons.directions_run), findsOneWidget);
+        expect(e.notice.updateRunning, [false]);
+        // 걸음은 그대로 두고 시간만 채우면 창이 비어 다시 걷기가 되므로, 계속 뛰며 60초를 채운다
+        for (var i = 0; i < 11; i++) {
+          await sensorTo(tester, e, 5, 130 + (i + 1) * 12);
+        }
+        expect(e.notice.updateRunning.last, isTrue);
+        await _end(tester, e);
+      });
+
       testWidgets('health 걸음·거리가 더 크면 그 값(화면에 보이는 값)을 보낸다', (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');

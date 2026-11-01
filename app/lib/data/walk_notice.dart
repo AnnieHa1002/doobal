@@ -11,10 +11,11 @@ import 'local_notifications.dart';
 abstract class WalkNotice {
   /// 걷기 시작: 상시 알림을 띄우고 포그라운드 서비스를 시작한다. 알림에 걸음 [steps]와 거리 [distanceM]이 보인다.
   /// [focus]는 본격 걷기 중일 때의 배수 글(`×1.3`, focusBadgeText): 있으면 본문 끝에 ` · 본격 걷기 ×1.3`이 붙는다
-  Future<void> start(int steps, double distanceM, {String? focus});
+  /// [isRunning]이면 제목이 `두발 · 달리는 중`이 된다
+  Future<void> start(int steps, double distanceM, {String? focus, bool isRunning = false});
 
   /// 알림의 걸음·거리·본격 걷기 표시를 새로 쓴다. 시작하지 않았으면 아무 일도 없다
-  Future<void> update(int steps, double distanceM, {String? focus});
+  Future<void> update(int steps, double distanceM, {String? focus, bool isRunning = false});
 
   /// 끝: 알림을 지우고 서비스를 멈춘다. 여러 번 불러도 된다
   Future<void> stop();
@@ -24,6 +25,9 @@ abstract class WalkNotice {
 String noticeKm(double distanceM) => (distanceM / 1000).toStringAsFixed(1);
 
 /// 알림 본문: `1,234보 · 1.2km`, 본격 걷기 중이면 끝에 ` · 본격 걷기 ×1.3` (UI 명세 13장)
+/// 알림 제목: 뛰고 있으면 `두발 · 달리는 중`, 아니면 `두발 · 걷는 중` (16장 11/1, UI 명세 13장)
+String noticeTitle({required bool isRunning}) => isRunning ? '두발 · 달리는 중' : '두발 · 걷는 중';
+
 String noticeBody(int steps, double distanceM, {String? focus}) =>
     '${formatInt(steps)}보 · ${noticeKm(distanceM)}km${focus == null ? '' : ' · 본격 걷기 $focus'}';
 
@@ -32,17 +36,17 @@ class NoopWalkNotice implements WalkNotice {
   const NoopWalkNotice();
 
   @override
-  Future<void> start(int steps, double distanceM, {String? focus}) async {}
+  Future<void> start(int steps, double distanceM, {String? focus, bool isRunning = false}) async {}
 
   @override
-  Future<void> update(int steps, double distanceM, {String? focus}) async {}
+  Future<void> update(int steps, double distanceM, {String? focus, bool isRunning = false}) async {}
 
   @override
   Future<void> stop() async {}
 }
 
 /// 안드로이드: flutter_local_notifications의 포그라운드 서비스(유형 health)에 알림을 건다.
-/// 알림은 제목 `두발 · 걷는 중`, 본문 `1,234보 · 1.2km` (본격 걷기 중이면 끝에 ` · 본격 걷기 ×1.3`)
+/// 알림은 제목 `두발 · 걷는 중`(뛰면 `두발 · 달리는 중`), 본문 `1,234보 · 1.2km` (본격 걷기 중이면 끝에 ` · 본격 걷기 ×1.3`)
 /// (UI 명세 13장. 소리·진동 없음, 시간은 안 보인다).
 /// 갱신은 서비스를 다시 시작하지 않고 같은 id의 알림을
 /// 다시 쓴다 (안드로이드 12부터 앱이 뒤에 있을 때 포그라운드 서비스 시작을 막을 수 있어서).
@@ -64,7 +68,12 @@ class AndroidWalkNotice implements WalkNotice {
   var _epoch = 0;
 
   @override
-  Future<void> start(int steps, double distanceM, {String? focus}) async {
+  Future<void> start(
+    int steps,
+    double distanceM, {
+    String? focus,
+    bool isRunning = false,
+  }) async {
     final epoch = ++_epoch;
     try {
       // 안드로이드 14부터 '건강' 서비스는 동작 인식 권한이 허용돼 있어야 시작할 수 있다
@@ -75,15 +84,21 @@ class AndroidWalkNotice implements WalkNotice {
       return;
     }
     _running = true;
-    if (!await _post(steps, distanceM, focus, epoch, first: true) && epoch == _epoch) {
+    if (!await _post(steps, distanceM, focus, isRunning, epoch, first: true) &&
+        epoch == _epoch) {
       _running = false;
     }
   }
 
   @override
-  Future<void> update(int steps, double distanceM, {String? focus}) async {
+  Future<void> update(
+    int steps,
+    double distanceM, {
+    String? focus,
+    bool isRunning = false,
+  }) async {
     if (!_running) return;
-    await _post(steps, distanceM, focus, _epoch, first: false);
+    await _post(steps, distanceM, focus, isRunning, _epoch, first: false);
   }
 
   @override
@@ -108,13 +123,14 @@ class AndroidWalkNotice implements WalkNotice {
     int steps,
     double distanceM,
     String? focus,
+    bool isRunning,
     int epoch, {
     required bool first,
   }) async {
     try {
       final plugin = await _notifications.ready();
       if (epoch != _epoch) return false;
-      const title = '두발 · 걷는 중';
+      final title = noticeTitle(isRunning: isRunning);
       final body = noticeBody(steps, distanceM, focus: focus);
       if (!first) {
         await plugin.show(
@@ -171,6 +187,10 @@ class FakeWalkNotice implements WalkNotice {
   final startFocus = <String?>[];
   final updateFocus = <String?>[];
 
+  /// start·update가 받은 뛰는 중 여부, [starts]·[updates]와 같은 순서
+  final startRunning = <bool>[];
+  final updateRunning = <bool>[];
+
   /// stop을 부른 횟수
   var stops = 0;
 
@@ -178,16 +198,28 @@ class FakeWalkNotice implements WalkNotice {
   var running = false;
 
   @override
-  Future<void> start(int steps, double distanceM, {String? focus}) async {
+  Future<void> start(
+    int steps,
+    double distanceM, {
+    String? focus,
+    bool isRunning = false,
+  }) async {
     starts.add((steps, distanceM));
     startFocus.add(focus);
+    startRunning.add(isRunning);
     running = true;
   }
 
   @override
-  Future<void> update(int steps, double distanceM, {String? focus}) async {
+  Future<void> update(
+    int steps,
+    double distanceM, {
+    String? focus,
+    bool isRunning = false,
+  }) async {
     updates.add((steps, distanceM));
     updateFocus.add(focus);
+    updateRunning.add(isRunning);
   }
 
   @override

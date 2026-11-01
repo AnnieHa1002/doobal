@@ -61,6 +61,11 @@ void main() {
   Map<Object?, Object?> data(MethodCall c) =>
       (c.arguments as Map<Object?, Object?>)['notificationData'] as Map<Object?, Object?>;
 
+  test('알림 제목: 뛰면 두발 · 달리는 중, 아니면 두발 · 걷는 중', () {
+    expect(noticeTitle(isRunning: true), '두발 · 달리는 중');
+    expect(noticeTitle(isRunning: false), '두발 · 걷는 중');
+  });
+
   group('AndroidWalkNotice', () {
     test('start: 센서 권한이 있으면 포그라운드 서비스를 건강 유형으로 시작한다', () async {
       final notice = make(FakeLiveSteps());

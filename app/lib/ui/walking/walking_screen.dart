@@ -63,6 +63,9 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   var _noticeSteps = 0;
   var _noticeDistanceM = 0.0;
   String? _noticeFocus;
+
+  /// 알림 제목에 마지막으로 쓴 뛰는 중 여부 (화면이 꺼져 있는 동안은 알 수 없어 그대로 둔다)
+  var _noticeRunning = false;
   DateTime? _noticeAt;
 
   /// 본격 걷기가 된 뒤로는 마칠 때까지 true (딱지·알림 끝 글). 다시 가릴 때 쓰는 입력(마지막으로 받은
@@ -180,7 +183,13 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _noticeAt = now;
     _noticeOn = true;
     _noticeFocus = _focusLabel();
-    _notice.start(_noticeSteps, _noticeDistanceM, focus: _noticeFocus);
+    _noticeRunning = _isRunning(summary);
+    _notice.start(
+      _noticeSteps,
+      _noticeDistanceM,
+      focus: _noticeFocus,
+      isRunning: _noticeRunning,
+    );
   }
 
   /// 본격 걷기 중이면 알림 끝에 붙일 배수 글(`×1.3`), 아니면 null
@@ -189,15 +198,20 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     return _focused && rules != null ? focusBadgeText(rules) : null;
   }
 
+  /// 지금 뛰는 중인가 (화면의 '달리는 중'과 같은 기준)
+  bool _isRunning(WalkSummary? s) => s != null && s.lastSteps > 0 && s.lastGait == Gait.run;
+
   /// 알림의 걸음·거리를 [steps]·[distanceM]으로 새로 쓴다. 알림 글이 바뀔 때만
-  /// (걸음이 다르거나 0.1km 단위 거리가 다르거나 본격 걷기 표시가 달라질 때),
-  /// rules.liveNoticeUpdateSec초에 한 번까지
-  void _pushNotice(int steps, double distanceM) {
+  /// (걸음이 다르거나 0.1km 단위 거리가 다르거나 본격 걷기 표시·뛰는 중 제목이 달라질 때),
+  /// rules.liveNoticeUpdateSec초에 한 번까지. [isRunning]이 없으면(화면이 꺼져 모를 때) 마지막 값
+  void _pushNotice(int steps, double distanceM, {bool? isRunning}) {
     if (!_noticeOn) return;
     final focus = _focusLabel();
+    final running = isRunning ?? _noticeRunning;
     if (steps == _noticeSteps &&
         noticeKm(distanceM) == noticeKm(_noticeDistanceM) &&
-        focus == _noticeFocus) {
+        focus == _noticeFocus &&
+        running == _noticeRunning) {
       return;
     }
     final rules = ref.read(rulesProvider).value;
@@ -211,7 +225,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _noticeSteps = steps;
     _noticeDistanceM = distanceM;
     _noticeFocus = focus;
-    _notice.update(steps, distanceM, focus: focus);
+    _noticeRunning = running;
+    _notice.update(steps, distanceM, focus: focus, isRunning: running);
   }
 
   /// 이번 걷기가 본격 걷기가 됐는지 본다 (한 번 되면 마칠 때까지 그대로). 됐으면 딱지를 켜고 토스트를
@@ -305,7 +320,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final now = ref.read(clockProvider)();
     _checkFocus(rules);
     final summary = _summaryAt(now);
-    _pushNotice(summary?.steps ?? 0, summary?.distanceM ?? 0);
+    _pushNotice(summary?.steps ?? 0, summary?.distanceM ?? 0, isRunning: _isRunning(summary));
     final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
     var shown = followDistance(
       _shownM,
@@ -358,7 +373,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
       return const Scaffold(body: SizedBox.expand());
     }
     final summary = _summaryAt(_now);
-    final running = summary != null && summary.lastSteps > 0 && summary.lastGait == Gait.run;
+    final running = _isRunning(summary);
 
     return Scaffold(
       body: Stack(
