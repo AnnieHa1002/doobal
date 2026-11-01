@@ -25,7 +25,8 @@ class PaintingDetailScreen extends ConsumerWidget {
         .value
         ?.where((p) => p.landmark.id == landmarkId)
         .firstOrNull;
-    final visits = ref.watch(visitsProvider(landmarkId)).value ?? const <VisitView>[];
+    final visits =
+        ref.watch(visitsProvider(landmarkId)).value ?? const <VisitView>[];
 
     return Scaffold(
       body: SafeArea(
@@ -70,7 +71,10 @@ class PaintingDetailScreen extends ConsumerWidget {
             constraints: const BoxConstraints(maxWidth: 300),
             child: AspectRatio(
               aspectRatio: 4 / 3,
-              child: FramedPainting.firstPack(key: ValueKey('detail-first-pack'), thickness: 12),
+              child: FramedPainting.firstPack(
+                key: ValueKey('detail-first-pack'),
+                thickness: 12,
+              ),
             ),
           ),
         ),
@@ -78,7 +82,11 @@ class PaintingDetailScreen extends ConsumerWidget {
         const Text(
           '$firstPackLabel · $firstPackName',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Palette.ink),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Palette.ink,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -113,8 +121,20 @@ class PaintingDetailScreen extends ConsumerWidget {
         Text(
           l.name,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Palette.ink),
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Palette.ink,
+          ),
         ),
+        if (l.id == 'kr088') ...[
+          const SizedBox(height: 8),
+          const Text(
+            '2025년 산불 이전 모습을 재구성한 그림이에요.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: Palette.subInk),
+          ),
+        ],
         const SizedBox(height: 4),
         Text(
           '${l.sido} ${l.sigungu} · ${terrainLabels[l.terrain] ?? l.terrain}',
@@ -125,7 +145,11 @@ class PaintingDetailScreen extends ConsumerWidget {
         Text(
           frameLabel(p.frame),
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Palette.ink),
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Palette.ink,
+          ),
         ),
         const SizedBox(height: 16),
         Container(

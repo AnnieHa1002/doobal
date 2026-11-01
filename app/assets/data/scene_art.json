@@ -1,0 +1,1500 @@
+{
+  "version": 12,
+  "sourceVersions": [
+    10,
+    11
+  ],
+  "assets": {
+    "prop_boat_01_v11_clean.png": {
+      "file": "assets/backgrounds/v11/prop_boat_01_v11_clean.png",
+      "canvas": [
+        3072,
+        1536
+      ],
+      "bbox": [
+        338,
+        1073,
+        2396,
+        312
+      ]
+    },
+    "sky_star_shooting_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_star_shooting_v11_clean.png",
+      "canvas": [
+        337,
+        112
+      ],
+      "bbox": [
+        38,
+        10,
+        290,
+        79
+      ]
+    },
+    "bg_lower_bank_spring_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_lower_bank_spring_v11_clean.png",
+      "canvas": [
+        4096,
+        640
+      ],
+      "bbox": [
+        0,
+        310,
+        4096,
+        330
+      ]
+    },
+    "bg_front_summer_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_front_summer_v11_clean.png",
+      "canvas": [
+        4096,
+        418
+      ],
+      "bbox": [
+        289,
+        240,
+        3552,
+        170
+      ]
+    },
+    "bg_rest_camp_front_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_rest_camp_front_v11_clean.png",
+      "canvas": [
+        1170,
+        1400
+      ],
+      "bbox": [
+        46,
+        1044,
+        1094,
+        259
+      ]
+    },
+    "sky_star_spark_s_v01_clean.png": {
+      "file": "assets/backgrounds/v11/sky_star_spark_s_v01_clean.png",
+      "canvas": [
+        131,
+        151
+      ],
+      "bbox": [
+        8,
+        8,
+        115,
+        135
+      ]
+    },
+    "sky_sun_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_sun_v11_clean.png",
+      "canvas": [
+        339,
+        343
+      ],
+      "bbox": [
+        20,
+        31,
+        303,
+        288
+      ]
+    },
+    "obj_rest_backpack_v11_clean.png": {
+      "file": "assets/backgrounds/v11/obj_rest_backpack_v11_clean.png",
+      "canvas": [
+        384,
+        384
+      ],
+      "bbox": [
+        25,
+        29,
+        334,
+        326
+      ]
+    },
+    "bg_lower_bank_base_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_lower_bank_base_v11_clean.png",
+      "canvas": [
+        4096,
+        640
+      ],
+      "bbox": [
+        0,
+        310,
+        4096,
+        106
+      ]
+    },
+    "bg_near_water_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_near_water_v11_clean.png",
+      "canvas": [
+        4096,
+        640
+      ],
+      "bbox": [
+        0,
+        279,
+        4096,
+        361
+      ]
+    },
+    "sky_cloud_02_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_cloud_02_v11_clean.png",
+      "canvas": [
+        425,
+        245
+      ],
+      "bbox": [
+        10,
+        9,
+        406,
+        226
+      ]
+    },
+    "fx_campfire_flame_01_v11_clean.png": {
+      "file": "assets/backgrounds/v11/fx_campfire_flame_01_v11_clean.png",
+      "canvas": [
+        256,
+        384
+      ],
+      "bbox": [
+        23,
+        70,
+        210,
+        295
+      ]
+    },
+    "sky_star_spark_l_v01_clean.png": {
+      "file": "assets/backgrounds/v11/sky_star_spark_l_v01_clean.png",
+      "canvas": [
+        192,
+        268
+      ],
+      "bbox": [
+        8,
+        8,
+        176,
+        252
+      ]
+    },
+    "bg_rest_camp_back_grass_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_rest_camp_back_grass_v11_clean.png",
+      "canvas": [
+        1170,
+        1400
+      ],
+      "bbox": [
+        0,
+        438,
+        1170,
+        958
+      ]
+    },
+    "bg_lower_bank_winter_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_lower_bank_winter_v11_clean.png",
+      "canvas": [
+        4096,
+        640
+      ],
+      "bbox": [
+        0,
+        310,
+        4096,
+        330
+      ]
+    },
+    "sky_star_dot_v01_clean.png": {
+      "file": "assets/backgrounds/v11/sky_star_dot_v01_clean.png",
+      "canvas": [
+        60,
+        60
+      ],
+      "bbox": [
+        8,
+        8,
+        44,
+        44
+      ]
+    },
+    "sky_birds_flock_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_birds_flock_v11_clean.png",
+      "canvas": [
+        409,
+        232
+      ],
+      "bbox": [
+        33,
+        11,
+        365,
+        209
+      ]
+    },
+    "bg_front_autumn_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_front_autumn_v11_clean.png",
+      "canvas": [
+        4096,
+        418
+      ],
+      "bbox": [
+        290,
+        240,
+        3527,
+        170
+      ]
+    },
+    "bg_rest_camp_front_grass_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_rest_camp_front_grass_v11_clean.png",
+      "canvas": [
+        1170,
+        1400
+      ],
+      "bbox": [
+        60,
+        1081,
+        1069,
+        209
+      ]
+    },
+    "sky_bird_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_bird_v11_clean.png",
+      "canvas": [
+        210,
+        206
+      ],
+      "bbox": [
+        40,
+        9,
+        158,
+        188
+      ]
+    },
+    "sky_star_five_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_star_five_v11_clean.png",
+      "canvas": [
+        170,
+        166
+      ],
+      "bbox": [
+        10,
+        10,
+        150,
+        146
+      ]
+    },
+    "bg_path_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_path_v11_clean.png",
+      "canvas": [
+        4096,
+        640
+      ],
+      "bbox": [
+        0,
+        227,
+        4096,
+        127
+      ]
+    },
+    "sky_moon_full_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_moon_full_v11_clean.png",
+      "canvas": [
+        291,
+        289
+      ],
+      "bbox": [
+        10,
+        9,
+        271,
+        271
+      ]
+    },
+    "fx_campfire_flame_02_v11_clean.png": {
+      "file": "assets/backgrounds/v11/fx_campfire_flame_02_v11_clean.png",
+      "canvas": [
+        256,
+        384
+      ],
+      "bbox": [
+        23,
+        25,
+        210,
+        340
+      ]
+    },
+    "sky_wash_v01.png": {
+      "file": "assets/backgrounds/v11/sky_wash_v01.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "bbox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "sky_cloud_01_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_cloud_01_v11_clean.png",
+      "canvas": [
+        359,
+        128
+      ],
+      "bbox": [
+        9,
+        10,
+        340,
+        108
+      ]
+    },
+    "obj_rest_map_v11_clean.png": {
+      "file": "assets/backgrounds/v11/obj_rest_map_v11_clean.png",
+      "canvas": [
+        384,
+        384
+      ],
+      "bbox": [
+        25,
+        67,
+        334,
+        250
+      ]
+    },
+    "fx_campfire_flame_03_v11_clean.png": {
+      "file": "assets/backgrounds/v11/fx_campfire_flame_03_v11_clean.png",
+      "canvas": [
+        256,
+        384
+      ],
+      "bbox": [
+        21,
+        53,
+        214,
+        312
+      ]
+    },
+    "sky_star_mix_v01_clean.png": {
+      "file": "assets/backgrounds/v11/sky_star_mix_v01_clean.png",
+      "canvas": [
+        208,
+        219
+      ],
+      "bbox": [
+        8,
+        8,
+        192,
+        203
+      ]
+    },
+    "sky_cloud_04_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_cloud_04_v11_clean.png",
+      "canvas": [
+        382,
+        222
+      ],
+      "bbox": [
+        9,
+        9,
+        363,
+        204
+      ]
+    },
+    "bg_front_winter_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_front_winter_v11_clean.png",
+      "canvas": [
+        4096,
+        418
+      ],
+      "bbox": [
+        296,
+        240,
+        3571,
+        170
+      ]
+    },
+    "sky_cloud_03_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_cloud_03_v11_clean.png",
+      "canvas": [
+        356,
+        118
+      ],
+      "bbox": [
+        12,
+        9,
+        319,
+        99
+      ]
+    },
+    "bg_lower_bank_autumn_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_lower_bank_autumn_v11_clean.png",
+      "canvas": [
+        4096,
+        640
+      ],
+      "bbox": [
+        0,
+        310,
+        4096,
+        330
+      ]
+    },
+    "sky_stars_cluster_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_stars_cluster_v11_clean.png",
+      "canvas": [
+        267,
+        224
+      ],
+      "bbox": [
+        13,
+        12,
+        241,
+        201
+      ]
+    },
+    "paper_grain_v01.png": {
+      "file": "assets/backgrounds/v11/paper_grain_v01.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "bbox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "obj_rest_note_v11_clean.png": {
+      "file": "assets/backgrounds/v11/obj_rest_note_v11_clean.png",
+      "canvas": [
+        384,
+        384
+      ],
+      "bbox": [
+        30,
+        25,
+        324,
+        334
+      ]
+    },
+    "sky_star_dots_b_v01_clean.png": {
+      "file": "assets/backgrounds/v11/sky_star_dots_b_v01_clean.png",
+      "canvas": [
+        234,
+        237
+      ],
+      "bbox": [
+        8,
+        8,
+        218,
+        221
+      ]
+    },
+    "bg_lower_bank_summer_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_lower_bank_summer_v11_clean.png",
+      "canvas": [
+        4096,
+        640
+      ],
+      "bbox": [
+        0,
+        310,
+        4096,
+        330
+      ]
+    },
+    "bg_rest_camp_back_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_rest_camp_back_v11_clean.png",
+      "canvas": [
+        1170,
+        1400
+      ],
+      "bbox": [
+        0,
+        397,
+        1170,
+        1003
+      ]
+    },
+    "sky_moon_crescent_v11_clean.png": {
+      "file": "assets/backgrounds/v11/sky_moon_crescent_v11_clean.png",
+      "canvas": [
+        218,
+        276
+      ],
+      "bbox": [
+        10,
+        10,
+        199,
+        256
+      ]
+    },
+    "bg_front_spring_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_front_spring_v11_clean.png",
+      "canvas": [
+        4096,
+        418
+      ],
+      "bbox": [
+        289,
+        240,
+        3544,
+        170
+      ]
+    },
+    "bg_lower_bank_grass_v11_clean.png": {
+      "file": "assets/backgrounds/v11/bg_lower_bank_grass_v11_clean.png",
+      "canvas": [
+        4096,
+        640
+      ],
+      "bbox": [
+        0,
+        316,
+        4096,
+        324
+      ]
+    },
+    "sky_star_dots_a_v01_clean.png": {
+      "file": "assets/backgrounds/v11/sky_star_dots_a_v01_clean.png",
+      "canvas": [
+        229,
+        168
+      ],
+      "bbox": [
+        8,
+        8,
+        213,
+        152
+      ]
+    },
+    "L2_jeju_basalt_patch": {
+      "file": "assets/backgrounds/v11/L2_jeju_basalt_patch_v11_clean.png",
+      "canvas": [
+        2048,
+        768
+      ],
+      "bbox": [
+        15,
+        309,
+        2015,
+        244
+      ]
+    },
+    "L2_mountain_shoulder_left": {
+      "file": "assets/backgrounds/v11/L2_mountain_shoulder_left_v11_clean.png",
+      "canvas": [
+        2046,
+        768
+      ],
+      "bbox": [
+        45,
+        349,
+        1952,
+        374
+      ]
+    },
+    "L2_mountain_shoulder_right": {
+      "file": "assets/backgrounds/v11/L2_mountain_shoulder_right_v11_clean.png",
+      "canvas": [
+        2172,
+        724
+      ],
+      "bbox": [
+        45,
+        249,
+        2109,
+        377
+      ]
+    },
+    "L2_river_shore_patch": {
+      "file": "assets/backgrounds/v11/L2_river_shore_patch_v11_clean.png",
+      "canvas": [
+        2170,
+        725
+      ],
+      "bbox": [
+        97,
+        281,
+        1996,
+        290
+      ]
+    },
+    "L3_autumn_ginkgo": {
+      "file": "assets/backgrounds/v11/L3_autumn_ginkgo_v11_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        112,
+        14,
+        1358,
+        993
+      ]
+    },
+    "L3_autumn_maple": {
+      "file": "assets/backgrounds/v11/L3_autumn_maple_v11_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        52,
+        17,
+        1448,
+        977
+      ]
+    },
+    "L3_autumn_rose": {
+      "file": "assets/backgrounds/v11/L3_autumn_rose_v11_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        52,
+        94,
+        1432,
+        868
+      ]
+    },
+    "L3_common_pine_cluster": {
+      "file": "assets/backgrounds/v11/L3_common_pine_cluster_v11_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        34,
+        17,
+        1470,
+        976
+      ]
+    },
+    "L3_spring_azalea": {
+      "file": "assets/backgrounds/v11/L3_spring_azalea_v11_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        53,
+        84,
+        1430,
+        845
+      ]
+    },
+    "L3_spring_forsythia": {
+      "file": "assets/backgrounds/v11/L3_spring_forsythia_v11_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        26,
+        78,
+        1488,
+        877
+      ]
+    },
+    "L3_spring_magnolia": {
+      "file": "assets/backgrounds/v11/L3_spring_magnolia_v11_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        43,
+        20,
+        1450,
+        976
+      ]
+    },
+    "L3_spring_plum": {
+      "file": "assets/backgrounds/v11/L3_spring_plum_v11_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        65,
+        21,
+        1415,
+        983
+      ]
+    },
+    "L3_summer_trumpet_vine": {
+      "file": "assets/backgrounds/v11/L3_summer_trumpet_vine_v11_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        48,
+        20,
+        1437,
+        983
+      ]
+    },
+    "bg_cluster_city_a_v10": {
+      "file": "assets/backgrounds/v11/bg_cluster_city_a_v10_clean.png",
+      "canvas": [
+        1774,
+        887
+      ],
+      "bbox": [
+        70,
+        230,
+        1661,
+        585
+      ]
+    },
+    "bg_cluster_village_a_v10": {
+      "file": "assets/backgrounds/v11/bg_cluster_village_a_v10_clean.png",
+      "canvas": [
+        1774,
+        887
+      ],
+      "bbox": [
+        257,
+        242,
+        1341,
+        550
+      ]
+    },
+    "bg_cluster_forest_a_v10": {
+      "file": "assets/backgrounds/v11/bg_cluster_forest_a_v10_clean.png",
+      "canvas": [
+        1774,
+        887
+      ],
+      "bbox": [
+        120,
+        112,
+        1538,
+        686
+      ]
+    },
+    "bg_cluster_forest_b_v10": {
+      "file": "assets/backgrounds/v11/bg_cluster_forest_b_v10_clean.png",
+      "canvas": [
+        1774,
+        887
+      ],
+      "bbox": [
+        28,
+        92,
+        1718,
+        723
+      ]
+    },
+    "bg_cluster_hill_a_v10": {
+      "file": "assets/backgrounds/v11/bg_cluster_hill_a_v10_clean.png",
+      "canvas": [
+        1774,
+        887
+      ],
+      "bbox": [
+        144,
+        415,
+        1496,
+        256
+      ]
+    },
+    "bg_object_utility_pole_a_v10": {
+      "file": "assets/backgrounds/v11/bg_object_utility_pole_a_v10_clean.png",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "bbox": [
+        274,
+        51,
+        477,
+        1437
+      ]
+    },
+    "bg_object_bush_a_v10": {
+      "file": "assets/backgrounds/v11/bg_object_bush_a_v10_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        80,
+        234,
+        1378,
+        627
+      ]
+    },
+    "bg_object_bush_b_v10": {
+      "file": "assets/backgrounds/v11/bg_object_bush_b_v10_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        107,
+        154,
+        1326,
+        758
+      ]
+    },
+    "L3_common_broadleaf_v10": {
+      "file": "assets/backgrounds/v11/L3_common_broadleaf_v10_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        77,
+        10,
+        1383,
+        1004
+      ]
+    },
+    "L3_spring_cherry_v10": {
+      "file": "assets/backgrounds/v11/L3_spring_cherry_v10_clean.png",
+      "canvas": [
+        1536,
+        1024
+      ],
+      "bbox": [
+        27,
+        10,
+        1482,
+        992
+      ]
+    },
+    "bg_far_capital_wide_part1_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_capital_wide_part1_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        619,
+        2048,
+        917
+      ]
+    },
+    "bg_far_capital_wide_part2_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_capital_wide_part2_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        466,
+        2048,
+        1070
+      ]
+    },
+    "bg_far_capital_wide_part3_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_capital_wide_part3_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        639,
+        2048,
+        897
+      ]
+    },
+    "bg_far_gangwon_wide_part1_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_gangwon_wide_part1_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        684,
+        2048,
+        852
+      ]
+    },
+    "bg_far_gangwon_wide_part2_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_gangwon_wide_part2_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        539,
+        2048,
+        997
+      ]
+    },
+    "bg_far_gangwon_wide_part3_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_gangwon_wide_part3_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        734,
+        2048,
+        802
+      ]
+    },
+    "bg_far_chungcheong_wide_part1_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_chungcheong_wide_part1_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        680,
+        2048,
+        856
+      ]
+    },
+    "bg_far_chungcheong_wide_part2_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_chungcheong_wide_part2_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        659,
+        2048,
+        877
+      ]
+    },
+    "bg_far_chungcheong_wide_part3_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_chungcheong_wide_part3_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        682,
+        2048,
+        854
+      ]
+    },
+    "bg_far_jeolla_wide_part1_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_jeolla_wide_part1_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        820,
+        2048,
+        716
+      ]
+    },
+    "bg_far_jeolla_wide_part2_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_jeolla_wide_part2_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        847,
+        2048,
+        689
+      ]
+    },
+    "bg_far_jeolla_wide_part3_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_jeolla_wide_part3_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        871,
+        2048,
+        665
+      ]
+    },
+    "bg_far_gyeongsang_wide_part1_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_gyeongsang_wide_part1_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        674,
+        2048,
+        862
+      ]
+    },
+    "bg_far_gyeongsang_wide_part2_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_gyeongsang_wide_part2_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        612,
+        2048,
+        924
+      ]
+    },
+    "bg_far_gyeongsang_wide_part3_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_gyeongsang_wide_part3_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        676,
+        2048,
+        860
+      ]
+    },
+    "bg_far_jeju_wide_part1_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_jeju_wide_part1_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        918,
+        2048,
+        618
+      ]
+    },
+    "bg_far_jeju_wide_part2_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_jeju_wide_part2_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        741,
+        2048,
+        795
+      ]
+    },
+    "bg_far_jeju_wide_part3_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_jeju_wide_part3_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        869,
+        2048,
+        667
+      ]
+    },
+    "bg_far_sea_wide_part1_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_sea_wide_part1_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        825,
+        2048,
+        711
+      ]
+    },
+    "bg_far_sea_wide_part2_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_sea_wide_part2_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        698,
+        2048,
+        838
+      ]
+    },
+    "bg_far_sea_wide_part3_v10_clean.png": {
+      "file": "assets/backgrounds/v11/bg_far_sea_wide_part3_v10_clean.png",
+      "canvas": [
+        2048,
+        1536
+      ],
+      "bbox": [
+        0,
+        805,
+        2048,
+        731
+      ]
+    },
+    "bg_back_meadow_spring_v10_preview.png": {
+      "file": "assets/backgrounds/v11/bg_back_meadow_spring_v10_preview.png",
+      "canvas": [
+        4096,
+        650
+      ],
+      "bbox": [
+        0,
+        70,
+        4096,
+        580
+      ]
+    },
+    "bg_back_meadow_summer_v10_preview.png": {
+      "file": "assets/backgrounds/v11/bg_back_meadow_summer_v10_preview.png",
+      "canvas": [
+        4096,
+        650
+      ],
+      "bbox": [
+        0,
+        70,
+        4096,
+        580
+      ]
+    },
+    "bg_back_meadow_autumn_v10_preview.png": {
+      "file": "assets/backgrounds/v11/bg_back_meadow_autumn_v10_preview.png",
+      "canvas": [
+        4096,
+        650
+      ],
+      "bbox": [
+        0,
+        70,
+        4096,
+        580
+      ]
+    },
+    "bg_back_meadow_winter_v10_preview.png": {
+      "file": "assets/backgrounds/v11/bg_back_meadow_winter_v10_preview.png",
+      "canvas": [
+        4096,
+        650
+      ],
+      "bbox": [
+        0,
+        70,
+        4096,
+        580
+      ]
+    },
+    "bg_rest_camp_back_landscape_v12_clean.png": {
+      "file": "assets/backgrounds/v11/bg_rest_camp_back_landscape_v12_clean.png",
+      "canvas": [
+        1862,
+        845
+      ],
+      "bbox": [
+        0,
+        52,
+        1862,
+        793
+      ]
+    }
+  },
+  "far": {
+    "capital": [
+      "bg_far_capital_wide_part1_v10_clean.png",
+      "bg_far_capital_wide_part2_v10_clean.png",
+      "bg_far_capital_wide_part3_v10_clean.png"
+    ],
+    "gangwon": [
+      "bg_far_gangwon_wide_part1_v10_clean.png",
+      "bg_far_gangwon_wide_part2_v10_clean.png",
+      "bg_far_gangwon_wide_part3_v10_clean.png"
+    ],
+    "chungcheong": [
+      "bg_far_chungcheong_wide_part1_v10_clean.png",
+      "bg_far_chungcheong_wide_part2_v10_clean.png",
+      "bg_far_chungcheong_wide_part3_v10_clean.png"
+    ],
+    "jeolla": [
+      "bg_far_jeolla_wide_part1_v10_clean.png",
+      "bg_far_jeolla_wide_part2_v10_clean.png",
+      "bg_far_jeolla_wide_part3_v10_clean.png"
+    ],
+    "gyeongsang": [
+      "bg_far_gyeongsang_wide_part1_v10_clean.png",
+      "bg_far_gyeongsang_wide_part2_v10_clean.png",
+      "bg_far_gyeongsang_wide_part3_v10_clean.png"
+    ],
+    "jeju": [
+      "bg_far_jeju_wide_part1_v10_clean.png",
+      "bg_far_jeju_wide_part2_v10_clean.png",
+      "bg_far_jeju_wide_part3_v10_clean.png"
+    ],
+    "sea": [
+      "bg_far_sea_wide_part1_v10_clean.png",
+      "bg_far_sea_wide_part2_v10_clean.png",
+      "bg_far_sea_wide_part3_v10_clean.png"
+    ]
+  },
+  "tags": {
+    "capital": [
+      "도시",
+      "언덕",
+      "숲"
+    ],
+    "gangwon": [
+      "산",
+      "숲"
+    ],
+    "chungcheong": [
+      "물가",
+      "평야",
+      "언덕"
+    ],
+    "jeolla": [
+      "평야",
+      "물가",
+      "언덕"
+    ],
+    "gyeongsang": [
+      "산",
+      "숲",
+      "언덕"
+    ],
+    "jeju": [
+      "오름",
+      "해안",
+      "언덕"
+    ],
+    "sea": []
+  },
+  "clusters": [
+    {
+      "id": "bg_cluster_city_a_v10",
+      "tags": [
+        "도시"
+      ],
+      "height": 460
+    },
+    {
+      "id": "bg_cluster_village_a_v10",
+      "tags": [
+        "도시"
+      ],
+      "height": 460
+    },
+    {
+      "id": "bg_cluster_forest_a_v10",
+      "tags": [
+        "숲"
+      ],
+      "height": 460
+    },
+    {
+      "id": "bg_cluster_forest_b_v10",
+      "tags": [
+        "숲"
+      ],
+      "height": 460
+    },
+    {
+      "id": "bg_cluster_hill_a_v10",
+      "tags": [
+        "언덕",
+        "평야"
+      ],
+      "height": 220
+    },
+    {
+      "id": "L2_mountain_shoulder_left",
+      "tags": [
+        "산",
+        "언덕"
+      ],
+      "height": 220
+    },
+    {
+      "id": "L2_mountain_shoulder_right",
+      "tags": [
+        "산",
+        "언덕"
+      ],
+      "height": 220
+    },
+    {
+      "id": "L2_river_shore_patch",
+      "tags": [
+        "물가"
+      ],
+      "height": 220
+    },
+    {
+      "id": "L2_jeju_basalt_patch",
+      "tags": [
+        "오름",
+        "해안"
+      ],
+      "height": 160
+    }
+  ],
+  "cycle": 12288,
+  "clusterGap": 4100,
+  "seed": "journey ID + world segment",
+  "portrait": {
+    "width": 1170,
+    "height": 2532,
+    "farY": 912,
+    "farWidth": 4800,
+    "farHeight": 1230,
+    "seaFarHeight": 1280,
+    "meadowY": 1880,
+    "groundY": 1892,
+    "frontY": 1838,
+    "pathY": 2171,
+    "figureHeight": 820
+  },
+  "landscape": {
+    "width": 2532,
+    "height": 1170,
+    "farY": 151,
+    "farWidth": 3744,
+    "farHeight": 959,
+    "seaFarHeight": 998,
+    "meadowY": 913,
+    "groundY": 922,
+    "frontY": 880,
+    "pathY": 1140,
+    "figureHeight": 616
+  },
+  "speeds": {
+    "far": 0.05,
+    "cluster": 0.1,
+    "backTree": 0.2,
+    "frontTree": 0.3,
+    "meadow": 0.5,
+    "ground": 1,
+    "front": 1
+  },
+  "frontTrees": {
+    "common": [
+      [
+        "L3_common_pine_cluster",
+        300,
+        1000
+      ],
+      [
+        "L3_common_broadleaf_v10",
+        6400,
+        950
+      ]
+    ],
+    "spring": [
+      [
+        "L3_spring_forsythia",
+        1250,
+        420
+      ],
+      [
+        "L3_spring_cherry_v10",
+        3300,
+        1080
+      ],
+      [
+        "L3_spring_azalea",
+        7350,
+        400
+      ],
+      [
+        "L3_spring_magnolia",
+        9400,
+        920
+      ],
+      [
+        "L3_spring_plum",
+        11300,
+        980
+      ]
+    ],
+    "summer": [
+      [
+        "L3_common_broadleaf_v10",
+        3300,
+        1050
+      ],
+      [
+        "L3_summer_trumpet_vine",
+        7350,
+        460
+      ]
+    ],
+    "autumn": [
+      [
+        "L3_autumn_maple",
+        3300,
+        1080
+      ],
+      [
+        "L3_autumn_rose",
+        7350,
+        420
+      ],
+      [
+        "L3_autumn_ginkgo",
+        9400,
+        1000
+      ]
+    ],
+    "winter": []
+  },
+  "backTrees": [
+    [
+      "L3_common_pine_cluster",
+      800,
+      430
+    ],
+    [
+      "L3_common_broadleaf_v10",
+      4850,
+      460
+    ],
+    [
+      "L3_common_pine_cluster",
+      9000,
+      420
+    ]
+  ],
+  "treeFrontFeet": 2081,
+  "treeBackFeet": 1780,
+  "backTreeHaze": 0.25,
+  "clusterFeet": 2025,
+  "boat": {
+    "deckY": 1216,
+    "charX": 1024,
+    "charFootY": 1216,
+    "charTopY": 100,
+    "deckAboveWater": 75
+  },
+  "camp": {
+    "y": 1132,
+    "fireX": 457,
+    "fireY": 791,
+    "frameSeconds": 0.18
+  },
+  "sky": {
+    "cloudSpeed": 4,
+    "passerMeanSeconds": 360,
+    "birdSeconds": 6,
+    "shootingSeconds": 1.2,
+    "starCount": 40,
+    "sunSize": 140,
+    "moonSize": 110,
+    "cloudWidth": 600,
+    "cloudY": 800,
+    "textureWash": 0.035,
+    "textureGrain": 0.025,
+    "maxDecodeWidth": 2048
+  }
+}

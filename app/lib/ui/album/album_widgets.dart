@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../common/basic_item_art.dart';
 
 import '../../app/sync_service.dart';
 import '../../domain/landmark.dart';
@@ -374,10 +375,7 @@ class PropRow extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: owned ? Palette.ink : Palette.subInk, width: 2),
             ),
-            child: Text(
-              prop.name.substring(0, 1),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
-            ),
+            child: BasicItemIcon(id: prop.id, fallback: prop.name.substring(0, 1)),
           ),
           const SizedBox(width: 12),
           Expanded(

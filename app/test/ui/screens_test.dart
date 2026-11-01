@@ -233,7 +233,7 @@ void main() {
       await _tapIcon(tester, Icons.arrow_back);
       expect(find.byType(MapScreen), findsNothing);
 
-      await tester.tap(find.byIcon(Icons.backpack_outlined));
+      await tester.tap(find.byKey(const ValueKey('camp-object-backpack')));
       await _transition(tester);
       expect(find.byType(AlbumScreen), findsOneWidget);
       expect(find.text('화집'), findsOneWidget);
@@ -241,7 +241,7 @@ void main() {
       await _tapIcon(tester, Icons.arrow_back);
       expect(find.byType(AlbumScreen), findsNothing);
 
-      await tester.tap(find.byIcon(Icons.menu_book_outlined));
+      await tester.tap(find.byKey(const ValueKey('camp-object-note')));
       await _transition(tester);
       expect(find.text('노트'), findsOneWidget);
       expect(find.text('내 방명록'), findsOneWidget);

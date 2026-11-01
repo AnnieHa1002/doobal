@@ -184,7 +184,8 @@ void main() {
         await pump(tester, const FirstPackFace(), w: w, h: h);
         expect(tester.takeException(), isNull, reason: '$w×$h');
         expect(tester.getSize(find.byType(FirstPackFace)), Size(w, h));
-        expect(find.byIcon(Icons.backpack_outlined), findsOneWidget);
+        expect(find.byType(Image), findsOneWidget);
+        expect((tester.widget<Image>(find.byType(Image)).image as AssetImage).assetName, FirstPackFace.path);
         expect(tester.widget<ColoredBox>(find.byType(ColoredBox)).color, Palette.paper);
       }
     });

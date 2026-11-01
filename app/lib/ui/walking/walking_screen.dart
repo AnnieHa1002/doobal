@@ -79,7 +79,10 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     try {
       final rules = await ref.read(rulesProvider.future);
       if (!mounted) return;
-      _timer = Timer.periodic(Duration(seconds: rules.walkingRefreshSec), (_) => _refresh());
+      _timer = Timer.periodic(
+        Duration(seconds: rules.walkingRefreshSec),
+        (_) => _refresh(),
+      );
       await _refresh();
     } catch (e) {
       debugPrint('걷는 중 시작 실패: $e');
@@ -102,10 +105,14 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
       final refreshSec = ref.read(rulesProvider).requireValue.walkingRefreshSec;
       setState(() {
         _record = record;
-        _catchUpMps = math.max(0.0, record.summary.distanceM - _shownM) / refreshSec;
+        _catchUpMps =
+            math.max(0.0, record.summary.distanceM - _shownM) / refreshSec;
         if (j != null) {
-          _ratioBefore =
-              ratioBeforeWalk(j.progress.progressKm, record.summary.distanceM / 1000, j.totalKm);
+          _ratioBefore = ratioBeforeWalk(
+            j.progress.progressKm,
+            record.summary.distanceM / 1000,
+            j.totalKm,
+          );
         }
       });
     } catch (e) {
@@ -130,12 +137,15 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   void _onTick(Duration elapsed) {
     final rules = ref.read(rulesProvider).value;
-    final dt = (elapsed - _lastTick).inMicroseconds / Duration.microsecondsPerSecond;
+    final dt =
+        (elapsed - _lastTick).inMicroseconds / Duration.microsecondsPerSecond;
     _lastTick = elapsed;
     if (rules == null) return;
 
     final summary = _record?.summary;
-    final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
+    final walkMps = summary == null
+        ? 0.0
+        : speedMps(summary.lastSteps, summary.lastGait, rules);
     final shown = followDistance(
       _shownM,
       summary?.distanceM ?? 0,
@@ -156,13 +166,15 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   void _finish() {
     // 이 화면을 걷기 기록으로 바꾼다. 마지막 동기화와 기록 계산은 걷기 기록 화면이 한다
-    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
-      builder: (_) => WalkRecordScreen(
-        start: _start,
-        end: ref.read(clockProvider)(),
-        ratioBefore: _ratioBefore,
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => WalkRecordScreen(
+          start: _start,
+          end: ref.read(clockProvider)(),
+          ratioBefore: _ratioBefore,
+        ),
       ),
-    ));
+    );
   }
 
   @override
@@ -172,11 +184,17 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final snap = ref.watch(snapshotProvider).value;
     // 위치는 여정이 있으면 늘 있다. 없으면(출발 동네 미선택) 다른 빠진 데이터처럼 빈 화면
     final position = snap?.position;
-    if (rules == null || landmarks == null || snap == null || position == null) {
+    if (rules == null ||
+        landmarks == null ||
+        snap == null ||
+        position == null) {
       return const Scaffold(body: SizedBox.expand());
     }
     final summary = _record?.summary;
-    final running = summary != null && summary.lastSteps > 0 && summary.lastGait == Gait.run;
+    final running =
+        summary != null &&
+        summary.lastSteps > 0 &&
+        summary.lastGait == Gait.run;
 
     return Scaffold(
       body: Stack(
@@ -190,6 +208,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             rules: rules,
             landmarks: landmarks,
             running: running,
+            moving: summary != null && summary.lastSteps > 0,
+            sceneSeed: snap.journey?.dest.id ?? 'home',
           ),
           SafeArea(
             child: Padding(
@@ -317,19 +337,28 @@ class _Panel extends StatelessWidget {
               const SizedBox(height: 8),
               InkBar(segments: [BarSegment(j.progress.ratio, Palette.moss)]),
               const SizedBox(height: 4),
-              Text('${j.dest.name}까지 ${formatKm(j.progress.remainingKm)}', style: small),
+              Text(
+                '${j.dest.name}까지 ${formatKm(j.progress.remainingKm)}',
+                style: small,
+              ),
             ],
             if (expanded) ...[
               const Divider(height: 24, color: Palette.ink),
               _Line('분당 걸음', '$spm보'),
-              _Line('속도', '${speedKmh(spm, gait, rules).toStringAsFixed(1)} km/h'),
+              _Line(
+                '속도',
+                '${speedKmh(spm, gait, rules).toStringAsFixed(1)} km/h',
+              ),
               _Line('보폭', '${strideM(gait, rules).toStringAsFixed(2)} m'),
               _Line('오늘 걸음', '${formatInt(snap.todaySteps)}보'),
               if (j != null) _Line('도착 예정일', formatMonthDay(j.eta)),
               if (nextMilestone != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Text('다음 방명록 지점까지 ${formatInt(nextMilestone!)}보', style: small),
+                  child: Text(
+                    '다음 방명록 지점까지 ${formatInt(nextMilestone!)}보',
+                    style: small,
+                  ),
                 ),
               const Padding(
                 padding: EdgeInsets.only(top: 4),
@@ -358,9 +387,14 @@ class _Line extends StatelessWidget {
         children: [
           Text(label, style: style),
           const Spacer(),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w600, color: Palette.ink)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Palette.ink,
+            ),
+          ),
         ],
       ),
     );

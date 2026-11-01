@@ -37,3 +37,9 @@ flutter:
     - assets/rive/
     # 지도 경계 SVG와 위경도 투영 (Drive Assets 폴더의 ui_map_*_v01)
     - assets/map/
+    # 승인된 v10 후경·v11 배경 원화
+    - assets/backgrounds/v11/
+    # 명소 풍경화 추천101장 (최종 채택 전 검토본)
+    - assets/paintings/
+    - assets/items/basic_v02/
+    - assets/ui/
