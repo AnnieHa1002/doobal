@@ -15,13 +15,16 @@ class SceneArt {
   final Map<String, dynamic> data;
   final Map<String, ui.Image> images;
 
+  /// 배·물 그림은 [onSea](배 구간)일 때만 읽는다. 후경 이름이 sea여도 울릉도 섬 위라면
+  /// 배에서 내린 땅이라 길·둑·나무를 읽는다 (그리는 쪽도 onSea로 고른다)
   static Future<SceneArt> load(
     AssetBundle bundle,
     SceneLook look,
     bool rest,
     double scale,
-    double pixelRatio,
-  ) async {
+    double pixelRatio, {
+    bool onSea = false,
+  }) async {
     final data = jsonDecode(
       await bundle.loadString('assets/data/scene_art.json'),
     ) as Map<String, dynamic>;
@@ -50,7 +53,7 @@ class SceneArt {
         for (final n in ['01', '02', '03'])
           'fx_campfire_flame_${n}_v11_clean.png',
       ]);
-    } else if (region == 'sea') {
+    } else if (onSea) {
       keys.addAll([
         'bg_near_water_v11_clean.png',
         'prop_boat_01_v11_clean.png',
@@ -180,10 +183,14 @@ class SceneArtHost extends StatefulWidget {
     required this.mode,
     required this.size,
     required this.builder,
+    this.onSea = false,
   });
   final SceneLook look;
   final SceneMode mode;
   final Size size;
+
+  /// 배 구간인가. 바뀌면 배·물 그림과 땅 그림을 바꿔 읽는다
+  final bool onSea;
   final Widget Function(BuildContext, SceneArt?, double) builder;
   @override
   State<SceneArtHost> createState() => _SceneArtHostState();
@@ -220,6 +227,7 @@ class _SceneArtHostState extends State<SceneArtHost> {
       widget.look.backdrop,
       widget.look.season,
       widget.mode,
+      widget.onSea,
       (scale * ratio * 100).round(),
     );
     if (_key == key) {
@@ -234,6 +242,7 @@ class _SceneArtHostState extends State<SceneArtHost> {
       widget.mode == SceneMode.rest,
       scale,
       ratio,
+      onSea: widget.onSea,
     ).then(
       (art) {
         if (!mounted || generation != _generation) {
@@ -252,6 +261,8 @@ class _SceneArtHostState extends State<SceneArtHost> {
       },
       onError: (Object error, StackTrace stack) {
         if (mounted && generation == _generation) {
+          // 옛 장면 builder에 멈춰 있지 않게, 지금 값으로 그리는 builder로 돌아간다
+          setState(() => _activeBuilder = null);
           FlutterError.reportError(
             FlutterErrorDetails(
               exception: error,

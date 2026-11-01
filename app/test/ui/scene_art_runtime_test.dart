@@ -67,7 +67,7 @@ void main() {
         look.season,
       );
       final art = (await tester.runAsync(
-        () => SceneArt.load(rootBundle, actual, false, 1 / 3, 3),
+        () => SceneArt.load(rootBundle, actual, false, 1 / 3, 3, onSea: region == 'sea'),
       ))!;
       try {
         expect((art.data['far'][region] as List).length, 3);
@@ -114,6 +114,45 @@ void main() {
     final directory = Platform.environment['DOOBAL_BACKGROUND_CAPTURE_DIR'];
     if (directory != null) {
       await tester.runAsync(() => File('$directory/decode_report.json').writeAsString(jsonEncode(seen)));
+    }
+  });
+
+  testWidgets('울릉도 섬 위(후경 sea, 배 구간 아님)는 배·물 대신 길·땅을 읽고 빈칸 없이 그린다', (tester) async {
+    final look = sceneLook(
+      DateTime.utc(2026, 7, 15, 3),
+      const LatLng(37.49799, 130.86706),
+      false,
+      landmarks,
+      rules,
+    );
+    // 성인봉 가까이: 가장 가까운 명소가 울릉도라 후경은 sea
+    expect(look.backdrop, 'sea');
+    final art = (await tester.runAsync(
+      () => SceneArt.load(rootBundle, look, false, 1 / 3, 3),
+    ))!;
+    try {
+      expect(art.images.containsKey('bg_path_v11_clean.png'), isTrue);
+      expect(art.images.containsKey('bg_near_water_v11_clean.png'), isFalse);
+      final recorder = ui.PictureRecorder();
+      SceneArtPainter(
+        art: art,
+        look: look,
+        mode: SceneMode.walking,
+        distanceM: 1234,
+        rules: rules,
+        onSea: false,
+        pass: ScenePass.background,
+        elapsed: 4,
+      ).paint(Canvas(recorder), const Size(390, 844));
+      final picture = recorder.endRecording();
+      final image = (await tester.runAsync(() => picture.toImage(390, 844)))!;
+      final bytes = (await tester.runAsync(() => image.toByteData()))!;
+      // 길 높이(아래쪽)까지 땅이 그려져 있다
+      expect(bytes.getUint8((780 * 390 + 195) * 4 + 3), 255);
+      image.dispose();
+      picture.dispose();
+    } finally {
+      art.dispose();
     }
   });
 

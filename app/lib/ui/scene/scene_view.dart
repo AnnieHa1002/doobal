@@ -85,6 +85,7 @@ class SceneView extends StatelessWidget {
           look: look,
           mode: mode,
           size: size,
+          onSea: onSea,
           builder: (context, art, elapsed) {
             final artLayout = art == null
                 ? null
