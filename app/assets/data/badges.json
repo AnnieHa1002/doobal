@@ -1,0 +1,273 @@
+{
+ "version": 1,
+ "asOf": "2026-10-30",
+ "showProgress": false,
+ "phases": {
+  "approx": true,
+  "note_ko": "걷기 1번 시작 시각 기준, 그 지점 일출·일몰에서 분",
+  "dawn": {
+   "fromSunriseMin": [
+    -70,
+    60
+   ]
+  },
+  "sunset": {
+   "fromSunsetMin": [
+    -60,
+    60
+   ]
+  },
+  "night": {
+   "fromSunsetMin": 60,
+   "toSunriseMin": -70
+  }
+ },
+ "badges": [
+  {
+   "id": "b_first_walk",
+   "name": "첫 걸음",
+   "group": "habit",
+   "desc": "처음으로 10분·1,000보 이상 이어 걷기",
+   "cond": {
+    "kind": "sessionsCount",
+    "n": 1
+   },
+   "icon": "ui_stamp_first_walk",
+   "order": 1
+  },
+  {
+   "id": "b_walk_5km",
+   "name": "한 번에 5km",
+   "group": "habit",
+   "desc": "걷기 한 번에 5km",
+   "cond": {
+    "kind": "sessionKmGte",
+    "km": 5
+   },
+   "icon": "ui_stamp_walk_5km",
+   "order": 2
+  },
+  {
+   "id": "b_walk_10km",
+   "name": "한 번에 10km",
+   "group": "habit",
+   "desc": "걷기 한 번에 10km",
+   "cond": {
+    "kind": "sessionKmGte",
+    "km": 10
+   },
+   "icon": "ui_stamp_walk_10km",
+   "order": 3
+  },
+  {
+   "id": "b_day_10k",
+   "name": "하루 1만 보",
+   "group": "habit",
+   "desc": "하루에 10,000보",
+   "cond": {
+    "kind": "dayStepsGte",
+    "steps": 10000
+   },
+   "icon": "ui_stamp_day_10k",
+   "order": 4
+  },
+  {
+   "id": "b_day_20k",
+   "name": "하루 2만 보",
+   "group": "habit",
+   "desc": "하루에 20,000보",
+   "cond": {
+    "kind": "dayStepsGte",
+    "steps": 20000
+   },
+   "icon": "ui_stamp_day_20k",
+   "order": 5
+  },
+  {
+   "id": "b_walks_100",
+   "name": "걷기 100번",
+   "group": "habit",
+   "desc": "걷기 1번을 100번 채우기",
+   "cond": {
+    "kind": "sessionsCount",
+    "n": 100
+   },
+   "icon": "ui_stamp_walks_100",
+   "order": 6
+  },
+  {
+   "id": "b_dawn",
+   "name": "새벽 산책",
+   "group": "time",
+   "desc": "해 뜰 무렵 걷기 시작",
+   "cond": {
+    "kind": "walkInPhase",
+    "phase": "dawn",
+    "n": 1
+   },
+   "icon": "ui_stamp_dawn",
+   "order": 7
+  },
+  {
+   "id": "b_sunset",
+   "name": "노을 산책",
+   "group": "time",
+   "desc": "해 질 무렵 걷기 시작",
+   "cond": {
+    "kind": "walkInPhase",
+    "phase": "sunset",
+    "n": 1
+   },
+   "icon": "ui_stamp_sunset",
+   "order": 8
+  },
+  {
+   "id": "b_night",
+   "name": "밤 산책",
+   "group": "time",
+   "desc": "해가 진 뒤 걷기 시작",
+   "cond": {
+    "kind": "walkInPhase",
+    "phase": "night",
+    "n": 1
+   },
+   "icon": "ui_stamp_night",
+   "order": 9
+  },
+  {
+   "id": "b_mountain",
+   "name": "산길 이정표",
+   "group": "terrain",
+   "desc": "산길에서 이정표 10번",
+   "cond": {
+    "kind": "terrainEvents",
+    "terrain": "mountain",
+    "n": 10
+   },
+   "icon": "ui_stamp_mountain",
+   "order": 10
+  },
+  {
+   "id": "b_coast",
+   "name": "바닷가 이정표",
+   "group": "terrain",
+   "desc": "바닷가에서 이정표 10번",
+   "cond": {
+    "kind": "terrainEvents",
+    "terrain": "coast",
+    "n": 10
+   },
+   "icon": "ui_stamp_coast",
+   "order": 11
+  },
+  {
+   "id": "b_field",
+   "name": "들판 이정표",
+   "group": "terrain",
+   "desc": "들판에서 이정표 10번",
+   "cond": {
+    "kind": "terrainEvents",
+    "terrain": "field",
+    "n": 10
+   },
+   "icon": "ui_stamp_field",
+   "order": 12
+  },
+  {
+   "id": "b_city",
+   "name": "도시 이정표",
+   "group": "terrain",
+   "desc": "도시에서 이정표 10번",
+   "cond": {
+    "kind": "terrainEvents",
+    "terrain": "city",
+    "n": 10
+   },
+   "icon": "ui_stamp_city",
+   "order": 13
+  },
+  {
+   "id": "b_seasons",
+   "name": "네 계절",
+   "group": "season",
+   "desc": "봄·여름·가을·겨울 모두 걷기",
+   "cond": {
+    "kind": "seasonsWalked",
+    "n": 4
+   },
+   "icon": "ui_stamp_seasons",
+   "order": 14
+  },
+  {
+   "id": "b_first_arrival",
+   "name": "첫 명소 도착",
+   "group": "journey",
+   "desc": "처음으로 명소에 도착",
+   "cond": {
+    "kind": "arrivalCount",
+    "n": 1
+   },
+   "icon": "ui_stamp_first_arrival",
+   "order": 15
+  },
+  {
+   "id": "b_first_boat",
+   "name": "첫 배 타기",
+   "group": "journey",
+   "desc": "배를 타고 제주나 울릉으로 건너기",
+   "cond": {
+    "kind": "seaCrossed"
+   },
+   "icon": "ui_stamp_first_boat",
+   "order": 16
+  },
+  {
+   "id": "b_first_gold",
+   "name": "첫 금 액자",
+   "group": "journey",
+   "desc": "금 액자 그림 얻기(한 여정 50km 이상)",
+   "cond": {
+    "kind": "frameGet",
+    "frame": "gold"
+   },
+   "icon": "ui_stamp_first_gold",
+   "order": 17
+  },
+  {
+   "id": "b_journey_100",
+   "name": "한 여정 100km",
+   "group": "journey",
+   "desc": "한 여정으로 100km 걷기",
+   "cond": {
+    "kind": "journeyKmGte",
+    "km": 100
+   },
+   "icon": "ui_stamp_journey_100",
+   "order": 18
+  },
+  {
+   "id": "b_all_friends",
+   "name": "세 친구 모두",
+   "group": "companion",
+   "desc": "동행 세 친구를 모두 만나기",
+   "cond": {
+    "kind": "companionsMet",
+    "n": 3
+   },
+   "icon": "ui_stamp_all_friends",
+   "order": 19
+  },
+  {
+   "id": "b_first_finale",
+   "name": "첫 이야기 완결",
+   "group": "companion",
+   "desc": "동행 이야기를 처음 끝까지 듣기",
+   "cond": {
+    "kind": "finaleCount",
+    "n": 1
+   },
+   "icon": "ui_stamp_first_finale",
+   "order": 20
+  }
+ ]
+}

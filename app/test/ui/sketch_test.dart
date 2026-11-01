@@ -15,6 +15,7 @@ import 'package:doobal/ui/decorate/decorate_screen.dart';
 import 'package:doobal/ui/map/landmark_card.dart';
 import 'package:doobal/ui/map/map_painter.dart';
 import 'package:doobal/ui/map/map_screen.dart';
+import 'package:doobal/ui/walking/walking_hud.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -179,8 +180,12 @@ void main() {
       await _pumpRest(tester, e);
       await tester.tap(find.byTooltip('출발하기'));
       await transition(tester);
-      expect(find.text('걷는 중'), findsOneWidget);
-      expect(find.textContaining('내 동네 스케치까지'), findsOneWidget);
+      expect(find.byType(StepPill), findsOneWidget);
+      // 목적지 이름은 걸음 알약을 눌러 펼친 숫자 카드에 있다
+      await tester.tap(find.byKey(const Key('walk-pill')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('내 동네 스케치까지'), findsOneWidget);
       await end(tester, e);
     });
   });

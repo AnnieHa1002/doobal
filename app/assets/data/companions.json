@@ -1,0 +1,1169 @@
+{
+ "version": 1,
+ "companions": [
+  {
+   "id": "bright",
+   "name": "퐁이",
+   "species": "duck",
+   "terrain": "coast",
+   "pace": "ahead",
+   "finaleProp": "hat_10",
+   "hideLayerOnFinale": null,
+   "faces": [
+    "closed",
+    "laugh",
+    "smile",
+    "surprised"
+   ],
+   "chapters": [
+    {
+     "no": 0,
+     "title": "만남",
+     "art": "mate_m01_story_00",
+     "lines": [
+      {
+       "who": "narr",
+       "text": "노란 오리 하나가 저 앞까지 뒤뚱뒤뚱 뛰어갔다가, 숨을 고르며 돌아온다"
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "와! 저 앞에 민들레 엄청 많아! …아, 안녕!"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "미안, 혼자 신났어. 너도 걷는 중이야? 어디까지 가?"
+      },
+      {
+       "who": "me",
+       "text": "응. 멀리 가는 중이야."
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "와, 멀리! 나는 그냥 두 발로 가는 게 너무 좋아서 걷는 중이야."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "같이 가도 돼? 혼자 보는 것보다 둘이 보는 게 두 배로 재밌거든. 어때, 같이 할래?"
+      }
+     ],
+     "choice": [
+      "together",
+      "solo"
+     ]
+    },
+    {
+     "no": 1,
+     "title": "걷는 게 좋은 이유",
+     "art": null,
+     "lines": [
+      {
+       "who": "narr",
+       "text": "퐁이가 앞서 뛰어갔다 돌아온다"
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "와, 저 모퉁이 돌면 길이 또 바뀌어! 걸으면 세상이 조금씩 바뀌는 거 알아?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "둥지 구멍으로 보는 하늘은 맨날 그 동그라미였는데, 걸으면 매번 새 그림이야."
+      },
+      {
+       "who": "me",
+       "text": "화가한테 딱 맞는 말이네."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "그치? 그래서 너랑 걷는 게 좋은가 봐. 너도 그래?"
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "와! 저기 새! …벌써 날아갔다. 다음엔 꼭 같이 보는 거야."
+      }
+     ]
+    },
+    {
+     "no": 2,
+     "title": "단단해진 다리",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "와, 이것 좀 봐! 다리가 단단해졌어. 전엔 물렁물렁했는데."
+      },
+      {
+       "who": "me",
+       "text": "진짜네. 많이 걸었구나."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "언덕 올라갈 때 숨도 덜 차. 몸이 '고마워' 하는 느낌이야."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "너도 그런 거 느껴? 어제보다 발이 가볍다든가, 해?"
+      },
+      {
+       "who": "me",
+       "text": "…조금은."
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "와, 거봐! 우리 같이 자라고 있는 거야."
+      }
+     ]
+    },
+    {
+     "no": 3,
+     "title": "처음 가 본 곳 목록",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "이거 내 수첩이야. 처음 가 본 곳 목록! 들을 거지?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "물웅덩이, 비 갠 숲길, 새벽 들판, 그리고… 지금 이 길이야!"
+      },
+      {
+       "who": "me",
+       "text": "그걸 다 적어 둬?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "응, 수첩에. 한 줄 쓸 때마다 두근거려. 너는 그림 그릴 때 안 두근거려?"
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "와, 생각해 보니 너는 그림으로, 나는 글자로 모으는 거야. 우리 둘 다 수집가야!"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…근데 첫 줄은 좀 짧아. '둥지 밖'. 그게 다야."
+      }
+     ]
+    },
+    {
+     "no": 4,
+     "title": "둥지 구멍",
+     "art": null,
+     "lines": [
+      {
+       "who": "narr",
+       "text": "조용히 걷던 퐁이가 먼저 입을 연다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "나 어릴 때 날개가 많이 약했어. 거의 둥지 안에만 있었던 거야."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "형제들이 날기 연습할 때, 나는 둥지 가장자리에 앉아서 구경했어."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "다른 오리들은 '쟤만 연습 빼 준대' 했어. 그게 날개보다 더 아팠어. 그런 기분 알아?"
+      },
+      {
+       "who": "me",
+       "text": "…그랬구나."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "근데 지금은 내가 제일 먼저 뛰어나가잖아. 신기하지 않아?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "그래서 매일 이렇게 신나는 거야. 하나도 당연하지 않거든."
+      },
+      {
+       "who": "narr",
+       "text": "둘은 한동안 말없이 걷는다"
+      }
+     ]
+    },
+    {
+     "no": 5,
+     "title": "처음 멈춘 날",
+     "art": null,
+     "lines": [
+      {
+       "who": "narr",
+       "text": "퐁이가 길가에 털썩 주저앉는다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "잠깐만… 숨이 좀 차. 날개도 무거워."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "이상해. 요즘 괜찮았는데. 나 왜 이러지…"
+      },
+      {
+       "who": "me",
+       "text": "쉬었다 가자. 급할 거 없어."
+      },
+      {
+       "who": "companion",
+       "face": "closed",
+       "text": "…사실 무서웠어. 다시 둥지로 돌아가야 할까 봐."
+      },
+      {
+       "who": "me",
+       "text": "오늘 많이 뛰었잖아. 쉬어 가도 돼."
+      },
+      {
+       "who": "companion",
+       "face": "closed",
+       "text": "…응. 조금만 앉아 있을게. 옆에 있어 줄 거야?"
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "…그래도 둥지보다 여기가 좋아. 여긴 네가 있잖아. 헤헤."
+      }
+     ]
+    },
+    {
+     "no": 6,
+     "title": "네 걸음에 맞춰서",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "어제 기다려 줘서 고마워. 지루하지 않았어?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "나 항상 먼저 뛰어갔잖아. 늦으면 뭔가 놓칠 것 같아서. 너 혼자 두고 간 적도 많고."
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "그러다 맨날 넘어졌지. 이 반창고들 다 그거야. 헤헤."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "근데 천천히 걸으니까 보이는 게 있더라. 와, 돌 틈에 꽃도 피어 있는 거야."
+      },
+      {
+       "who": "me",
+       "text": "뛰어가면 못 봤을 것들이네."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "응. 오늘은 네 옆에서 걸을 거야. 네 걸음에 맞춰서. 괜찮아?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "아, 맞다. 엄마가 핀 달아 줄 때 한 말. \"해 보러 나가자.\" 그거였어."
+      }
+     ]
+    },
+    {
+     "no": 7,
+     "title": "철새가 들려준 지도",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "부탁 하나 해도 돼? 진짜 진짜 중요한 거야."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "둥지 옆에서 쉬어 가던 철새들이 산 넘어 바다, 바다 넘어 들판 얘기를 해 줬어. 그걸 듣고 지도를 그렸어."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "그 상상 속 풍경을 네가 그려 줄 수 있어?"
+      },
+      {
+       "who": "me",
+       "text": "어떤 풍경이었는데?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "음… 우리가 걸어온 길이랑 비슷해. 아니, 똑같은지도 몰라."
+      },
+      {
+       "who": "me",
+       "text": "그럼 이미 그리고 있었네."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "와… 정말이네. 헤헤, 그럼 벌써 반은 다 된 거야!"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "나머지 반은 같이 채우자!"
+      }
+     ]
+    },
+    {
+     "no": 8,
+     "title": "두 발로 가는 길 (완결)",
+     "art": "mate_m01_story_08",
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "있잖아, 요즘은 둥지 생각이 잘 안 나. 왜 그런지 알아?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "예전엔 구멍으로 하늘을 '보는' 오리였는데, 이제는 하늘 아래 '있는' 오리라서야."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "언젠가 날 수도 있겠지. 근데 지금은 두 발로 가는 게 좋아. 너랑 같이."
+      },
+      {
+       "who": "narr",
+       "text": "퐁이가 머리에서 핀 하나를 빼서 내민다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "엄마가 준 핀, 원래 해랑 달 한 쌍이었어. 해는 내가, 달은 네가 해."
+      },
+      {
+       "who": "me",
+       "text": "고마워. 잘 달고 다닐게."
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "와! 잘 어울려! 앞으로도 같이 걸을 거지? 저기 좀 봐, 볼 게 아직 엄청 많아!"
+      }
+     ],
+     "prop": "hat_10"
+    }
+   ]
+  },
+  {
+   "id": "rest",
+   "name": "휴",
+   "species": "cat",
+   "terrain": "city",
+   "pace": "walkOnly",
+   "finaleProp": "hand_09",
+   "hideLayerOnFinale": null,
+   "faces": [
+    "closed",
+    "laugh",
+    "smile",
+    "surprised"
+   ],
+   "chapters": [
+    {
+     "no": 0,
+     "title": "만남",
+     "art": "mate_m02_story_00",
+     "lines": [
+      {
+       "who": "narr",
+       "text": "회색 고양이 하나가 앞만 보고 걷고 있다. 옆에 서도 고개를 돌리지 않는다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…뭐."
+      },
+      {
+       "who": "me",
+       "text": "같은 방향이네."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "그렇네. 그냥 걷는 중이야."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "말 많이 안 해도 되면, 같이 걷든가."
+      }
+     ],
+     "choice": [
+      "together",
+      "solo"
+     ]
+    },
+    {
+     "no": 1,
+     "title": "처음 가 보는 길",
+     "art": null,
+     "lines": [
+      {
+       "who": "me",
+       "text": "어디까지 가?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "몰라. 정해 놓으면 또 숙제 같아서."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "사실 쉬는 동안 매일 같은 길만 걸었어. 생각 안 해도 되니까."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…오늘은 너 따라오다 보니 처음 보는 길이네."
+      },
+      {
+       "who": "me",
+       "text": "별로야?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…아니. 나쁘지 않아. 너는? 맨날 가는 길 있어?"
+      },
+      {
+       "who": "me",
+       "text": "응, 집 앞 골목."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…그 길도 좋겠네. 너 같은 애가 걷는 길이면."
+      }
+     ]
+    },
+    {
+     "no": 2,
+     "title": "목방울",
+     "art": null,
+     "lines": [
+      {
+       "who": "narr",
+       "text": "목방울이 딸랑딸랑 계속 울린다. 휴는 귀를 납작하게 눕힌다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "공방에서 부르는 방울이야. 쉬는 중인데도 울려."
+      },
+      {
+       "who": "narr",
+       "text": "휴는 방울을 떼어 주머니에 넣는다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…뗐어. 3개월 만에 처음."
+      },
+      {
+       "who": "me",
+       "text": "기분 어때?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "조용하네. 생각보다 괜찮아."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "별일 안 생기겠지 뭐."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…엄마한테는 아직 말 안 했지만."
+      }
+     ]
+    },
+    {
+     "no": 3,
+     "title": "고개 들기",
+     "art": null,
+     "lines": [
+      {
+       "who": "narr",
+       "text": "휴는 한참 뒤에야 따라와 옆에 선다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "오다가 담 위에 앉은 애가 날 보더라. 신경 쓰여서 빨리 왔어."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "나 원래 앞만 보고 걸어. 옆을 보면 잡생각이 나거든."
+      },
+      {
+       "who": "me",
+       "text": "오늘은?"
+      },
+      {
+       "who": "narr",
+       "text": "휴는 잠깐 멈춰 고개를 든다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…하늘이 저런 색이었나."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "됐어. 오늘은 이 정도만. …그래도 좀 예쁘긴 하다."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…너는 왜 안 물어봐? 왜 쉬는지."
+      },
+      {
+       "who": "me",
+       "text": "말하고 싶을 때 말하라고, 기다리는 중이었어."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…그거 좋은 버릇이다."
+      }
+     ]
+    },
+    {
+     "no": 4,
+     "title": "멈춘 앞발",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "물어봐도 돼. 왜 쉬는지."
+      },
+      {
+       "who": "me",
+       "text": "말하고 싶을 때 말해."
+      },
+      {
+       "who": "companion",
+       "face": "closed",
+       "text": "…어느 새벽에, 반죽 위에서 앞발이 안 움직였어."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "아픈 데는 없는데, 발이 '이제 그만' 하더라."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "엄마한테는 \"응, 식빵 잘 굽고 있어\"라고만 해. 거짓말은 아닌데, 진짜도 아니지."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "별거 아니야. …아니, 별거였지 뭐."
+      }
+     ]
+    },
+    {
+     "no": 5,
+     "title": "다 귀찮은 날",
+     "art": null,
+     "lines": [
+      {
+       "who": "narr",
+       "text": "휴는 한참 뒤에야 따라온다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "늦었지. 오늘은 좀 별로인 날이야."
+      },
+      {
+       "who": "me",
+       "text": "무슨 일 있어?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "아니. 그냥 다 귀찮은 날. 그런 날이 꽤 오래가서, 숲 상담소 부엉이 선생님한테도 가 봤어."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "거기서 들은 말이 '쉬어도 된다'였어. 남한테는 잘만 하던 말인데."
+      },
+      {
+       "who": "me",
+       "text": "그럼 오늘은 쉬엄쉬엄 가자."
+      },
+      {
+       "who": "companion",
+       "face": "closed",
+       "text": "…그 말, 내가 하려던 건데."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "너도 쉬어도 괜찮아. …나도. 이번엔 나도 포함이야."
+      }
+     ]
+    },
+    {
+     "no": 6,
+     "title": "햇볕 자리",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "아침에 창가 햇볕 자리에 앉아 봤어. 공방 다닐 땐 한 번도 못 앉아 본 자리."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "새벽엔 반죽, 낮엔 정리, 해 들 땐 이미 녹초였거든."
+      },
+      {
+       "who": "me",
+       "text": "어땠어?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…응. 온도가 있더라."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "저녁엔 노을 볼 거야. 별 계획은 아니고."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "이런 거 하나씩 모으는 중이야. 너 그림 모으듯이."
+      },
+      {
+       "who": "narr",
+       "text": "둘은 햇볕이 드는 쪽으로 조금 비켜 걷는다"
+      }
+     ]
+    },
+    {
+     "no": 7,
+     "title": "돌아갈까",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "반장님이 이제 돌아오래. 내 발바닥 자국 찾는 손님이 많대."
+      },
+      {
+       "who": "me",
+       "text": "돌아갈 거야?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "모르겠어. 돌아가면 또 앞만 볼 것 같아서."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "안 돌아가면… 그건 그거대로 무섭고."
+      },
+      {
+       "who": "me",
+       "text": "아직 시간 있잖아."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…그렇지. 오늘 답 안 내도 되지 뭐."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…아, 엄마한테는 말했어. 진짜로."
+      }
+     ]
+    },
+    {
+     "no": 8,
+     "title": "걷는 법은 이제 알아 (완결)",
+     "art": "mate_m02_story_08",
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "엄마가 그러더라. \"식빵은 안 구워도 돼.\""
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "그래서 정했어. …아니, 안 정하기로 정했어. 천천히 생각할래."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "하나는 확실해. 걷는 법은 이제 알아. 지치면 쉬고, 햇볕 자리 찾고, 다시 걷고."
+      },
+      {
+       "who": "narr",
+       "text": "휴가 주머니에서 고양이 발 모양 장갑을 꺼낸다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "공방에서 만든 거. 내 발바닥 본떠서. …꾹꾹이는 이제 네가 해."
+      },
+      {
+       "who": "me",
+       "text": "고마워. 잘 낄게."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "그러니까 내일도 같이 걷든가. 너무 빨리 뛰지만 말고."
+      }
+     ],
+     "prop": "hand_09"
+    }
+   ]
+  },
+  {
+   "id": "doctor",
+   "name": "심 박사",
+   "species": "ginseng",
+   "terrain": "mountain",
+   "pace": "match",
+   "finaleProp": "hat_11",
+   "hideLayerOnFinale": "glasses",
+   "faces": [
+    "closed",
+    "laugh",
+    "smile",
+    "surprised"
+   ],
+   "chapters": [
+    {
+     "no": 0,
+     "title": "만남",
+     "art": "mate_m03_story_00",
+     "lines": [
+      {
+       "who": "narr",
+       "text": "뒤에서 다정한 목소리가 들린다. 동그란 안경을 쓴 작은 산삼이 잎을 흔든다"
+      },
+      {
+       "who": "companion",
+       "face": "surprised",
+       "text": "어이쿠, 거기 걷는 분! 어깨에 힘이 너무 들어갔어요!"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "허리는 곧게 펴고, 고개는 들어서 앞을 보는 거지요.",
+       "source": "H1"
+      },
+      {
+       "who": "me",
+       "text": "이렇게요?"
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "그렇지요! …뭐, 말처럼 쉽지는 않지요? 호호."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "저도 걷는 중이에요. 괜찮다면 같이 걸어도 될까요?"
+      }
+     ],
+     "choice": [
+      "together",
+      "solo"
+     ]
+    },
+    {
+     "no": 1,
+     "title": "숨 쉬는 법",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "걸을 때 숨은 어떻게 쉬나요? 그냥 쉬지요? 호호."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "숨은 참지 말고, 일정하게 쉬는 거예요. 걸음에 맞춰서요.",
+       "source": "H2"
+      },
+      {
+       "who": "me",
+       "text": "…생각보다 어렵네요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "그렇지요? 말처럼 쉽지 않지요!"
+      },
+      {
+       "who": "narr",
+       "text": "발밑 버섯이 똑똑 울린다. 심 박사가 잠시 망설이다 받는다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "네, 어머니. …네, 물 잘 먹고 있어요. 네, 끊을게요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…호호. 백 년 만에 땅 위로 나왔더니 할 말이 없네요."
+      }
+     ]
+    },
+    {
+     "no": 2,
+     "title": "첫 문장",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "출발 전에 5분에서 10분, 가볍게 몸 풀어 주는 것 잊지 않았지요?",
+       "source": "H3"
+      },
+      {
+       "who": "me",
+       "text": "깜빡했어요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "호호, 다들 그래요! 저도 백 년을 깜빡했지요."
+      },
+      {
+       "who": "narr",
+       "text": "심 박사가 버섯 앞에 쪼그려 앉아 뭔가 말하려다 멈추기를 반복한다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "옛 친구 도라지한테 소식을 보내려는데, 첫마디가 안 나오네요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "'잘 지내?' …이걸로 보냈어요. 답이 올까요?"
+      },
+      {
+       "who": "me",
+       "text": "올 거예요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "호호, 화가님 말은 이상하게 믿음이 가네요."
+      }
+     ]
+    },
+    {
+     "no": 3,
+     "title": "비 갠 길",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "길이 미끄러울 땐 보폭을 좁히고 천천히! 주머니에 손 넣고 걷는 건 금물이고요.",
+       "source": "H4"
+      },
+      {
+       "who": "me",
+       "text": "박사님은 모르는 게 없네요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "호호, 아는 것과 하는 건 다르지요. 말처럼 쉽지 않지요?"
+      },
+      {
+       "who": "narr",
+       "text": "버섯이 똑똑 울린다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "응, 동생아. 그 산은 흙이 마르지 않니? 물은 아침에 주고, 그늘은…"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "…'또 잔소리'라고요? …그래요, 미안해요."
+      },
+      {
+       "who": "narr",
+       "text": "통화가 끝나고, 심 박사가 안경을 벗어 한참 닦는다"
+      }
+     ]
+    },
+    {
+     "no": 4,
+     "title": "땅속 백 년",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "저는 백 년 동안 땅속에서 뿌리만 키웠어요. 안경 너머로 책만 보면서요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "그런데 고개를 들어 보니, 주변에 아무도 없더라고요."
+      },
+      {
+       "who": "narr",
+       "text": "심 박사가 잎 사이에서 빛바랜 사진 한 장을 꺼낸다. 작은 씨앗들이 나란히 붙어 있다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "형제들이에요. 새들이 하나씩 다른 산으로 데려갔지요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "다들 만나면 저는 가르치기만 했어요. 그러니 멀어질 만도 하지요. 호호, 욕심만 많았지요?"
+      },
+      {
+       "who": "narr",
+       "text": "버섯이 조용하다. 심 박사가 사진을 다시 넣는다"
+      }
+     ]
+    },
+    {
+     "no": 5,
+     "title": "부재중",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "오늘은 제가 먼저 버섯 전화를 몇 번 걸어 봤어요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "다들 바쁜가 봐요. 아무도 안 받네요. 호호…"
+      },
+      {
+       "who": "me",
+       "text": "다시 연락 올 거예요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "그렇겠지요? …그렇지요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "사람한테… 아니, 누구한테든 다시 다가가는 건 말처럼 쉽지 않네요."
+      },
+      {
+       "who": "narr",
+       "text": "버섯 위에서 잎 끝이 멈춘다"
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "그래도 오늘은 화가님이 받아 줬으니, 한 통은 성공이지요! 호호."
+      }
+     ]
+    },
+    {
+     "no": 6,
+     "title": "나란히 걷기",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "요즘 알게 된 게 하나 있어요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "마주 보면 자꾸 가르치게 되는데, 나란히 걸으면 얼굴을 안 봐도 되니 말이 쉬워요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "혼자 걸을 땐 걸음 수만 셌는데, 같이 걸으니 이야기를 세게 되네요."
+      },
+      {
+       "who": "me",
+       "text": "저도 그래요."
+      },
+      {
+       "who": "narr",
+       "text": "버섯이 똑똑 울린다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "아, 도라지예요! …응, 미안, 나도 그동안 못 받았지. 응, 응!"
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "호호! 백 년 만에 수다가 길어지겠네요."
+      }
+     ]
+    },
+    {
+     "no": 7,
+     "title": "약속",
+     "art": null,
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "도라지랑 주말에 같이 걷기로 했어요! 백 년 만이에요."
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "뭘 챙겨 가야 하나 고민이네요. 호호."
+      },
+      {
+       "who": "me",
+       "text": "그냥 같이 걸으면 되지 않을까요?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "그렇지요! 걷기엔 그게 제일이지요."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "아, 목이 마르지 않아도 물은 자주 조금씩 마시고요.",
+       "source": "H5"
+      },
+      {
+       "who": "narr",
+       "text": "버섯 전화를 걸어"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "응, 토요일 아침! 늦으면 안 돼요! …호호, 내가 할 소리지."
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "화가님은요? 오래 못 본 친구 있어요?"
+      },
+      {
+       "who": "me",
+       "text": "…연락 한번 해 봐야겠어요."
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "호호! 그 마음이면 벌써 반은 한 거지요."
+      }
+     ]
+    },
+    {
+     "no": 8,
+     "title": "새 가족사진 (완결)",
+     "art": "mate_m03_story_08",
+     "lines": [
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "주말에 도라지랑 걸었어요. 도라지가 더덕을 데려왔는데, 더덕이 또 덩굴째 이웃들을 줄줄이 감아 왔지 뭐예요."
+      },
+      {
+       "who": "companion",
+       "face": "laugh",
+       "text": "어머니한테도 먼저 전화했고요. 동생한테는 잔소리 안 했어요. 한 번도요! 호호."
+      },
+      {
+       "who": "narr",
+       "text": "다 같이 찍은 새 사진을 꺼낸다. 그 끝에 화가인 나도 있다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "씨앗 하나가 여럿이 되지요. 이제 사진이 두 장이에요."
+      },
+      {
+       "who": "narr",
+       "text": "심 박사가 안경을 벗어 내민다"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "이제 안경 없이도 친구 얼굴은 잘 보여요. 화가님이 써요. 이마에 올려 두면 멋있지요?"
+      },
+      {
+       "who": "companion",
+       "face": "smile",
+       "text": "자, 계속 걸을까요? 말처럼 쉽진 않지만, 같이라면 할 만하지요!"
+      }
+     ],
+     "prop": "hat_11"
+    }
+   ]
+  }
+ ]
+}
