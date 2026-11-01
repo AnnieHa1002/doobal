@@ -9,7 +9,8 @@ part 'app_db.g.dart';
 // M1 범위 (M1 명세 5장) + 스키마 2 (M3: 그림·소품, 여정의 끝) + 스키마 3 (프로필: 출발 동네)
 // + 스키마 4 (화집 벽) + 스키마 5 (새 그림 표시) + 스키마 6 (프로필: 시작 흐름)
 // + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지) + 스키마 8 (방명록 쓸 기회·쓴 글)
-// + 스키마 9 (알림 기록·알림 켜고 끄기) + 스키마 10 (복원한 하루 요약 지키기: 동기화 상태 열).
+// + 스키마 9 (알림 기록·알림 켜고 끄기) + 스키마 10 (복원한 하루 요약 지키기: 동기화 상태 열)
+// + 스키마 11 (본격 걷기: 앱 걷기 창·이동 거리·럭 장부).
 // 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
@@ -24,17 +25,27 @@ class StepMinutes extends Table {
   Set<Column> get primaryKey => {minuteUtc};
 }
 
+/// 하루 요약. distanceM은 실제로 걸은 거리(걸음 × 보폭)이고 보너스·상점은 안 들어 있다 (이름을 바꾸지 않았다).
+/// 본격 걷기(스키마 11)의 열: bonusM은 앱 걷기 보너스, shopM은 상점 효과(아직 0),
+/// travelM = distanceM + bonusM + shopM은 여정·경비·도착 예정일이 쓰는 이동 거리,
+/// walkTravelM은 앱 걷기 창 안에서 걸은 이동 거리(상점 뺌, 소품 거리의 기준), coins는 그날 번 럭
 @DataClassName('DaySummaryRow')
 class DaySummaries extends Table {
   TextColumn get day => text()();
   IntColumn get steps => integer()();
   RealColumn get distanceM => real()();
   IntColumn get countedSessions => integer()();
+  RealColumn get bonusM => real().withDefault(const Constant(0.0))();
+  RealColumn get shopM => real().withDefault(const Constant(0.0))();
+  RealColumn get travelM => real().withDefault(const Constant(0.0))();
+  RealColumn get walkTravelM => real().withDefault(const Constant(0.0))();
+  IntColumn get coins => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {day};
 }
 
+/// 걷기 구간. distanceM은 실제 거리, bonusM은 그 구간 안 앱 걷기 보너스 거리(스키마 11)
 @DataClassName('WalkSessionRow')
 class WalkSessions extends Table {
   IntColumn get startUtc => integer()();
@@ -44,6 +55,7 @@ class WalkSessions extends Table {
   RealColumn get runRatio => real()();
   BoolColumn get qualified => boolean()();
   BoolColumn get counted => boolean()();
+  RealColumn get bonusM => real().withDefault(const Constant(0.0))();
 
   @override
   Set<Column> get primaryKey => {startUtc};
@@ -153,6 +165,10 @@ class SyncState extends Table {
   /// 이 기기에만 두는 값이라 백업에 넣지 않는다
   TextColumn get restoreFloorDay => text().nullable()();
 
+  /// 앱이 살아 있던 마지막 시각 (epoch ms). 살아 있는 동안 config sync.aliveSaveSec마다와 백그라운드로
+  /// 갈 때 적는다. 다음 실행에서 끝나지 않은 앱 걷기를 이 시각에서 닫는다. 이 기기에만 두는 값
+  IntColumn get lastAliveUtc => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -259,6 +275,35 @@ class NotificationSettings extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// 앱 걷기가 끝난 까닭: finish는 걷기 마치기(또는 화면 닫기), appEnded는 앱이 끝나서 다음 실행에서 닫았다
+enum AppWalkEnd { finish, appEnded }
+
+/// 앱 걷기 창: 걷는 중 화면을 연 때(출발하기)부터 닫은 때까지 ([startUtc, endUtc), epoch ms).
+/// endUtc가 null이면 열려 있다 (앱이 살아 있는 동안은 지금까지로 센다). 이 창 안에서 걷기 1번을 채워야
+/// 보너스가 붙는다
+@DataClassName('AppWalkRow')
+class AppWalks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get startUtc => integer()();
+  IntColumn get endUtc => integer().nullable()();
+  TextColumn get endReason => textEnum<AppWalkEnd>().nullable()();
+}
+
+/// 럭 장부 행의 종류: earn은 걸어서 번 것(하루 한 행, 다시 계산하면 덮어쓴다), ad는 광고 보상,
+/// spend는 쓴 것 (ad·spend는 한 번 쓰고 고치지 않는다)
+enum CoinKind { earn, ad, spend }
+
+/// 럭 장부. day는 한국 날짜, amount는 늘어난 만큼 양수(spend도 양수로 두고 kind로 가린다), refId는
+/// 그 일을 가리키는 값 (광고 id·산 물건 등)
+@DataClassName('CoinLedgerRow')
+class CoinLedger extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get day => text()();
+  TextColumn get kind => textEnum<CoinKind>()();
+  IntColumn get amount => integer()();
+  TextColumn get refId => text().nullable()();
+}
+
 @DriftDatabase(
   tables: [
     StepMinutes,
@@ -275,13 +320,15 @@ class NotificationSettings extends Table {
     GuestbookPosts,
     NotificationLog,
     NotificationSettings,
+    AppWalks,
+    CoinLedger,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -336,6 +383,20 @@ class AppDb extends _$AppDb {
           }
           // 동기화 상태 표는 1부터 있었고 다시 만든 적이 없어서 어디서 올라와도 열을 더한다
           if (from < 10) await m.addColumn(syncState, syncState.restoreFloorDay);
+          // 하루 요약·걷기 구간·동기화 상태 표는 1부터 있었고 다시 만든 적이 없어서 어디서 올라와도 열을 더한다.
+          // 옛 하루에는 앱 걷기가 없었으니 이동 거리 = 실제 거리 (보너스·앱 걷기 이동 거리·럭은 기본값 0)
+          if (from < 11) {
+            await m.addColumn(daySummaries, daySummaries.bonusM);
+            await m.addColumn(daySummaries, daySummaries.shopM);
+            await m.addColumn(daySummaries, daySummaries.travelM);
+            await m.addColumn(daySummaries, daySummaries.walkTravelM);
+            await m.addColumn(daySummaries, daySummaries.coins);
+            await m.addColumn(walkSessions, walkSessions.bonusM);
+            await m.addColumn(syncState, syncState.lastAliveUtc);
+            await m.createTable(appWalks);
+            await m.createTable(coinLedger);
+            await customStatement('UPDATE day_summaries SET travel_m = distance_m');
+          }
         },
       );
 }

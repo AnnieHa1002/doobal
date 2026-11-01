@@ -120,7 +120,8 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
                         },
                         howTo: (p) => propHowTo(
                           p,
-                          totalKm: snap?.totalKm ?? 0,
+                          // 거리 소품은 앱 걷기 이동 거리로 센다 (Snapshot.walkTravelKm)
+                          totalKm: snap?.walkTravelKm ?? 0,
                           totalSteps: snap?.totalSteps ?? 0,
                           progress: regionProgress({
                             for (final v in paintings)

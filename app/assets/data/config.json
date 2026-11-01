@@ -2,9 +2,11 @@
  "version": 2,
  "gait": { "walkMaxSpm": 130, "runMinSpm": 140, "walkStrideM": 0.7, "runStrideM": 1.0 },
  "session": { "maxGapMin": 2, "minMin": 10, "minSteps": 1000, "maxPerDay": 3 },
- "sync": { "refetchHours": 48, "walkingRefreshSec": 30 },
+ "sync": { "refetchHours": 48, "walkingRefreshSec": 30, "aliveSaveSec": 30 },
  "live": { "cadenceWindowSec": 30, "noticeUpdateSec": 60 },
  "record": { "lapKm": 1 },
+ "bonus": { "appliesTo": "qualifiedSession", "travelMultiplier": 1.3, "coinMultiplier": 2.0 },
+ "coins": { "perKm": null },
  "route": {
   "seaFactor": 0.3333333333,
   "earthRadiusKm": 6371.0088,

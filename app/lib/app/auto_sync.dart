@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,7 +24,10 @@ const _toastMinKm = 0.1;
 /// 동기화, 도착을 알았을 때, 백그라운드로 갈 때.
 /// 도착했는데 도착 화면을 아직 안 봤으면(앱을 켜기 전에 도착했거나, 걷는 중 화면이 새로 읽다가
 /// 도착을 알게 됐을 때) 열려 있는 화면 위에 도착 화면을 띄운다. 이 위젯이 home이라
-/// 어느 화면 위에서든 같은 Navigator에 올릴 수 있다
+/// 어느 화면 위에서든 같은 Navigator에 올릴 수 있다.
+/// 앱 걷기(본격 걷기 보너스의 창)를 위해 앱이 살아 있는 동안 config sync.aliveSaveSec마다와
+/// 백그라운드로 갈 때 '살아 있던 시각'을 적는다. 앱을 켠 직후에는 앞 실행에서 끝나지 않은 앱 걷기를
+/// 그 시각에서 닫고(동기화보다 먼저) 동기화한다
 class AutoSync extends ConsumerStatefulWidget {
   const AutoSync({super.key, required this.child});
 
@@ -34,6 +39,7 @@ class AutoSync extends ConsumerStatefulWidget {
 
 class _AutoSyncState extends ConsumerState<AutoSync> {
   late final AppLifecycleListener _lifecycle;
+  Timer? _aliveTimer;
   var _running = false;
 
   /// 이번 실행에서 도착 화면을 이미 띄운 여정 (같은 여정을 두 번 띄우지 않는다)
@@ -52,25 +58,66 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
         fireImmediately: true);
     // 앱을 새로 켠 것도 연 것이다 (앞 실행이 백그라운드에서 끝났으면 예약된 N5가 남아 있다)
     _notice((svc, now) => svc.onOpen(now));
-    _sync();
+    _startUp();
   }
 
   @override
   void dispose() {
+    _aliveTimer?.cancel();
     _lifecycle.dispose();
     super.dispose();
+  }
+
+  /// 앱을 켠 직후: 앞 실행에서 끝나지 않은 앱 걷기를 닫고 지금 살아 있다고 적은 뒤 동기화한다
+  /// (닫은 날의 하루 요약이 먼저 맞아야 동기화가 그 위에서 계산한다). 앞의 일이 실패해도 동기화는 한다
+  Future<void> _startUp() async {
+    await _service((svc, now) async {
+      await svc.closeOrphanAppWalks(now);
+      await svc.saveAlive(now);
+    }, '앱 걷기 정리');
+    await _startAliveTimer();
+    await _sync();
+  }
+
+  /// 앱이 살아 있는 동안 rules.aliveSaveSec마다 살아 있다고 적는다
+  Future<void> _startAliveTimer() async {
+    try {
+      final rules = await ref.read(rulesProvider.future);
+      if (!mounted) return;
+      _aliveTimer = Timer.periodic(Duration(seconds: rules.aliveSaveSec), (_) => _saveAlive());
+    } catch (e) {
+      debugPrint('살아 있는 시각 저장 시작 실패: $e');
+    }
+  }
+
+  void _saveAlive() => _service((svc, now) => svc.saveAlive(now), '살아 있는 시각 저장');
+
+  /// 동기화 서비스에 지금 시각으로 일을 시킨다. 실패해도 앱 흐름은 그대로다
+  Future<void> _service(
+    Future<void> Function(SyncService svc, DateTime now) job,
+    String what,
+  ) async {
+    try {
+      final svc = await ref.read(syncServiceProvider.future);
+      await job(svc, ref.read(clockProvider)());
+    } catch (e) {
+      debugPrint('$what 실패: $e');
+    }
   }
 
   /// 앞으로 나왔다: 화면 안 표시 모드로 바꾸고 N5 예약을 취소·초기화한 뒤 동기화한다
   void _onForeground() {
     ref.read(appForegroundProvider.notifier).set(true);
     _notice((svc, now) => svc.onOpen(now));
+    _saveAlive();
     _sync();
   }
 
-  /// 백그라운드로 갔다: 이제부터 동기화는 시스템 알림 대상이고, N5를 예약한다
+  /// 백그라운드로 갔다: 이제부터 동기화는 시스템 알림 대상이고, N5를 예약한다.
+  /// 앱이 이대로 끝날 수 있어서 살아 있던 시각도 적는다
   void _onBackground() {
     ref.read(appForegroundProvider.notifier).set(false);
+    _saveAlive();
     _notice((svc, now) => svc.onBackground(now));
     _backup((runner, now) => runner.run(BackupReason.background, now));
   }

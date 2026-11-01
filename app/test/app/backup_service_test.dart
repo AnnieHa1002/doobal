@@ -12,7 +12,7 @@ import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/notification_policy.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/time_kst.dart';
-import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
+import 'package:drift/drift.dart' show OrderingTerm, Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -64,9 +64,22 @@ Future<void> _fill(AppDb db) async {
   await db.batch((b) {
     b.insertAll(db.daySummaries, [
       DaySummariesCompanion.insert(
-          day: '2026-11-17', steps: 4000, distanceM: 2800.5, countedSessions: 1),
+          day: '2026-11-17',
+          steps: 4000,
+          distanceM: 2800.5,
+          countedSessions: 1,
+          travelM: const Value(2800.5)),
+      // 본격 걷기 열: 보너스 · 상점 · 이동 거리 · 앱 걷기 이동 거리 · 럭
       DaySummariesCompanion.insert(
-          day: '2026-11-18', steps: 8123, distanceM: 5686.1, countedSessions: 2),
+          day: '2026-11-18',
+          steps: 8123,
+          distanceM: 5686.1,
+          countedSessions: 2,
+          bonusM: const Value(210.5),
+          shopM: const Value(12.25),
+          travelM: const Value(5908.85),
+          walkTravelM: const Value(1500.75),
+          coins: const Value(40)),
     ]);
     b.insertAll(db.walkSessions, [
       WalkSessionsCompanion.insert(
@@ -77,6 +90,7 @@ Future<void> _fill(AppDb db) async {
         runRatio: 0.25,
         qualified: true,
         counted: true,
+        bonusM: const Value(210.5),
       ),
       WalkSessionsCompanion.insert(
         startUtc: Value(_ms(_synced) - 7200000),
@@ -142,6 +156,24 @@ Future<void> _fill(AppDb db) async {
     ]);
     b.insert(
         db.travelFund, TravelFundCompanion.insert(id: const Value(1), km: 3.5, fundedUntilUtc: 7000));
+    // 앱 걷기 창 둘 (닫은 것. 열려 있던 창은 복원할 때 닫는다)
+    b.insertAll(db.appWalks, [
+      AppWalksCompanion.insert(
+          startUtc: _ms(_synced) - 3600000,
+          endUtc: Value(_ms(_synced) - 1800000),
+          endReason: const Value(AppWalkEnd.finish)),
+      AppWalksCompanion.insert(
+          startUtc: _ms(_synced) - 7200000,
+          endUtc: Value(_ms(_synced) - 7000000),
+          endReason: const Value(AppWalkEnd.appEnded)),
+    ]);
+    b.insertAll(db.coinLedger, [
+      CoinLedgerCompanion.insert(day: '2026-11-18', kind: CoinKind.earn, amount: 40),
+      CoinLedgerCompanion.insert(
+          day: '2026-11-18', kind: CoinKind.ad, amount: 5, refId: const Value('ad-1')),
+      CoinLedgerCompanion.insert(
+          day: '2026-11-18', kind: CoinKind.spend, amount: 7, refId: const Value('shop-1')),
+    ]);
     b.insertAll(db.paintingsOwned, [
       // 첫 그림(첫 여행 짐 꾸러미): 소유 기록 1줄만 있다
       PaintingsOwnedCompanion.insert(
@@ -260,6 +292,8 @@ Future<Map<String, Object?>> _userState(AppDb db) async => {
       'tickets': await db.select(db.guestbookTickets).get(),
       'posts': await db.select(db.guestbookPosts).get(),
       'noticeSettings': await db.select(db.notificationSettings).get(),
+      'appWalks': await db.select(db.appWalks).get(),
+      'coins': await db.select(db.coinLedger).get(),
       'profile': [
         for (final r in await db.select(db.profile).get())
           r.copyWith(
@@ -330,7 +364,7 @@ void main() {
       final json = _json(await svcA.exportBackup(_now));
       expect(json['format'], 1);
       expect(json['schema'], a.schemaVersion);
-      expect(json['schema'], 10);
+      expect(json['schema'], 11);
       expect(json['createdUtc'], _ms(_now));
       expect(json['syncedUtc'], _ms(_synced));
       expect((json['tables'] as Map<String, dynamic>).keys, svcA.includedTableNames);
@@ -410,6 +444,110 @@ void main() {
       final log = await b.select(b.notificationLog).get();
       expect([for (final l in log) (l.kind, l.refKey, l.status)],
           [(NoticeKind.n5, '', NoticeStatus.scheduled)]);
+    });
+  });
+
+  group('본격 걷기: 앱 걷기 창·럭 장부·이동 거리', () {
+    test('앱 걷기 창과 럭 장부는 백업 문자열에 들어가고, 하루 요약·걷기 구간에 새 열이 있다', () async {
+      await _fill(a);
+      final json = _json(await svcA.exportBackup(_now));
+      final tables = json['tables'] as Map<String, dynamic>;
+      expect(tables.keys, containsAll(['app_walks', 'coin_ledger']));
+      expect((tables['day_summaries'] as Map)['cols'],
+          containsAll(['bonus_m', 'shop_m', 'travel_m', 'walk_travel_m', 'coins']));
+      expect((tables['walk_sessions'] as Map)['cols'], contains('bonus_m'));
+      expect((tables['app_walks'] as Map)['cols'], ['id', 'start_utc', 'end_utc', 'end_reason']);
+      expect((tables['coin_ledger'] as Map)['rows'], hasLength(3));
+      // 앱이 살아 있던 마지막 시각은 이 기기에만 둔다
+      expect(jsonEncode(json), isNot(contains('last_alive_utc')));
+    });
+
+    test('복원하면 하루 요약의 새 열·걷기 구간 보너스·앱 걷기 창·럭 장부(광고·씀 포함)가 그대로다', () async {
+      await _fill(a);
+      await svcB.restoreBackup(await svcA.exportBackup(_now));
+      final day = await (b.select(b.daySummaries)..where((t) => t.day.equals('2026-11-18')))
+          .getSingle();
+      expect((day.bonusM, day.shopM, day.travelM, day.walkTravelM, day.coins),
+          (210.5, 12.25, 5908.85, 1500.75, 40));
+      expect((await b.select(b.walkSessions).get()).map((r) => r.bonusM), contains(210.5));
+      expect((await b.select(b.appWalks).get()).map((r) => r.endReason),
+          [AppWalkEnd.finish, AppWalkEnd.appEnded]);
+      expect((await b.select(b.coinLedger).get()).map((r) => (r.kind, r.amount, r.refId)), [
+        (CoinKind.earn, 40, null),
+        (CoinKind.ad, 5, 'ad-1'),
+        (CoinKind.spend, 7, 'shop-1'),
+      ]);
+    });
+
+    test('백업을 만들 때 열려 있던 앱 걷기는 복원하면 만든 시각에 appEnded로 닫는다', () async {
+      final open = _ms(_now) - 600000;
+      await a.into(a.appWalks).insert(AppWalksCompanion.insert(startUtc: open));
+      await svcB.restoreBackup(await svcA.exportBackup(_now));
+      final walk = await b.select(b.appWalks).getSingle();
+      expect((walk.startUtc, walk.endUtc, walk.endReason), (open, _ms(_now), AppWalkEnd.appEnded));
+    });
+
+    test('옛 백업(스키마 10: 새 열·표 없음)은 이동 거리를 실제 거리로 채우고 앱 걷기·럭 장부는 비운다', () async {
+      final text = _pack(_backupJson(tables: {
+        'day_summaries': _table(['day', 'steps', 'distance_m', 'counted_sessions'], [
+          ['2026-11-17', 4000, 2800.5, 1],
+          ['2026-11-18', 8123, 5686.1, 2],
+        ]),
+        'walk_sessions': _table(
+          ['start_utc', 'end_utc', 'steps', 'distance_m', 'run_ratio', 'qualified', 'counted'],
+          [
+            [1000, 2000, 3000, 2100.0, 0.25, 1, 1],
+          ],
+        ),
+      }));
+      await _fill(b); // 쓰던 기기에 있던 앱 걷기·럭 장부는 백업에 없어서 비워진다
+      await svcB.restoreBackup(text);
+
+      final days = await (b.select(b.daySummaries)..orderBy([(t) => OrderingTerm(expression: t.day)]))
+          .get();
+      expect([for (final d in days) (d.day, d.distanceM, d.travelM)],
+          [('2026-11-17', 2800.5, 2800.5), ('2026-11-18', 5686.1, 5686.1)]);
+      expect([for (final d in days) (d.bonusM, d.shopM, d.walkTravelM, d.coins)],
+          everyElement((0, 0, 0, 0)));
+      expect((await b.select(b.walkSessions).getSingle()).bonusM, 0);
+      expect(await b.select(b.appWalks).get(), isEmpty);
+      expect(await b.select(b.coinLedger).get(), isEmpty);
+    });
+
+    test('진행 중인 여정의 걸은 거리에는 앱 걷기 보너스가 붙는다', () async {
+      // 여정 시작 분부터 15분 동안 분당 100보. 마지막 동기화는 열다섯 번째 분의 한가운데라
+      // 앞 14분(1,400보 = 걷기 1번 인정)만 센다. 앱 걷기 창이 그 14분을 덮는다
+      final start = _ms(DateTime.utc(2026, 11, 18, 4)) ~/ 60000;
+      await a.into(a.journeys).insert(JourneysCompanion.insert(
+            id: 'jA',
+            originLat: 37.5,
+            originLng: 127.0,
+            destId: 'kr008',
+            startUtc: start * 60000,
+            fundKm: 2.0,
+            totalEffectiveKm: 300,
+            status: JourneyStatus.active,
+          ));
+      await a.batch((bt) => bt.insertAll(a.stepMinutes, [
+            for (var i = 0; i < 15; i++)
+              StepMinutesCompanion.insert(minuteUtc: Value(start + i), steps: 100),
+          ]));
+      await a.into(a.syncState).insert(SyncStateCompanion.insert(
+            id: const Value(1),
+            lastFetchedUtc: Value(start * 60000 + 14 * 60000 + 30000),
+            firstRecordDay: '2026-11-18',
+            installUtc: 0,
+          ));
+      await a.into(a.appWalks).insert(AppWalksCompanion.insert(
+          startUtc: start * 60000, endUtc: Value(start * 60000 + 14 * 60000)));
+
+      final walked = _json(await svcA.exportBackup(_now))['journeyWalked'] as Map<String, dynamic>;
+      // 14분 × 100보 × 0.7m = 980m, 보너스 ×1.3 → 1,274m (진행 거리와 같은 이동 거리)
+      expect(walked['km'], closeTo(1.274, 1e-9));
+
+      await svcB.restoreBackup(await svcA.exportBackup(_now));
+      final j = await (b.select(b.journeys)..where((t) => t.id.equals('jA'))).getSingle();
+      expect(j.fundKm, closeTo(3.274, 1e-9));
     });
   });
 
@@ -621,7 +759,7 @@ void main() {
     test('이 앱보다 새 스키마면 StateError (DB는 그대로)', () async {
       await _fill(b);
       final before = await _userState(b);
-      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 11))), throwsStateError);
+      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 12))), throwsStateError);
       expect(await _userState(b), before);
     });
 
@@ -1005,6 +1143,57 @@ void main() {
         // 11/18·19는 옛 기기와 같고, 11/20 걷기 구간은 둘이 됐다
         expect((await sortedSessions(b)).map((r) => r.steps), [6000, 7200, 3000, 3000]);
         expect((await sortedSessions(b)).where((r) => r.counted), hasLength(4));
+      });
+
+      test('앱 걷기 보너스·이동 거리·앱 걷기 이동 거리·럭도 지킨다 (새 기기에 건강 기록이 없어도)', () async {
+        final j = jsonDecode(File('assets/data/config.json').readAsStringSync())
+            as Map<String, dynamic>;
+        (j['coins'] as Map<String, dynamic>)['perKm'] = 10;
+        final r10 = Rules.fromJson(j);
+        SyncService svcWith(AppDb db, StepSource source) => SyncService(
+              db: db,
+              source: source,
+              rules: r10,
+              allowedSources: const [],
+              landmarks: byId,
+              props: props,
+              milestones: milestones,
+            );
+        // 옛 기기: 11/18 한국 11:00에 60분 × 100보를 앱 걷기 창 안에서 걸었다
+        final sa = svcWith(a, FakeStepSource(records));
+        await sa.sync(t0);
+        final id = await sa.startAppWalk(t0.add(const Duration(hours: 2)));
+        await sa.sync(t0.add(const Duration(hours: 4)));
+        await sa.finishAppWalk(id, t0.add(const Duration(hours: 3)));
+        final first = (await sortedDays(a)).first;
+        // 6,000보 × 0.7 = 4,200m, 보너스 1,260m → 이동 5,460m, 럭 (4.2km × 2) × 10 = 84
+        expect(first.bonusM, closeTo(1260, 1e-9));
+        expect(first.travelM, closeTo(5460, 1e-9));
+        expect(first.walkTravelM, closeTo(5460, 1e-9));
+        expect(first.coins, 84);
+        final text = await svcA.exportBackup(t0.add(const Duration(hours: 5)));
+
+        // 새 기기: 건강 기록이 없다. 복원한 날의 값이 0으로 덮이지 않는다
+        await svcB.restoreBackup(text);
+        final sb = svcWith(b, FakeStepSource());
+        await sb.sync(t0.add(const Duration(hours: 6)));
+        await sb.sync(t0.add(const Duration(hours: 30)));
+        expect((await sortedDays(b)).first, first);
+        expect(await b.select(b.walkSessions).get(), await a.select(a.walkSessions).get());
+        // 럭 장부의 번 행도 하루 요약과 같다
+        final ledger = await b.select(b.coinLedger).get();
+        expect([for (final r in ledger) (r.day, r.kind, r.amount)],
+            [('2026-11-18', CoinKind.earn, 84)]);
+        expect(await b.select(b.appWalks).get(), await a.select(a.appWalks).get());
+        final snap = await sb.snapshot(t0.add(const Duration(hours: 30)));
+        expect(snap.walkTravelKm, closeTo(5.46, 1e-9));
+
+        // 지키는 장치가 없으면 0으로 덮이고 번 행도 없어진다 (비교)
+        await b.update(b.syncState).write(const SyncStateCompanion(restoreFloorDay: Value(null)));
+        await sb.sync(t0.add(const Duration(hours: 31)));
+        final lost = (await sortedDays(b)).first;
+        expect((lost.bonusM, lost.travelM, lost.walkTravelM, lost.coins), (0, 0, 0, 0));
+        expect(await b.select(b.coinLedger).get(), isEmpty);
       });
 
       test('복원한 날에 건강 앱에 일부만 있으면(복원값보다 작으면) 복원값을 지킨다', () async {

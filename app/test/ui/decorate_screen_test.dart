@@ -81,6 +81,9 @@ Future<void> _walked(AppDb db, double km) =>
           steps: 1000,
           distanceM: km * 1000,
           countedSessions: 0,
+          // 거리 소품의 기준은 앱 걷기 이동 거리다
+          travelM: Value(km * 1000),
+          walkTravelM: Value(km * 1000),
         ));
 
 /// 소품 칸 안의 자물쇠·체크 표시

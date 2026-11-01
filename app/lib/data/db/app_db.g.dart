@@ -247,12 +247,71 @@ class $DaySummariesTable extends DaySummaries
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _bonusMMeta = const VerificationMeta('bonusM');
+  @override
+  late final GeneratedColumn<double> bonusM = GeneratedColumn<double>(
+    'bonus_m',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _shopMMeta = const VerificationMeta('shopM');
+  @override
+  late final GeneratedColumn<double> shopM = GeneratedColumn<double>(
+    'shop_m',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _travelMMeta = const VerificationMeta(
+    'travelM',
+  );
+  @override
+  late final GeneratedColumn<double> travelM = GeneratedColumn<double>(
+    'travel_m',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _walkTravelMMeta = const VerificationMeta(
+    'walkTravelM',
+  );
+  @override
+  late final GeneratedColumn<double> walkTravelM = GeneratedColumn<double>(
+    'walk_travel_m',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _coinsMeta = const VerificationMeta('coins');
+  @override
+  late final GeneratedColumn<int> coins = GeneratedColumn<int>(
+    'coins',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     day,
     steps,
     distanceM,
     countedSessions,
+    bonusM,
+    shopM,
+    travelM,
+    walkTravelM,
+    coins,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -301,6 +360,39 @@ class $DaySummariesTable extends DaySummaries
     } else if (isInserting) {
       context.missing(_countedSessionsMeta);
     }
+    if (data.containsKey('bonus_m')) {
+      context.handle(
+        _bonusMMeta,
+        bonusM.isAcceptableOrUnknown(data['bonus_m']!, _bonusMMeta),
+      );
+    }
+    if (data.containsKey('shop_m')) {
+      context.handle(
+        _shopMMeta,
+        shopM.isAcceptableOrUnknown(data['shop_m']!, _shopMMeta),
+      );
+    }
+    if (data.containsKey('travel_m')) {
+      context.handle(
+        _travelMMeta,
+        travelM.isAcceptableOrUnknown(data['travel_m']!, _travelMMeta),
+      );
+    }
+    if (data.containsKey('walk_travel_m')) {
+      context.handle(
+        _walkTravelMMeta,
+        walkTravelM.isAcceptableOrUnknown(
+          data['walk_travel_m']!,
+          _walkTravelMMeta,
+        ),
+      );
+    }
+    if (data.containsKey('coins')) {
+      context.handle(
+        _coinsMeta,
+        coins.isAcceptableOrUnknown(data['coins']!, _coinsMeta),
+      );
+    }
     return context;
   }
 
@@ -326,6 +418,26 @@ class $DaySummariesTable extends DaySummaries
         DriftSqlType.int,
         data['${effectivePrefix}counted_sessions'],
       )!,
+      bonusM: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}bonus_m'],
+      )!,
+      shopM: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}shop_m'],
+      )!,
+      travelM: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}travel_m'],
+      )!,
+      walkTravelM: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}walk_travel_m'],
+      )!,
+      coins: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}coins'],
+      )!,
     );
   }
 
@@ -340,11 +452,21 @@ class DaySummaryRow extends DataClass implements Insertable<DaySummaryRow> {
   final int steps;
   final double distanceM;
   final int countedSessions;
+  final double bonusM;
+  final double shopM;
+  final double travelM;
+  final double walkTravelM;
+  final int coins;
   const DaySummaryRow({
     required this.day,
     required this.steps,
     required this.distanceM,
     required this.countedSessions,
+    required this.bonusM,
+    required this.shopM,
+    required this.travelM,
+    required this.walkTravelM,
+    required this.coins,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -353,6 +475,11 @@ class DaySummaryRow extends DataClass implements Insertable<DaySummaryRow> {
     map['steps'] = Variable<int>(steps);
     map['distance_m'] = Variable<double>(distanceM);
     map['counted_sessions'] = Variable<int>(countedSessions);
+    map['bonus_m'] = Variable<double>(bonusM);
+    map['shop_m'] = Variable<double>(shopM);
+    map['travel_m'] = Variable<double>(travelM);
+    map['walk_travel_m'] = Variable<double>(walkTravelM);
+    map['coins'] = Variable<int>(coins);
     return map;
   }
 
@@ -362,6 +489,11 @@ class DaySummaryRow extends DataClass implements Insertable<DaySummaryRow> {
       steps: Value(steps),
       distanceM: Value(distanceM),
       countedSessions: Value(countedSessions),
+      bonusM: Value(bonusM),
+      shopM: Value(shopM),
+      travelM: Value(travelM),
+      walkTravelM: Value(walkTravelM),
+      coins: Value(coins),
     );
   }
 
@@ -375,6 +507,11 @@ class DaySummaryRow extends DataClass implements Insertable<DaySummaryRow> {
       steps: serializer.fromJson<int>(json['steps']),
       distanceM: serializer.fromJson<double>(json['distanceM']),
       countedSessions: serializer.fromJson<int>(json['countedSessions']),
+      bonusM: serializer.fromJson<double>(json['bonusM']),
+      shopM: serializer.fromJson<double>(json['shopM']),
+      travelM: serializer.fromJson<double>(json['travelM']),
+      walkTravelM: serializer.fromJson<double>(json['walkTravelM']),
+      coins: serializer.fromJson<int>(json['coins']),
     );
   }
   @override
@@ -385,6 +522,11 @@ class DaySummaryRow extends DataClass implements Insertable<DaySummaryRow> {
       'steps': serializer.toJson<int>(steps),
       'distanceM': serializer.toJson<double>(distanceM),
       'countedSessions': serializer.toJson<int>(countedSessions),
+      'bonusM': serializer.toJson<double>(bonusM),
+      'shopM': serializer.toJson<double>(shopM),
+      'travelM': serializer.toJson<double>(travelM),
+      'walkTravelM': serializer.toJson<double>(walkTravelM),
+      'coins': serializer.toJson<int>(coins),
     };
   }
 
@@ -393,11 +535,21 @@ class DaySummaryRow extends DataClass implements Insertable<DaySummaryRow> {
     int? steps,
     double? distanceM,
     int? countedSessions,
+    double? bonusM,
+    double? shopM,
+    double? travelM,
+    double? walkTravelM,
+    int? coins,
   }) => DaySummaryRow(
     day: day ?? this.day,
     steps: steps ?? this.steps,
     distanceM: distanceM ?? this.distanceM,
     countedSessions: countedSessions ?? this.countedSessions,
+    bonusM: bonusM ?? this.bonusM,
+    shopM: shopM ?? this.shopM,
+    travelM: travelM ?? this.travelM,
+    walkTravelM: walkTravelM ?? this.walkTravelM,
+    coins: coins ?? this.coins,
   );
   DaySummaryRow copyWithCompanion(DaySummariesCompanion data) {
     return DaySummaryRow(
@@ -407,6 +559,13 @@ class DaySummaryRow extends DataClass implements Insertable<DaySummaryRow> {
       countedSessions: data.countedSessions.present
           ? data.countedSessions.value
           : this.countedSessions,
+      bonusM: data.bonusM.present ? data.bonusM.value : this.bonusM,
+      shopM: data.shopM.present ? data.shopM.value : this.shopM,
+      travelM: data.travelM.present ? data.travelM.value : this.travelM,
+      walkTravelM: data.walkTravelM.present
+          ? data.walkTravelM.value
+          : this.walkTravelM,
+      coins: data.coins.present ? data.coins.value : this.coins,
     );
   }
 
@@ -416,13 +575,28 @@ class DaySummaryRow extends DataClass implements Insertable<DaySummaryRow> {
           ..write('day: $day, ')
           ..write('steps: $steps, ')
           ..write('distanceM: $distanceM, ')
-          ..write('countedSessions: $countedSessions')
+          ..write('countedSessions: $countedSessions, ')
+          ..write('bonusM: $bonusM, ')
+          ..write('shopM: $shopM, ')
+          ..write('travelM: $travelM, ')
+          ..write('walkTravelM: $walkTravelM, ')
+          ..write('coins: $coins')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(day, steps, distanceM, countedSessions);
+  int get hashCode => Object.hash(
+    day,
+    steps,
+    distanceM,
+    countedSessions,
+    bonusM,
+    shopM,
+    travelM,
+    walkTravelM,
+    coins,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -430,7 +604,12 @@ class DaySummaryRow extends DataClass implements Insertable<DaySummaryRow> {
           other.day == this.day &&
           other.steps == this.steps &&
           other.distanceM == this.distanceM &&
-          other.countedSessions == this.countedSessions);
+          other.countedSessions == this.countedSessions &&
+          other.bonusM == this.bonusM &&
+          other.shopM == this.shopM &&
+          other.travelM == this.travelM &&
+          other.walkTravelM == this.walkTravelM &&
+          other.coins == this.coins);
 }
 
 class DaySummariesCompanion extends UpdateCompanion<DaySummaryRow> {
@@ -438,12 +617,22 @@ class DaySummariesCompanion extends UpdateCompanion<DaySummaryRow> {
   final Value<int> steps;
   final Value<double> distanceM;
   final Value<int> countedSessions;
+  final Value<double> bonusM;
+  final Value<double> shopM;
+  final Value<double> travelM;
+  final Value<double> walkTravelM;
+  final Value<int> coins;
   final Value<int> rowid;
   const DaySummariesCompanion({
     this.day = const Value.absent(),
     this.steps = const Value.absent(),
     this.distanceM = const Value.absent(),
     this.countedSessions = const Value.absent(),
+    this.bonusM = const Value.absent(),
+    this.shopM = const Value.absent(),
+    this.travelM = const Value.absent(),
+    this.walkTravelM = const Value.absent(),
+    this.coins = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DaySummariesCompanion.insert({
@@ -451,6 +640,11 @@ class DaySummariesCompanion extends UpdateCompanion<DaySummaryRow> {
     required int steps,
     required double distanceM,
     required int countedSessions,
+    this.bonusM = const Value.absent(),
+    this.shopM = const Value.absent(),
+    this.travelM = const Value.absent(),
+    this.walkTravelM = const Value.absent(),
+    this.coins = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : day = Value(day),
        steps = Value(steps),
@@ -461,6 +655,11 @@ class DaySummariesCompanion extends UpdateCompanion<DaySummaryRow> {
     Expression<int>? steps,
     Expression<double>? distanceM,
     Expression<int>? countedSessions,
+    Expression<double>? bonusM,
+    Expression<double>? shopM,
+    Expression<double>? travelM,
+    Expression<double>? walkTravelM,
+    Expression<int>? coins,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -468,6 +667,11 @@ class DaySummariesCompanion extends UpdateCompanion<DaySummaryRow> {
       if (steps != null) 'steps': steps,
       if (distanceM != null) 'distance_m': distanceM,
       if (countedSessions != null) 'counted_sessions': countedSessions,
+      if (bonusM != null) 'bonus_m': bonusM,
+      if (shopM != null) 'shop_m': shopM,
+      if (travelM != null) 'travel_m': travelM,
+      if (walkTravelM != null) 'walk_travel_m': walkTravelM,
+      if (coins != null) 'coins': coins,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -477,6 +681,11 @@ class DaySummariesCompanion extends UpdateCompanion<DaySummaryRow> {
     Value<int>? steps,
     Value<double>? distanceM,
     Value<int>? countedSessions,
+    Value<double>? bonusM,
+    Value<double>? shopM,
+    Value<double>? travelM,
+    Value<double>? walkTravelM,
+    Value<int>? coins,
     Value<int>? rowid,
   }) {
     return DaySummariesCompanion(
@@ -484,6 +693,11 @@ class DaySummariesCompanion extends UpdateCompanion<DaySummaryRow> {
       steps: steps ?? this.steps,
       distanceM: distanceM ?? this.distanceM,
       countedSessions: countedSessions ?? this.countedSessions,
+      bonusM: bonusM ?? this.bonusM,
+      shopM: shopM ?? this.shopM,
+      travelM: travelM ?? this.travelM,
+      walkTravelM: walkTravelM ?? this.walkTravelM,
+      coins: coins ?? this.coins,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -503,6 +717,21 @@ class DaySummariesCompanion extends UpdateCompanion<DaySummaryRow> {
     if (countedSessions.present) {
       map['counted_sessions'] = Variable<int>(countedSessions.value);
     }
+    if (bonusM.present) {
+      map['bonus_m'] = Variable<double>(bonusM.value);
+    }
+    if (shopM.present) {
+      map['shop_m'] = Variable<double>(shopM.value);
+    }
+    if (travelM.present) {
+      map['travel_m'] = Variable<double>(travelM.value);
+    }
+    if (walkTravelM.present) {
+      map['walk_travel_m'] = Variable<double>(walkTravelM.value);
+    }
+    if (coins.present) {
+      map['coins'] = Variable<int>(coins.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -516,6 +745,11 @@ class DaySummariesCompanion extends UpdateCompanion<DaySummaryRow> {
           ..write('steps: $steps, ')
           ..write('distanceM: $distanceM, ')
           ..write('countedSessions: $countedSessions, ')
+          ..write('bonusM: $bonusM, ')
+          ..write('shopM: $shopM, ')
+          ..write('travelM: $travelM, ')
+          ..write('walkTravelM: $walkTravelM, ')
+          ..write('coins: $coins, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -607,6 +841,16 @@ class $WalkSessionsTable extends WalkSessions
       'CHECK ("counted" IN (0, 1))',
     ),
   );
+  static const VerificationMeta _bonusMMeta = const VerificationMeta('bonusM');
+  @override
+  late final GeneratedColumn<double> bonusM = GeneratedColumn<double>(
+    'bonus_m',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     startUtc,
@@ -616,6 +860,7 @@ class $WalkSessionsTable extends WalkSessions
     runRatio,
     qualified,
     counted,
+    bonusM,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -683,6 +928,12 @@ class $WalkSessionsTable extends WalkSessions
     } else if (isInserting) {
       context.missing(_countedMeta);
     }
+    if (data.containsKey('bonus_m')) {
+      context.handle(
+        _bonusMMeta,
+        bonusM.isAcceptableOrUnknown(data['bonus_m']!, _bonusMMeta),
+      );
+    }
     return context;
   }
 
@@ -720,6 +971,10 @@ class $WalkSessionsTable extends WalkSessions
         DriftSqlType.bool,
         data['${effectivePrefix}counted'],
       )!,
+      bonusM: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}bonus_m'],
+      )!,
     );
   }
 
@@ -737,6 +992,7 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
   final double runRatio;
   final bool qualified;
   final bool counted;
+  final double bonusM;
   const WalkSessionRow({
     required this.startUtc,
     required this.endUtc,
@@ -745,6 +1001,7 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
     required this.runRatio,
     required this.qualified,
     required this.counted,
+    required this.bonusM,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -756,6 +1013,7 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
     map['run_ratio'] = Variable<double>(runRatio);
     map['qualified'] = Variable<bool>(qualified);
     map['counted'] = Variable<bool>(counted);
+    map['bonus_m'] = Variable<double>(bonusM);
     return map;
   }
 
@@ -768,6 +1026,7 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
       runRatio: Value(runRatio),
       qualified: Value(qualified),
       counted: Value(counted),
+      bonusM: Value(bonusM),
     );
   }
 
@@ -784,6 +1043,7 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
       runRatio: serializer.fromJson<double>(json['runRatio']),
       qualified: serializer.fromJson<bool>(json['qualified']),
       counted: serializer.fromJson<bool>(json['counted']),
+      bonusM: serializer.fromJson<double>(json['bonusM']),
     );
   }
   @override
@@ -797,6 +1057,7 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
       'runRatio': serializer.toJson<double>(runRatio),
       'qualified': serializer.toJson<bool>(qualified),
       'counted': serializer.toJson<bool>(counted),
+      'bonusM': serializer.toJson<double>(bonusM),
     };
   }
 
@@ -808,6 +1069,7 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
     double? runRatio,
     bool? qualified,
     bool? counted,
+    double? bonusM,
   }) => WalkSessionRow(
     startUtc: startUtc ?? this.startUtc,
     endUtc: endUtc ?? this.endUtc,
@@ -816,6 +1078,7 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
     runRatio: runRatio ?? this.runRatio,
     qualified: qualified ?? this.qualified,
     counted: counted ?? this.counted,
+    bonusM: bonusM ?? this.bonusM,
   );
   WalkSessionRow copyWithCompanion(WalkSessionsCompanion data) {
     return WalkSessionRow(
@@ -826,6 +1089,7 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
       runRatio: data.runRatio.present ? data.runRatio.value : this.runRatio,
       qualified: data.qualified.present ? data.qualified.value : this.qualified,
       counted: data.counted.present ? data.counted.value : this.counted,
+      bonusM: data.bonusM.present ? data.bonusM.value : this.bonusM,
     );
   }
 
@@ -838,7 +1102,8 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
           ..write('distanceM: $distanceM, ')
           ..write('runRatio: $runRatio, ')
           ..write('qualified: $qualified, ')
-          ..write('counted: $counted')
+          ..write('counted: $counted, ')
+          ..write('bonusM: $bonusM')
           ..write(')'))
         .toString();
   }
@@ -852,6 +1117,7 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
     runRatio,
     qualified,
     counted,
+    bonusM,
   );
   @override
   bool operator ==(Object other) =>
@@ -863,7 +1129,8 @@ class WalkSessionRow extends DataClass implements Insertable<WalkSessionRow> {
           other.distanceM == this.distanceM &&
           other.runRatio == this.runRatio &&
           other.qualified == this.qualified &&
-          other.counted == this.counted);
+          other.counted == this.counted &&
+          other.bonusM == this.bonusM);
 }
 
 class WalkSessionsCompanion extends UpdateCompanion<WalkSessionRow> {
@@ -874,6 +1141,7 @@ class WalkSessionsCompanion extends UpdateCompanion<WalkSessionRow> {
   final Value<double> runRatio;
   final Value<bool> qualified;
   final Value<bool> counted;
+  final Value<double> bonusM;
   const WalkSessionsCompanion({
     this.startUtc = const Value.absent(),
     this.endUtc = const Value.absent(),
@@ -882,6 +1150,7 @@ class WalkSessionsCompanion extends UpdateCompanion<WalkSessionRow> {
     this.runRatio = const Value.absent(),
     this.qualified = const Value.absent(),
     this.counted = const Value.absent(),
+    this.bonusM = const Value.absent(),
   });
   WalkSessionsCompanion.insert({
     this.startUtc = const Value.absent(),
@@ -891,6 +1160,7 @@ class WalkSessionsCompanion extends UpdateCompanion<WalkSessionRow> {
     required double runRatio,
     required bool qualified,
     required bool counted,
+    this.bonusM = const Value.absent(),
   }) : endUtc = Value(endUtc),
        steps = Value(steps),
        distanceM = Value(distanceM),
@@ -905,6 +1175,7 @@ class WalkSessionsCompanion extends UpdateCompanion<WalkSessionRow> {
     Expression<double>? runRatio,
     Expression<bool>? qualified,
     Expression<bool>? counted,
+    Expression<double>? bonusM,
   }) {
     return RawValuesInsertable({
       if (startUtc != null) 'start_utc': startUtc,
@@ -914,6 +1185,7 @@ class WalkSessionsCompanion extends UpdateCompanion<WalkSessionRow> {
       if (runRatio != null) 'run_ratio': runRatio,
       if (qualified != null) 'qualified': qualified,
       if (counted != null) 'counted': counted,
+      if (bonusM != null) 'bonus_m': bonusM,
     });
   }
 
@@ -925,6 +1197,7 @@ class WalkSessionsCompanion extends UpdateCompanion<WalkSessionRow> {
     Value<double>? runRatio,
     Value<bool>? qualified,
     Value<bool>? counted,
+    Value<double>? bonusM,
   }) {
     return WalkSessionsCompanion(
       startUtc: startUtc ?? this.startUtc,
@@ -934,6 +1207,7 @@ class WalkSessionsCompanion extends UpdateCompanion<WalkSessionRow> {
       runRatio: runRatio ?? this.runRatio,
       qualified: qualified ?? this.qualified,
       counted: counted ?? this.counted,
+      bonusM: bonusM ?? this.bonusM,
     );
   }
 
@@ -961,6 +1235,9 @@ class WalkSessionsCompanion extends UpdateCompanion<WalkSessionRow> {
     if (counted.present) {
       map['counted'] = Variable<bool>(counted.value);
     }
+    if (bonusM.present) {
+      map['bonus_m'] = Variable<double>(bonusM.value);
+    }
     return map;
   }
 
@@ -973,7 +1250,8 @@ class WalkSessionsCompanion extends UpdateCompanion<WalkSessionRow> {
           ..write('distanceM: $distanceM, ')
           ..write('runRatio: $runRatio, ')
           ..write('qualified: $qualified, ')
-          ..write('counted: $counted')
+          ..write('counted: $counted, ')
+          ..write('bonusM: $bonusM')
           ..write(')'))
         .toString();
   }
@@ -2318,6 +2596,17 @@ class $SyncStateTable extends SyncState
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _lastAliveUtcMeta = const VerificationMeta(
+    'lastAliveUtc',
+  );
+  @override
+  late final GeneratedColumn<int> lastAliveUtc = GeneratedColumn<int>(
+    'last_alive_utc',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2325,6 +2614,7 @@ class $SyncStateTable extends SyncState
     firstRecordDay,
     installUtc,
     restoreFloorDay,
+    lastAliveUtc,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2378,6 +2668,15 @@ class $SyncStateTable extends SyncState
         ),
       );
     }
+    if (data.containsKey('last_alive_utc')) {
+      context.handle(
+        _lastAliveUtcMeta,
+        lastAliveUtc.isAcceptableOrUnknown(
+          data['last_alive_utc']!,
+          _lastAliveUtcMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2407,6 +2706,10 @@ class $SyncStateTable extends SyncState
         DriftSqlType.string,
         data['${effectivePrefix}restore_floor_day'],
       ),
+      lastAliveUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_alive_utc'],
+      ),
     );
   }
 
@@ -2427,12 +2730,17 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
   /// (새 기기의 건강 앱에는 그 기록이 없을 수 있다). 복원한 적이 없으면 null.
   /// 이 기기에만 두는 값이라 백업에 넣지 않는다
   final String? restoreFloorDay;
+
+  /// 앱이 살아 있던 마지막 시각 (epoch ms). 살아 있는 동안 config sync.aliveSaveSec마다와 백그라운드로
+  /// 갈 때 적는다. 다음 실행에서 끝나지 않은 앱 걷기를 이 시각에서 닫는다. 이 기기에만 두는 값
+  final int? lastAliveUtc;
   const SyncStateRow({
     required this.id,
     this.lastFetchedUtc,
     required this.firstRecordDay,
     required this.installUtc,
     this.restoreFloorDay,
+    this.lastAliveUtc,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2445,6 +2753,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     map['install_utc'] = Variable<int>(installUtc);
     if (!nullToAbsent || restoreFloorDay != null) {
       map['restore_floor_day'] = Variable<String>(restoreFloorDay);
+    }
+    if (!nullToAbsent || lastAliveUtc != null) {
+      map['last_alive_utc'] = Variable<int>(lastAliveUtc);
     }
     return map;
   }
@@ -2460,6 +2771,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       restoreFloorDay: restoreFloorDay == null && nullToAbsent
           ? const Value.absent()
           : Value(restoreFloorDay),
+      lastAliveUtc: lastAliveUtc == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAliveUtc),
     );
   }
 
@@ -2474,6 +2788,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       firstRecordDay: serializer.fromJson<String>(json['firstRecordDay']),
       installUtc: serializer.fromJson<int>(json['installUtc']),
       restoreFloorDay: serializer.fromJson<String?>(json['restoreFloorDay']),
+      lastAliveUtc: serializer.fromJson<int?>(json['lastAliveUtc']),
     );
   }
   @override
@@ -2485,6 +2800,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       'firstRecordDay': serializer.toJson<String>(firstRecordDay),
       'installUtc': serializer.toJson<int>(installUtc),
       'restoreFloorDay': serializer.toJson<String?>(restoreFloorDay),
+      'lastAliveUtc': serializer.toJson<int?>(lastAliveUtc),
     };
   }
 
@@ -2494,6 +2810,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     String? firstRecordDay,
     int? installUtc,
     Value<String?> restoreFloorDay = const Value.absent(),
+    Value<int?> lastAliveUtc = const Value.absent(),
   }) => SyncStateRow(
     id: id ?? this.id,
     lastFetchedUtc: lastFetchedUtc.present
@@ -2504,6 +2821,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     restoreFloorDay: restoreFloorDay.present
         ? restoreFloorDay.value
         : this.restoreFloorDay,
+    lastAliveUtc: lastAliveUtc.present ? lastAliveUtc.value : this.lastAliveUtc,
   );
   SyncStateRow copyWithCompanion(SyncStateCompanion data) {
     return SyncStateRow(
@@ -2520,6 +2838,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       restoreFloorDay: data.restoreFloorDay.present
           ? data.restoreFloorDay.value
           : this.restoreFloorDay,
+      lastAliveUtc: data.lastAliveUtc.present
+          ? data.lastAliveUtc.value
+          : this.lastAliveUtc,
     );
   }
 
@@ -2530,7 +2851,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           ..write('lastFetchedUtc: $lastFetchedUtc, ')
           ..write('firstRecordDay: $firstRecordDay, ')
           ..write('installUtc: $installUtc, ')
-          ..write('restoreFloorDay: $restoreFloorDay')
+          ..write('restoreFloorDay: $restoreFloorDay, ')
+          ..write('lastAliveUtc: $lastAliveUtc')
           ..write(')'))
         .toString();
   }
@@ -2542,6 +2864,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     firstRecordDay,
     installUtc,
     restoreFloorDay,
+    lastAliveUtc,
   );
   @override
   bool operator ==(Object other) =>
@@ -2551,7 +2874,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           other.lastFetchedUtc == this.lastFetchedUtc &&
           other.firstRecordDay == this.firstRecordDay &&
           other.installUtc == this.installUtc &&
-          other.restoreFloorDay == this.restoreFloorDay);
+          other.restoreFloorDay == this.restoreFloorDay &&
+          other.lastAliveUtc == this.lastAliveUtc);
 }
 
 class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
@@ -2560,12 +2884,14 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
   final Value<String> firstRecordDay;
   final Value<int> installUtc;
   final Value<String?> restoreFloorDay;
+  final Value<int?> lastAliveUtc;
   const SyncStateCompanion({
     this.id = const Value.absent(),
     this.lastFetchedUtc = const Value.absent(),
     this.firstRecordDay = const Value.absent(),
     this.installUtc = const Value.absent(),
     this.restoreFloorDay = const Value.absent(),
+    this.lastAliveUtc = const Value.absent(),
   });
   SyncStateCompanion.insert({
     this.id = const Value.absent(),
@@ -2573,6 +2899,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     required String firstRecordDay,
     required int installUtc,
     this.restoreFloorDay = const Value.absent(),
+    this.lastAliveUtc = const Value.absent(),
   }) : firstRecordDay = Value(firstRecordDay),
        installUtc = Value(installUtc);
   static Insertable<SyncStateRow> custom({
@@ -2581,6 +2908,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Expression<String>? firstRecordDay,
     Expression<int>? installUtc,
     Expression<String>? restoreFloorDay,
+    Expression<int>? lastAliveUtc,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2588,6 +2916,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       if (firstRecordDay != null) 'first_record_day': firstRecordDay,
       if (installUtc != null) 'install_utc': installUtc,
       if (restoreFloorDay != null) 'restore_floor_day': restoreFloorDay,
+      if (lastAliveUtc != null) 'last_alive_utc': lastAliveUtc,
     });
   }
 
@@ -2597,6 +2926,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Value<String>? firstRecordDay,
     Value<int>? installUtc,
     Value<String?>? restoreFloorDay,
+    Value<int?>? lastAliveUtc,
   }) {
     return SyncStateCompanion(
       id: id ?? this.id,
@@ -2604,6 +2934,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       firstRecordDay: firstRecordDay ?? this.firstRecordDay,
       installUtc: installUtc ?? this.installUtc,
       restoreFloorDay: restoreFloorDay ?? this.restoreFloorDay,
+      lastAliveUtc: lastAliveUtc ?? this.lastAliveUtc,
     );
   }
 
@@ -2625,6 +2956,9 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     if (restoreFloorDay.present) {
       map['restore_floor_day'] = Variable<String>(restoreFloorDay.value);
     }
+    if (lastAliveUtc.present) {
+      map['last_alive_utc'] = Variable<int>(lastAliveUtc.value);
+    }
     return map;
   }
 
@@ -2635,7 +2969,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
           ..write('lastFetchedUtc: $lastFetchedUtc, ')
           ..write('firstRecordDay: $firstRecordDay, ')
           ..write('installUtc: $installUtc, ')
-          ..write('restoreFloorDay: $restoreFloorDay')
+          ..write('restoreFloorDay: $restoreFloorDay, ')
+          ..write('lastAliveUtc: $lastAliveUtc')
           ..write(')'))
         .toString();
   }
@@ -5906,6 +6241,659 @@ class NotificationSettingsCompanion
   }
 }
 
+class $AppWalksTable extends AppWalks
+    with TableInfo<$AppWalksTable, AppWalkRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AppWalksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _startUtcMeta = const VerificationMeta(
+    'startUtc',
+  );
+  @override
+  late final GeneratedColumn<int> startUtc = GeneratedColumn<int>(
+    'start_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endUtcMeta = const VerificationMeta('endUtc');
+  @override
+  late final GeneratedColumn<int> endUtc = GeneratedColumn<int>(
+    'end_utc',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<AppWalkEnd?, String> endReason =
+      GeneratedColumn<String>(
+        'end_reason',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      ).withConverter<AppWalkEnd?>($AppWalksTable.$converterendReasonn);
+  @override
+  List<GeneratedColumn> get $columns => [id, startUtc, endUtc, endReason];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'app_walks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AppWalkRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('start_utc')) {
+      context.handle(
+        _startUtcMeta,
+        startUtc.isAcceptableOrUnknown(data['start_utc']!, _startUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startUtcMeta);
+    }
+    if (data.containsKey('end_utc')) {
+      context.handle(
+        _endUtcMeta,
+        endUtc.isAcceptableOrUnknown(data['end_utc']!, _endUtcMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AppWalkRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AppWalkRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      startUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_utc'],
+      )!,
+      endUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_utc'],
+      ),
+      endReason: $AppWalksTable.$converterendReasonn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}end_reason'],
+        ),
+      ),
+    );
+  }
+
+  @override
+  $AppWalksTable createAlias(String alias) {
+    return $AppWalksTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<AppWalkEnd, String, String> $converterendReason =
+      const EnumNameConverter<AppWalkEnd>(AppWalkEnd.values);
+  static JsonTypeConverter2<AppWalkEnd?, String?, String?>
+  $converterendReasonn = JsonTypeConverter2.asNullable($converterendReason);
+}
+
+class AppWalkRow extends DataClass implements Insertable<AppWalkRow> {
+  final int id;
+  final int startUtc;
+  final int? endUtc;
+  final AppWalkEnd? endReason;
+  const AppWalkRow({
+    required this.id,
+    required this.startUtc,
+    this.endUtc,
+    this.endReason,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['start_utc'] = Variable<int>(startUtc);
+    if (!nullToAbsent || endUtc != null) {
+      map['end_utc'] = Variable<int>(endUtc);
+    }
+    if (!nullToAbsent || endReason != null) {
+      map['end_reason'] = Variable<String>(
+        $AppWalksTable.$converterendReasonn.toSql(endReason),
+      );
+    }
+    return map;
+  }
+
+  AppWalksCompanion toCompanion(bool nullToAbsent) {
+    return AppWalksCompanion(
+      id: Value(id),
+      startUtc: Value(startUtc),
+      endUtc: endUtc == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endUtc),
+      endReason: endReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endReason),
+    );
+  }
+
+  factory AppWalkRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AppWalkRow(
+      id: serializer.fromJson<int>(json['id']),
+      startUtc: serializer.fromJson<int>(json['startUtc']),
+      endUtc: serializer.fromJson<int?>(json['endUtc']),
+      endReason: $AppWalksTable.$converterendReasonn.fromJson(
+        serializer.fromJson<String?>(json['endReason']),
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'startUtc': serializer.toJson<int>(startUtc),
+      'endUtc': serializer.toJson<int?>(endUtc),
+      'endReason': serializer.toJson<String?>(
+        $AppWalksTable.$converterendReasonn.toJson(endReason),
+      ),
+    };
+  }
+
+  AppWalkRow copyWith({
+    int? id,
+    int? startUtc,
+    Value<int?> endUtc = const Value.absent(),
+    Value<AppWalkEnd?> endReason = const Value.absent(),
+  }) => AppWalkRow(
+    id: id ?? this.id,
+    startUtc: startUtc ?? this.startUtc,
+    endUtc: endUtc.present ? endUtc.value : this.endUtc,
+    endReason: endReason.present ? endReason.value : this.endReason,
+  );
+  AppWalkRow copyWithCompanion(AppWalksCompanion data) {
+    return AppWalkRow(
+      id: data.id.present ? data.id.value : this.id,
+      startUtc: data.startUtc.present ? data.startUtc.value : this.startUtc,
+      endUtc: data.endUtc.present ? data.endUtc.value : this.endUtc,
+      endReason: data.endReason.present ? data.endReason.value : this.endReason,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppWalkRow(')
+          ..write('id: $id, ')
+          ..write('startUtc: $startUtc, ')
+          ..write('endUtc: $endUtc, ')
+          ..write('endReason: $endReason')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, startUtc, endUtc, endReason);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AppWalkRow &&
+          other.id == this.id &&
+          other.startUtc == this.startUtc &&
+          other.endUtc == this.endUtc &&
+          other.endReason == this.endReason);
+}
+
+class AppWalksCompanion extends UpdateCompanion<AppWalkRow> {
+  final Value<int> id;
+  final Value<int> startUtc;
+  final Value<int?> endUtc;
+  final Value<AppWalkEnd?> endReason;
+  const AppWalksCompanion({
+    this.id = const Value.absent(),
+    this.startUtc = const Value.absent(),
+    this.endUtc = const Value.absent(),
+    this.endReason = const Value.absent(),
+  });
+  AppWalksCompanion.insert({
+    this.id = const Value.absent(),
+    required int startUtc,
+    this.endUtc = const Value.absent(),
+    this.endReason = const Value.absent(),
+  }) : startUtc = Value(startUtc);
+  static Insertable<AppWalkRow> custom({
+    Expression<int>? id,
+    Expression<int>? startUtc,
+    Expression<int>? endUtc,
+    Expression<String>? endReason,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (startUtc != null) 'start_utc': startUtc,
+      if (endUtc != null) 'end_utc': endUtc,
+      if (endReason != null) 'end_reason': endReason,
+    });
+  }
+
+  AppWalksCompanion copyWith({
+    Value<int>? id,
+    Value<int>? startUtc,
+    Value<int?>? endUtc,
+    Value<AppWalkEnd?>? endReason,
+  }) {
+    return AppWalksCompanion(
+      id: id ?? this.id,
+      startUtc: startUtc ?? this.startUtc,
+      endUtc: endUtc ?? this.endUtc,
+      endReason: endReason ?? this.endReason,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (startUtc.present) {
+      map['start_utc'] = Variable<int>(startUtc.value);
+    }
+    if (endUtc.present) {
+      map['end_utc'] = Variable<int>(endUtc.value);
+    }
+    if (endReason.present) {
+      map['end_reason'] = Variable<String>(
+        $AppWalksTable.$converterendReasonn.toSql(endReason.value),
+      );
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppWalksCompanion(')
+          ..write('id: $id, ')
+          ..write('startUtc: $startUtc, ')
+          ..write('endUtc: $endUtc, ')
+          ..write('endReason: $endReason')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CoinLedgerTable extends CoinLedger
+    with TableInfo<$CoinLedgerTable, CoinLedgerRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CoinLedgerTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _dayMeta = const VerificationMeta('day');
+  @override
+  late final GeneratedColumn<String> day = GeneratedColumn<String>(
+    'day',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<CoinKind, String> kind =
+      GeneratedColumn<String>(
+        'kind',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<CoinKind>($CoinLedgerTable.$converterkind);
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<int> amount = GeneratedColumn<int>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _refIdMeta = const VerificationMeta('refId');
+  @override
+  late final GeneratedColumn<String> refId = GeneratedColumn<String>(
+    'ref_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, day, kind, amount, refId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'coin_ledger';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CoinLedgerRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('day')) {
+      context.handle(
+        _dayMeta,
+        day.isAcceptableOrUnknown(data['day']!, _dayMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dayMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('ref_id')) {
+      context.handle(
+        _refIdMeta,
+        refId.isAcceptableOrUnknown(data['ref_id']!, _refIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CoinLedgerRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CoinLedgerRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      day: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}day'],
+      )!,
+      kind: $CoinLedgerTable.$converterkind.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}kind'],
+        )!,
+      ),
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}amount'],
+      )!,
+      refId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ref_id'],
+      ),
+    );
+  }
+
+  @override
+  $CoinLedgerTable createAlias(String alias) {
+    return $CoinLedgerTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<CoinKind, String, String> $converterkind =
+      const EnumNameConverter<CoinKind>(CoinKind.values);
+}
+
+class CoinLedgerRow extends DataClass implements Insertable<CoinLedgerRow> {
+  final int id;
+  final String day;
+  final CoinKind kind;
+  final int amount;
+  final String? refId;
+  const CoinLedgerRow({
+    required this.id,
+    required this.day,
+    required this.kind,
+    required this.amount,
+    this.refId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['day'] = Variable<String>(day);
+    {
+      map['kind'] = Variable<String>(
+        $CoinLedgerTable.$converterkind.toSql(kind),
+      );
+    }
+    map['amount'] = Variable<int>(amount);
+    if (!nullToAbsent || refId != null) {
+      map['ref_id'] = Variable<String>(refId);
+    }
+    return map;
+  }
+
+  CoinLedgerCompanion toCompanion(bool nullToAbsent) {
+    return CoinLedgerCompanion(
+      id: Value(id),
+      day: Value(day),
+      kind: Value(kind),
+      amount: Value(amount),
+      refId: refId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(refId),
+    );
+  }
+
+  factory CoinLedgerRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CoinLedgerRow(
+      id: serializer.fromJson<int>(json['id']),
+      day: serializer.fromJson<String>(json['day']),
+      kind: $CoinLedgerTable.$converterkind.fromJson(
+        serializer.fromJson<String>(json['kind']),
+      ),
+      amount: serializer.fromJson<int>(json['amount']),
+      refId: serializer.fromJson<String?>(json['refId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'day': serializer.toJson<String>(day),
+      'kind': serializer.toJson<String>(
+        $CoinLedgerTable.$converterkind.toJson(kind),
+      ),
+      'amount': serializer.toJson<int>(amount),
+      'refId': serializer.toJson<String?>(refId),
+    };
+  }
+
+  CoinLedgerRow copyWith({
+    int? id,
+    String? day,
+    CoinKind? kind,
+    int? amount,
+    Value<String?> refId = const Value.absent(),
+  }) => CoinLedgerRow(
+    id: id ?? this.id,
+    day: day ?? this.day,
+    kind: kind ?? this.kind,
+    amount: amount ?? this.amount,
+    refId: refId.present ? refId.value : this.refId,
+  );
+  CoinLedgerRow copyWithCompanion(CoinLedgerCompanion data) {
+    return CoinLedgerRow(
+      id: data.id.present ? data.id.value : this.id,
+      day: data.day.present ? data.day.value : this.day,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      refId: data.refId.present ? data.refId.value : this.refId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CoinLedgerRow(')
+          ..write('id: $id, ')
+          ..write('day: $day, ')
+          ..write('kind: $kind, ')
+          ..write('amount: $amount, ')
+          ..write('refId: $refId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, day, kind, amount, refId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CoinLedgerRow &&
+          other.id == this.id &&
+          other.day == this.day &&
+          other.kind == this.kind &&
+          other.amount == this.amount &&
+          other.refId == this.refId);
+}
+
+class CoinLedgerCompanion extends UpdateCompanion<CoinLedgerRow> {
+  final Value<int> id;
+  final Value<String> day;
+  final Value<CoinKind> kind;
+  final Value<int> amount;
+  final Value<String?> refId;
+  const CoinLedgerCompanion({
+    this.id = const Value.absent(),
+    this.day = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.refId = const Value.absent(),
+  });
+  CoinLedgerCompanion.insert({
+    this.id = const Value.absent(),
+    required String day,
+    required CoinKind kind,
+    required int amount,
+    this.refId = const Value.absent(),
+  }) : day = Value(day),
+       kind = Value(kind),
+       amount = Value(amount);
+  static Insertable<CoinLedgerRow> custom({
+    Expression<int>? id,
+    Expression<String>? day,
+    Expression<String>? kind,
+    Expression<int>? amount,
+    Expression<String>? refId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (day != null) 'day': day,
+      if (kind != null) 'kind': kind,
+      if (amount != null) 'amount': amount,
+      if (refId != null) 'ref_id': refId,
+    });
+  }
+
+  CoinLedgerCompanion copyWith({
+    Value<int>? id,
+    Value<String>? day,
+    Value<CoinKind>? kind,
+    Value<int>? amount,
+    Value<String?>? refId,
+  }) {
+    return CoinLedgerCompanion(
+      id: id ?? this.id,
+      day: day ?? this.day,
+      kind: kind ?? this.kind,
+      amount: amount ?? this.amount,
+      refId: refId ?? this.refId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (day.present) {
+      map['day'] = Variable<String>(day.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(
+        $CoinLedgerTable.$converterkind.toSql(kind.value),
+      );
+    }
+    if (amount.present) {
+      map['amount'] = Variable<int>(amount.value);
+    }
+    if (refId.present) {
+      map['ref_id'] = Variable<String>(refId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CoinLedgerCompanion(')
+          ..write('id: $id, ')
+          ..write('day: $day, ')
+          ..write('kind: $kind, ')
+          ..write('amount: $amount, ')
+          ..write('refId: $refId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -5928,6 +6916,8 @@ abstract class _$AppDb extends GeneratedDatabase {
   );
   late final $NotificationSettingsTable notificationSettings =
       $NotificationSettingsTable(this);
+  late final $AppWalksTable appWalks = $AppWalksTable(this);
+  late final $CoinLedgerTable coinLedger = $CoinLedgerTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5947,6 +6937,8 @@ abstract class _$AppDb extends GeneratedDatabase {
     guestbookPosts,
     notificationLog,
     notificationSettings,
+    appWalks,
+    coinLedger,
   ];
 }
 
@@ -6088,6 +7080,11 @@ typedef $$DaySummariesTableCreateCompanionBuilder =
       required int steps,
       required double distanceM,
       required int countedSessions,
+      Value<double> bonusM,
+      Value<double> shopM,
+      Value<double> travelM,
+      Value<double> walkTravelM,
+      Value<int> coins,
       Value<int> rowid,
     });
 typedef $$DaySummariesTableUpdateCompanionBuilder =
@@ -6096,6 +7093,11 @@ typedef $$DaySummariesTableUpdateCompanionBuilder =
       Value<int> steps,
       Value<double> distanceM,
       Value<int> countedSessions,
+      Value<double> bonusM,
+      Value<double> shopM,
+      Value<double> travelM,
+      Value<double> walkTravelM,
+      Value<int> coins,
       Value<int> rowid,
     });
 
@@ -6125,6 +7127,31 @@ class $$DaySummariesTableFilterComposer
 
   ColumnFilters<int> get countedSessions => $composableBuilder(
     column: $table.countedSessions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get bonusM => $composableBuilder(
+    column: $table.bonusM,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get shopM => $composableBuilder(
+    column: $table.shopM,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get travelM => $composableBuilder(
+    column: $table.travelM,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get walkTravelM => $composableBuilder(
+    column: $table.walkTravelM,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get coins => $composableBuilder(
+    column: $table.coins,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6157,6 +7184,31 @@ class $$DaySummariesTableOrderingComposer
     column: $table.countedSessions,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get bonusM => $composableBuilder(
+    column: $table.bonusM,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get shopM => $composableBuilder(
+    column: $table.shopM,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get travelM => $composableBuilder(
+    column: $table.travelM,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get walkTravelM => $composableBuilder(
+    column: $table.walkTravelM,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get coins => $composableBuilder(
+    column: $table.coins,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DaySummariesTableAnnotationComposer
@@ -6181,6 +7233,23 @@ class $$DaySummariesTableAnnotationComposer
     column: $table.countedSessions,
     builder: (column) => column,
   );
+
+  GeneratedColumn<double> get bonusM =>
+      $composableBuilder(column: $table.bonusM, builder: (column) => column);
+
+  GeneratedColumn<double> get shopM =>
+      $composableBuilder(column: $table.shopM, builder: (column) => column);
+
+  GeneratedColumn<double> get travelM =>
+      $composableBuilder(column: $table.travelM, builder: (column) => column);
+
+  GeneratedColumn<double> get walkTravelM => $composableBuilder(
+    column: $table.walkTravelM,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get coins =>
+      $composableBuilder(column: $table.coins, builder: (column) => column);
 }
 
 class $$DaySummariesTableTableManager
@@ -6218,12 +7287,22 @@ class $$DaySummariesTableTableManager
                 Value<int> steps = const Value.absent(),
                 Value<double> distanceM = const Value.absent(),
                 Value<int> countedSessions = const Value.absent(),
+                Value<double> bonusM = const Value.absent(),
+                Value<double> shopM = const Value.absent(),
+                Value<double> travelM = const Value.absent(),
+                Value<double> walkTravelM = const Value.absent(),
+                Value<int> coins = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DaySummariesCompanion(
                 day: day,
                 steps: steps,
                 distanceM: distanceM,
                 countedSessions: countedSessions,
+                bonusM: bonusM,
+                shopM: shopM,
+                travelM: travelM,
+                walkTravelM: walkTravelM,
+                coins: coins,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6232,12 +7311,22 @@ class $$DaySummariesTableTableManager
                 required int steps,
                 required double distanceM,
                 required int countedSessions,
+                Value<double> bonusM = const Value.absent(),
+                Value<double> shopM = const Value.absent(),
+                Value<double> travelM = const Value.absent(),
+                Value<double> walkTravelM = const Value.absent(),
+                Value<int> coins = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DaySummariesCompanion.insert(
                 day: day,
                 steps: steps,
                 distanceM: distanceM,
                 countedSessions: countedSessions,
+                bonusM: bonusM,
+                shopM: shopM,
+                travelM: travelM,
+                walkTravelM: walkTravelM,
+                coins: coins,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6283,6 +7372,7 @@ typedef $$WalkSessionsTableCreateCompanionBuilder =
       required double runRatio,
       required bool qualified,
       required bool counted,
+      Value<double> bonusM,
     });
 typedef $$WalkSessionsTableUpdateCompanionBuilder =
     WalkSessionsCompanion Function({
@@ -6293,6 +7383,7 @@ typedef $$WalkSessionsTableUpdateCompanionBuilder =
       Value<double> runRatio,
       Value<bool> qualified,
       Value<bool> counted,
+      Value<double> bonusM,
     });
 
 class $$WalkSessionsTableFilterComposer
@@ -6336,6 +7427,11 @@ class $$WalkSessionsTableFilterComposer
 
   ColumnFilters<bool> get counted => $composableBuilder(
     column: $table.counted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get bonusM => $composableBuilder(
+    column: $table.bonusM,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6383,6 +7479,11 @@ class $$WalkSessionsTableOrderingComposer
     column: $table.counted,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get bonusM => $composableBuilder(
+    column: $table.bonusM,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$WalkSessionsTableAnnotationComposer
@@ -6414,6 +7515,9 @@ class $$WalkSessionsTableAnnotationComposer
 
   GeneratedColumn<bool> get counted =>
       $composableBuilder(column: $table.counted, builder: (column) => column);
+
+  GeneratedColumn<double> get bonusM =>
+      $composableBuilder(column: $table.bonusM, builder: (column) => column);
 }
 
 class $$WalkSessionsTableTableManager
@@ -6454,6 +7558,7 @@ class $$WalkSessionsTableTableManager
                 Value<double> runRatio = const Value.absent(),
                 Value<bool> qualified = const Value.absent(),
                 Value<bool> counted = const Value.absent(),
+                Value<double> bonusM = const Value.absent(),
               }) => WalkSessionsCompanion(
                 startUtc: startUtc,
                 endUtc: endUtc,
@@ -6462,6 +7567,7 @@ class $$WalkSessionsTableTableManager
                 runRatio: runRatio,
                 qualified: qualified,
                 counted: counted,
+                bonusM: bonusM,
               ),
           createCompanionCallback:
               ({
@@ -6472,6 +7578,7 @@ class $$WalkSessionsTableTableManager
                 required double runRatio,
                 required bool qualified,
                 required bool counted,
+                Value<double> bonusM = const Value.absent(),
               }) => WalkSessionsCompanion.insert(
                 startUtc: startUtc,
                 endUtc: endUtc,
@@ -6480,6 +7587,7 @@ class $$WalkSessionsTableTableManager
                 runRatio: runRatio,
                 qualified: qualified,
                 counted: counted,
+                bonusM: bonusM,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -7139,6 +8247,7 @@ typedef $$SyncStateTableCreateCompanionBuilder = SyncStateCompanion Function({
   required String firstRecordDay,
   required int installUtc,
   Value<String?> restoreFloorDay,
+  Value<int?> lastAliveUtc,
 });
 typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<int> id,
@@ -7146,6 +8255,7 @@ typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<String> firstRecordDay,
   Value<int> installUtc,
   Value<String?> restoreFloorDay,
+  Value<int?> lastAliveUtc,
 });
 
 class $$SyncStateTableFilterComposer
@@ -7179,6 +8289,11 @@ class $$SyncStateTableFilterComposer
 
   ColumnFilters<String> get restoreFloorDay => $composableBuilder(
     column: $table.restoreFloorDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastAliveUtc => $composableBuilder(
+    column: $table.lastAliveUtc,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7216,6 +8331,11 @@ class $$SyncStateTableOrderingComposer
     column: $table.restoreFloorDay,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get lastAliveUtc => $composableBuilder(
+    column: $table.lastAliveUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncStateTableAnnotationComposer
@@ -7247,6 +8367,11 @@ class $$SyncStateTableAnnotationComposer
 
   GeneratedColumn<String> get restoreFloorDay => $composableBuilder(
     column: $table.restoreFloorDay,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastAliveUtc => $composableBuilder(
+    column: $table.lastAliveUtc,
     builder: (column) => column,
   );
 }
@@ -7287,12 +8412,14 @@ class $$SyncStateTableTableManager
                 Value<String> firstRecordDay = const Value.absent(),
                 Value<int> installUtc = const Value.absent(),
                 Value<String?> restoreFloorDay = const Value.absent(),
+                Value<int?> lastAliveUtc = const Value.absent(),
               }) => SyncStateCompanion(
                 id: id,
                 lastFetchedUtc: lastFetchedUtc,
                 firstRecordDay: firstRecordDay,
                 installUtc: installUtc,
                 restoreFloorDay: restoreFloorDay,
+                lastAliveUtc: lastAliveUtc,
               ),
           createCompanionCallback:
               ({
@@ -7301,12 +8428,14 @@ class $$SyncStateTableTableManager
                 required String firstRecordDay,
                 required int installUtc,
                 Value<String?> restoreFloorDay = const Value.absent(),
+                Value<int?> lastAliveUtc = const Value.absent(),
               }) => SyncStateCompanion.insert(
                 id: id,
                 lastFetchedUtc: lastFetchedUtc,
                 firstRecordDay: firstRecordDay,
                 installUtc: installUtc,
                 restoreFloorDay: restoreFloorDay,
+                lastAliveUtc: lastAliveUtc,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -9135,6 +10264,381 @@ typedef $$NotificationSettingsTableProcessedTableManager =
       NotificationSettingsRow,
       PrefetchHooks Function()
     >;
+typedef $$AppWalksTableCreateCompanionBuilder = AppWalksCompanion Function({
+  Value<int> id,
+  required int startUtc,
+  Value<int?> endUtc,
+  Value<AppWalkEnd?> endReason,
+});
+typedef $$AppWalksTableUpdateCompanionBuilder = AppWalksCompanion Function({
+  Value<int> id,
+  Value<int> startUtc,
+  Value<int?> endUtc,
+  Value<AppWalkEnd?> endReason,
+});
+
+class $$AppWalksTableFilterComposer extends Composer<_$AppDb, $AppWalksTable> {
+  $$AppWalksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startUtc => $composableBuilder(
+    column: $table.startUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endUtc => $composableBuilder(
+    column: $table.endUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<AppWalkEnd?, AppWalkEnd, String>
+  get endReason => $composableBuilder(
+    column: $table.endReason,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+}
+
+class $$AppWalksTableOrderingComposer
+    extends Composer<_$AppDb, $AppWalksTable> {
+  $$AppWalksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startUtc => $composableBuilder(
+    column: $table.startUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endUtc => $composableBuilder(
+    column: $table.endUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get endReason => $composableBuilder(
+    column: $table.endReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AppWalksTableAnnotationComposer
+    extends Composer<_$AppDb, $AppWalksTable> {
+  $$AppWalksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get startUtc =>
+      $composableBuilder(column: $table.startUtc, builder: (column) => column);
+
+  GeneratedColumn<int> get endUtc =>
+      $composableBuilder(column: $table.endUtc, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<AppWalkEnd?, String> get endReason =>
+      $composableBuilder(column: $table.endReason, builder: (column) => column);
+}
+
+class $$AppWalksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $AppWalksTable,
+          AppWalkRow,
+          $$AppWalksTableFilterComposer,
+          $$AppWalksTableOrderingComposer,
+          $$AppWalksTableAnnotationComposer,
+          $$AppWalksTableCreateCompanionBuilder,
+          $$AppWalksTableUpdateCompanionBuilder,
+          (AppWalkRow, BaseReferences<_$AppDb, $AppWalksTable, AppWalkRow>),
+          AppWalkRow,
+          PrefetchHooks Function()
+        > {
+  $$AppWalksTableTableManager(_$AppDb db, $AppWalksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AppWalksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AppWalksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AppWalksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> startUtc = const Value.absent(),
+                Value<int?> endUtc = const Value.absent(),
+                Value<AppWalkEnd?> endReason = const Value.absent(),
+              }) => AppWalksCompanion(
+                id: id,
+                startUtc: startUtc,
+                endUtc: endUtc,
+                endReason: endReason,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int startUtc,
+                Value<int?> endUtc = const Value.absent(),
+                Value<AppWalkEnd?> endReason = const Value.absent(),
+              }) => AppWalksCompanion.insert(
+                id: id,
+                startUtc: startUtc,
+                endUtc: endUtc,
+                endReason: endReason,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AppWalksTable, AppWalkRow>(table),
+                  BaseReferences<_$AppDb, $AppWalksTable, AppWalkRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AppWalksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $AppWalksTable,
+      AppWalkRow,
+      $$AppWalksTableFilterComposer,
+      $$AppWalksTableOrderingComposer,
+      $$AppWalksTableAnnotationComposer,
+      $$AppWalksTableCreateCompanionBuilder,
+      $$AppWalksTableUpdateCompanionBuilder,
+      (AppWalkRow, BaseReferences<_$AppDb, $AppWalksTable, AppWalkRow>),
+      AppWalkRow,
+      PrefetchHooks Function()
+    >;
+typedef $$CoinLedgerTableCreateCompanionBuilder = CoinLedgerCompanion Function({
+  Value<int> id,
+  required String day,
+  required CoinKind kind,
+  required int amount,
+  Value<String?> refId,
+});
+typedef $$CoinLedgerTableUpdateCompanionBuilder = CoinLedgerCompanion Function({
+  Value<int> id,
+  Value<String> day,
+  Value<CoinKind> kind,
+  Value<int> amount,
+  Value<String?> refId,
+});
+
+class $$CoinLedgerTableFilterComposer
+    extends Composer<_$AppDb, $CoinLedgerTable> {
+  $$CoinLedgerTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get day => $composableBuilder(
+    column: $table.day,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<CoinKind, CoinKind, String> get kind =>
+      $composableBuilder(
+        column: $table.kind,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<int> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get refId => $composableBuilder(
+    column: $table.refId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CoinLedgerTableOrderingComposer
+    extends Composer<_$AppDb, $CoinLedgerTable> {
+  $$CoinLedgerTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get day => $composableBuilder(
+    column: $table.day,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get refId => $composableBuilder(
+    column: $table.refId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CoinLedgerTableAnnotationComposer
+    extends Composer<_$AppDb, $CoinLedgerTable> {
+  $$CoinLedgerTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get day =>
+      $composableBuilder(column: $table.day, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<CoinKind, String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get refId =>
+      $composableBuilder(column: $table.refId, builder: (column) => column);
+}
+
+class $$CoinLedgerTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $CoinLedgerTable,
+          CoinLedgerRow,
+          $$CoinLedgerTableFilterComposer,
+          $$CoinLedgerTableOrderingComposer,
+          $$CoinLedgerTableAnnotationComposer,
+          $$CoinLedgerTableCreateCompanionBuilder,
+          $$CoinLedgerTableUpdateCompanionBuilder,
+          (
+            CoinLedgerRow,
+            BaseReferences<_$AppDb, $CoinLedgerTable, CoinLedgerRow>,
+          ),
+          CoinLedgerRow,
+          PrefetchHooks Function()
+        > {
+  $$CoinLedgerTableTableManager(_$AppDb db, $CoinLedgerTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CoinLedgerTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CoinLedgerTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CoinLedgerTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> day = const Value.absent(),
+                Value<CoinKind> kind = const Value.absent(),
+                Value<int> amount = const Value.absent(),
+                Value<String?> refId = const Value.absent(),
+              }) => CoinLedgerCompanion(
+                id: id,
+                day: day,
+                kind: kind,
+                amount: amount,
+                refId: refId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String day,
+                required CoinKind kind,
+                required int amount,
+                Value<String?> refId = const Value.absent(),
+              }) => CoinLedgerCompanion.insert(
+                id: id,
+                day: day,
+                kind: kind,
+                amount: amount,
+                refId: refId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CoinLedgerTable, CoinLedgerRow>(table),
+                  BaseReferences<_$AppDb, $CoinLedgerTable, CoinLedgerRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CoinLedgerTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $CoinLedgerTable,
+      CoinLedgerRow,
+      $$CoinLedgerTableFilterComposer,
+      $$CoinLedgerTableOrderingComposer,
+      $$CoinLedgerTableAnnotationComposer,
+      $$CoinLedgerTableCreateCompanionBuilder,
+      $$CoinLedgerTableUpdateCompanionBuilder,
+      (CoinLedgerRow, BaseReferences<_$AppDb, $CoinLedgerTable, CoinLedgerRow>),
+      CoinLedgerRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -9167,4 +10671,8 @@ class $AppDbManager {
       $$NotificationLogTableTableManager(_db, _db.notificationLog);
   $$NotificationSettingsTableTableManager get notificationSettings =>
       $$NotificationSettingsTableTableManager(_db, _db.notificationSettings);
+  $$AppWalksTableTableManager get appWalks =>
+      $$AppWalksTableTableManager(_db, _db.appWalks);
+  $$CoinLedgerTableTableManager get coinLedger =>
+      $$CoinLedgerTableTableManager(_db, _db.coinLedger);
 }

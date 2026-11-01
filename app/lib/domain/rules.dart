@@ -90,9 +90,13 @@ class Rules {
     required this.sessionMaxPerDay,
     required this.refetchHours,
     required this.walkingRefreshSec,
+    required this.aliveSaveSec,
     required this.liveCadenceWindowSec,
     required this.liveNoticeUpdateSec,
     required this.lapKm,
+    required this.bonusTravelMultiplier,
+    required this.bonusCoinMultiplier,
+    required this.coinsPerKm,
     required this.seaFactor,
     required this.earthRadiusKm,
     required this.ports,
@@ -157,6 +161,10 @@ class Rules {
   /// 걷는 중 화면이 동기화하는 간격(초)
   final int walkingRefreshSec;
 
+  /// 앱이 살아 있는 동안 '마지막으로 살아 있던 시각'을 적는 간격(초) (config sync.aliveSaveSec).
+  /// 앱이 갑자기 끝났을 때 열려 있던 앱 걷기를 이 시각에서 닫는다
+  final int aliveSaveSec;
+
   /// 걸음 센서로 분당 걸음을 낼 때 보는 최근 시간(초) (config live.cadenceWindowSec)
   final int liveCadenceWindowSec;
 
@@ -165,6 +173,14 @@ class Rules {
 
   /// 걷기 기록의 랩 길이(km) (config record.lapKm)
   final double lapKm;
+
+  /// 본격 걷기 보너스 (config bonus): 앱 걷기 창 안의 걷기 1번 인정 구간은 이동 거리가 실제 거리의
+  /// [bonusTravelMultiplier]배, 럭은 [bonusCoinMultiplier]배로 센다
+  final double bonusTravelMultiplier;
+  final double bonusCoinMultiplier;
+
+  /// 실제 1km당 하루 럭 (config coins.perKm). 기획이 아직 안 정해서 null이면 럭은 늘 0이다
+  final double? coinsPerKm;
 
   final double seaFactor;
   final double earthRadiusKm;
@@ -278,6 +294,8 @@ class Rules {
     final sync = j['sync'] as Map<String, dynamic>;
     final live = j['live'] as Map<String, dynamic>;
     final record = j['record'] as Map<String, dynamic>;
+    final bonus = j['bonus'] as Map<String, dynamic>;
+    final coins = j['coins'] as Map<String, dynamic>;
     final route = j['route'] as Map<String, dynamic>;
     final journey = j['journey'] as Map<String, dynamic>;
     final frame = journey['frame'] as Map<String, dynamic>;
@@ -319,6 +337,23 @@ class Rules {
     // 랩 길이가 0 이하면 랩을 끊을 수 없다
     if (_d(record['lapKm']) <= 0) throw const FormatException('record.lapKm는 0보다 커야 한다');
 
+    // 보너스는 늘려 주는 것이라 1배 미만이면 거리·럭이 줄어든다. 구현한 적용 범위는 하나뿐이다
+    if (bonus['appliesTo'] != 'qualifiedSession') {
+      throw FormatException('bonus.appliesTo를 모른다: ${bonus['appliesTo']}');
+    }
+    if (_d(bonus['travelMultiplier']) < 1) {
+      throw const FormatException('bonus.travelMultiplier는 1 이상이어야 한다');
+    }
+    if (_d(bonus['coinMultiplier']) < 1) {
+      throw const FormatException('bonus.coinMultiplier는 1 이상이어야 한다');
+    }
+    if (_dn(coins['perKm']) case final perKm? when perKm < 0) {
+      throw const FormatException('coins.perKm는 0 이상이거나 null이어야 한다');
+    }
+    if ((sync['aliveSaveSec'] as int) <= 0) {
+      throw const FormatException('sync.aliveSaveSec는 0보다 커야 한다');
+    }
+
     return Rules(
       walkMaxSpm: gait['walkMaxSpm'] as int,
       runMinSpm: gait['runMinSpm'] as int,
@@ -330,9 +365,13 @@ class Rules {
       sessionMaxPerDay: session['maxPerDay'] as int,
       refetchHours: sync['refetchHours'] as int,
       walkingRefreshSec: sync['walkingRefreshSec'] as int,
+      aliveSaveSec: sync['aliveSaveSec'] as int,
       liveCadenceWindowSec: live['cadenceWindowSec'] as int,
       liveNoticeUpdateSec: live['noticeUpdateSec'] as int,
       lapKm: _d(record['lapKm']),
+      bonusTravelMultiplier: _d(bonus['travelMultiplier']),
+      bonusCoinMultiplier: _d(bonus['coinMultiplier']),
+      coinsPerKm: _dn(coins['perKm']),
       seaFactor: _d(route['seaFactor']),
       earthRadiusKm: _d(route['earthRadiusKm']),
       ports: (route['ports'] as Map<String, dynamic>)

@@ -12,6 +12,7 @@ class WalkSession {
     required this.runRatio,
     required this.qualified,
     required this.counted,
+    this.bonusM = 0,
   });
 
   final DateTime start;
@@ -27,6 +28,10 @@ class WalkSession {
 
   /// qualified 중 그날(시작 시각의 한국 날짜) 앞에서부터 하루 최대 횟수까지
   final bool counted;
+
+  /// 앱 걷기 창 안의 분에 붙은 보너스 거리(m) 합. [distanceM]은 실제 거리라 보너스가 들어 있지 않다.
+  /// detectSessions는 창을 모르므로 0으로 두고, 저장한 구간을 읽을 때만 채워진다
+  final double bonusM;
 
   Duration get length => end.difference(start);
 }

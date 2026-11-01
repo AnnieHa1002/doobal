@@ -378,7 +378,8 @@ void main() {
 
       await walkAndRefresh(tester, e, 10, 100);
       expect(pillText('1,000'), findsOneWidget);
-      // 진행 줄: 출발 전 0 → 0.7km만큼
+      // 진행 줄: 출발 전 0 → 이동 거리만큼. 걷는 중 화면이 앱 걷기 창을 열어 두었고 10분·1,000보로
+      // 걷기 1번을 채웠으니 실제 0.7km에 보너스 ×1.3이 붙어 0.91km다
       final ratio = (await tester.runAsync(() => e.svc.snapshot(e.now)))!.journey!.progress.ratio;
       expect(tester.widget<ProgressLine>(find.byType(ProgressLine)).ratio, closeTo(ratio, 1e-9));
       expect(ratio, greaterThan(0));
@@ -396,7 +397,7 @@ void main() {
       expect(find.text('0.70 m'), findsOneWidget);
       expect(find.text('오늘 걸음'), findsOneWidget);
       expect(find.text('1,000보'), findsOneWidget);
-      final remaining = _totalKm('kr003') - 0.7;
+      final remaining = _totalKm('kr003') - 0.91;
       expect(find.text('${_byId['kr003']!.name}까지'), findsOneWidget);
       expect(find.text(formatKm(remaining)), findsOneWidget);
       final eta = (await tester.runAsync(() => e.svc.snapshot(e.now)))!.journey!.eta;
@@ -1052,7 +1053,8 @@ void main() {
 
       // 진행 막대: 걷기 전 0%에서 지금 %까지
       final name = _byId['kr003']!.name;
-      final after = (1.05 / _totalKm('kr003') * 100).round();
+      // 15분 걷기도 걷는 중 화면의 창 안이라 이동 거리는 1.05 × 1.3 = 1.365km (큰 숫자는 실제 거리 1.05km)
+      final after = (1.365 / _totalKm('kr003') * 100).round();
       expect(find.text('$name까지 0% 왔어요'), findsOneWidget);
       await tester.pump(const Duration(seconds: 2));
       expect(find.text('$name까지 $after% 왔어요'), findsOneWidget);
@@ -1062,7 +1064,7 @@ void main() {
       expect(find.text('걷기 기록'), findsNothing);
       expect(find.text('걷기 마치기'), findsNothing);
       expect(find.byType(RestScreen), findsOneWidget);
-      expect(find.text('쉬는 중 · 목적지까지 ${formatKm(_totalKm('kr003') - 1.05)}'), findsOneWidget);
+      expect(find.text('쉬는 중 · 목적지까지 ${formatKm(_totalKm('kr003') - 1.365)}'), findsOneWidget);
       expect(Navigator.of(tester.element(find.byType(RestScreen))).canPop(), isFalse);
       await _end(tester, e);
     });

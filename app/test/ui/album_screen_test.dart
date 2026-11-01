@@ -70,11 +70,15 @@ Future<void> _openAlbum(WidgetTester tester, UiEnv e,
 Future<List<String?>> _dbWall(WidgetTester tester, UiEnv e) async =>
     (await tester.runAsync(e.svc.wall))!;
 
-/// 걸음 기록을 넣고 동기화해서 누적 11.2km·16,000보를 쌓는다 (hand_02 지팡이를 얻는다)
+/// 걸음 기록을 넣고 동기화해서 누적 11.2km·16,000보를 쌓는다 (hand_02 지팡이를 얻는다).
+/// 거리 소품은 앱 걷기 창 안에서 걸은 이동 거리로 세서, 걷는 중 화면을 연 것처럼 창을 열고 닫는다
+/// (11.2km × 1.3 = 14.56km)
 Future<void> _walk11km(UiEnv e) async {
+  final id = await e.svc.startAppWalk(t1);
   e.source.records.add(walkRecord(t1, 160, 100));
   e.now = t1.add(const Duration(hours: 5));
   await e.svc.sync(e.now);
+  await e.svc.finishAppWalk(id, t1.add(const Duration(minutes: 160)));
 }
 
 void main() {

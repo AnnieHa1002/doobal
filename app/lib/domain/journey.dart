@@ -93,13 +93,16 @@ class ArrivalOutcome {
 }
 
 /// 도착했을 때의 그림 상태. 방문 +1, 액자는 이전과 이번 중 높은 쪽(내려가지 않는다),
-/// 가장 먼 거리도 큰 쪽. 액자 순서는 wood < silver < gold (enum 순서)
+/// 가장 먼 거리도 큰 쪽. 액자 순서는 wood < silver < gold (enum 순서).
+/// 이번 액자 등급은 [frameKm](실제로 걸은 거리 기준, frameBasisKm)으로 가린다. 안 주면 여정 환산 거리
+/// ([journeyEffectiveKm]) 전체로 가린다 (보너스 없이 걸어 도착했을 때와 같다)
 ArrivalOutcome paintingAfterArrival(
   OwnedPainting? previous,
   double journeyEffectiveKm,
-  Rules rules,
-) {
-  final now = frameFor(journeyEffectiveKm, rules);
+  Rules rules, {
+  double? frameKm,
+}) {
+  final now = frameFor(frameKm ?? journeyEffectiveKm, rules);
   if (previous == null) {
     return ArrivalOutcome(OwnedPainting(1, now, journeyEffectiveKm), null);
   }

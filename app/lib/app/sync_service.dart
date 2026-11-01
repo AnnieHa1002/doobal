@@ -7,6 +7,7 @@ import '../data/step_source.dart';
 import '../domain/arrival.dart';
 import '../domain/bucket.dart';
 import '../domain/eta.dart';
+import '../domain/focus_walk.dart';
 import '../domain/gait.dart';
 import '../domain/geo.dart';
 import '../domain/guestbook.dart';
@@ -42,7 +43,7 @@ class SyncReport {
   final int dropped;
   final Map<String, int> stepsBySource;
 
-  /// 이번 동기화로 인정된 거리(km). 진행 중 여정이 있었으면 그 진행 거리의 증가,
+  /// 이번 동기화로 인정된 이동 거리(km, 앱 걷기 보너스 포함). 진행 중 여정이 있었으면 그 진행 거리의 증가,
   /// 없었으면 여행 경비의 증가(상한에서 멈춤). 같은 기록으로 또 돌리면 0.
   /// 디버그 거리 배수가 켜져 있으면 진행 거리의 증가에는 그 배수가 곱해져 있다
   final double advancedKm;
@@ -54,9 +55,24 @@ class SyncReport {
 
 /// 걷기 마치기 직후 걷기 기록 화면의 내용
 class WalkRecord {
-  const WalkRecord(this.summary, this.sessions, this.countedToday, {this.laps = const []});
+  const WalkRecord(
+    this.summary,
+    this.sessions,
+    this.countedToday, {
+    this.laps = const [],
+    this.bonusM = 0,
+  });
 
   final WalkSummary summary;
+
+  /// 이번 걷기의 앱 걷기 보너스 거리(m). 앱 걷기 창 밖이거나 걷기 1번에 못 미쳤으면 0
+  final double bonusM;
+
+  /// 이번 걷기의 실제 거리(m) = [summary]의 거리
+  double get actualM => summary.distanceM;
+
+  /// 이번 걷기의 이동 거리(m) = 실제 + 보너스 (상점은 아직 0). 여정은 이만큼 나아간다
+  double get travelM => actualM + bonusM;
 
   /// 랩(rules.lapKm마다)과 마지막에 남은 부분 랩. 걸음이 없으면 빈 목록
   final List<Lap> laps;
@@ -284,6 +300,7 @@ class Snapshot {
     required this.paintingsCount,
     required this.totalKm,
     required this.guestbookTicket,
+    this.walkTravelKm = 0,
   });
 
   final String today;
@@ -320,8 +337,12 @@ class Snapshot {
   /// 얻은 그림 수
   final int paintingsCount;
 
-  /// 설치 이후 실제로 걸은 거리(km). 하루 거리의 합이라 배 환산이 아니다 (소품 거리 기준)
+  /// 설치 이후 실제로 걸은 거리(km). 하루 실제 거리의 합이라 배 환산도 보너스도 아니다
   final double totalKm;
+
+  /// 설치 이후 앱 걷기 창 안에서 걸은 이동 거리(km, 보너스 포함·상점 뺌). 거리 소품 10개의 기준이다
+  /// (나의 정보의 누적 거리가 쓸 값)
+  final double walkTravelKm;
 
   /// 쉼터 표지판용 열린 방명록 기회 하나. 도착 기회가 먼저, 그다음 남은 걸음이 적은 걸음 숫자 기회.
   /// 없으면 null (표지판이 서지 않는다).
@@ -431,7 +452,7 @@ class SyncService {
     final candidates = <NoticeCandidate>[];
     await db.transaction(() async {
       final activeBefore = await _activeJourney();
-      final progressBefore = await _progressOf(activeBefore);
+      final progressBefore = await _progressOf(activeBefore, to);
       final before = progressBefore?.progressKm ?? (await _fund()).km;
       await (db.delete(db.stepMinutes)
             ..where((t) => t.minuteUtc.isBetweenValues(fromMin, toMin)))
@@ -440,7 +461,7 @@ class SyncService {
             for (final m in minutes)
               StepMinutesCompanion.insert(minuteUtc: Value(m.minute), steps: m.steps),
           ]));
-      await _recomputeDays(kstDayKey(from), kstDayKey(to), state.restoreFloorDay);
+      await _recomputeDays(kstDayKey(from), kstDayKey(to), state.restoreFloorDay, to);
       await _advanceJourney(to);
       await _unlockProps(to);
       final newMilestones = await _updateGuestbookTickets(to);
@@ -451,7 +472,7 @@ class SyncService {
           ? null
           : await (db.select(db.journeys)..where((t) => t.id.equals(activeBefore.id)))
               .getSingle();
-      final progressAfter = await _progressOf(journeyAfter);
+      final progressAfter = await _progressOf(journeyAfter, to);
       advancedKm = math.max(0.0, (progressAfter?.progressKm ?? (await _fund()).km) - before);
 
       // 알림 후보: 이번에 새로 생긴 일만 (N3 이야기 새 장은 M4에서)
@@ -601,7 +622,7 @@ class SyncService {
   /// 멈춘 분까지는 이 여정의 걸음(진행 거리에 이미 들어 있다)이라, 경비는 다음 분부터 센다
   Future<LatLng> _stop(JourneyRow active, DateTime now) async {
     final j = _toJourney(active);
-    final p = progress(j, await _walkedKmOnJourney(active), rules);
+    final p = progress(j, (await _journeyWalked(active, now)).travelKm, rules);
     final at = positionAt(j.route, p.progressKm).latLng;
     await (db.update(db.journeys)..where((t) => t.id.equals(active.id))).write(JourneysCompanion(
       status: const Value(JourneyStatus.stopped),
@@ -614,8 +635,9 @@ class SyncService {
     return at;
   }
 
-  /// 소장한 그림을 더하고 도착 화면에 쓸 값을 여정에 적는다 (도착 화면은 아직 안 보여 줌)
-  Future<void> _arrive(JourneyRow active, DateTime to) async {
+  /// 소장한 그림을 더하고 도착 화면에 쓸 값을 여정에 적는다 (도착 화면은 아직 안 보여 줌).
+  /// 액자 등급은 [frameKm](실제로 걸은 거리 기준)으로 가린다. 앱 걷기 보너스로 부풀린 이동 거리는 쓰지 않는다
+  Future<void> _arrive(JourneyRow active, DateTime to, {required double frameKm}) async {
     final dest = _destOf(active);
     final at = to.toUtc().millisecondsSinceEpoch;
     if (dest.id == sketchId) return _arriveSketch(active, dest, at);
@@ -624,6 +646,7 @@ class SyncService {
       owned == null ? null : OwnedPainting(owned.visits, owned.frame, owned.bestKm),
       _toJourney(active).route.totalEffectiveKm,
       rules,
+      frameKm: frameKm,
     );
     final p = out.painting;
     // 새 그림 표시는 처음 얻을 때만 켠다. 재방문은 seen을 안 넣어서 충돌 갱신이 건드리지 않는다
@@ -673,13 +696,13 @@ class SyncService {
   }
 
   /// 새로 얻은 소품을 더한다 (한 번 얻은 소품은 없어지지 않는다).
-  /// 누적 거리·걸음은 하루 요약의 합, 권역은 그림을 얻은 명소로 센다
+  /// 거리 소품은 앱 걷기 이동 거리(walkTravelM)의 합, 걸음은 하루 요약의 합, 권역은 그림을 얻은 명소로 센다
   Future<void> _unlockProps(DateTime now) async {
     final days = await db.select(db.daySummaries).get();
     final visited = await _visitedLandmarkIds();
     final earned = earnedPropIds(
       props,
-      days.fold(0.0, (sum, d) => sum + d.distanceM) / 1000,
+      days.fold(0.0, (sum, d) => sum + d.walkTravelM) / 1000,
       days.fold(0, (sum, d) => sum + d.steps),
       completedRegions(visited, landmarks.values.toList()),
     );
@@ -1075,7 +1098,8 @@ class SyncService {
   /// 늦게 들어와서 걷기를 마친 직후엔 걷는 중 화면보다 모자랄 수 있으므로, 센서 쪽 걸음이 더 많으면
   /// 걸음·거리·걸은 분·뛴 비율·랩을 통째로 센서 값으로 낸다 (숨어 있던 동안의 센서 걸음은 돌아올 때
   /// 한꺼번에 들어오지만, 그 사이 앱이 종료되면 놓쳐서 거꾸로 health가 더 많을 수도 있다).
-  /// 걷기 1번 인정(sessions)과 오늘 인정 수는 저장된 값 그대로다
+  /// 걷기 1번 인정(sessions)과 오늘 인정 수는 저장된 값 그대로다.
+  /// 앱 걷기 보너스(WalkRecord.bonusM)는 저장하지 않고 이 창의 분으로 그때 계산한다
   Future<WalkRecord> walkRecord(
     DateTime fromUtc,
     DateTime toUtc, {
@@ -1085,12 +1109,11 @@ class SyncService {
     // 끝 시각이 걸친 분도 포함 (올림)
     final toMin = (toUtc.millisecondsSinceEpoch + Duration.millisecondsPerMinute - 1) ~/
         Duration.millisecondsPerMinute;
-    final minutes = await _minutesFrom(
-      epochMinute(kstDayStartUtc(addDays(kstDayKey(fromUtc), -1))),
-      beforeMinute: toMin,
-    );
+    final contextMin = epochMinute(kstDayStartUtc(addDays(kstDayKey(fromUtc), -1)));
+    final minutes = await _minutesFrom(contextMin, beforeMinute: toMin);
+    final health = classifyGait(minutes, rules);
     final numbers = pickWalkNumbers(
-      health: classifyGait(minutes, rules),
+      health: health,
       live: live,
       fromMinute: fromMin,
       toMinute: toMin,
@@ -1107,12 +1130,108 @@ class SyncService {
           ..where((t) => t.day.equals(kstDayKey(toUtc))))
         .getSingleOrNull();
 
+    // 앱 걷기 보너스: 숫자를 고른 쪽 분 목록으로, 걷기 1번 인정도 그 목록으로 가린다
+    // (센서 쪽이면 아직 건강 앱에 안 들어온 걸음으로 채운 걷기도 인정될 수 있다)
+    var bonusM = 0.0;
+    final windows = await _windows(fromMs: contextMin * Duration.millisecondsPerMinute);
+    if (windows.isNotEmpty) {
+      final source = numbers.usedLive ? live : health;
+      bonusM = sumTravel(splitTravel(
+        minutes: [for (final m in source) if (m.minute >= fromMin && m.minute < toMin) m],
+        sessions: detectSessions(numbers.usedLive ? toStepMinutes(live) : minutes, rules),
+        windows: windows,
+        now: toUtc,
+        rules: rules,
+      )).bonusM;
+    }
+
     return WalkRecord(
       numbers.summary,
       [for (final r in rows) _sessionOf(r)],
       today?.countedSessions ?? 0,
       laps: numbers.laps,
+      bonusM: bonusM,
     );
+  }
+
+  /// 앱 걷기 창을 연다 (걷는 중 화면을 열었다 = 출발하기). 만든 창의 번호를 돌려준다.
+  /// 열린 창이 남아 있으면(앞 화면이 닫히지 못했다) 먼저 닫는다 (두 창이 겹쳐 열려 있으면 안 된다).
+  /// 창이 달라졌으니 그날의 하루 요약·걷기 구간을 다시 계산한다
+  Future<int> startAppWalk(DateTime now) => db.transaction(() async {
+        final state = await _ensureState(now);
+        final open = await (db.select(db.appWalks)..where((t) => t.endUtc.isNull())).get();
+        await _closeAppWalks(open, state.lastAliveUtc, now);
+        final at = now.toUtc().millisecondsSinceEpoch;
+        final id = await db.into(db.appWalks).insert(AppWalksCompanion.insert(startUtc: at));
+        await _recomputeWalkDays(at, at, now);
+        return id;
+      });
+
+  /// 앱 걷기 창 [id]를 닫는다 (걷기 마치기). 이미 닫혔거나 없는 창이면 아무것도 안 한다.
+  /// 닫은 시각이 시작보다 앞서면 시작 시각으로 닫는다. 창이 달라졌으니 영향받은 날을 다시 계산한다
+  Future<void> finishAppWalk(int id, DateTime now) => db.transaction(() async {
+        final row =
+            await (db.select(db.appWalks)..where((t) => t.id.equals(id))).getSingleOrNull();
+        if (row == null || row.endUtc != null) return;
+        final end = math.max(row.startUtc, now.toUtc().millisecondsSinceEpoch);
+        await (db.update(db.appWalks)..where((t) => t.id.equals(id))).write(AppWalksCompanion(
+          endUtc: Value(end),
+          endReason: const Value(AppWalkEnd.finish),
+        ));
+        await _recomputeWalkDays(row.startUtc, end, now);
+      });
+
+  /// 앱이 살아 있다고 적는다 (config sync.aliveSaveSec마다와 백그라운드로 갈 때 부른다).
+  /// 앱이 갑자기 끝나면 이 시각이 열려 있던 앱 걷기의 끝이 된다 ([closeOrphanAppWalks])
+  Future<void> saveAlive(DateTime now) async {
+    await _ensureState(now);
+    await (db.update(db.syncState)..where((t) => t.id.equals(1)))
+        .write(SyncStateCompanion(lastAliveUtc: Value(now.toUtc().millisecondsSinceEpoch)));
+  }
+
+  /// 앱을 새로 켰을 때 끝나지 않은 앱 걷기를 닫는다: 마지막으로 살아 있던 시각(lastAliveUtc)에서,
+  /// 그게 없거나 시작보다 앞서면 시작 시각에서 (길이 0), 끝난 까닭은 appEnded.
+  /// 닫은 날을 다시 계산한다. 닫은 창의 수를 돌려준다. 열린 창이 없으면 아무것도 건드리지 않는다.
+  /// 앱을 켠 직후에 한 번만 부른다 (살아 있는 동안 열려 있는 창은 닫으면 안 된다)
+  Future<int> closeOrphanAppWalks(DateTime now) => db.transaction(() async {
+        final open = await (db.select(db.appWalks)..where((t) => t.endUtc.isNull())).get();
+        if (open.isEmpty) return 0;
+        final state = await _ensureState(now);
+        return _closeAppWalks(open, state.lastAliveUtc, now);
+      });
+
+  /// 열려 있는 창 [open]을 [lastAliveUtc]에서 닫고(appEnded, [now]보다 늦게는 안 닫는다) 닫은 날을 다시 계산한다
+  Future<int> _closeAppWalks(List<AppWalkRow> open, int? lastAliveUtc, DateTime now) async {
+    if (open.isEmpty) return 0;
+    final nowMs = now.toUtc().millisecondsSinceEpoch;
+    var first = open.first.startUtc;
+    var last = first;
+    for (final r in open) {
+      final end = math.max(
+        r.startUtc,
+        math.min(
+          orphanEnd(_utc(r.startUtc), lastAliveUtc == null ? null : _utc(lastAliveUtc))
+              .millisecondsSinceEpoch,
+          nowMs,
+        ),
+      );
+      await (db.update(db.appWalks)..where((t) => t.id.equals(r.id))).write(AppWalksCompanion(
+        endUtc: Value(end),
+        endReason: const Value(AppWalkEnd.appEnded),
+      ));
+      first = math.min(first, r.startUtc);
+      last = math.max(last, end);
+    }
+    await _recomputeWalkDays(first, last, now);
+    return open.length;
+  }
+
+  /// 앱 걷기 창이 달라진 구간 [fromMs, toMs]가 걸친 날(한국 날짜)의 하루 요약·걷기 구간을 다시 계산한다.
+  /// 여정 진행·도착은 저장된 분과 창으로 그때그때 계산하니 다음 동기화(또는 상태 읽기)에 따라온다
+  Future<void> _recomputeWalkDays(int fromMs, int toMs, DateTime now) async {
+    final state = await _ensureState(now);
+    await _recomputeDays(
+        kstDayKey(_utc(fromMs)), kstDayKey(_utc(toMs)), state.restoreFloorDay, now);
   }
 
   Future<Snapshot> snapshot(DateTime now) async {
@@ -1124,7 +1243,7 @@ class SyncService {
 
     final days = await db.select(db.daySummaries).get();
     final active = await _activeJourney();
-    final here = await _whereNow(active);
+    final here = await _whereNow(active, now);
     JourneyView? view;
     if (active != null) {
       final p = here.progress!;
@@ -1152,6 +1271,7 @@ class SyncService {
       paintingsCount: (await db.select(db.paintingsOwned).get()).length,
       totalKm: days.fold(0.0, (sum, d) => sum + d.distanceM) / 1000,
       guestbookTicket: (await openTickets(now)).firstOrNull,
+      walkTravelKm: days.fold(0.0, (sum, d) => sum + d.walkTravelM) / 1000,
     );
   }
 
@@ -1162,7 +1282,7 @@ class SyncService {
   Future<MapData> mapData(DateTime now) async {
     await _ensureState(now);
     final active = await _activeJourney();
-    final here = await _whereNow(active);
+    final here = await _whereNow(active, now);
     final rows = await (db.select(db.journeys)
           ..orderBy([
             (t) => OrderingTerm(expression: t.startUtc),
@@ -1211,7 +1331,7 @@ class SyncService {
   /// 출발지는 진행 중인 여정의 지금 지점, 없으면 쉬는 자리. 둘 다 없으면 StateError(startJourney와 같다)
   Future<JourneyPreview> preview(String destId, DateTime now) async {
     final state = await _ensureState(now);
-    final from = (await _whereNow(await _activeJourney())).position;
+    final from = (await _whereNow(await _activeJourney(), now)).position;
     if (from == null) throw StateError(_needHome);
     final totalKm = buildRoute(from, landmarks[destId]!.latLng, rules).totalEffectiveKm;
     final today = kstDayKey(now);
@@ -1261,24 +1381,25 @@ class SyncService {
 
   /// 지금 있는 곳. 진행 중인 여정이 있으면 그 여정·진행·경로 위 지점·배 구간 여부,
   /// 없으면 쉬는 자리 (여정과 진행은 null)
-  Future<_Here> _whereNow(JourneyRow? active) async {
+  Future<_Here> _whereNow(JourneyRow? active, DateTime now) async {
     if (active == null) {
       return (journey: null, progress: null, position: await _restingPosition(), onSea: false);
     }
     final j = _toJourney(active);
-    final p = progress(j, await _walkedKmOnJourney(active), rules);
+    final p = progress(j, (await _journeyWalked(active, now)).travelKm, rules);
     final at = positionAt(j.route, p.progressKm);
     return (journey: j, progress: p, position: at.latLng, onSea: at.onSea);
   }
 
-  /// 남은 거리 [remainingKm]를 가는 도착 예정일 (하루 평균은 하루 요약에서)
+  /// 남은 거리 [remainingKm]를 가는 도착 예정일 (하루 평균은 하루 요약의 이동 거리 travelM에서:
+  /// 앱 걷기 보너스가 붙은 날은 그만큼 빨리 도착한다)
   DateTime _etaOf(
     double remainingKm,
     List<DaySummaryRow> days,
     String today,
     SyncStateRow state,
   ) =>
-      etaDate(remainingKm, {for (final d in days) d.day: d.distanceM / 1000}, today,
+      etaDate(remainingKm, {for (final d in days) d.day: d.travelM / 1000}, today,
           state.firstRecordDay, rules);
 
   /// 여정이 없을 때 장면의 위치: 가장 나중에 끝난 여정(도착·멈춤)의 끝 지점, 없으면 출발 동네,
@@ -1316,28 +1437,51 @@ class SyncService {
 
   /// 영향받은 날의 하루 요약·걷기 1번을 다시 계산한다.
   /// 전날 0시부터 불러서 자정을 넘는 구간과 직전 걷기/뛰기 상태를 이어 본다.
+  /// 하루 요약에는 실제 거리(distanceM)와 함께 앱 걷기 보너스·이동 거리·앱 걷기 이동 거리·럭이 들어가고,
+  /// 걷기 구간에는 그 구간의 보너스 거리가 들어간다. 앱 걷기 창은 [now]까지 열려 있는 것으로 센다.
+  /// 럭은 장부(CoinLedger)에 하루 한 행으로 다시 쓴다 (0이면 행이 없다. 광고·씀 행은 건드리지 않는다).
   /// 백업을 복원한 기기라면 [restoreFloorDay]까지의 날은 건강 앱에서 다시 계산한 값이 복원값보다
   /// 작을 때 복원값(하루 요약과 걷기 구간)을 지킨다 ([guardRestoredDay])
-  Future<void> _recomputeDays(String firstDay, String lastDay, String? restoreFloorDay) async {
+  Future<void> _recomputeDays(
+    String firstDay,
+    String lastDay,
+    String? restoreFloorDay,
+    DateTime now,
+  ) async {
     final days = <String>[];
     for (var d = firstDay; d.compareTo(lastDay) <= 0; d = addDays(d, 1)) {
       days.add(d);
     }
-    final minutes =
-        await _minutesFrom(epochMinute(kstDayStartUtc(addDays(firstDay, -1))));
+    final contextFrom = epochMinute(kstDayStartUtc(addDays(firstDay, -1)));
+    final minutes = await _minutesFrom(contextFrom);
     final gaits = classifyGait(minutes, rules);
-    final sessions = detectSessions(minutes, rules)
-        .where((s) => days.contains(kstDayKey(s.start)))
-        .toList();
+    final allSessions = detectSessions(minutes, rules);
+    final sessions = allSessions.where((s) => days.contains(kstDayKey(s.start))).toList();
+    final windows = await _windows(fromMs: contextFrom * Duration.millisecondsPerMinute);
+    // 걷기 1번 인정은 불러온 분 전체의 구간으로 가리고, 보너스는 분마다 창과 겹친 분에만 붙는다
+    final travel = splitTravel(
+      minutes: gaits,
+      sessions: allSessions,
+      windows: windows,
+      now: now,
+      rules: rules,
+    );
+    final byDay = dailyTravel(travel);
+    final sessionBonus = sessionBonusM(sessions, travel);
 
     final steps = {for (final d in days) d: 0};
-    final dist = {for (final d in days) d: 0.0};
     for (final g in gaits) {
       final d = kstDayKey(StepMinute(g.minute, 0).startUtc);
-      if (!steps.containsKey(d)) continue;
-      steps[d] = steps[d]! + g.steps;
-      dist[d] = dist[d]! + distanceM([g], rules);
+      if (steps.containsKey(d)) steps[d] = steps[d]! + g.steps;
     }
+    final dist = {for (final d in days) d: byDay[d]?.actualM ?? 0.0};
+    final bonus = {for (final d in days) d: byDay[d]?.bonusM ?? 0.0};
+    final shop = {for (final d in days) d: byDay[d]?.shopM ?? 0.0};
+    final travelM = {for (final d in days) d: byDay[d]?.travelM ?? 0.0};
+    final walkTravel = {for (final d in days) d: byDay[d]?.walkTravelM ?? 0.0};
+    final coins = {
+      for (final d in days) d: byDay[d] == null ? 0 : dailyCoins(byDay[d]!, rules),
+    };
     final counted = {
       for (final d in days)
         d: sessions.where((s) => s.counted && kstDayKey(s.start) == d).length,
@@ -1350,12 +1494,27 @@ class SyncService {
       for (final r in stored) {
         if (!isRestoredDay(r.day, restoreFloorDay)) continue;
         final out = guardRestoredDay(
-          DayTotals(r.steps, r.distanceM, r.countedSessions),
-          DayTotals(steps[r.day]!, dist[r.day]!, counted[r.day]!),
+          DayTotals(r.steps, r.distanceM, r.countedSessions,
+              bonusM: r.bonusM,
+              shopM: r.shopM,
+              travelM: r.travelM,
+              walkTravelM: r.walkTravelM,
+              coins: r.coins),
+          DayTotals(steps[r.day]!, dist[r.day]!, counted[r.day]!,
+              bonusM: bonus[r.day]!,
+              shopM: shop[r.day]!,
+              travelM: travelM[r.day]!,
+              walkTravelM: walkTravel[r.day]!,
+              coins: coins[r.day]!),
         );
         steps[r.day] = out.totals.steps;
         dist[r.day] = out.totals.distanceM;
         counted[r.day] = out.totals.countedSessions;
+        bonus[r.day] = out.totals.bonusM;
+        shop[r.day] = out.totals.shopM;
+        travelM[r.day] = out.totals.travelM;
+        walkTravel[r.day] = out.totals.walkTravelM;
+        coins[r.day] = out.totals.coins;
         if (!out.useRecomputedSessions) keepSessions.add(r.day);
       }
     }
@@ -1369,6 +1528,10 @@ class SyncService {
                 t.startUtc.isBiggerOrEqualValue(from) & t.startUtc.isSmallerThanValue(to)))
           .go();
     }
+    // 럭 장부의 그날 번 행은 하루 요약의 럭(복원값을 지킨 뒤의 값)과 늘 같게 다시 쓴다
+    await (db.delete(db.coinLedger)
+          ..where((t) => t.day.isIn(days) & t.kind.equalsValue(CoinKind.earn)))
+        .go();
     await db.batch((b) {
       for (final d in days) {
         b.insert(
@@ -1378,12 +1541,22 @@ class SyncService {
             steps: steps[d]!,
             distanceM: dist[d]!,
             countedSessions: counted[d]!,
+            bonusM: Value(bonus[d]!),
+            shopM: Value(shop[d]!),
+            travelM: Value(travelM[d]!),
+            walkTravelM: Value(walkTravel[d]!),
+            coins: Value(coins[d]!),
           ),
           mode: InsertMode.insertOrReplace,
         );
       }
+      b.insertAll(db.coinLedger, [
+        for (final d in days)
+          if (coins[d]! > 0)
+            CoinLedgerCompanion.insert(day: d, kind: CoinKind.earn, amount: coins[d]!),
+      ]);
       b.insertAll(db.walkSessions, [
-        for (final s in sessions)
+        for (final (i, s) in sessions.indexed)
           if (!keepSessions.contains(kstDayKey(s.start)))
             WalkSessionsCompanion.insert(
               startUtc: Value(s.start.millisecondsSinceEpoch),
@@ -1393,12 +1566,14 @@ class SyncService {
               runRatio: s.runRatio,
               qualified: s.qualified,
               counted: s.counted,
+              bonusM: Value(sessionBonus[i]),
             ),
       ]);
     });
   }
 
-  /// 여정이 있으면 진행·도착을 계산하고 넘친 거리를 경비로, 없으면 그동안 걸은 거리를 경비로 (상한 있음)
+  /// 여정이 있으면 진행·도착을 계산하고 넘친 거리를 경비로, 없으면 그동안 걸은 이동 거리를 경비로 (상한 있음).
+  /// 진행·넘친 거리·경비는 앱 걷기 보너스가 붙은 이동 거리이고, 도착할 때의 액자 등급만 실제 거리로 가린다
   Future<void> _advanceJourney(DateTime to) async {
     final fund = await _fund();
     final toMin = epochMinute(to);
@@ -1407,18 +1582,22 @@ class SyncService {
 
     final active = await _activeJourney();
     if (active != null) {
-      final p = progress(_toJourney(active), await _walkedKmOnJourney(active), rules);
+      final j = _toJourney(active);
+      final walked = await _journeyWalked(active, to);
+      final p = progress(j, walked.travelKm, rules);
       if (p.arrived) {
-        await _arrive(active, to);
+        await _arrive(active, to,
+            frameKm: frameBasisKm(j.fundKm, walked.actualKm, j.route.totalEffectiveKm));
         // 넘친 거리는 배수를 곱하기 전 걸은 거리로 되돌려 경비에 넣는다
         km = addToFund(km, p.overflowKm / distanceScale, rules);
         // 도착한 분까지는 여정의 걸음(넘친 거리에 들어 있다)이라 경비는 다음 분부터
         fundedUntil = _nextMinuteMs(to);
       }
     } else {
-      // 다 끝난 분만 센다. 지금 분은 다음 동기화 때 들어간다
+      // 다 끝난 분만 센다. 지금 분은 다음 동기화 때 들어간다.
+      // 이미 센 분은 그때 알던 걷기 1번 인정으로 센 값이라 뒤늦게 인정돼도 소급하지 않는다
       km = addToFund(
-          km, await _distanceKmFrom(_minuteOf(fund.fundedUntilUtc), beforeMinute: toMin), rules);
+          km, await _travelKmFrom(_minuteOf(fund.fundedUntilUtc), to, beforeMinute: toMin), rules);
     }
     // 멈춤으로 앞서 둔 다음 분 경계는 되돌리지 않는다 (같은 분 안에서 또 동기화해도 두 번 세지 않게)
     await (db.update(db.travelFund)..where((t) => t.id.equals(1))).write(TravelFundCompanion(
@@ -1433,23 +1612,60 @@ class SyncService {
     return [for (final r in await q.get()) StepMinute(r.minuteUtc, r.steps)];
   }
 
-  Future<double> _distanceKmFrom(int fromMinute, {int? beforeMinute}) async {
-    final minutes = await _minutesFrom(fromMinute, beforeMinute: beforeMinute);
-    return distanceM(classifyGait(minutes, rules), rules) / 1000;
+  /// 걷기 구간 앞뒤로 이어서 걷기 1번 인정을 가리려고 [fromMinute]보다 앞에서 불러오는 분의 시작
+  /// (앱 걷기 창이 없으면 걷기 구간을 안 보니 앞을 불러오지 않는다)
+  int _contextStart(int fromMinute, List<AppWalkWindow> windows) =>
+      windows.isEmpty ? fromMinute : math.min(fromMinute, contextStartMinute(fromMinute));
+
+  /// [fromMinute]부터 [beforeMinute) 전까지의 분별 실제·보너스 나눔. 열린 앱 걷기 창은 [now]까지로 센다
+  Future<List<MinuteTravel>> _travelFrom(int fromMinute, DateTime now, {int? beforeMinute}) async {
+    final windows = await _windows(fromMs: fromMinute * Duration.millisecondsPerMinute);
+    final context =
+        await _minutesFrom(_contextStart(fromMinute, windows), beforeMinute: beforeMinute);
+    return travelFrom(
+      context: context,
+      fromMinute: fromMinute,
+      windows: windows,
+      now: now,
+      rules: rules,
+    );
   }
 
-  /// 여정을 시작한 뒤 걸은 거리(km) × 디버그 거리 배수: 여정 진행 거리를 계산하는 유일한 자리.
-  /// 경비(여정 없이 걸은 거리)와 하루 요약은 이 값이 아니라 [_distanceKmFrom] 그대로 쓴다
-  Future<double> _walkedKmOnJourney(JourneyRow journey) async =>
-      await _distanceKmFrom(_minuteOf(journey.startUtc)) * distanceScale;
+  /// [fromMinute]부터 [beforeMinute) 전까지의 이동 거리(km)
+  Future<double> _travelKmFrom(int fromMinute, DateTime now, {int? beforeMinute}) async =>
+      sumTravel(await _travelFrom(fromMinute, now, beforeMinute: beforeMinute)).travelM / 1000;
+
+  /// 여정을 시작한 뒤 걸은 이동 거리(km)와 실제 거리(km), 둘 다 × 디버그 거리 배수:
+  /// 여정 진행 거리(이동 거리)와 액자 기준(실제 거리)을 계산하는 유일한 자리.
+  /// 경비(여정 없이 걸은 거리)와 하루 요약은 이 값이 아니라 [_travelKmFrom]·분별 나눔 그대로 쓴다
+  Future<({double travelKm, double actualKm})> _journeyWalked(
+    JourneyRow journey,
+    DateTime now,
+  ) async {
+    final t = sumTravel(await _travelFrom(_minuteOf(journey.startUtc), now));
+    return (
+      travelKm: t.travelM / 1000 * distanceScale,
+      actualKm: t.actualM / 1000 * distanceScale,
+    );
+  }
 
   /// 여정의 지금 진행 (도착 뒤에도 넘친 만큼 포함). 여정이 없으면 null.
   /// 동기화 전후로 비교하는 값은 여정이 있으면 이 진행 거리, 없으면 여행 경비다.
   /// 여정이 있는 동안 경비는 도착할 때 넘친 거리만 늘고 그건 진행 거리에 이미 들어 있으니,
   /// 둘을 더하면 두 번 세게 된다
-  Future<JourneyProgress?> _progressOf(JourneyRow? journey) async => journey == null
+  Future<JourneyProgress?> _progressOf(JourneyRow? journey, DateTime now) async => journey == null
       ? null
-      : progress(_toJourney(journey), await _walkedKmOnJourney(journey), rules);
+      : progress(_toJourney(journey), (await _journeyWalked(journey, now)).travelKm, rules);
+
+  /// 앱 걷기 창. [fromMs]가 있으면 그 시각 뒤까지 이어진 것(열린 것 포함)만
+  Future<List<AppWalkWindow>> _windows({int? fromMs}) async {
+    final q = db.select(db.appWalks);
+    if (fromMs != null) q.where((t) => t.endUtc.isNull() | t.endUtc.isBiggerThanValue(fromMs));
+    return [
+      for (final r in await q.get())
+        AppWalkWindow(_utc(r.startUtc), r.endUtc == null ? null : _utc(r.endUtc!)),
+    ];
+  }
 
   Future<TravelFundRow> _fund() =>
       (db.select(db.travelFund)..where((t) => t.id.equals(1))).getSingle();
@@ -1500,6 +1716,7 @@ class SyncService {
         runRatio: r.runRatio,
         qualified: r.qualified,
         counted: r.counted,
+        bonusM: r.bonusM,
       );
 
   SyncReport _report(

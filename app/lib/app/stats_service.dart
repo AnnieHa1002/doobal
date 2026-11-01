@@ -50,5 +50,6 @@ class StatsService {
         runRatio: r.runRatio,
         qualified: r.qualified,
         counted: r.counted,
+        bonusM: r.bonusM,
       );
 }

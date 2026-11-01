@@ -135,5 +135,19 @@ void main() {
       expect(o.painting.bestKm, 30);
       expect(o.prevFrame, Frame.silver);
     });
+
+    test('frameKm(실제로 걸은 거리)를 주면 액자는 그것으로, 가장 먼 거리는 여정 환산 거리로', () {
+      // 60km 여정을 보너스로 도착: 실제 46.15km → 은, 가장 먼 거리는 60km
+      final first = paintingAfterArrival(null, 60, rules, frameKm: 60 / 1.3);
+      expect(first.painting.frame, Frame.silver);
+      expect(first.painting.bestKm, 60);
+      // 안 주면 환산 거리 전체로 (보너스 없이 걸어 도착했을 때)
+      expect(paintingAfterArrival(null, 60, rules).painting.frame, Frame.gold);
+      // 재방문은 낮은 액자로 내려가지 않는다
+      final again = paintingAfterArrival(const OwnedPainting(1, Frame.gold, 55), 60, rules,
+          frameKm: 10);
+      expect(again.painting.frame, Frame.gold);
+      expect(again.painting.bestKm, 60);
+    });
   });
 }

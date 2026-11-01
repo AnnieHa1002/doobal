@@ -25,7 +25,11 @@ import 'walking_hud.dart';
 /// health 기록은 늦게 들어오므로, 기기 걸음 센서(LiveWalker)가 있으면 걸음·거리는 둘 중 큰 쪽,
 /// 분당 걸음과 걷기/뛰기는 센서 기준으로 보여 준다. 진행 바·남은 km·도착은 동기화 값 그대로.
 /// 화면이 꺼져 있던 동안 센 걸음은 앱이 돌아올 때 한꺼번에 들어오고, 그때 거리는 바로 맞춘다.
-/// 안드로이드는 걷는 동안 상시 알림(포그라운드 서비스)으로 앱을 살려 두고, 알림에 걸음을 보여 준다
+/// 안드로이드는 걷는 동안 상시 알림(포그라운드 서비스)으로 앱을 살려 두고, 알림에 걸음을 보여 준다.
+/// 열면 앱 걷기 창(본격 걷기 보너스)을 열고, 걷기 마치기를 누르면 finish로 닫는다.
+/// 마치기를 안 누르고 이 화면이 사라져도(되돌아가기 제스처 등) 그 시각에 finish로 닫는다.
+/// 앱이 통째로 끝나서 화면이 정리되지 못한 경우는 다음 실행 때 AutoSync가 마지막으로 살아 있던
+/// 시각에서 닫는다 (appEnded)
 class WalkingScreen extends ConsumerStatefulWidget {
   const WalkingScreen({super.key});
 
@@ -69,12 +73,21 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   var _refreshing = false;
   var _wasOnSea = false;
 
+  /// 이 화면이 연 앱 걷기 창의 번호 (열기가 실패했으면 null). 닫기는 한 번만.
+  /// 화면이 정리되는 중(dispose)에는 ref를 못 쓰므로 시계와 서비스는 처음에 필드에 담아 둔다
+  late final DateTime Function() _clock;
+  late final Future<SyncService> _service;
+  late final Future<int?> _appWalk;
+  var _appWalkClosed = false;
+
   @override
   void initState() {
     super.initState();
-    final clock = ref.read(clockProvider);
+    final clock = _clock = ref.read(clockProvider);
+    _service = ref.read(syncServiceProvider.future);
     _notice = ref.read(walkNoticeProvider);
     _start = _now = clock();
+    _appWalk = _openAppWalk(_start);
     _ratioBefore = ref.read(snapshotProvider).value?.journey?.progress.ratio;
     _ticker = createTicker(_onTick)..start();
     ref.listenManual(snapshotProvider, (_, next) {
@@ -86,12 +99,38 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   @override
   void dispose() {
+    // 마치기 없이 나가는 경우: 창이 열린 채 남지 않게 지금 시각에 닫는다 (마치기로 나갔으면 이미 닫혔다)
+    unawaited(_closeAppWalk(_clock()));
     _noticeOn = false;
     _notice.stop();
     _live?.dispose();
     _timer?.cancel();
     _ticker.dispose();
     super.dispose();
+  }
+
+  /// 앱 걷기 창을 연다. 실패하면 null (이번 걷기는 보너스 없이 센다)
+  Future<int?> _openAppWalk(DateTime start) async {
+    try {
+      return await (await _service).startAppWalk(start);
+    } catch (e) {
+      debugPrint('앱 걷기 열기 실패: $e');
+      return null;
+    }
+  }
+
+  /// 앱 걷기 창을 [end]에 finish로 닫는다 (한 번만). 열기가 아직 안 끝났으면 끝난 뒤에 닫는다.
+  /// 화면이 정리되는 중에도 부른다 (ref를 쓰지 않는다)
+  Future<void> _closeAppWalk(DateTime end) async {
+    if (_appWalkClosed) return;
+    _appWalkClosed = true;
+    try {
+      final id = await _appWalk;
+      if (id == null) return;
+      await (await _service).finishAppWalk(id, end);
+    } catch (e) {
+      debugPrint('앱 걷기 닫기 실패: $e');
+    }
   }
 
   Future<void> _startRefreshing() async {
@@ -168,8 +207,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
         _record = record;
         _catchUpMps = math.max(0.0, record.summary.distanceM - _shownM) / refreshSec;
         if (j != null) {
-          _ratioBefore =
-              ratioBeforeWalk(j.progress.progressKm, record.summary.distanceM / 1000, j.totalKm);
+          // 진행 거리는 이동 거리(앱 걷기 보너스 포함)라 이번 걷기도 이동 거리로 뺀다
+          _ratioBefore = ratioBeforeWalk(j.progress.progressKm, record.travelM / 1000, j.totalKm);
         }
       });
     } catch (e) {
@@ -235,11 +274,14 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   void _finish() {
     _noticeOn = false;
     _notice.stop();
+    final end = ref.read(clockProvider)();
+    // 창은 걷기를 마친 시각에 닫는다. 걷기 기록 화면의 계산은 DB 쓰기 순서상 닫힌 뒤에 읽는다
+    unawaited(_closeAppWalk(end));
     // 이 화면을 걷기 기록으로 바꾼다. 마지막 동기화와 기록 계산은 걷기 기록 화면이 한다
     Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
       builder: (_) => WalkRecordScreen(
         start: _start,
-        end: ref.read(clockProvider)(),
+        end: end,
         ratioBefore: _ratioBefore,
         liveMinutes: _live?.walk.minutes ?? const [],
       ),

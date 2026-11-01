@@ -5,7 +5,7 @@ import 'package:drift/drift.dart';
 
 import '../data/db/app_db.dart';
 import '../domain/bucket.dart';
-import '../domain/gait.dart';
+import '../domain/focus_walk.dart';
 import '../domain/rules.dart';
 import '../domain/time_kst.dart';
 
@@ -53,6 +53,8 @@ class BackupService {
     db.guestbookTickets: {},
     db.guestbookPosts: {},
     db.notificationSettings: {},
+    db.appWalks: {},
+    db.coinLedger: {},
     db.profile: {
       db.profile.ageConfirmedAt.$name,
       db.profile.onboardedAt.$name,
@@ -62,8 +64,8 @@ class BackupService {
   };
 
   /// 백업에 넣지 않는 표 (기기 상태). 복원할 때 걸음 분과 동기화 상태는 다시 만들고,
-  /// 알림 기록은 지금 기기 것을 그대로 둔다. 동기화 상태의 restoreFloorDay(복원한 마지막 날)도
-  /// 이 기기에서 복원할 때 정하는 값이라 표째 넣지 않는다
+  /// 알림 기록은 지금 기기 것을 그대로 둔다. 동기화 상태의 restoreFloorDay(복원한 마지막 날)와
+  /// lastAliveUtc(앱이 살아 있던 마지막 시각)도 이 기기의 값이라 표째 넣지 않는다
   List<TableInfo<Table, dynamic>> get skippedTables =>
       [db.stepMinutes, db.syncState, db.notificationLog];
 
@@ -105,8 +107,11 @@ class BackupService {
   ///   첫 기록일보다는 앞서지 않게). 복원한 하루 요약의 마지막 날은 restoreFloorDay에 적는다:
   ///   새 기기의 건강 앱에 그 기록이 없어도 그 날까지의 하루 요약·걷기 구간이 0으로 덮이지 않는다
   ///   (SyncService가 다시 계산한 값이 복원값보다 작으면 복원값을 지킨다)
-  /// - 진행 중인 여정은 걸음 분이 없어서 진행 거리를 다시 셀 수 없다. 백업에 적힌 걸은 거리
-  ///   (journeyWalked.km)를 여정의 경비(fundKm)에 더하고 시작 시각을 syncedUtc의 분으로 옮긴다.
+  /// - 앱 걷기 창(AppWalks)과 럭 장부(CoinLedger)도 되살린다. 옛 백업에는 없어서 비어 있어도 된다.
+  ///   백업을 만들 때 열려 있던 앱 걷기는 백업을 만든 시각에서 닫는다 (appEnded).
+  ///   이동 거리 열이 없는 옛 백업의 하루 요약은 이동 거리를 실제 거리로 채운다
+  /// - 진행 중인 여정은 걸음 분이 없어서 진행 거리를 다시 셀 수 없다. 백업에 적힌 걸은 이동 거리
+  ///   (journeyWalked.km, 앱 걷기 보너스 포함)를 여정의 경비(fundKm)에 더하고 시작 시각을 syncedUtc의 분으로 옮긴다.
   ///   그러면 진행 거리 = 경비 + 시작 이후 걸은 거리라는 엔진 계산은 그대로이고, 복원 뒤 동기화가
   ///   가져오는 그 분 이후의 걸음만 새로 더해진다 (엔진은 바꾸지 않는다)
   Future<void> restoreBackup(String text) async {
@@ -127,6 +132,14 @@ class BackupService {
           guestbookConsentAt: Value(device.guestbookConsentAt),
         ));
       }
+      // 이동 거리 열이 없던 옛 백업: 그때는 앱 걷기가 없었으니 이동 거리 = 실제 거리
+      if (!(backup.tables['day_summaries']?.cols.contains('travel_m') ?? true)) {
+        await db.customStatement('UPDATE day_summaries SET travel_m = distance_m');
+      }
+      await db.customStatement(
+        'UPDATE app_walks SET end_utc = MAX(start_utc, ?), end_reason = ? WHERE end_utc IS NULL',
+        [backup.createdUtc, AppWalkEnd.appEnded.name],
+      );
       await _carryWalkedKm(backup);
       await db.delete(db.stepMinutes).go();
       await _resetSyncState(backup);
@@ -165,7 +178,8 @@ class BackupService {
     };
   }
 
-  /// 진행 중인 여정이 시작한 뒤 마지막 동기화 직전 분까지 저장된 걸음으로 잰 걸은 거리(km).
+  /// 진행 중인 여정이 시작한 뒤 마지막 동기화 직전 분까지 저장된 걸음으로 잰 걸은 이동 거리(km).
+  /// 여정 진행 거리와 같은 값이라 앱 걷기 보너스가 붙어 있다 (열린 앱 걷기 창은 마지막 동기화 시각까지로 센다).
   /// 마지막 동기화 분은 아직 덜 찬 분이라 빼고, 복원 뒤 동기화가 그 분부터 다시 가져와서 센다.
   /// 진행 중인 여정이 없거나 동기화한 적이 없으면 null (이때는 이을 값이 없다).
   /// 디버그 거리 배수는 곱하지 않은 값이다
@@ -175,14 +189,33 @@ class BackupService {
           ..where((t) => t.status.equalsValue(JourneyStatus.active)))
         .getSingleOrNull();
     if (active == null) return null;
+    final fromMinute = _minuteOf(active.startUtc);
+    final windows = [
+      for (final r in await (db.select(db.appWalks)
+            ..where((t) =>
+                t.endUtc.isNull() |
+                t.endUtc.isBiggerThanValue(fromMinute * Duration.millisecondsPerMinute)))
+          .get())
+        AppWalkWindow(
+          DateTime.fromMillisecondsSinceEpoch(r.startUtc, isUtc: true),
+          r.endUtc == null ? null : DateTime.fromMillisecondsSinceEpoch(r.endUtc!, isUtc: true),
+        ),
+    ];
     final rows = await (db.select(db.stepMinutes)
           ..where((t) =>
-              t.minuteUtc.isBiggerOrEqualValue(_minuteOf(active.startUtc)) &
+              t.minuteUtc.isBiggerOrEqualValue(
+                  windows.isEmpty ? fromMinute : contextStartMinute(fromMinute)) &
               t.minuteUtc.isSmallerThanValue(_minuteOf(syncedUtc)))
           ..orderBy([(t) => OrderingTerm(expression: t.minuteUtc)]))
         .get();
-    final minutes = [for (final r in rows) StepMinute(r.minuteUtc, r.steps)];
-    return {'id': active.id, 'km': distanceM(classifyGait(minutes, rules), rules) / 1000};
+    final travel = travelFrom(
+      context: [for (final r in rows) StepMinute(r.minuteUtc, r.steps)],
+      fromMinute: fromMinute,
+      windows: windows,
+      now: DateTime.fromMillisecondsSinceEpoch(syncedUtc, isUtc: true),
+      rules: rules,
+    );
+    return {'id': active.id, 'km': sumTravel(travel).travelM / 1000};
   }
 
   Future<SyncStateRow?> _syncStateRow() =>
