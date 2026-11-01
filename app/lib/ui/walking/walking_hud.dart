@@ -7,12 +7,14 @@ import '../../app/sync_service.dart';
 import '../../domain/gait.dart';
 import '../../domain/rules.dart';
 import '../../domain/walk_record.dart';
+import '../common/focus_badge.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 
 /// 걷는 중 위·아래 UI (UI 명세 3장 10/30판). 큰 패널 대신
 /// ① 얇은 진행 줄(글자 없음) ② 걸음 알약 ③ 알약을 누르면 펼쳐지는 숫자 카드(8초 뒤 접힘)
 /// ④ 아래 ‘걷기 마치기’ 알약. 배경(SceneView) 위에 Stack으로 얹는다.
+/// 본격 걷기 중이면([focusBadge]) 걸음 알약 오른쪽 끝에 이끼색 딱지(`×1.3`)가 붙는다.
 /// 아이콘은 ui_icon SVG를 넣기 전까지 Material 아이콘으로 대신한다
 class WalkingHud extends StatefulWidget {
   const WalkingHud({
@@ -25,6 +27,7 @@ class WalkingHud extends StatefulWidget {
     required this.running,
     required this.nextMilestone,
     required this.onFinish,
+    this.focusBadge,
   });
 
   final Rules rules;
@@ -40,6 +43,9 @@ class WalkingHud extends StatefulWidget {
   final int? nextMilestone;
   final VoidCallback onFinish;
 
+  /// 본격 걷기 중일 때 걸음 알약에 붙는 배수 글(`×1.3`). 아니면 null
+  final String? focusBadge;
+
   @override
   State<WalkingHud> createState() => _WalkingHudState();
 }
@@ -52,6 +58,9 @@ abstract final class HudMetrics {
   static const lineHeight = 3.0;
   static const pillGap = 13.0;
   static const pillMinWidth = 143.0;
+
+  /// 본격 걷기 딱지가 붙으면 알약 최소 폭이 이만큼 는다 (딱지 폭 + 간격)
+  static const pillBadgeExtra = 40.0;
   static const pillHeight = 32.0;
   static const finishWidth = 120.0;
   static const finishHeight = 44.0;
@@ -104,6 +113,7 @@ class _WalkingHudState extends State<WalkingHud> {
                 steps: widget.summary?.steps ?? 0,
                 km: widget.shownM / 1000,
                 running: widget.running,
+                badge: widget.focusBadge,
                 onTap: _toggle,
               ),
               AnimatedSize(
@@ -168,7 +178,9 @@ class ProgressLine extends StatelessWidget {
 
 const _tabular = [FontFeature.tabularFigures()];
 
-/// 카드색 90% 알약 + 잉크 테두리. 걷기/뛰기 아이콘 + 이번 걸음 수 + ‘걸음 · 1.99 km’
+/// 카드색 90% 알약 + 잉크 테두리. 걷기/뛰기 아이콘 + 이번 걸음 수 + ‘걸음 · 1.99 km’.
+/// 본격 걷기 중이면 [badge](`×1.3`)가 오른쪽 끝에 이끼색 딱지로 붙고 알약 폭이 40pt 는다.
+/// 글자를 키워서 알약이 칸보다 넓어지면 안의 글을 통째로 줄인다
 class StepPill extends StatelessWidget {
   const StepPill({
     super.key,
@@ -176,12 +188,14 @@ class StepPill extends StatelessWidget {
     required this.km,
     required this.running,
     required this.onTap,
+    this.badge,
   });
 
   final int steps;
   final double km;
   final bool running;
   final VoidCallback onTap;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -193,8 +207,8 @@ class StepPill extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(
-            minWidth: HudMetrics.pillMinWidth,
+          constraints: BoxConstraints(
+            minWidth: HudMetrics.pillMinWidth + (badge == null ? 0 : HudMetrics.pillBadgeExtra),
             minHeight: HudMetrics.pillHeight,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -203,36 +217,44 @@ class StepPill extends StatelessWidget {
             borderRadius: BorderRadius.circular(HudMetrics.pillHeight / 2),
             border: Border.all(color: Palette.ink, width: 1.5),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(
-                running ? Icons.directions_run : Icons.directions_walk,
-                size: 16,
-                color: Palette.ink,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                formatInt(steps),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  running ? Icons.directions_run : Icons.directions_walk,
+                  size: 16,
                   color: Palette.ink,
-                  fontFeatures: _tabular,
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '걸음 · ${formatKm(km, digits: 2)}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  letterSpacing: 12 * 0.08,
-                  color: Palette.subInk,
-                  fontFeatures: _tabular,
+                const SizedBox(width: 6),
+                Text(
+                  formatInt(steps),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Palette.ink,
+                    fontFeatures: _tabular,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Text(
+                  '걸음 · ${formatKm(km, digits: 2)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    letterSpacing: 12 * 0.08,
+                    color: Palette.subInk,
+                    fontFeatures: _tabular,
+                  ),
+                ),
+                if (badge != null) ...[
+                  const SizedBox(width: 6),
+                  FocusBadge(badge!),
+                ],
+              ],
+            ),
           ),
         ),
       ),

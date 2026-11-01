@@ -55,7 +55,7 @@ List<Prop> parseProps(Map<String, dynamic> json) => [
         if ((p as Map<String, dynamic>)['status'] == 'mvp') Prop.fromJson(p),
     ];
 
-/// 지금 얻은 소품 id. 누적 거리는 센서로 잰 실제 걸은 거리(배 환산 아님).
+/// 지금 얻은 소품 id. 거리 소품은 걷는 중 화면에서 걸은 이동 거리(본격 걷기 보너스 포함, 배 구간 환산 아님)로 센다.
 /// 동료 소품은 여기서 주지 않는다 (동료 이야기를 마칠 때 준다, M4)
 Set<String> earnedPropIds(
   List<Prop> props,

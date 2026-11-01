@@ -4,8 +4,12 @@ import 'package:flutter/material.dart';
 const toastDuration = Duration(milliseconds: 2500);
 
 /// 아래 큰 버튼을 가리지 않게 띄운다. 위쪽 카드 토스트는 나중에 바꾼다
-void showToast(BuildContext context, String text) {
-  ScaffoldMessenger.of(context)
+void showToast(BuildContext context, String text) =>
+    showToastOn(ScaffoldMessenger.of(context), text);
+
+/// 화면 밖(AutoSync)에서는 BuildContext가 없어서 메신저로 띄운다
+void showToastOn(ScaffoldMessengerState messenger, String text) {
+  messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
       content: Text(text),

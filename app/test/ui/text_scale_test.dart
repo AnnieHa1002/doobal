@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:doobal/app/profile_service.dart';
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/data/db/app_db.dart';
@@ -8,6 +11,7 @@ import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/onboarding.dart';
 import 'package:doobal/domain/prop.dart';
+import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/album/album_screen.dart';
@@ -28,6 +32,7 @@ import 'package:doobal/ui/start/me_screen.dart';
 import 'package:doobal/ui/start/permission_screen.dart';
 import 'package:doobal/ui/start/welcome_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
+import 'package:doobal/ui/walking/walking_hud.dart';
 import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
@@ -46,6 +51,13 @@ import 'ui_env.dart';
 
 const _sizes = [Size(390, 844), Size(320, 568)];
 const _scales = [1.3, 1.6, 2.0];
+
+/// 럭 단가가 정해진 규칙 (걷기 기록의 럭 줄을 보려고. config 지금 값은 null이라 럭 줄이 없다)
+final _coinRules = () {
+  final j = jsonDecode(File('assets/data/config.json').readAsStringSync()) as Map<String, dynamic>;
+  (j['coins'] as Map<String, dynamic>)['perKm'] = 10;
+  return Rules.fromJson(j);
+}();
 
 /// 한 화면을 한 크기·한 배율로 점검한다. 화면 상태를 바꿀 때마다 [check]로 모으고,
 /// 끝나면 [verify]가 한꺼번에 따진다
@@ -764,6 +776,62 @@ void main() {
       fit.check('걷기 기록 다시 보기');
       await end(tester, e);
     });
+
+    // 본격 걷기: 거리 두 줄(실제 / 여행 + 본격 걷기 ×1.3)과 럭 줄(×2 딱지)까지 모두 나오는 경우
+    _scaleCases('방금 마침 (본격 걷기·럭)', (tester, fit) async {
+      final e = UiEnv(appRules: _coinRules);
+      await e.seed(tester, () async {
+        await seedWalk(e);
+        final id = await e.svc.startAppWalk(t1);
+        await e.svc.finishAppWalk(id, t1.add(const Duration(minutes: 15)));
+      });
+      await openRecord(tester, e, fit, review: false);
+      expect(find.textContaining('(본격 걷기 ×1.3)'), findsOneWidget);
+      expect(find.textContaining('럭 +'), findsOneWidget);
+      fit.check('걷기 기록 (거리 두 줄·럭)');
+      await end(tester, e);
+    });
+  });
+
+  group('걷는 중 걸음 알약', () {
+    // 화면 너비에서 양옆 20pt를 뺀 칸 (걷는 중 위쪽 UI의 칸). 알약은 칸 안에 들어오고 딱지도 그 안에 있어야 한다
+    Future<void> openPill(WidgetTester tester, _Fit fit, {required String? badge}) async {
+      phone(tester, width: fit.width, height: fit.height);
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: StepPill(steps: 12345, km: 12.34, running: true, badge: badge, onTap: () {}),
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+    }
+
+    for (final badge in <String?>['×1.3', null]) {
+      _scaleCases(badge == null ? '본격 걷기 아님' : '본격 걷기 딱지 ×1.3', (tester, fit) async {
+        await openPill(tester, fit, badge: badge);
+        fit.check('걸음 알약');
+        final pill = tester.getRect(find.byType(StepPill));
+        // 칸(양옆 20pt)을 넘지 않는다. 글자가 커지면 안의 글이 줄어든다
+        expect(pill.left, greaterThanOrEqualTo(20 - 0.01));
+        expect(pill.right, lessThanOrEqualTo(fit.width - 20 + 0.01));
+        final found = find.byKey(const Key('focus-badge'));
+        if (badge == null) {
+          expect(found, findsNothing);
+        } else {
+          // 딱지는 알약 안에 있고, 걸음 숫자보다 오른쪽 끝에 있다
+          expect(found, findsOneWidget);
+          final tag = tester.getRect(found);
+          expect(tag.right, lessThanOrEqualTo(pill.right + 0.01));
+          expect(tag.left, greaterThan(pill.left));
+          expect(tester.getRect(find.text('12,345')).right, lessThanOrEqualTo(tag.left + 0.01));
+        }
+      });
+    }
   });
 
   group('꾸미기', () {

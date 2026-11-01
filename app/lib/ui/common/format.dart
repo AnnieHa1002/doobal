@@ -8,6 +8,9 @@ export '../../domain/format_int.dart';
 /// 12.34 → '12.3 km'
 String formatKm(double km, {int digits = 1}) => '${km.toStringAsFixed(digits)} km';
 
+/// 미터를 km 한 자리로, 단위를 붙여서: 2130 → '2.1km' (걷기 기록 거리 줄·알림과 같은 모양)
+String formatKmShort(double meters) => '${(meters / 1000).toStringAsFixed(1)}km';
+
 /// 65초 → '1:05', 1시간 이상은 '1:02:03'. 음수는 0으로
 String formatDuration(Duration d) {
   final total = d.isNegative ? 0 : d.inSeconds;

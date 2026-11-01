@@ -61,12 +61,17 @@ class WalkRecord {
     this.countedToday, {
     this.laps = const [],
     this.bonusM = 0,
+    this.bonusActualM = 0,
   });
 
   final WalkSummary summary;
 
   /// 이번 걷기의 앱 걷기 보너스 거리(m). 앱 걷기 창 밖이거나 걷기 1번에 못 미쳤으면 0
   final double bonusM;
+
+  /// 보너스가 붙은 분의 실제 거리(m). 럭 배수(bonus.coinMultiplier)가 붙는 거리다
+  /// (배수가 1이라 [bonusM]이 0이어도 보너스 분이 있으면 0보다 크다)
+  final double bonusActualM;
 
   /// 이번 걷기의 실제 거리(m) = [summary]의 거리
   double get actualM => summary.distanceM;
@@ -1132,17 +1137,17 @@ class SyncService {
 
     // 앱 걷기 보너스: 숫자를 고른 쪽 분 목록으로, 걷기 1번 인정도 그 목록으로 가린다
     // (센서 쪽이면 아직 건강 앱에 안 들어온 걸음으로 채운 걷기도 인정될 수 있다)
-    var bonusM = 0.0;
+    var bonus = const TravelTotals();
     final windows = await _windows(fromMs: contextMin * Duration.millisecondsPerMinute);
     if (windows.isNotEmpty) {
       final source = numbers.usedLive ? live : health;
-      bonusM = sumTravel(splitTravel(
+      bonus = sumTravel(splitTravel(
         minutes: [for (final m in source) if (m.minute >= fromMin && m.minute < toMin) m],
         sessions: detectSessions(numbers.usedLive ? toStepMinutes(live) : minutes, rules),
         windows: windows,
         now: toUtc,
         rules: rules,
-      )).bonusM;
+      ));
     }
 
     return WalkRecord(
@@ -1150,7 +1155,8 @@ class SyncService {
       [for (final r in rows) _sessionOf(r)],
       today?.countedSessions ?? 0,
       laps: numbers.laps,
-      bonusM: bonusM,
+      bonusM: bonus.bonusM,
+      bonusActualM: bonus.bonusActualM,
     );
   }
 
@@ -1193,16 +1199,33 @@ class SyncService {
   /// 그게 없거나 시작보다 앞서면 시작 시각에서 (길이 0), 끝난 까닭은 appEnded.
   /// 닫은 날을 다시 계산한다. 닫은 창의 수를 돌려준다. 열린 창이 없으면 아무것도 건드리지 않는다.
   /// 앱을 켠 직후에 한 번만 부른다 (살아 있는 동안 열려 있는 창은 닫으면 안 된다)
-  Future<int> closeOrphanAppWalks(DateTime now) => db.transaction(() async {
+  Future<int> closeOrphanAppWalks(DateTime now) async => (await _closeOrphans(now)).count;
+
+  /// [closeOrphanAppWalks]와 같고, 닫은 창 중 가장 늦은 끝 시각을 돌려준다 (닫은 창이 없으면 null).
+  /// 앱을 켠 직후 '걷기가 멈췄어요' 토스트가 이 시각 뒤에 쌓인 걸음([stepsFrom])을 센다
+  Future<DateTime?> closeOrphanAppWalksEnd(DateTime now) async => (await _closeOrphans(now)).end;
+
+  Future<({int count, DateTime? end})> _closeOrphans(DateTime now) => db.transaction(() async {
         final open = await (db.select(db.appWalks)..where((t) => t.endUtc.isNull())).get();
-        if (open.isEmpty) return 0;
+        if (open.isEmpty) return (count: 0, end: null);
         final state = await _ensureState(now);
-        return _closeAppWalks(open, state.lastAliveUtc, now);
+        final end = await _closeAppWalks(open, state.lastAliveUtc, now);
+        return (count: open.length, end: end);
       });
 
-  /// 열려 있는 창 [open]을 [lastAliveUtc]에서 닫고(appEnded, [now]보다 늦게는 안 닫는다) 닫은 날을 다시 계산한다
-  Future<int> _closeAppWalks(List<AppWalkRow> open, int? lastAliveUtc, DateTime now) async {
-    if (open.isEmpty) return 0;
+  /// 분 시작이 [from] 이상이고 [upTo]가 속한 분까지인 저장된 걸음의 합 (창이 끝난 뒤의 걸음을 셀 때:
+  /// 분 시작이 창 안인 분은 창에 속하니 끝 시각이 걸친 분은 세지 않고 다음 분부터 센다)
+  Future<int> stepsFrom(DateTime from, DateTime upTo) async {
+    final fromMin = (from.millisecondsSinceEpoch + Duration.millisecondsPerMinute - 1) ~/
+        Duration.millisecondsPerMinute;
+    final minutes = await _minutesFrom(fromMin, beforeMinute: epochMinute(upTo) + 1);
+    return minutes.fold<int>(0, (sum, m) => sum + m.steps);
+  }
+
+  /// 열려 있는 창 [open]을 [lastAliveUtc]에서 닫고(appEnded, [now]보다 늦게는 안 닫는다) 닫은 날을 다시 계산한다.
+  /// 닫은 창 중 가장 늦은 끝 시각을 돌려준다 (열린 창이 없으면 null)
+  Future<DateTime?> _closeAppWalks(List<AppWalkRow> open, int? lastAliveUtc, DateTime now) async {
+    if (open.isEmpty) return null;
     final nowMs = now.toUtc().millisecondsSinceEpoch;
     var first = open.first.startUtc;
     var last = first;
@@ -1223,7 +1246,7 @@ class SyncService {
       last = math.max(last, end);
     }
     await _recomputeWalkDays(first, last, now);
-    return open.length;
+    return _utc(last);
   }
 
   /// 앱 걷기 창이 달라진 구간 [fromMs, toMs]가 걸친 날(한국 날짜)의 하루 요약·걷기 구간을 다시 계산한다.

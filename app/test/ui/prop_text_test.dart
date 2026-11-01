@@ -12,14 +12,14 @@ String? _howTo(String id, {double km = 0, int steps = 0, Set<String> visited = c
         totalKm: km, totalSteps: steps, progress: regionProgress(visited, landmarks));
 
 void main() {
-  test('거리: `누적 150km · 지금 87km`, 지금 거리는 버림', () {
-    expect(_howTo('hand_03', km: 87), '누적 150km · 지금 87km');
-    expect(_howTo('hand_03', km: 87.9), '누적 150km · 지금 87km');
-    expect(_howTo('hand_03'), '누적 150km · 지금 0km');
+  test('거리: `본격 걷기 150km · 지금 87km`, 지금 거리는 버림', () {
+    expect(_howTo('hand_03', km: 87), '본격 걷기 150km · 지금 87km');
+    expect(_howTo('hand_03', km: 87.9), '본격 걷기 150km · 지금 87km');
+    expect(_howTo('hand_03'), '본격 걷기 150km · 지금 0km');
   });
 
   test('거리 천 단위는 쉼표', () {
-    expect(_howTo('hat_03', km: 120.4), '누적 1,000km · 지금 120km');
+    expect(_howTo('hat_03', km: 120.4), '본격 걷기 1,000km · 지금 120km');
   });
 
   test('걸음: `누적 1,000,000보 · 지금 8,500보`', () {

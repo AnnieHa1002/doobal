@@ -710,7 +710,7 @@ void main() {
 
       await tester.tap(_key('prop-hand_03'));
       await tester.pump();
-      expect(find.text('누적 150km · 지금 87km'), findsOneWidget);
+      expect(find.text('본격 걷기 150km · 지금 87km'), findsOneWidget);
       expect(_worn(tester, 'hand'), '붓');
       expect(_enabled(tester, '저장'), isFalse);
       await end(tester, e);

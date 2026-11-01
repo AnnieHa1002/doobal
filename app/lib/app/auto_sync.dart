@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/backup_policy.dart';
+import '../domain/focus_walk.dart';
 import '../ui/arrival/arrival_screen.dart';
+import '../ui/common/toast.dart';
 import 'backup_runner.dart';
 import 'notification_service.dart';
 import 'providers.dart';
@@ -27,7 +29,8 @@ const _toastMinKm = 0.1;
 /// 어느 화면 위에서든 같은 Navigator에 올릴 수 있다.
 /// 앱 걷기(본격 걷기 보너스의 창)를 위해 앱이 살아 있는 동안 config sync.aliveSaveSec마다와
 /// 백그라운드로 갈 때 '살아 있던 시각'을 적는다. 앱을 켠 직후에는 앞 실행에서 끝나지 않은 앱 걷기를
-/// 그 시각에서 닫고(동기화보다 먼저) 동기화한다
+/// 그 시각에서 닫고(동기화보다 먼저) 동기화한다. 닫은 창이 있으면(걷는 중에 앱이 끝났다) 첫 동기화 뒤에
+/// 쉼터에 토스트를 한 번 띄운다: 창이 끝난 뒤 쌓인 걸음은 평소 걸음으로 더해졌다고 알린다
 class AutoSync extends ConsumerStatefulWidget {
   const AutoSync({super.key, required this.child});
 
@@ -40,7 +43,9 @@ class AutoSync extends ConsumerStatefulWidget {
 class _AutoSyncState extends ConsumerState<AutoSync> {
   late final AppLifecycleListener _lifecycle;
   Timer? _aliveTimer;
-  var _running = false;
+
+  /// 돌고 있는 동기화 (겹쳐 돌지 않게 하고, 부른 쪽이 끝나길 기다릴 수 있게)
+  Future<void>? _syncing;
 
   /// 이번 실행에서 도착 화면을 이미 띄운 여정 (같은 여정을 두 번 띄우지 않는다)
   final _arrivalsShown = <String>{};
@@ -69,14 +74,30 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   }
 
   /// 앱을 켠 직후: 앞 실행에서 끝나지 않은 앱 걷기를 닫고 지금 살아 있다고 적은 뒤 동기화한다
-  /// (닫은 날의 하루 요약이 먼저 맞아야 동기화가 그 위에서 계산한다). 앞의 일이 실패해도 동기화는 한다
+  /// (닫은 날의 하루 요약이 먼저 맞아야 동기화가 그 위에서 계산한다). 앞의 일이 실패해도 동기화는 한다.
+  /// 닫은 창이 있었으면 동기화가 끝난 뒤 토스트를 띄운다
   Future<void> _startUp() async {
+    DateTime? orphanEnd;
     await _service((svc, now) async {
-      await svc.closeOrphanAppWalks(now);
+      orphanEnd = await svc.closeOrphanAppWalksEnd(now);
       await svc.saveAlive(now);
     }, '앱 걷기 정리');
     await _startAliveTimer();
     await _sync();
+    final end = orphanEnd;
+    if (end != null) await _showOrphanToast(end);
+  }
+
+  /// 걷는 중에 앱이 끝나 닫은 창 [end] 뒤 지금까지 쌓인 걸음을 세어 `걷기가 멈췄어요` 토스트를 띄운다
+  /// (걸음이 없으면 멈췄다는 말만). 첫 동기화가 건강 기록을 넣은 뒤라 그 걸음이 들어 있다.
+  /// 같은 동기화가 띄운 `그동안 n km 걸었어요`는 지우고 이 토스트만 남긴다 (같은 걸음 이야기라서)
+  Future<void> _showOrphanToast(DateTime end) async {
+    var steps = 0;
+    await _service((svc, now) async => steps = await svc.stepsFrom(end, now), '멈춘 걷기 걸음 세기');
+    final messenger = scaffoldMessengerKey.currentState;
+    if (!mounted || messenger == null) return;
+    messenger.clearSnackBars();
+    showToastOn(messenger, orphanWalkToast(steps));
   }
 
   /// 앱이 살아 있는 동안 rules.aliveSaveSec마다 살아 있다고 적는다
@@ -168,10 +189,10 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     if (mounted) ref.invalidate(snapshotProvider);
   }
 
-  Future<void> _sync() async {
-    // 겹쳐 돌지 않게 한다 (시작과 resumed가 연달아 올 수 있다)
-    if (_running) return;
-    _running = true;
+  /// 겹쳐 돌지 않게 한다 (시작과 resumed가 연달아 올 수 있다): 이미 돌고 있으면 그 동기화를 기다리게 한다
+  Future<void> _sync() => _syncing ??= _runSync().whenComplete(() => _syncing = null);
+
+  Future<void> _runSync() async {
     try {
       final svc = await ref.read(syncServiceProvider.future);
       final report = await svc.sync(ref.read(clockProvider)());
@@ -185,8 +206,6 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
       _backup((runner, now) => runner.afterSync(now));
     } catch (e) {
       debugPrint('자동 동기화 실패: $e');
-    } finally {
-      _running = false;
     }
   }
 

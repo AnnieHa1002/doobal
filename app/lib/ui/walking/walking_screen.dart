@@ -9,11 +9,13 @@ import '../../app/live_walker.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../data/walk_notice.dart';
+import '../../domain/focus_walk.dart';
 import '../../domain/follow.dart';
 import '../../domain/gait.dart';
 import '../../domain/journey.dart';
 import '../../domain/live_walk.dart';
 import '../../domain/milestones.dart';
+import '../../domain/rules.dart';
 import '../../domain/walk_record.dart';
 import '../common/toast.dart';
 import '../scene/scene_view.dart';
@@ -28,6 +30,8 @@ import 'walking_hud.dart';
 /// 안드로이드는 걷는 동안 상시 알림(포그라운드 서비스)으로 앱을 살려 두고, 알림에 걸음을 보여 준다.
 /// 열면 앱 걷기 창(본격 걷기 보너스)을 열고, 걷기 마치기를 누르면 finish로 닫는다.
 /// 마치기를 안 누르고 이 화면이 사라져도(되돌아가기 제스처 등) 그 시각에 finish로 닫는다.
+/// 이번 걷기가 걷기 1번으로 인정되면(isFocusedWalk) 본격 걷기: 걸음 알약에 배수 딱지를 붙이고 토스트를
+/// 한 번 띄우며 상시 알림 끝에도 쓴다. 마칠 때까지 그대로다.
 /// 앱이 통째로 끝나서 화면이 정리되지 못한 경우는 다음 실행 때 AutoSync가 마지막으로 살아 있던
 /// 시각에서 닫는다 (appEnded)
 class WalkingScreen extends ConsumerStatefulWidget {
@@ -58,7 +62,14 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   var _noticeOn = false;
   var _noticeSteps = 0;
   var _noticeDistanceM = 0.0;
+  String? _noticeFocus;
   DateTime? _noticeAt;
+
+  /// 본격 걷기가 된 뒤로는 마칠 때까지 true (딱지·알림 끝 글). 다시 가릴 때 쓰는 입력(마지막으로 받은
+  /// 기록과 센서 걸음)이 그대로면 다시 계산하지 않는다
+  var _focused = false;
+  WalkRecord? _focusRecord;
+  var _focusSteps = -1;
 
   /// 마지막으로 본 LiveWalk.catchUps. 바뀌면 숨어 있던 동안의 걸음이 들어온 것이라 거리를 바로 맞춘다
   var _catchUps = 0;
@@ -168,14 +179,27 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _noticeDistanceM = summary?.distanceM ?? 0;
     _noticeAt = now;
     _noticeOn = true;
-    _notice.start(_noticeSteps, _noticeDistanceM);
+    _noticeFocus = _focusLabel();
+    _notice.start(_noticeSteps, _noticeDistanceM, focus: _noticeFocus);
+  }
+
+  /// 본격 걷기 중이면 알림 끝에 붙일 배수 글(`×1.3`), 아니면 null
+  String? _focusLabel() {
+    final rules = ref.read(rulesProvider).value;
+    return _focused && rules != null ? focusBadgeText(rules) : null;
   }
 
   /// 알림의 걸음·거리를 [steps]·[distanceM]으로 새로 쓴다. 알림 글이 바뀔 때만
-  /// (걸음이 다르거나 0.1km 단위 거리가 다를 때), rules.liveNoticeUpdateSec초에 한 번까지
+  /// (걸음이 다르거나 0.1km 단위 거리가 다르거나 본격 걷기 표시가 달라질 때),
+  /// rules.liveNoticeUpdateSec초에 한 번까지
   void _pushNotice(int steps, double distanceM) {
     if (!_noticeOn) return;
-    if (steps == _noticeSteps && noticeKm(distanceM) == noticeKm(_noticeDistanceM)) return;
+    final focus = _focusLabel();
+    if (steps == _noticeSteps &&
+        noticeKm(distanceM) == noticeKm(_noticeDistanceM) &&
+        focus == _noticeFocus) {
+      return;
+    }
     final rules = ref.read(rulesProvider).value;
     final now = ref.read(clockProvider)();
     final last = _noticeAt;
@@ -186,7 +210,31 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _noticeAt = now;
     _noticeSteps = steps;
     _noticeDistanceM = distanceM;
-    _notice.update(steps, distanceM);
+    _noticeFocus = focus;
+    _notice.update(steps, distanceM, focus: focus);
+  }
+
+  /// 이번 걷기가 본격 걷기가 됐는지 본다 (한 번 되면 마칠 때까지 그대로). 됐으면 딱지를 켜고 토스트를
+  /// 한 번 띄운다 (알림 글은 _pushNotice가 바뀐 표시를 보고 새로 쓴다).
+  /// 건강 기록(동기화 때 바뀐다)이나 센서 걸음이 달라졌을 때만 다시 가린다
+  void _checkFocus(Rules rules) {
+    if (_focused) return;
+    final record = _record;
+    final liveSteps = _live?.walk.steps ?? 0;
+    if (identical(record, _focusRecord) && liveSteps == _focusSteps) return;
+    _focusRecord = record;
+    _focusSteps = liveSteps;
+    final focused = isFocusedWalk(
+      start: _start,
+      saved: record?.sessions ?? const [],
+      live: _live?.walk.minutes ?? const [],
+      rules: rules,
+    );
+    if (!focused) return;
+    setState(() => _focused = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) showToast(context, focusToastText(rules));
+    });
   }
 
   Future<void> _refresh() async {
@@ -211,6 +259,16 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
           _ratioBefore = ratioBeforeWalk(j.progress.progressKm, record.travelM / 1000, j.totalKm);
         }
       });
+      // 화면이 꺼져 있어 프레임이 없을 때도 동기화마다 본격 걷기를 가리고, 알림에 아직 안 쓴 표시가
+      // 있으면 쓴다 (숫자는 줄지 않게 마지막으로 쓴 값과 큰 쪽)
+      _checkFocus(ref.read(rulesProvider).requireValue);
+      if (_focused && _noticeFocus == null) {
+        final s = _summaryAt(ref.read(clockProvider)());
+        _pushNotice(
+          math.max(_noticeSteps, s?.steps ?? 0),
+          math.max(_noticeDistanceM, s?.distanceM ?? 0),
+        );
+      }
     } catch (e) {
       debugPrint('걷는 중 동기화 실패: $e');
     } finally {
@@ -245,6 +303,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     if (rules == null) return;
 
     final now = ref.read(clockProvider)();
+    _checkFocus(rules);
     final summary = _summaryAt(now);
     _pushNotice(summary?.steps ?? 0, summary?.distanceM ?? 0);
     final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
@@ -324,6 +383,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             walkingTime: _now.difference(_start),
             running: running,
             nextMilestone: _nextMilestone(snap),
+            focusBadge: _focused ? focusBadgeText(rules) : null,
             onFinish: _finish,
           ),
         ],

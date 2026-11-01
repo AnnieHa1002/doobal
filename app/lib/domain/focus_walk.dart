@@ -1,4 +1,5 @@
 import 'bucket.dart';
+import 'format_int.dart';
 import 'gait.dart';
 import 'rules.dart';
 import 'session.dart';
@@ -289,3 +290,44 @@ double frameBasisKm(double fundKm, double actualWalkedKm, double totalEffectiveK
   final km = fundKm + actualWalkedKm;
   return km < totalEffectiveKm ? km : totalEffectiveKm;
 }
+
+/// 배수를 글로: 1.3 → '1.3', 2.0 → '2', 1.25 → '1.25' (끝의 0은 뗀다)
+String formatMultiplier(double x) => x.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+
+/// 걸음 알약 딱지·상시 알림 끝에 붙는 배수 글: '×1.3' (config bonus.travelMultiplier)
+String focusBadgeText(Rules rules) => '×${formatMultiplier(rules.bonusTravelMultiplier)}';
+
+/// 본격 걷기로 인정된 순간의 토스트. 럭 단가(coins.perKm)가 아직 없으면 럭 이야기는 뺀다
+String focusToastText(Rules rules) {
+  final travel = '본격 걷기! 여행 거리 ${formatMultiplier(rules.bonusTravelMultiplier)}배';
+  return rules.coinsPerKm == null
+      ? travel
+      : '$travel · 럭 ${formatMultiplier(rules.bonusCoinMultiplier)}배';
+}
+
+/// 걷는 중 화면([start]에 연 앱 걷기 창)의 이번 걷기가 본격 걷기(걷기 1번 인정)가 됐는가.
+/// 화면이 보여 주는 두 숫자로 가린다: 건강 기록으로 저장된 걷기 구간 [saved](WalkRecord.sessions)
+/// 중 인정된 것이 창 안의 분을 품었거나, 기기 센서가 센 분 [live]만으로 인정된 구간이 있으면 true.
+/// 인정은 구간 전체로 가리므로 창이 열리기 전에 걷던 분이 이어져 있어도 된다 (엔진의 보너스와 같은 규칙).
+/// 보너스는 분 시작이 창 안인 분에만 붙으니, 구간의 마지막 분(끝 − 1분)이 [start] 이후여야 한다
+bool isFocusedWalk({
+  required DateTime start,
+  required List<WalkSession> saved,
+  required List<GaitMinute> live,
+  required Rules rules,
+}) {
+  const minute = Duration(minutes: 1);
+  if (saved.any((s) => s.qualified && !s.end.subtract(minute).isBefore(start))) return true;
+  return detectSessions(toStepMinutes(live), rules).any((s) => s.qualified);
+}
+
+/// 앱을 켠 직후 끝나지 않은 앱 걷기를 닫았을 때의 토스트. [steps]는 창이 끝난 뒤 지금까지 쌓인
+/// 걸음 (평소 걸음으로 더해진 것). 0이면 멈췄다는 말만
+String orphanWalkToast(int steps) =>
+    steps <= 0 ? '걷기가 멈췄어요' : '걷기가 멈췄어요 · 그동안 ${formatInt(steps)}보는 평소 걸음으로 더했어요';
+
+/// 이번 걷기(걷기 기록)의 럭: floor((보너스 밖 실제 km + 보너스 분의 실제 km × bonus.coinMultiplier) × coins.perKm).
+/// 하루 럭([dailyCoins])은 하루 합에 내림해서 내므로, 걷기마다 낸 값의 합과 하루 값은 걷기 수만큼
+/// (많아야 걷기당 1) 다를 수 있다. coins.perKm가 null이면 0
+int walkCoins({required double actualM, required double bonusActualM, required Rules rules}) =>
+    dailyCoins(TravelTotals(actualM: actualM, bonusActualM: bonusActualM), rules);

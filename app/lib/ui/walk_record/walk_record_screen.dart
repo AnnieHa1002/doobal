@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/focus_walk.dart';
 import '../../domain/gait.dart';
 import '../../domain/laps.dart';
 import '../../domain/milestones.dart';
@@ -11,6 +12,7 @@ import '../../domain/time_kst.dart';
 import '../../domain/walk_record.dart';
 import '../common/app_text.dart';
 import '../common/big_number.dart';
+import '../common/focus_badge.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
 import '../common/ink_bar.dart';
@@ -173,6 +175,43 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
     return rows;
   }
 
+  /// 큰 숫자 아래 거리 줄 (UI 명세 4장): `실제 2.1km` / `여행 2.6km (본격 걷기 ×1.3)`.
+  /// 여정은 여행 거리로, 액자는 실제 거리로 센다. 본격 걷기 구간이 없으면(보너스 0) 여행 거리가
+  /// 실제와 같아서 실제 줄만 둔다. 그 아래 `럭 +n`(본격 걷기 분이 있으면 ×2 딱지)은 럭 단가
+  /// (coins.perKm)가 정해진 뒤에만 나온다
+  List<Widget> _distanceLines(Rules rules, WalkRecord record) {
+    final focused = record.bonusM > 0;
+    final coins = rules.coinsPerKm == null
+        ? null
+        : walkCoins(actualM: record.actualM, bonusActualM: record.bonusActualM, rules: rules);
+    return [
+      const SizedBox(height: 8),
+      Text('실제 ${formatKmShort(record.actualM)}',
+          key: const ValueKey('line-actual'), style: AppText.bodySub),
+      if (focused)
+        Text(
+          '여행 ${formatKmShort(record.travelM)} (본격 걷기 ${focusBadgeText(rules)})',
+          key: const ValueKey('line-travel'),
+          style: AppText.bodySub.copyWith(color: Palette.moss),
+        ),
+      if (coins != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            children: [
+              Text('럭 +${formatInt(coins)}',
+                  key: const ValueKey('line-coins'),
+                  style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+              if (record.bonusActualM > 0)
+                FocusBadge('×${formatMultiplier(rules.bonusCoinMultiplier)}'),
+            ],
+          ),
+        ),
+    ];
+  }
+
   Widget _content(Rules rules, WalkRecord record, Snapshot snap, List<int>? milestones) {
     final s = record.summary;
     final run = s.runRatio;
@@ -194,6 +233,7 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
             _Big(BigNumber(formatDuration(widget.end.difference(widget.start))), '시간'),
           ],
         ),
+        ..._distanceLines(rules, record),
         const SizedBox(height: 16),
         InkBar(segments: [
           BarSegment(1 - run, Palette.moss),
