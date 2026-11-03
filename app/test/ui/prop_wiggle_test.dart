@@ -243,7 +243,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('흔들림을 끄면(off) 오래 기다려도 흔들리지 않고 프레임도 없다', (tester) async {
+    testWidgets('흔들림을 끄면(off) 오래 기다려도 물건 애니메이션은 멈춰 있다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _openRest(tester, e, const WiggleSpec.off());
@@ -252,18 +252,27 @@ void main() {
         await tester.pump(const Duration(seconds: 3));
         expect(_tilted(tester), isEmpty);
       }
-      expect(tester.binding.hasScheduledFrame, isFalse);
+      // 정령의 숨쉬기 프레임과 물건의 흔들림은 별도로 확인한다.
+      for (final prop in tester.widgetList<PropWiggle>(find.byType(PropWiggle))) {
+        expect(prop.wiggler.controller.isAnimating, isFalse);
+        expect(prop.wiggler.target, isNull);
+      }
       await end(tester, e);
     });
 
-    testWidgets('기본 설정(3~6초)에서도 pumpAndSettle이 끝나고, 흔들림이 지나면 0도로 돌아온다',
+    testWidgets('기본 설정(3~6초)에서도 흔들림이 지나면 물건은 0도에서 멈춘다',
         (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _openRest(tester, e, const WiggleSpec());
 
       await tester.pump(const Duration(seconds: 6));
-      await tester.pumpAndSettle();
+      // 화면에는 계속 숨쉬는 정령이 있으므로 전체 프레임 정지를 기다리지 않는다.
+      await tester.pump(const Duration(milliseconds: 700));
+      for (final prop in tester.widgetList<PropWiggle>(find.byType(PropWiggle))) {
+        expect(prop.wiggler.controller.isAnimating, isFalse);
+        expect(prop.wiggler.target, isNull);
+      }
       expect(_tilted(tester), isEmpty);
       await end(tester, e);
     });

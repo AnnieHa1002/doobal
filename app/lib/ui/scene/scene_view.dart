@@ -117,24 +117,24 @@ class SceneView extends StatelessWidget {
             final foot = rest && seated && !onSea
                 ? baseFoot + Offset(-size.width * .10, -size.height * .075)
                 : baseFoot;
-            // 그림의 맨 위 약 y100~발바닥 y1216을 실제 캐릭터 키로 맞춘다.
+            // 정령의 머리 위 y150~발바닥 y440을 실제 캐릭터 키로 맞춘다.
             // 가로 화면은 기준 1170px에서 키616px, 세로는 config의 키를 쓴다.
             final figureHeight =
                 artLayout?.figureHeight ??
                 (size.width > size.height
                     ? 616 * size.height / 1170
                     : rules.characterHeightPx * k);
-            final scale = figureHeight / (1216 - 100);
+            final scale = figureHeight / (440 - 150);
             return Stack(
               children: [
                 Positioned.fill(
                   child: CustomPaint(painter: layer(ScenePass.background)),
                 ),
                 Positioned(
-                  left: foot.dx - 512 * scale,
-                  top: foot.dy - 1216 * scale,
-                  width: 1024 * scale,
-                  height: 1280 * scale,
+                  left: foot.dx - 300 * scale,
+                  top: foot.dy - 440 * scale,
+                  width: 600 * scale,
+                  height: 600 * scale,
                   child: ColorFiltered(
                     colorFilter: ColorFilter.mode(
                       Color(tint),

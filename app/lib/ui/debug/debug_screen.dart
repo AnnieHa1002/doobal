@@ -1,3 +1,4 @@
+import 'spirit_preview_screen.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -174,6 +175,12 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                   MaterialPageRoute<void>(builder: (_) => const RivePreviewScreen()),
                 ),
                 child: const Text('Rive 시험'),
+              ),
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const SpiritPreviewScreen()),
+                ),
+                child: const Text('정령 움직임'),
               ),
             ],
           ),
