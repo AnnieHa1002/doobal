@@ -668,27 +668,7 @@
    "backdrop": 0.05,
    "camp": 1.0
   },
-  "objects": {
-   "backpack": 0.06,
-   "character": 0.2,
-   "notebook": 0.26,
-   "map": 0.36,
-   "campfire": 0.45,
-   "tent": 0.52,
-   "companion": 0.56,
-   "signpost": 0.63,
-   "cart": 0.82
-  },
-  "objectsNote": "x = 장면 폭 비율(가운데), 가안(codex_camp_wide_v01 2장, 납품 README가 고치면 그 값). tent·signpost는 뒤판 그림 안이라 위치만 참고. 수레는 obj_rest_cart 354×300, 바퀴 밑이 groundY",
-  "hitOrder": [
-   "cart",
-   "map",
-   "backpack",
-   "notebook",
-   "companion",
-   "character"
-  ],
-  "hitNote": "겹치면 앞 순서가 먼저 눌림(11/4). 정령 몸 누르기는 config character.tapReaction",
+  "objectsNote": "물건·캐릭터·동행 자리는 themes/camp.json v2(장면 폭 비율)가 한 곳. 여기는 장면 크기·그림 파일만",
   "fixedHud": "config rest.fixedHud",
   "widthPx": 1760,
   "firstViewPx": [
@@ -705,6 +685,7 @@
    "backY": 1432,
    "frontY": 1892,
    "pending": "Codex 납품 대기(디자인기획/codex_camp_wide_v01.md). 그전까지 v11 1170폭 캠프를 왼쪽에 두고 오른쪽은 빈 땅"
-  }
+  },
+  "hitOrder": "themes/camp.json hitOrder"
  }
 }

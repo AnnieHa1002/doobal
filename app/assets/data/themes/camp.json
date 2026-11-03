@@ -1,14 +1,20 @@
 {
- "version": 1,
+ "version": 2,
  "id": "camp",
  "approx": true,
+ "note": "v2(11/4 개발 기획): 넓은 캠프(scene.json rest, 장면 폭 1760 = 화면 1.5배). x는 '장면 폭' 비율(v1은 화면 폭 비율이었음 — 코드가 x × sceneWidthRatio로 화면 비율을 구해야 함), footY·y는 화면 높이 비율. 값은 디자인기획/codex_camp_wide_v01.md 2장 가안(땅 y 2200 = 0.869, 동행 2230 = 0.881), 납품 README가 고치면 따름. 물건 y·size와 방명록 표지판 자리는 디자인 기획 확인 대기",
+ "sceneWidthRatio": 1.5,
+ "firstView": [0, 0.665],
  "objects": [
-  { "id": "map",      "label": "지도", "x": 0.20, "y": 0.70, "size": 64 },
-  { "id": "backpack", "label": "배낭", "x": 0.80, "y": 0.66, "size": 64 },
-  { "id": "note",     "label": "노트", "x": 0.62, "y": 0.79, "size": 56 }
+  { "id": "backpack", "label": "배낭", "x": 0.06, "y": 0.86, "size": 64 },
+  { "id": "note",     "label": "노트", "x": 0.26, "y": 0.88, "size": 56 },
+  { "id": "map",      "label": "지도", "x": 0.36, "y": 0.83, "size": 64 },
+  { "id": "cart",     "label": "수레", "x": 0.82, "y": 0.869, "size": 120, "anchor": "bottom" }
  ],
- "character": { "x": 0.42, "footY": 0.845 },
- "companion": { "x": 0.66, "footY": 0.80 },
- "signpost": { "x": 0.12, "footY": 0.62 },
- "guestbookSign": { "x": 0.27, "footY": 0.60 }
+ "campfire": { "x": 0.45, "footY": 0.869 },
+ "character": { "x": 0.20, "footY": 0.869 },
+ "companion": { "x": 0.56, "footY": 0.881 },
+ "signpost": { "x": 0.63, "footY": 0.869 },
+ "guestbookSign": { "x": 0.59, "footY": 0.869 },
+ "hitOrder": ["cart", "map", "backpack", "note", "companion", "character"]
 }
