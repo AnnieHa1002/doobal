@@ -1,0 +1,414 @@
+{
+  "version": 13,
+  "date": "2026-11-03",
+  "status": "still-image-and-file-QA-passed; app-review-pending",
+  "driveFolderId": "1sED8ZGGoAIjyWib_F8dxR_0WPV7vxZFi",
+  "generation": {
+    "tool": "built-in imagegen",
+    "workingCanvas": [
+      6144,
+      2048
+    ],
+    "generatedCanvas": [
+      2172,
+      724
+    ],
+    "normalizedCanvas": [
+      6144,
+      1536
+    ],
+    "note": "Generated raster normalized/upscaled, not native 6144px generation. Original terrain alpha restored except narrow seam repairs."
+  },
+  "runtimeIntegration": false,
+  "sceneConfigChanged": false,
+  "masters": [
+    {
+      "region": "capital",
+      "file": "bg_far_capital_winter_wide_v13_clean.png",
+      "width": 6144,
+      "height": 1536,
+      "sha256": "a7e47b2bd13a02e121f8da945599d78c9f35a4edb38dbcdb96e5a689246be863",
+      "sourceDriveId": "11j8VBX09mNxsOZbrJuhbnZ5xB1OiqAgI",
+      "sourceSha256": "1e452e708bbf0bbde57e762b72a7624a7e4ec6cc954860414fca17d4f250f2d9",
+      "wrapEdgeChannelMismatch": 0,
+      "lowAlphaPixels": 0,
+      "tileReassemblyMismatchRows": 0,
+      "seamRepair": null,
+      "iceRepair": null,
+      "tiles": [
+        {
+          "file": "bg_far_capital_winter_wide_v13_part1_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "c4490a5146bc9b0f8f66be2c71c3a0130408422a942426acc46752095af0e671"
+        },
+        {
+          "file": "bg_far_capital_winter_wide_v13_part2_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "cadd783f8bf89897f0b23eca2316b3b678f9ca2fb4a0a562ab965c63ebf89c93"
+        },
+        {
+          "file": "bg_far_capital_winter_wide_v13_part3_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "d9a0ecbe0ab6130613fb8b503fbe9b77c2c5505fd895ce61e97be6927b2a764a"
+        }
+      ]
+    },
+    {
+      "region": "gangwon",
+      "file": "bg_far_gangwon_winter_wide_v13_clean.png",
+      "width": 6144,
+      "height": 1536,
+      "sha256": "261a4893b4bef2b2c6e06fe8631c4464b4cc6b10e599c7c4c9fc25d455734dbb",
+      "sourceDriveId": "1JJiElYeoHC868c84D1s7Wt1Ba0g7Tevk",
+      "sourceSha256": "591153bcaa6dc7d8671d07b91fcce2990a95e968e462d417db64b088bda18921",
+      "wrapEdgeChannelMismatch": 0,
+      "lowAlphaPixels": 0,
+      "tileReassemblyMismatchRows": 0,
+      "seamRepair": null,
+      "iceRepair": null,
+      "tiles": [
+        {
+          "file": "bg_far_gangwon_winter_wide_v13_part1_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "57c5f192a1d5604c1368df779f64b4f4f2e5a5ef04eceb6bd47695d2b8dfba9f"
+        },
+        {
+          "file": "bg_far_gangwon_winter_wide_v13_part2_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "1a2d67a487f2a7f16cabed064fb2b85ac6ff01cea8eaed9fd513db85dad65d3d"
+        },
+        {
+          "file": "bg_far_gangwon_winter_wide_v13_part3_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "a4832ac14bcba9b092f90289e2c4e7a5eff7ed74c7172a6a36e6096ffb3e7461"
+        }
+      ]
+    },
+    {
+      "region": "chungcheong",
+      "file": "bg_far_chungcheong_winter_wide_v13_clean.png",
+      "width": 6144,
+      "height": 1536,
+      "sha256": "74cbcaf47a0f2575e2cc86bfd0b633b3be798c4e3a5014130e16e6b9ba8176ab",
+      "sourceDriveId": "1wEvmlVruzKbHbhdoDf5kDOSCrDgkiXZN",
+      "sourceSha256": "ec1a312cf2102f14dd5d0f393857f785a70e5dac34f4bb78224245d21b165ec7",
+      "wrapEdgeChannelMismatch": 0,
+      "lowAlphaPixels": 0,
+      "tileReassemblyMismatchRows": 0,
+      "seamRepair": {
+        "range": [
+          3950,
+          4250
+        ],
+        "outsideChangedChannels": 0,
+        "alphaChangedInsideRange": 1643,
+        "method": "imagegen context edit; narrowly masked placement; remove generated sky haze outside terrain"
+      },
+      "iceRepair": {
+        "generated": "exec-7190cf4d-bafc-48ef-bc93-8cc08c233b5e.png",
+        "generatedSize": [
+          2172,
+          724
+        ],
+        "selectedWaterComponents": [
+          {
+            "pixels": 1383073,
+            "miny": 827,
+            "maxy": 1219
+          },
+          {
+            "pixels": 165,
+            "miny": 903,
+            "maxy": 912
+          },
+          {
+            "pixels": 1437,
+            "miny": 908,
+            "maxy": 930
+          },
+          {
+            "pixels": 109,
+            "miny": 997,
+            "maxy": 1000
+          }
+        ],
+        "maskedPixels": 1341610,
+        "changedPixels": 1340945,
+        "alphaChanged": 0,
+        "outsideWaterMaskChangedBeforeWrap": 0,
+        "method": "imagegen freshwater ice; blue-water components only, banks feathered 2px; original alpha; sea horizon in jeolla excluded; final 64px outer wrap normalization"
+      },
+      "tiles": [
+        {
+          "file": "bg_far_chungcheong_winter_wide_v13_part1_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "6c53ad482eea887615db5311c57510036f021562f3c03e763c225cbd65c0918d"
+        },
+        {
+          "file": "bg_far_chungcheong_winter_wide_v13_part2_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "a601bee3f6e39adfaa45f458f36942ebd16cf0dd4fa8d125a1c3f4db04138f4a"
+        },
+        {
+          "file": "bg_far_chungcheong_winter_wide_v13_part3_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "115ff6030a428f90003b02a1c9cd5bf179c537e6d646e1ae941f3235c07b38d4"
+        }
+      ]
+    },
+    {
+      "region": "jeolla",
+      "file": "bg_far_jeolla_winter_wide_v13_clean.png",
+      "width": 6144,
+      "height": 1536,
+      "sha256": "baf9e78d55626264f4f706c28b6fea762fa117b2e85f1dfff13e4331b7489a04",
+      "sourceDriveId": "1HAvN4x_UMArhmvS2iZYlW6SmjUDwD63p",
+      "sourceSha256": "3927ca5059a02687b9e0e3c72d0867ebb86130fa0b925799572c6405006cec06",
+      "wrapEdgeChannelMismatch": 0,
+      "lowAlphaPixels": 0,
+      "tileReassemblyMismatchRows": 0,
+      "seamRepair": {
+        "range": [
+          3950,
+          4250
+        ],
+        "outsideChangedChannels": 0,
+        "alphaChangedInsideRange": 1473,
+        "method": "imagegen context edit; narrowly masked placement; remove generated sky haze outside terrain"
+      },
+      "iceRepair": {
+        "generated": "exec-bcd04e9b-7fa5-42b0-b8cd-7ecee6532a80.png",
+        "generatedSize": [
+          2172,
+          724
+        ],
+        "selectedWaterComponents": [
+          {
+            "pixels": 146,
+            "miny": 1034,
+            "maxy": 1043
+          },
+          {
+            "pixels": 3694,
+            "miny": 1043,
+            "maxy": 1121
+          },
+          {
+            "pixels": 33892,
+            "miny": 1045,
+            "maxy": 1325
+          },
+          {
+            "pixels": 258,
+            "miny": 1061,
+            "maxy": 1070
+          },
+          {
+            "pixels": 1350,
+            "miny": 1069,
+            "maxy": 1096
+          },
+          {
+            "pixels": 16282,
+            "miny": 1102,
+            "maxy": 1273
+          }
+        ],
+        "maskedPixels": 39336,
+        "changedPixels": 39336,
+        "alphaChanged": 0,
+        "outsideWaterMaskChangedBeforeWrap": 0,
+        "method": "imagegen freshwater ice; blue-water components only, banks feathered 2px; original alpha; sea horizon in jeolla excluded; final 64px outer wrap normalization"
+      },
+      "tiles": [
+        {
+          "file": "bg_far_jeolla_winter_wide_v13_part1_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "03d5639005e95a48ac1ff7ff0c7a5dceb5ab434bb3a8059bf0b2ede443a6475a"
+        },
+        {
+          "file": "bg_far_jeolla_winter_wide_v13_part2_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "36922b24a51a21eff62fdc02af9a832148da1756001a8f895ba65398a68265c6"
+        },
+        {
+          "file": "bg_far_jeolla_winter_wide_v13_part3_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "92efef73650ca1fa46d0b533c5d91a6851c02058e6a638e94117db92a3a8bd7d"
+        }
+      ]
+    },
+    {
+      "region": "gyeongsang",
+      "file": "bg_far_gyeongsang_winter_wide_v13_clean.png",
+      "width": 6144,
+      "height": 1536,
+      "sha256": "077c921c4351c7a7c420844f8bcd5d9ad97710b279b951f1760c7e495d5a7a22",
+      "sourceDriveId": "1f99xr4-DRkyZPKS4K1rKmA98nGqm4WWp",
+      "sourceSha256": "c78fade1408cb2fe967459a70a557f2b743e2f93e407955e47e01aa9f899839f",
+      "wrapEdgeChannelMismatch": 0,
+      "lowAlphaPixels": 0,
+      "tileReassemblyMismatchRows": 0,
+      "seamRepair": null,
+      "iceRepair": {
+        "generated": "exec-50a5b1d4-9556-44e4-a1a6-48acd70e0264.png",
+        "generatedSize": [
+          2172,
+          724
+        ],
+        "selectedWaterComponents": [
+          {
+            "pixels": 34727,
+            "miny": 947,
+            "maxy": 1152
+          },
+          {
+            "pixels": 404293,
+            "miny": 957,
+            "maxy": 1328
+          },
+          {
+            "pixels": 13625,
+            "miny": 959,
+            "maxy": 1069
+          },
+          {
+            "pixels": 195,
+            "miny": 961,
+            "maxy": 972
+          },
+          {
+            "pixels": 105,
+            "miny": 962,
+            "maxy": 967
+          },
+          {
+            "pixels": 109,
+            "miny": 980,
+            "maxy": 983
+          },
+          {
+            "pixels": 104290,
+            "miny": 1049,
+            "maxy": 1275
+          },
+          {
+            "pixels": 1110,
+            "miny": 1057,
+            "maxy": 1071
+          },
+          {
+            "pixels": 2430,
+            "miny": 1100,
+            "maxy": 1152
+          }
+        ],
+        "maskedPixels": 516234,
+        "changedPixels": 516234,
+        "alphaChanged": 0,
+        "outsideWaterMaskChangedBeforeWrap": 0,
+        "method": "imagegen freshwater ice; blue-water components only, banks feathered 2px; original alpha; sea horizon in jeolla excluded; final 64px outer wrap normalization"
+      },
+      "tiles": [
+        {
+          "file": "bg_far_gyeongsang_winter_wide_v13_part1_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "02fbf3cdf3dd87f85c294e1becb59a87575c7b23a371265f30aa8c1c67b5f86f"
+        },
+        {
+          "file": "bg_far_gyeongsang_winter_wide_v13_part2_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "49626d932a943f5b2388e0f37e378be4cdc73f8e7cebe94abea7da1b4f58584b"
+        },
+        {
+          "file": "bg_far_gyeongsang_winter_wide_v13_part3_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "50e0b32f3fb5bf84b8161f322c0f75b2cb164af3502e9b2996d80869413206ac"
+        }
+      ]
+    },
+    {
+      "region": "jeju",
+      "file": "bg_far_jeju_winter_wide_v13_clean.png",
+      "width": 6144,
+      "height": 1536,
+      "sha256": "a19567698972a26db6c2a7c876d7ba58dedef37ae4a23ec4b226153291f77055",
+      "sourceDriveId": "1Mw2Et6kRT-AywvdKU3yCo79Pf7mw61sd",
+      "sourceSha256": "d89dcf03f47e7dc8b30f7052b61b88742afd796573c01df7622fc961865b8b67",
+      "wrapEdgeChannelMismatch": 0,
+      "lowAlphaPixels": 0,
+      "tileReassemblyMismatchRows": 0,
+      "seamRepair": null,
+      "iceRepair": null,
+      "tiles": [
+        {
+          "file": "bg_far_jeju_winter_wide_v13_part1_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "a469dddfd2f22be9c589ea886e250808409004910115e381c9c7a44b8b6be008"
+        },
+        {
+          "file": "bg_far_jeju_winter_wide_v13_part2_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "0224dd2c4e188050f8a30b306bee2ec1024271d64a04c82bedff88962f5ed543"
+        },
+        {
+          "file": "bg_far_jeju_winter_wide_v13_part3_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "665179baa82ef46e682b735ee1cde21a0ce50bf049016a1ec4ba991d559b7a26"
+        }
+      ]
+    },
+    {
+      "region": "sea",
+      "file": "bg_far_sea_winter_wide_v13_clean.png",
+      "width": 6144,
+      "height": 1536,
+      "sha256": "8c563bacab1e76b23cc2610681a0fd8a17f54b00421653aa80c4500eb816e4fb",
+      "sourceDriveId": "10F0H59DnIXbQ3hV0YUlIv8q1U7hIsfXe",
+      "sourceSha256": "12363072ce5aa46e3309a89092b50851a072d9de736dda55c46622838754ba72",
+      "wrapEdgeChannelMismatch": 0,
+      "lowAlphaPixels": 0,
+      "tileReassemblyMismatchRows": 0,
+      "seamRepair": null,
+      "iceRepair": null,
+      "tiles": [
+        {
+          "file": "bg_far_sea_winter_wide_v13_part1_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "eea41830a4ff8a2b6f138cfc0006f55679d296a6ea4d9dd8f45897b22c898887"
+        },
+        {
+          "file": "bg_far_sea_winter_wide_v13_part2_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "f27dd397b1ad98f38ca449233a42e739806647865a95702f91bcd6490b33348f"
+        },
+        {
+          "file": "bg_far_sea_winter_wide_v13_part3_clean.png",
+          "width": 2048,
+          "height": 1536,
+          "sha256": "bf2e90ea73f89b4724f3dfededf2f1c323da95b38172a357ef21206c8ecfa26f"
+        }
+      ]
+    }
+  ]
+}
