@@ -1,0 +1,640 @@
+{
+ "version": 3,
+ "asOf": "2026-11-04",
+ "source": "Assets/02_Backgrounds_배경 background_panorama_v10(placement.json v10·기록/objects_manifest.json) + background_unified_v11(placement.json v11·clean) — 개발 기획 11/3. 리포 runtime_v12(scene_art.json)와 파일 이름·좌표를 대조할 것 / v3(11/4 개발 기획): 겨울 후경 v13 파일 이름(Assets/02_Backgrounds_배경/background_winter_far_v13, 바다도 겨울판), 배 9척은 boats.json·boat_layers.json, 정령 발 y 960을 갑판 y 1216에 맞춤, 쉼터 rest(장면 폭 약 1.5배·누름 순서)",
+ "assetDirs": {
+  "v10": "backgrounds/v10",
+  "v11": "backgrounds/v11",
+  "v13winter": "backgrounds/v13_winter"
+ },
+ "screen": {
+  "portrait": [
+   1170,
+   2532
+  ],
+  "landscapeScale": 0.78
+ },
+ "backdrop": {
+  "master": [
+   6144,
+   1536
+  ],
+  "tileWidth": 2048,
+  "portrait": {
+   "width": 4800,
+   "heightLand": 1230,
+   "heightSea": 1280,
+   "y": 912
+  },
+  "landscape": {
+   "width": 3744,
+   "heightLand": 959,
+   "heightSea": 998,
+   "y": 151
+  },
+  "speed": 0.05
+ },
+ "backdrops": {
+  "capital": {
+   "file": "bg_far_capital_wide_v10_clean.png",
+   "tiles": [
+    "bg_far_capital_wide_v10_tile1",
+    "bg_far_capital_wide_v10_tile2",
+    "bg_far_capital_wide_v10_tile3"
+   ],
+   "winterFile": "bg_far_capital_winter_wide_v13_clean.png",
+   "winterPending": false,
+   "tags": [
+    "도시",
+    "언덕",
+    "숲"
+   ],
+   "winterTiles": [
+    "bg_far_capital_winter_wide_v13_part1",
+    "bg_far_capital_winter_wide_v13_part2",
+    "bg_far_capital_winter_wide_v13_part3"
+   ],
+   "winterSource": "v13"
+  },
+  "gangwon": {
+   "file": "bg_far_gangwon_wide_v10_clean.png",
+   "tiles": [
+    "bg_far_gangwon_wide_v10_tile1",
+    "bg_far_gangwon_wide_v10_tile2",
+    "bg_far_gangwon_wide_v10_tile3"
+   ],
+   "winterFile": "bg_far_gangwon_winter_wide_v13_clean.png",
+   "winterPending": false,
+   "tags": [
+    "산",
+    "숲"
+   ],
+   "winterTiles": [
+    "bg_far_gangwon_winter_wide_v13_part1",
+    "bg_far_gangwon_winter_wide_v13_part2",
+    "bg_far_gangwon_winter_wide_v13_part3"
+   ],
+   "winterSource": "v13"
+  },
+  "chungcheong": {
+   "file": "bg_far_chungcheong_wide_v10_clean.png",
+   "tiles": [
+    "bg_far_chungcheong_wide_v10_tile1",
+    "bg_far_chungcheong_wide_v10_tile2",
+    "bg_far_chungcheong_wide_v10_tile3"
+   ],
+   "winterFile": "bg_far_chungcheong_winter_wide_v13_clean.png",
+   "winterPending": false,
+   "tags": [
+    "물가",
+    "평야",
+    "언덕"
+   ],
+   "winterTiles": [
+    "bg_far_chungcheong_winter_wide_v13_part1",
+    "bg_far_chungcheong_winter_wide_v13_part2",
+    "bg_far_chungcheong_winter_wide_v13_part3"
+   ],
+   "winterSource": "v13"
+  },
+  "jeolla": {
+   "file": "bg_far_jeolla_wide_v10_clean.png",
+   "tiles": [
+    "bg_far_jeolla_wide_v10_tile1",
+    "bg_far_jeolla_wide_v10_tile2",
+    "bg_far_jeolla_wide_v10_tile3"
+   ],
+   "winterFile": "bg_far_jeolla_winter_wide_v13_clean.png",
+   "winterPending": false,
+   "tags": [
+    "평야",
+    "물가",
+    "언덕"
+   ],
+   "winterTiles": [
+    "bg_far_jeolla_winter_wide_v13_part1",
+    "bg_far_jeolla_winter_wide_v13_part2",
+    "bg_far_jeolla_winter_wide_v13_part3"
+   ],
+   "winterSource": "v13"
+  },
+  "gyeongsang": {
+   "file": "bg_far_gyeongsang_wide_v10_clean.png",
+   "tiles": [
+    "bg_far_gyeongsang_wide_v10_tile1",
+    "bg_far_gyeongsang_wide_v10_tile2",
+    "bg_far_gyeongsang_wide_v10_tile3"
+   ],
+   "winterFile": "bg_far_gyeongsang_winter_wide_v13_clean.png",
+   "winterPending": false,
+   "tags": [
+    "산",
+    "숲",
+    "언덕"
+   ],
+   "winterTiles": [
+    "bg_far_gyeongsang_winter_wide_v13_part1",
+    "bg_far_gyeongsang_winter_wide_v13_part2",
+    "bg_far_gyeongsang_winter_wide_v13_part3"
+   ],
+   "winterSource": "v13"
+  },
+  "jeju": {
+   "file": "bg_far_jeju_wide_v10_clean.png",
+   "tiles": [
+    "bg_far_jeju_wide_v10_tile1",
+    "bg_far_jeju_wide_v10_tile2",
+    "bg_far_jeju_wide_v10_tile3"
+   ],
+   "winterFile": "bg_far_jeju_winter_wide_v13_clean.png",
+   "winterPending": false,
+   "tags": [
+    "오름",
+    "해안",
+    "언덕"
+   ],
+   "winterTiles": [
+    "bg_far_jeju_winter_wide_v13_part1",
+    "bg_far_jeju_winter_wide_v13_part2",
+    "bg_far_jeju_winter_wide_v13_part3"
+   ],
+   "winterSource": "v13"
+  },
+  "sea": {
+   "file": "bg_far_sea_wide_v10_clean.png",
+   "tiles": [
+    "bg_far_sea_wide_v10_tile1",
+    "bg_far_sea_wide_v10_tile2",
+    "bg_far_sea_wide_v10_tile3"
+   ],
+   "winterFile": "bg_far_sea_winter_wide_v13_clean.png",
+   "winterPending": false,
+   "tags": [],
+   "winterTiles": [
+    "bg_far_sea_winter_wide_v13_part1",
+    "bg_far_sea_winter_wide_v13_part2",
+    "bg_far_sea_winter_wide_v13_part3"
+   ],
+   "winterSource": "v13"
+  }
+ },
+ "pieces": {
+  "grove": [
+   {
+    "id": "bg_cluster_city_a",
+    "file": "bg_cluster_city_a_v10_clean.png",
+    "tags": [
+     "도시"
+    ],
+    "source": "v10",
+    "tall": false,
+    "bbox": [
+     70,
+     230,
+     1661,
+     585
+    ]
+   },
+   {
+    "id": "bg_cluster_village_a",
+    "file": "bg_cluster_village_a_v10_clean.png",
+    "tags": [
+     "도시"
+    ],
+    "source": "v10",
+    "tall": false,
+    "bbox": [
+     257,
+     242,
+     1341,
+     550
+    ]
+   },
+   {
+    "id": "bg_cluster_forest_a",
+    "file": "bg_cluster_forest_a_v10_clean.png",
+    "tags": [
+     "숲"
+    ],
+    "source": "v10",
+    "tall": false,
+    "bbox": [
+     120,
+     112,
+     1538,
+     686
+    ]
+   },
+   {
+    "id": "bg_cluster_forest_b",
+    "file": "bg_cluster_forest_b_v10_clean.png",
+    "tags": [
+     "숲"
+    ],
+    "source": "v10",
+    "tall": false,
+    "bbox": [
+     28,
+     92,
+     1718,
+     723
+    ]
+   },
+   {
+    "id": "bg_cluster_hill_a",
+    "file": "bg_cluster_hill_a_v10_clean.png",
+    "tags": [
+     "언덕",
+     "평야"
+    ],
+    "source": "v10",
+    "tall": false,
+    "bbox": [
+     144,
+     415,
+     1496,
+     256
+    ]
+   },
+   {
+    "id": "L2_mountain_shoulder_left",
+    "file": "L2_mountain_shoulder_left_v11_clean.png",
+    "tags": [
+     "산",
+     "언덕"
+    ],
+    "source": "v11",
+    "tall": false
+   },
+   {
+    "id": "L2_mountain_shoulder_right",
+    "file": "L2_mountain_shoulder_right_v11_clean.png",
+    "tags": [
+     "산",
+     "언덕"
+    ],
+    "source": "v11",
+    "tall": false
+   },
+   {
+    "id": "L2_river_shore_patch",
+    "file": "L2_river_shore_patch_v11_clean.png",
+    "tags": [
+     "물가"
+    ],
+    "source": "v11",
+    "tall": false
+   },
+   {
+    "id": "L2_jeju_basalt_patch",
+    "file": "L2_jeju_basalt_patch_v11_clean.png",
+    "tags": [
+     "오름",
+     "해안"
+    ],
+    "source": "v11",
+    "tall": false
+   }
+  ],
+  "roadside": [
+   {
+    "id": "bg_object_utility_pole_a",
+    "file": "bg_object_utility_pole_a_v10_clean.png",
+    "tags": [
+     "도시",
+     "평야"
+    ],
+    "source": "v10",
+    "tall": true,
+    "bbox": [
+     274,
+     51,
+     477,
+     1437
+    ],
+    "size": "big",
+    "seasons": [
+     "spring",
+     "summer",
+     "autumn",
+     "winter"
+    ],
+    "row": "front"
+   },
+   {
+    "id": "bg_object_bush_a",
+    "file": "bg_object_bush_a_v10_clean.png",
+    "tags": [],
+    "source": "v10",
+    "tall": false,
+    "bbox": [
+     80,
+     234,
+     1378,
+     627
+    ],
+    "size": "small",
+    "seasons": [
+     "spring",
+     "summer",
+     "autumn",
+     "winter"
+    ]
+   },
+   {
+    "id": "bg_object_bush_b",
+    "file": "bg_object_bush_b_v10_clean.png",
+    "tags": [],
+    "source": "v10",
+    "tall": false,
+    "bbox": [
+     107,
+     154,
+     1326,
+     758
+    ],
+    "size": "small",
+    "seasons": [
+     "spring",
+     "summer",
+     "autumn",
+     "winter"
+    ]
+   },
+   {
+    "id": "L3_common_broadleaf",
+    "file": "L3_common_broadleaf_v10_clean.png",
+    "tags": [],
+    "source": "v10",
+    "tall": true,
+    "bbox": [
+     77,
+     10,
+     1383,
+     1004
+    ],
+    "size": "big",
+    "seasons": [
+     "spring",
+     "summer",
+     "autumn",
+     "winter"
+    ]
+   },
+   {
+    "id": "L3_common_pine_cluster",
+    "file": "L3_common_pine_cluster_v11_clean.png",
+    "tags": [],
+    "source": "v11",
+    "tall": true,
+    "size": "big",
+    "seasons": [
+     "spring",
+     "summer",
+     "autumn",
+     "winter"
+    ]
+   },
+   {
+    "id": "L3_spring_cherry",
+    "file": "L3_spring_cherry_v10_clean.png",
+    "tags": [],
+    "source": "v10",
+    "tall": true,
+    "bbox": [
+     27,
+     10,
+     1482,
+     992
+    ],
+    "size": "big",
+    "seasons": [
+     "spring"
+    ]
+   },
+   {
+    "id": "L3_spring_plum",
+    "file": "L3_spring_plum_v11_clean.png",
+    "tags": [],
+    "source": "v11",
+    "tall": true,
+    "size": "big",
+    "seasons": [
+     "spring"
+    ]
+   },
+   {
+    "id": "L3_spring_magnolia",
+    "file": "L3_spring_magnolia_v11_clean.png",
+    "tags": [],
+    "source": "v11",
+    "tall": true,
+    "size": "big",
+    "seasons": [
+     "spring"
+    ]
+   },
+   {
+    "id": "L3_spring_azalea",
+    "file": "L3_spring_azalea_v11_clean.png",
+    "tags": [],
+    "source": "v11",
+    "tall": false,
+    "size": "small",
+    "seasons": [
+     "spring"
+    ]
+   },
+   {
+    "id": "L3_spring_forsythia",
+    "file": "L3_spring_forsythia_v11_clean.png",
+    "tags": [],
+    "source": "v11",
+    "tall": false,
+    "size": "small",
+    "seasons": [
+     "spring"
+    ]
+   },
+   {
+    "id": "L3_summer_trumpet_vine",
+    "file": "L3_summer_trumpet_vine_v11_clean.png",
+    "tags": [],
+    "source": "v11",
+    "tall": false,
+    "size": "small",
+    "seasons": [
+     "summer"
+    ]
+   },
+   {
+    "id": "L3_autumn_maple",
+    "file": "L3_autumn_maple_v11_clean.png",
+    "tags": [],
+    "source": "v11",
+    "tall": true,
+    "size": "big",
+    "seasons": [
+     "autumn"
+    ]
+   },
+   {
+    "id": "L3_autumn_ginkgo",
+    "file": "L3_autumn_ginkgo_v11_clean.png",
+    "tags": [],
+    "source": "v11",
+    "tall": true,
+    "size": "big",
+    "seasons": [
+     "autumn"
+    ]
+   },
+   {
+    "id": "L3_autumn_rose",
+    "file": "L3_autumn_rose_v11_clean.png",
+    "tags": [],
+    "source": "v11",
+    "tall": false,
+    "size": "small",
+    "seasons": [
+     "autumn"
+    ]
+   }
+  ]
+ },
+ "people": {
+  "pending": "사람 실루엣 v13 납품됨(11/3, 디자인/asset_progress_20261103.md 끝 표) — 파일 이름·bbox는 개발이 리포에 넣을 때 채움(정리 R3)",
+  "pieces": []
+ },
+ "layout": {
+  "cycleWidthPx": 12288,
+  "grove": {
+   "speed": 0.1,
+   "gapMinPx": 2500,
+   "approx": true,
+   "slotsPerCycle": 3
+  },
+  "roadside": {
+   "front": {
+    "speed": 0.3,
+    "feetY": 2081,
+    "bigHeightPx": [
+     900,
+     1100
+    ],
+    "smallHeightPx": [
+     380,
+     480
+    ],
+    "approx": true,
+    "slotsPerCycle": 6
+   },
+   "back": {
+    "speed": 0.2,
+    "feetY": 1780,
+    "scaleOfFront": [
+     0.4,
+     0.5
+    ],
+    "haze": 0.25,
+    "approx": true,
+    "slotsPerCycle": 5
+   },
+   "tallObjectClearX": 250,
+   "tallNearCharacterOpacity": 0.35
+  }
+ },
+ "ground": {
+  "path": "bg_path_v11_clean.png",
+  "lowerBankBase": "bg_lower_bank_base_v11_clean.png",
+  "lowerBankGrass": "bg_lower_bank_grass_v11_clean.png",
+  "canvas": [
+   4096,
+   640
+  ],
+  "pathY": 279,
+  "portraitY": 1892,
+  "landscapeY": 922,
+  "speed": 1.0
+ },
+ "meadow": {
+  "file": "bg_back_meadow_v10_clean.png",
+  "grass": "bg_back_meadow_grass_v10_clean.png",
+  "canvas": [
+   4096,
+   650
+  ],
+  "portraitY": 1880,
+  "speed": 0.5
+ },
+ "foreground": {
+  "file": "bg_front_{season}_v11_clean.png",
+  "canvas": [
+   4096,
+   418
+  ],
+  "maxPlantHeight": 170,
+  "portraitY": 1838,
+  "landscapeY": 880,
+  "speed": 1.0
+ },
+ "water": {
+  "file": "bg_near_water_v11_clean.png",
+  "canvas": [
+   4096,
+   640
+  ],
+  "surfaceY": 279
+ },
+ "boat": {
+  "boatsFile": "boats.json",
+  "layersFile": "boat_layers.json",
+  "default": "boat_raft",
+  "canvas": [
+   3072,
+   1536
+  ],
+  "deckY": 1216,
+  "characterFeetY": 960,
+  "characterOrigin": "x = mainFoot.x − 512, y = deckY − 960 (= 256), 동행은 companionFoot에 같은 식",
+  "pending": "9척 합친 boat_layers.json(앞판·뒤판·mainFoot·companionFoot) 납품 뒤 boats.json layers를 채움(codex_boats_fix_v01)",
+  "removed": "boat_ferry(v11 나룻배)·boat_sail 상품은 11/3 배 9척으로 없앰"
+ },
+ "seed": "hash(journeyId, layer, cycleIndex, slot)",
+ "rules": [
+  "조각 = 지역 tags와 하나라도 겹치는 것 + tags 빈 공용, 그 계절(seasons)에 있는 것만",
+  "겨울 roadside는 seasons에 winter가 있는 것만(소나무·활엽수·전봇대·덤불)",
+  "sea 지역은 grove·roadside·meadow·foreground 끔",
+  "bbox가 없는 v11 조각은 빌드 때 알파로 재서 채움(앱은 bbox 없으면 그림 전체)"
+ ],
+ "winterNote": "v13 7장(바다 포함, 바다는 얼리지 않은 열린 물). 타일 이름 part1~3은 README 기준, 리포에 넣을 때 tiles/ 실제 이름과 대조. Annie 눈 검수·폰 확인 전이라 겨울 철(12~2월)에만 쓰고 v10은 그대로",
+ "rest": {
+  "approx": true,
+  "widthRatio": 1.5,
+  "viewport": "처음 화면 = 장면 왼쪽 1/1.5, 오른쪽으로 밀면 수레",
+  "parallax": {
+   "sky": 0.03,
+   "backdrop": 0.05,
+   "camp": 1.0
+  },
+  "objects": {
+   "map": null,
+   "backpack": null,
+   "notebook": null,
+   "companion": null,
+   "character": null,
+   "cart": null
+  },
+  "objectsNote": "x 위치(장면 폭 비율)는 디자인 기획이 넓힌 캠프 4장(뒤판·앞판·풀 2)과 함께 정함. cart는 오른쪽 끝, 나머지는 처음 화면",
+  "hitOrder": [
+   "cart",
+   "map",
+   "backpack",
+   "notebook",
+   "companion",
+   "character"
+  ],
+  "hitNote": "겹치면 앞 순서가 먼저 눌림(11/4). 정령 몸 누르기는 config character.tapReaction",
+  "fixedHud": "config rest.fixedHud"
+ }
+}

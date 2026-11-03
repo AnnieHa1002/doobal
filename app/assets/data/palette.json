@@ -1,38 +1,428 @@
 {
- "version": 1,
- "source": "디자인기획/색_견본.md(10/29 확정), 아트 디렉션 v2 5장",
+ "version": 6,
+ "source": "v6(11/4 개발 기획): 몸 색 견본 10 확정(11/4 Annie, 수채 파스텔 6 + 자연색 4, 기본 크림), 기준 밝기 가안 200(v21 회색조 몸 실측 뒤 고침), 채도 막대 없음. 베레모는 기본 #A4502F + 같은 10색. v5(11/4 개발 기획): 얼굴을 Codex 리그 v24 승인본으로 — 눈 5·눈썹 5(없음 포함)·코 7(없음 포함)·입 6, 표정 6(기본·행복·울먹임·놀람·졸림·화남) + 자동 깜빡임. 저장값은 문자 id, Rive View model에는 rive 정수로 넘김(README 'Doobal_Spirit_Face_Rig_v24', noseStyle은 0 고리·3 없음 순서 주의). 베레모 색 바꾸기 tintProps. v4(11/03): 얼굴 5종·표정 4. v3(11/03): 몸 색 1채널, hair·skin은 legacy",
  "formula": "출력 RGB = 견본 RGB × L ÷ base, L = 0.299R + 0.587G + 0.114B, 알파 그대로",
- "hair": {
-  "base": 182,
-  "swatches": [
-   { "id": 1, "name": "흑발", "hex": "#2B2522" },
-   { "id": 2, "name": "짙은 갈색", "hex": "#4A3226" },
-   { "id": 3, "name": "갈색", "hex": "#6E4A32" },
-   { "id": 4, "name": "적갈색", "hex": "#8C3E2A" },
-   { "id": 5, "name": "진저", "hex": "#C2703A" },
-   { "id": 6, "name": "금발", "hex": "#D6B26E" },
-   { "id": 7, "name": "애쉬그레이", "hex": "#849AA9" },
-   { "id": 8, "name": "백발", "hex": "#E3E0DA" },
-   { "id": 9, "name": "푸른색", "hex": "#4F6F9E" },
-   { "id": 10, "name": "분홍색", "hex": "#E39AB0" }
-  ],
-  "custom": { "lightMin": 15, "lightMax": 90 },
-  "gradient": { "rootUntil": 0.3, "tipFrom": 0.85, "browsUse": "root" },
-  "parts": ["hair_front", "hair_back", "brows"]
+ "rive": {
+  "file": "doobal_spirit_face_rig_v24.riv",
+  "drive": "193DZTyOHoqAi9uBRqQZufZ9vx1XJRmlJ",
+  "artboard": "DoobalSpirit",
+  "stateMachine": "SpiritController",
+  "viewModel": "DoobalSpirit",
+  "props": {
+   "eye": "eyeStyle",
+   "brow": "browStyle",
+   "nose": "noseStyle",
+   "mouth": "mouthStyle",
+   "expression": "expression",
+   "blink": "blinkMode",
+   "direction": "direction",
+   "motion": "motion",
+   "faceVisible": "faceVisible",
+   "headPressed": "headPressed",
+   "bellyPressed": "bellyPressed",
+   "lookX": "lookX",
+   "lookY": "lookY"
+  },
+  "direction": {
+   "front": 0,
+   "right": 1,
+   "back": 2,
+   "left": 3
+  },
+  "blinkMode": {
+   "auto": 0,
+   "open": 1,
+   "closed": 2
+  },
+  "motion": {
+   "idle": 0,
+   "walk": 1,
+   "sit": 2,
+   "lie": 3,
+   "jump": 4,
+   "run": 5,
+   "sleep": 6,
+   "wave": 7,
+   "fall": 8,
+   "laugh": 9
+  }
  },
- "skin": {
-  "base": 196,
-  "swatches": [
-   { "id": 1, "name": "피부 1", "hex": "#F6E1D3" },
-   { "id": 2, "name": "피부 2", "hex": "#F4D7D7" },
-   { "id": 3, "name": "피부 3", "hex": "#EECBB2" },
-   { "id": 4, "name": "피부 4", "hex": "#E2B48F" },
-   { "id": 5, "name": "피부 5", "hex": "#CF9A72" },
-   { "id": 6, "name": "피부 6", "hex": "#B57E57" },
-   { "id": 7, "name": "피부 7", "hex": "#966242" }
+ "customParts": {
+  "asOf": "2026-11-04",
+  "eyes": [
+   {
+    "id": "dot",
+    "name": "점+반짝",
+    "rive": 0
+   },
+   {
+    "id": "bean",
+    "name": "콩 눈",
+    "rive": 1
+   },
+   {
+    "id": "sleepy",
+    "name": "졸린 눈",
+    "rive": 2
+   },
+   {
+    "id": "fierce",
+    "name": "사나운 눈",
+    "rive": 3
+   },
+   {
+    "id": "cat",
+    "name": "고양이 눈",
+    "rive": 4
+   }
   ],
-  "custom": { "lightMin": 35, "lightMax": 95 },
-  "parts": ["face_shape", "ears", "body_skin"]
+  "brows": [
+   {
+    "id": "none",
+    "name": "없음",
+    "rive": 0
+   },
+   {
+    "id": "shiba",
+    "name": "시바",
+    "rive": 1
+   },
+   {
+    "id": "thin",
+    "name": "가늘고 긴",
+    "rive": 2
+   },
+   {
+    "id": "thick",
+    "name": "두꺼운",
+    "rive": 3
+   },
+   {
+    "id": "fierce",
+    "name": "사나운",
+    "rive": 4
+   }
+  ],
+  "nose": [
+   {
+    "id": "none",
+    "name": "없음",
+    "rive": 3
+   },
+   {
+    "id": "ring",
+    "name": "고리",
+    "rive": 0
+   },
+   {
+    "id": "dot",
+    "name": "점",
+    "rive": 1
+   },
+   {
+    "id": "wide",
+    "name": "넓적",
+    "rive": 2
+   },
+   {
+    "id": "triangle",
+    "name": "삼각",
+    "rive": 4
+   },
+   {
+    "id": "heart",
+    "name": "하트",
+    "rive": 5
+   },
+   {
+    "id": "shy",
+    "name": "쑥스러움",
+    "rive": 6
+   }
+  ],
+  "mouth": [
+   {
+    "id": "smile",
+    "name": "미소",
+    "rive": 0
+   },
+   {
+    "id": "omega",
+    "name": "ω",
+    "rive": 1
+   },
+   {
+    "id": "o",
+    "name": "o",
+    "rive": 2
+   },
+   {
+    "id": "flat",
+    "name": "일자",
+    "rive": 3
+   },
+   {
+    "id": "tongue",
+    "name": "혀",
+    "rive": 4
+   },
+   {
+    "id": "smirk",
+    "name": "삐죽 미소",
+    "rive": 5
+   }
+  ],
+  "defaultFace": {
+   "eyes": "dot",
+   "brows": "shiba",
+   "nose": "shy",
+   "mouth": "omega"
+  },
+  "expressions": [
+   {
+    "id": "default",
+    "name": "기본",
+    "rive": 0
+   },
+   {
+    "id": "happy",
+    "name": "행복",
+    "rive": 1
+   },
+   {
+    "id": "teary",
+    "name": "울먹임",
+    "rive": 2
+   },
+   {
+    "id": "surprised",
+    "name": "놀람",
+    "rive": 3
+   },
+   {
+    "id": "sleepy",
+    "name": "졸림",
+    "rive": 4
+   },
+   {
+    "id": "angry",
+    "name": "화남",
+    "rive": 5
+   }
+  ],
+  "expressionTriggers": {
+   "happy": [
+    "arrival",
+    "paintingGet",
+    "tap",
+    "praise"
+   ],
+   "surprised": [
+    "companionMeet",
+    "newProp",
+    "regionComplete"
+   ],
+   "teary": [
+    "fall",
+    "storyMoving",
+    "returnAfterLongRest"
+   ],
+   "sleepy": [
+    "nightRest",
+    "sleep"
+   ],
+   "angry": [
+    "rapidTap"
+   ]
+  },
+  "holdSec": {
+   "approx": true,
+   "happy": 2,
+   "surprised": 2,
+   "teary": 3,
+   "angry": 2
+  },
+  "note": "11/4 Annie 확정(Codex v24). 얼굴 파츠는 색을 입히지 않음. 화면 이름은 꾸미기 얼굴 탭에 쓰지 않아도 됨(그림만). 졸림은 밤 쉼터·잠자기 동작에서 유지(holdSec 없음). 화남 조건은 config character.tapReaction"
+ },
+ "body": {
+  "base": 200,
+  "baseApprox": true,
+  "default": 1,
+  "swatches": [
+   {
+    "id": 1,
+    "name": "크림",
+    "hex": "#F3E4C4"
+   },
+   {
+    "id": 2,
+    "name": "살구",
+    "hex": "#F5C9A3"
+   },
+   {
+    "id": 3,
+    "name": "분홍",
+    "hex": "#EFC0BE"
+   },
+   {
+    "id": 4,
+    "name": "라벤더",
+    "hex": "#D3C6E6"
+   },
+   {
+    "id": 5,
+    "name": "하늘",
+    "hex": "#BCD9E8"
+   },
+   {
+    "id": 6,
+    "name": "연두",
+    "hex": "#CDE0AC"
+   },
+   {
+    "id": 7,
+    "name": "이끼",
+    "hex": "#9FAE7E"
+   },
+   {
+    "id": 8,
+    "name": "흙",
+    "hex": "#C4A07C"
+   },
+   {
+    "id": 9,
+    "name": "테라코타",
+    "hex": "#C9775A"
+   },
+   {
+    "id": 10,
+    "name": "남청",
+    "hex": "#7F8DB3"
+   }
+  ],
+  "custom": {
+   "lightMin": null,
+   "lightMax": null,
+   "note": "직접 고르기는 둠, 밝기 제한 값은 디자인 기획(없으면 제한 없음)"
+  },
+  "saturationSlider": false,
+  "parts": [
+   "body",
+   "arm_l",
+   "arm_r",
+   "foot_l",
+   "foot_r"
+  ],
+  "note": "견본 id는 저장값이라 순서를 바꾸지 않음"
+ },
+ "tintProps": {
+  "note": "11/4 베레모 색 바꾸기: 회색조 파츠에 같은 공식으로 색. 견본은 body.swatches와 같은 묶음(가안), 기본 테라코타. 고른 색은 Profile.look.tints{propId: {kind: swatch,i}|{kind: custom,hex}}. base는 Codex 회색조 베레모 납품 뒤 채움",
+  "hat_01": {
+   "swatches": "body",
+   "default": "#A4502F",
+   "defaultIsExtra": true,
+   "base": null,
+   "custom": true,
+   "note": "고르는 줄 = 기본 테라코타 + body 견본 10. base는 Codex 회색조 베레모 납품 뒤"
+  }
+ },
+ "legacy": {
+  "deprecated": "2026-11-02 정령 전환으로 더 쓰지 않음",
+  "hair": {
+   "base": 182,
+   "swatches": [
+    {
+     "id": 1,
+     "name": "흑발",
+     "hex": "#2B2522"
+    },
+    {
+     "id": 2,
+     "name": "짙은 갈색",
+     "hex": "#4A3226"
+    },
+    {
+     "id": 3,
+     "name": "갈색",
+     "hex": "#6E4A32"
+    },
+    {
+     "id": 4,
+     "name": "적갈색",
+     "hex": "#8C3E2A"
+    },
+    {
+     "id": 5,
+     "name": "진저",
+     "hex": "#C2703A"
+    },
+    {
+     "id": 6,
+     "name": "금발",
+     "hex": "#D6B26E"
+    },
+    {
+     "id": 7,
+     "name": "애쉬그레이",
+     "hex": "#849AA9"
+    },
+    {
+     "id": 8,
+     "name": "백발",
+     "hex": "#E3E0DA"
+    },
+    {
+     "id": 9,
+     "name": "푸른색",
+     "hex": "#4F6F9E"
+    },
+    {
+     "id": 10,
+     "name": "분홍색",
+     "hex": "#E39AB0"
+    }
+   ]
+  },
+  "skin": {
+   "base": 196,
+   "swatches": [
+    {
+     "id": 1,
+     "name": "피부 1",
+     "hex": "#F6E1D3"
+    },
+    {
+     "id": 2,
+     "name": "피부 2",
+     "hex": "#F4D7D7"
+    },
+    {
+     "id": 3,
+     "name": "피부 3",
+     "hex": "#EECBB2"
+    },
+    {
+     "id": 4,
+     "name": "피부 4",
+     "hex": "#E2B48F"
+    },
+    {
+     "id": 5,
+     "name": "피부 5",
+     "hex": "#CF9A72"
+    },
+    {
+     "id": 6,
+     "name": "피부 6",
+     "hex": "#B57E57"
+    },
+    {
+     "id": 7,
+     "name": "피부 7",
+     "hex": "#966242"
+    }
+   ]
+  }
  },
  "grass": {
   "base": 150,
@@ -43,6 +433,10 @@
    "autumn": "#C79A5B",
    "winter": "#D8D6CC"
   },
-  "layers": ["ground_grass", "camp_back_grass", "camp_front_grass"]
+  "layers": [
+   "ground_grass",
+   "camp_back_grass",
+   "camp_front_grass"
+  ]
  }
 }
