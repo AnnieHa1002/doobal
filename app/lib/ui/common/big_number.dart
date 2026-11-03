@@ -18,7 +18,7 @@ class BigNumber extends StatelessWidget {
       child: Text.rich(
         TextSpan(
           text: value,
-          style: AppText.bigNumber,
+          style: AppText.bigNumber(context),
           children: [if (unit != null) TextSpan(text: ' $unit', style: AppText.bodySub)],
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../common/app_text.dart';
 import '../common/palette.dart';
 
 /// 입력 칸 모서리와 카드 모서리 (UI 명세 공통: 큰 버튼과 같은 12pt)
@@ -44,7 +45,7 @@ class StartLayout extends StatelessWidget {
 BoxDecoration startCardDecoration() => BoxDecoration(
       color: Palette.card,
       borderRadius: BorderRadius.circular(startRadius),
-      border: Border.all(color: Palette.ink, width: 2.5),
+      border: Border.all(color: Palette.ink, width: InkLine.panel),
     );
 
 /// 잉크 테두리 카드. 내용이 길면 안에서 스크롤한다
@@ -75,7 +76,7 @@ class StartLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Palette.ink),
+      style: context.display(14),
     );
   }
 }
@@ -106,8 +107,8 @@ InputDecoration startInputDecoration({required String hint, Widget? prefix}) {
     filled: true,
     fillColor: Palette.paper,
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-    border: border(2.5),
-    enabledBorder: border(2.5),
-    focusedBorder: border(3.5),
+    border: border(InkLine.panel),
+    enabledBorder: border(InkLine.panel),
+    focusedBorder: border(InkLine.focus),
   );
 }

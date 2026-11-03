@@ -8,11 +8,13 @@ import 'package:doobal/data/painting_sharer.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/data/walk_notice.dart';
 import 'package:doobal/domain/bucket.dart';
+import 'package:doobal/domain/display_font.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/sketch.dart';
+import 'package:doobal/ui/common/app_theme.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -257,6 +259,10 @@ Future<void> pumpDoobal(
   await tester.pumpWidget(ProviderScope(overrides: e.overrides, child: app));
 }
 
+/// [openOnTop]이 띄우는 앱의 표시 글꼴. null이면 앱 테마 없이(표시 글꼴은 배율 1.0 고운 바탕)
+/// 띄우고, 정하면 그 글꼴의 앱 테마로 띄운다 (개구·동글 넘침 점검)
+DisplayFont? testDisplayFont;
+
 /// '열기' 버튼 하나뿐인 첫 화면에서 [screen]을 연다 (앱 첫 화면 위에 쌓이는 것과 같다)
 Future<void> openOnTop(
   WidgetTester tester,
@@ -271,6 +277,7 @@ Future<void> openOnTop(
   await tester.pumpWidget(ProviderScope(
     overrides: [...e.overrides, ...extra],
     child: MaterialApp(
+      theme: testDisplayFont == null ? null : doobalTheme(testDisplayFont!),
       home: Builder(
         builder: (context) => Scaffold(
           body: Center(

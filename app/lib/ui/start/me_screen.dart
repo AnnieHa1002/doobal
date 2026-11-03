@@ -1,3 +1,4 @@
+import '../common/app_text.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -151,15 +152,11 @@ class _HairCell extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected ? Palette.terracotta : Palette.paper,
             borderRadius: BorderRadius.circular(startRadius),
-            border: Border.all(color: Palette.ink, width: 2.5),
+            border: Border.all(color: Palette.ink, width: InkLine.panel),
           ),
           child: Text(
             '$number',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: selected ? Palette.paper : Palette.ink,
-            ),
+            style: context.display(18, color: selected ? Palette.paper : Palette.ink),
           ),
         ),
       ),

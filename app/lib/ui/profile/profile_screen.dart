@@ -160,7 +160,7 @@ class _ProfileCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Palette.paper,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Palette.ink, width: 2.5),
+              border: Border.all(color: Palette.ink, width: InkLine.panel),
             ),
             child: CustomPaint(painter: painter),
           ),
@@ -173,7 +173,7 @@ class _ProfileCard extends StatelessWidget {
                   me.nickname,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.cardTitle,
+                  style: AppText.cardTitle(context),
                 ),
                 const SizedBox(height: 8),
                 // 너비 120pt는 글자 크기를 키우면 같이 넓어진다 (칸이 모자라면 칸만큼에서 멈춘다)
@@ -231,7 +231,7 @@ class _DaysCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('최근 14일', style: AppText.cardTitle),
+          Text('최근 14일', style: AppText.cardTitle(context)),
           const SizedBox(height: 12),
           SizedBox(
             height: _chartHeight,
@@ -260,7 +260,7 @@ class _DaysCard extends StatelessWidget {
                       _weekdayLabels[dayFromKey(b.day).weekday - 1],
                       textAlign: TextAlign.center,
                       style: b.day == today
-                          ? AppText.label.copyWith(fontWeight: FontWeight.w800, color: Palette.ink)
+                          ? context.display(12)
                           : AppText.label,
                     ),
                   ),
@@ -305,7 +305,7 @@ class _CompanionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('동행 도감', style: AppText.cardTitle),
+          Text('동행 도감', style: AppText.cardTitle(context)),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,7 +338,7 @@ class _CompanionSlot extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Palette.ink.withValues(alpha: 0.12),
-            border: Border.all(color: Palette.ink.withValues(alpha: 0.35), width: 2),
+            border: Border.all(color: Palette.ink.withValues(alpha: 0.35), width: InkLine.panel),
           ),
           child: Icon(Icons.person, size: 32, color: Palette.ink.withValues(alpha: 0.4)),
         ),

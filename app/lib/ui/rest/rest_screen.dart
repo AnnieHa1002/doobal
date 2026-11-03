@@ -8,6 +8,7 @@ import '../../domain/camp_theme.dart';
 import '../../domain/rules.dart';
 import '../../domain/sketch.dart';
 import '../album/album_screen.dart';
+import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
@@ -212,19 +213,15 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                 decoration: BoxDecoration(
                   color: Palette.card,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Palette.ink, width: 2.5),
+                  border: Border.all(color: Palette.ink, width: InkLine.panel),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
+                    Text(
                       '출발 동네를 골라 주세요',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Palette.ink,
-                      ),
+                      style: context.display(20),
                     ),
                     const SizedBox(height: 20),
                     GameButton(
@@ -312,7 +309,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
         decoration: BoxDecoration(
           color: Palette.card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Palette.ink, width: 2.5),
+          border: Border.all(color: Palette.ink, width: InkLine.panel),
         ),
         child: Icon(icon, size: size * 0.5, color: Palette.ink),
       );
@@ -389,13 +386,13 @@ class _StatusPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.card.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Palette.ink, width: 2),
+        border: Border.all(color: Palette.ink, width: InkLine.pill),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
           text,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Palette.ink),
+          style: context.display(14),
         ),
       ),
     );
@@ -416,11 +413,11 @@ class _ScaleBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.terracotta,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Palette.ink, width: 2),
+        border: Border.all(color: Palette.ink, width: InkLine.pill),
       ),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Palette.paper),
+        style: context.display(12, color: Palette.paper),
       ),
     );
   }
@@ -444,11 +441,11 @@ class _SpeechBubble extends StatelessWidget {
           decoration: BoxDecoration(
             color: Palette.card,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Palette.ink, width: 2),
+            border: Border.all(color: Palette.ink, width: InkLine.panel),
           ),
           child: Text(
             text,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Palette.ink),
+            style: context.display(14),
           ),
         ),
         // 꼬리는 말풍선 아래 테두리를 살짝 덮어 이어 붙인다

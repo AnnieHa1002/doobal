@@ -364,7 +364,7 @@ void main() {
       final json = _json(await svcA.exportBackup(_now));
       expect(json['format'], 1);
       expect(json['schema'], a.schemaVersion);
-      expect(json['schema'], 11);
+      expect(json['schema'], 12);
       expect(json['createdUtc'], _ms(_now));
       expect(json['syncedUtc'], _ms(_synced));
       expect((json['tables'] as Map<String, dynamic>).keys, svcA.includedTableNames);
@@ -759,7 +759,7 @@ void main() {
     test('이 앱보다 새 스키마면 StateError (DB는 그대로)', () async {
       await _fill(b);
       final before = await _userState(b);
-      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 12))), throwsStateError);
+      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 13))), throwsStateError);
       expect(await _userState(b), before);
     });
 

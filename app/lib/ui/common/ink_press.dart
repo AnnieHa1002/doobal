@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'palette.dart';
 
-const _border = 2.5;
-const _shadow = 4.0;
 const _pressDuration = Duration(milliseconds: 80);
 
-/// 잉크 테두리 + 아래로 4pt 그림자. 누르면 그림자가 0이 되고 4pt 내려간다 (0.08초).
-/// 높이는 그림자 자리까지 [height] + 4이고, 안의 글자가 커지면(글자 크기 설정) 그만큼 늘어난다.
+/// 잉크 1.8 선 + 아래 2pt 옅은 그림자(잉크 18%, 번짐 없음). 누르면 내려가지 않고 면이 한 단계
+/// 진해지며([pressedFill]) 그림자가 없어진다 (0.08초, UI 명세 0장 버튼, 11/3 깔끔한 선).
+/// 높이는 그림자 자리까지 [height] + 2이고, 안의 글자가 커지면(글자 크기 설정) 그만큼 늘어난다.
 /// [onPressed]가 null이면 눌리지 않는 비활성
 class InkPress extends StatefulWidget {
   const InkPress({
@@ -25,7 +24,7 @@ class InkPress extends StatefulWidget {
   final Color fill;
   final Widget child;
 
-  /// 이 높이가 최소다 (그림자 자리는 따로 4pt)
+  /// 이 높이가 최소다 (그림자 자리는 따로 2pt)
   final double height;
 
   /// null이면 부모 너비를 꽉 채운다
@@ -65,24 +64,21 @@ class _InkPressState extends State<InkPress> {
         onTap: widget.onPressed,
         child: SizedBox(
           width: widget.width,
-          // 눌리면 4pt 내려간다. 위아래 합이 늘 4pt라 전체 높이는 그대로다
-          child: AnimatedPadding(
-            duration: _pressDuration,
-            padding: EdgeInsets.only(top: _pressed ? _shadow : 0, bottom: _pressed ? 0 : _shadow),
+          // 그림자 자리는 눌려도 비워 둔다 (버튼은 제자리에 있고 면만 바뀐다)
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: InkLine.shadow),
             child: AnimatedContainer(
               duration: _pressDuration,
               width: widget.width ?? double.infinity,
               constraints: BoxConstraints(minHeight: widget.height),
               decoration: BoxDecoration(
-                color: widget.fill,
+                color: _pressed ? pressedFill(widget.fill) : widget.fill,
                 shape: widget.circle ? BoxShape.circle : BoxShape.rectangle,
                 borderRadius: widget.circle ? null : BorderRadius.circular(widget.radius),
-                border: Border.all(color: Palette.ink, width: _border),
+                border: Border.all(color: Palette.ink, width: InkLine.panel),
                 boxShadow: [
-                  BoxShadow(
-                    color: Palette.ink,
-                    offset: Offset(0, _pressed ? 0 : _shadow),
-                  ),
+                  if (!_pressed)
+                    const BoxShadow(color: Palette.shadow, offset: Offset(0, InkLine.shadow)),
                 ],
               ),
               // 안이 최소 높이보다 작으면 가운데, 크면 안이 높이를 정한다

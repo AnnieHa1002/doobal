@@ -1,3 +1,4 @@
+import '../common/app_text.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -215,7 +216,7 @@ class StepPill extends StatelessWidget {
           decoration: BoxDecoration(
             color: Palette.card.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(HudMetrics.pillHeight / 2),
-            border: Border.all(color: Palette.ink, width: 1.5),
+            border: Border.all(color: Palette.ink, width: InkLine.pill),
           ),
           child: FittedBox(
             fit: BoxFit.scaleDown,
@@ -232,12 +233,7 @@ class StepPill extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   formatInt(steps),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Palette.ink,
-                    fontFeatures: _tabular,
-                  ),
+                  style: context.display(18).copyWith(fontFeatures: _tabular),
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -284,7 +280,7 @@ class _DetailCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.card.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Palette.ink, width: 1.5),
+        border: Border.all(color: Palette.ink, width: InkLine.pill),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,12 +324,7 @@ class _Line extends StatelessWidget {
           ),
           const Spacer(),
           Text(value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Palette.ink,
-                fontFeatures: _tabular,
-              )),
+              style: context.display(14).copyWith(fontFeatures: _tabular)),
         ],
       ),
     );
@@ -373,11 +364,11 @@ class FinishPill extends StatelessWidget {
           decoration: BoxDecoration(
             color: Palette.card.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(HudMetrics.finishHeight / 2),
-            border: Border.all(color: Palette.ink, width: 1.5),
+            border: Border.all(color: Palette.ink, width: InkLine.pill),
           ),
-          child: const Text(
+          child: Text(
             '걷기 마치기',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Palette.ink),
+            style: context.display(15),
           ),
         ),
       ),

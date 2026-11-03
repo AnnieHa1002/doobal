@@ -228,18 +228,14 @@ class _EndCell extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: selected ? Palette.terracotta : Palette.ink,
-                  width: selected ? 4 : 2.5,
+                  width: selected ? 3 : InkLine.panel,
                 ),
               ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                color: Palette.ink,
-              ),
+              style: context.display(14),
             ),
           ],
         ),

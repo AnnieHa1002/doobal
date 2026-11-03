@@ -203,6 +203,9 @@ class Profile extends Table {
   IntColumn get linkConsentAt => integer().nullable()();
   IntColumn get guestbookConsentAt => integer().nullable()();
 
+  /// 설정에서 고른 표시 글꼴 이름(DisplayFont.name). null이면 기본 개구 (11/3)
+  TextColumn get displayFont => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -328,7 +331,7 @@ class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -397,6 +400,8 @@ class AppDb extends _$AppDb {
             await m.createTable(coinLedger);
             await customStatement('UPDATE day_summaries SET travel_m = distance_m');
           }
+          // 2 이하에서 올라올 때는 위 createTable(profile)이 지금 정의라 이미 있다
+          if (from >= 3 && from < 12) await m.addColumn(profile, profile.displayFont);
         },
       );
 }

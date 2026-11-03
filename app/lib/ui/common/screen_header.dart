@@ -22,7 +22,8 @@ class ScreenHeader extends StatelessWidget {
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           const SizedBox(width: 12),
-          Text(title, style: AppText.title),
+          // 글자를 크게 키운 작은 화면에서는 제목이 다음 줄로 넘어간다 (오른쪽으로 넘치지 않게)
+          Expanded(child: Text(title, style: AppText.title(context))),
         ],
       ),
     );

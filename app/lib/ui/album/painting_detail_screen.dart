@@ -5,6 +5,7 @@ import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
+import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/framed_painting.dart';
@@ -136,14 +137,10 @@ class _PaintingDetailScreenState extends ConsumerState<PaintingDetailScreen> {
       children: [
         _capture(const FramedPainting.firstPack(key: ValueKey('detail-first-pack'), thickness: 12)),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           '$firstPackLabel · $firstPackName',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: Palette.ink,
-          ),
+          style: context.display(22),
         ),
         const SizedBox(height: 4),
         Text(
@@ -172,11 +169,7 @@ class _PaintingDetailScreenState extends ConsumerState<PaintingDetailScreen> {
         Text(
           l.name,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: Palette.ink,
-          ),
+          style: context.display(22),
         ),
         if (l.id == 'kr088') ...[
           const SizedBox(height: 8),
@@ -196,11 +189,7 @@ class _PaintingDetailScreenState extends ConsumerState<PaintingDetailScreen> {
         Text(
           frameLabel(p.frame),
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Palette.ink,
-          ),
+          style: context.display(16),
         ),
         const SizedBox(height: 16),
         Container(
@@ -208,7 +197,7 @@ class _PaintingDetailScreenState extends ConsumerState<PaintingDetailScreen> {
           decoration: BoxDecoration(
             color: Palette.card,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Palette.ink, width: 2.5),
+            border: Border.all(color: Palette.ink, width: InkLine.panel),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

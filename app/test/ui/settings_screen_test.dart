@@ -6,10 +6,12 @@ import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/notification_permission.dart';
 import 'package:doobal/data/notifier.dart';
 import 'package:doobal/data/step_source.dart';
+import 'package:doobal/domain/display_font.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/notification_policy.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/main.dart';
+import 'package:doobal/ui/common/app_theme.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/notice_page.dart';
 import 'package:doobal/ui/debug/debug_screen.dart';
@@ -18,6 +20,7 @@ import 'package:doobal/ui/settings/settings_screen.dart';
 import 'package:doobal/ui/start/welcome_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,7 +28,7 @@ import '../app/helpers.dart';
 import 'ui_env.dart';
 
 /// 줄이 모두 만들어지도록 길게 잡은 높이
-const _tall = 1400.0;
+const _tall = 1700.0;
 
 /// 묻다가 예외가 나는 걸음 출처 (건강 앱이 없는 기기)
 class _ThrowingSource extends FakeStepSource {
@@ -474,6 +477,72 @@ void main() {
     });
   });
 
+  group('글꼴 고르기 (16장 11/3)', () {
+    /// 앱처럼 고른 글꼴을 테마로 쓰는 앱에 설정을 띄운다
+    Future<void> openThemed(WidgetTester tester, UiEnv e) async {
+      phone(tester, height: _tall);
+      await tester.pumpWidget(ProviderScope(
+        overrides: e.overrides,
+        child: Consumer(
+          builder: (context, ref, _) => MaterialApp(
+            theme: doobalTheme(ref.watch(displayFontProvider).value ?? DisplayFont.gaegu),
+            home: const SettingsScreen(),
+          ),
+        ),
+      ));
+      await settle(tester, () => find.text('권한 다시 열기').evaluate().isNotEmpty);
+    }
+
+    TextStyle labelStyle(WidgetTester tester) => tester.widget<Text>(find.text('글꼴 고르기')).style!;
+    Finder checkIn(String name) => find.descendant(
+        of: find.byKey(ValueKey('font-$name')), matching: find.byIcon(Icons.check));
+
+    testWidgets('맨 위에 개구·동글·고운 바탕, 이름은 그 글꼴로 보이고 기본 개구에 체크', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await openThemed(tester, e);
+
+      for (final f in DisplayFont.values) {
+        final name = tester.widget<Text>(find.descendant(
+            of: find.byKey(ValueKey('font-${f.name}')), matching: find.byType(Text)));
+        expect(name.data, f.label);
+        expect(name.style!.fontFamily, f.family);
+        expect(name.style!.fontSize, closeTo(18 * f.scale, 1e-9));
+      }
+      expect(checkIn('gaegu'), findsOneWidget);
+      expect(checkIn('dongle'), findsNothing);
+      // 글꼴 줄이 계정 연결보다 위
+      expect(tester.getTopLeft(find.text('글꼴 고르기')).dy,
+          lessThan(tester.getTopLeft(find.text('계정 연결')).dy));
+      // 화면의 굵은 글자(묶음 이름)도 개구 1.3배
+      expect((labelStyle(tester).fontFamily, labelStyle(tester).fontSize), ('Gaegu', 12 * 1.3));
+      await end(tester, e);
+    });
+
+    testWidgets('동글을 고르면 저장되고 체크가 옮겨 가며, 화면 굵은 글자가 바로 동글 1.5배가 된다',
+        (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await openThemed(tester, e);
+
+      await tester.tap(find.byKey(const ValueKey('font-dongle')));
+      await settle(tester, () => checkIn('dongle').evaluate().isNotEmpty);
+      // 테마가 바뀌는 0.2초 애니메이션이 끝나길 기다린다
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(checkIn('gaegu'), findsNothing);
+      expect((labelStyle(tester).fontFamily, labelStyle(tester).fontSize), ('Dongle', 12 * 1.5));
+      final row = await tester.runAsync(() => e.db.select(e.db.profile).getSingle());
+      expect(row!.displayFont, 'dongle');
+
+      // 고운 바탕은 배율 1.0이라 명세 pt 그대로
+      await tester.tap(find.byKey(const ValueKey('font-batang')));
+      await settle(tester, () => checkIn('batang').evaluate().isNotEmpty);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect((labelStyle(tester).fontFamily, labelStyle(tester).fontSize), ('GowunBatang', 12.0));
+      await end(tester, e);
+    });
+  });
+
   group('계정 삭제', () {
     /// 앱 전체를 띄워 쉼터에서 설정을 열고 `계정 삭제`를 누른 첫 확인 창까지
     Future<void> openFirstConfirm(
@@ -516,7 +585,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('두 번째 확인에서 취소해도 그대로다 (마지막 버튼만 테라코타)', (tester) async {
+    testWidgets('두 번째 확인에서 취소해도 그대로다 (마지막 버튼만 붉은 오류색, 11/3)', (tester) async {
       final e = UiEnv();
       await openFirstConfirm(tester, e);
       final before = await _rowCount(tester, e.db);
@@ -527,7 +596,7 @@ void main() {
       expect(find.text('정말 삭제할까요?'), findsOneWidget);
       expect(find.text('되돌릴 수 없어요'), findsOneWidget);
       expect(find.text('계정을 삭제할까요?'), findsNothing);
-      expect(_gameButton(tester, '삭제').kind, GameButtonKind.primary);
+      expect(_gameButton(tester, '삭제').kind, GameButtonKind.danger);
       expect(_gameButton(tester, '취소').kind, GameButtonKind.secondary);
 
       await tester.tap(find.text('취소'));

@@ -5,6 +5,7 @@ import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/landmark.dart';
 import '../../domain/sketch.dart';
+import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
@@ -112,9 +113,9 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     '화집',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Palette.ink),
+                    style: context.display(22),
                   ),
                 ],
               ),
@@ -139,14 +140,10 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_hangId != null) ...[
-                  const Text(
+                  Text(
                     '바꿀 액자를 누르세요',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Palette.terracotta,
-                    ),
+                    style: context.display(14, color: Palette.terracotta),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -247,7 +244,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
         padding: const EdgeInsets.only(top: 16, bottom: 8),
         child: Text(
           slot.value,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Palette.ink),
+          style: context.display(16),
         ),
       ));
       for (final p in mine) {

@@ -112,9 +112,9 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
             if (widget.review)
               const ScreenHeader('걷기 기록')
             else
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Text('걷기 기록', style: AppText.title),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Text('걷기 기록', style: AppText.title(context)),
               ),
             Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: card)),
             if (!widget.review)
@@ -177,7 +177,7 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
 
   /// 큰 숫자 아래 거리 줄 (UI 명세 4장): `실제 2.1km` / `여행 2.6km (본격 걷기 ×1.3)`.
   /// 여정은 여행 거리로, 액자는 실제 거리로 센다. 본격 걷기 구간이 없으면(보너스 0) 여행 거리가
-  /// 실제와 같아서 실제 줄만 둔다. 그 아래 `럭 +n`(본격 걷기 분이 있으면 ×2 딱지)은 럭 단가
+  /// 실제와 같아서 실제 줄만 둔다. 그 아래 `+n 럭`(본격 걷기 분이 있으면 ×2 딱지, 11/3 숫자 뒤 단위)은 럭 단가
   /// (coins.perKm)가 정해진 뒤에만 나온다
   List<Widget> _distanceLines(Rules rules, WalkRecord record) {
     final focused = record.bonusM > 0;
@@ -201,9 +201,9 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: 6,
             children: [
-              Text('럭 +${formatInt(coins)}',
+              Text('+${formatInt(coins)} 럭',
                   key: const ValueKey('line-coins'),
-                  style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+                  style: context.display(15)),
               if (record.bonusActualM > 0)
                 FocusBadge('×${formatMultiplier(rules.bonusCoinMultiplier)}'),
             ],
@@ -258,7 +258,7 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
         const SizedBox(height: 16),
         Text(
           _sessionText(rules, record),
-          style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+          style: context.display(15),
         ),
         // 다시 볼 때는 걷기 전 비율을 몰라서 진행 막대 연출이 없다
         if (!widget.review && j != null && before != null) ...[

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../domain/rules.dart';
+import '../common/app_text.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
 import 'start_layout.dart';
@@ -141,13 +142,9 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
+                        Text(
                           '시작하기 전에',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            color: Palette.ink,
-                          ),
+                          style: context.display(24),
                         ),
                         const SizedBox(height: 16),
                         DecoratedBox(
@@ -229,16 +226,12 @@ class _PermissionRow extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
+              style: context.display(18),
             ),
             const SizedBox(width: 8),
             Text(
               mandatory ? '필수' : '선택',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: mandatory ? Palette.terracotta : Palette.subInk,
-              ),
+              style: context.display(13, color: mandatory ? Palette.terracotta : Palette.subInk),
             ),
           ],
         ),
@@ -246,13 +239,13 @@ class _PermissionRow extends StatelessWidget {
         StartNote(description),
         const SizedBox(height: 12),
         switch (state) {
-          _Ask.granted => const Row(
+          _Ask.granted => Row(
               children: [
-                Icon(Icons.check_circle, color: Palette.moss, size: 22),
-                SizedBox(width: 6),
+                const Icon(Icons.check_circle, color: Palette.moss, size: 22),
+                const SizedBox(width: 6),
                 Text(
                   '허용됨',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Palette.moss),
+                  style: context.display(15, color: Palette.moss),
                 ),
               ],
             ),

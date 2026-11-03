@@ -244,24 +244,24 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('럭 단가가 있으면 럭 +n, 본격 걷기 분이 있으면 ×2 딱지: 840m 전부 보너스 → (0 + 0.84 × 2) × 10 = 16',
+    testWidgets('럭 단가가 있으면 +n 럭, 본격 걷기 분이 있으면 ×2 딱지: 840m 전부 보너스 → (0 + 0.84 × 2) × 10 = 16',
         (tester) async {
       final e = UiEnv(appRules: _coinRules);
       await e.seed(tester, () => seedRecord(e, focused: true));
       await openRecord(tester, e);
 
-      expect(find.text('럭 +16'), findsOneWidget);
+      expect(find.text('+16 럭'), findsOneWidget);
       expect(find.text('×2'), findsOneWidget);
       expect(find.text('여행 1.1km (본격 걷기 ×1.3)'), findsOneWidget);
       await end(tester, e);
     });
 
-    testWidgets('럭 단가가 있고 본격 걷기가 아니면 럭 +8 (0.84km × 10 내림)에 ×2 딱지는 없다', (tester) async {
+    testWidgets('럭 단가가 있고 본격 걷기가 아니면 +8 럭 (0.84km × 10 내림)에 ×2 딱지는 없다', (tester) async {
       final e = UiEnv(appRules: _coinRules);
       await e.seed(tester, () => seedRecord(e, focused: false));
       await openRecord(tester, e);
 
-      expect(find.text('럭 +8'), findsOneWidget);
+      expect(find.text('+8 럭'), findsOneWidget);
       expect(find.text('×2'), findsNothing);
       await end(tester, e);
     });

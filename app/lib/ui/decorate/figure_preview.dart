@@ -48,7 +48,7 @@ class _FigurePreviewState extends State<FigurePreview> with SingleTickerProvider
             decoration: BoxDecoration(
               color: Palette.card,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Palette.ink, width: 2.5),
+              border: Border.all(color: Palette.ink, width: InkLine.panel),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(9.5),

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app/sync_service.dart';
 import '../../domain/prop.dart';
 import '../../domain/sketch.dart';
-import '../common/app_text.dart' show badgeMaxTextScale;
+import '../common/app_text.dart';
 import '../common/basic_item_art.dart';
 import '../common/framed_painting.dart';
 import '../common/notice_dot.dart';
@@ -25,7 +25,7 @@ const _labelHeight = 17.0;
 
 /// 이름 줄 높이: 글자 크기를 키우면 한 줄이 같이 커진다 (기본 크기에서는 17pt)
 double paintingLabelHeight(BuildContext context) =>
-    MediaQuery.textScalerOf(context).scale(12) * 1.25 + 2;
+    MediaQuery.textScalerOf(context).scale(12 * context.displayFont.scale) * 1.25 + 2;
 
 /// 그림 칸 3열 격자. 칸 높이는 기본 크기에서 너비 : 높이 = 0.78이고,
 /// 글자 크기를 키우면 이름 줄이 커진 만큼 칸이 길어져서 그림 크기는 그대로다
@@ -189,14 +189,14 @@ class AlbumTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _tab(0, '그림', const ValueKey('tab-paintings'))),
+        Expanded(child: _tab(context, 0, '그림', const ValueKey('tab-paintings'))),
         const SizedBox(width: 8),
-        Expanded(child: _tab(1, '소품', const ValueKey('tab-props'), dot: propsDot)),
+        Expanded(child: _tab(context, 1, '소품', const ValueKey('tab-props'), dot: propsDot)),
       ],
     );
   }
 
-  Widget _tab(int index, String label, Key key, {bool dot = false}) {
+  Widget _tab(BuildContext context, int index, String label, Key key, {bool dot = false}) {
     final on = selected == index;
     return Semantics(
       button: true,
@@ -211,7 +211,7 @@ class AlbumTabs extends StatelessWidget {
           decoration: BoxDecoration(
             color: on ? Palette.terracotta : Palette.card,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Palette.ink, width: 2.5),
+            border: Border.all(color: Palette.ink, width: InkLine.panel),
           ),
           // 점은 글자 칸 바깥 오른쪽 위에 걸친다 (글자 위치는 그대로)
           child: Stack(
@@ -219,11 +219,7 @@ class AlbumTabs extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: on ? Palette.paper : Palette.ink,
-                ),
+                style: context.display(16, color: on ? Palette.paper : Palette.ink),
               ),
               if (dot)
                 const Positioned(
@@ -307,15 +303,11 @@ class _Chip extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected ? Palette.terracotta : Palette.card,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Palette.ink, width: 2),
+                border: Border.all(color: Palette.ink, width: InkLine.panel),
               ),
               child: Text(
                 label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Palette.paper : Palette.ink,
-                ),
+                style: context.display(14, color: selected ? Palette.paper : Palette.ink),
               ),
             ),
           ),
@@ -362,12 +354,7 @@ class _OwnedCell extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    height: 1.25,
-                    color: Palette.ink,
-                  ),
+                  style: context.display(12).copyWith(height: 1.25),
                 ),
               ),
             ],
@@ -449,7 +436,7 @@ class PropRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Palette.ink, width: 2),
+        border: Border.all(color: Palette.ink, width: InkLine.panel),
       ),
       child: Row(
         children: [
@@ -460,7 +447,7 @@ class PropRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: Palette.paper,
               shape: BoxShape.circle,
-              border: Border.all(color: Palette.ink, width: 2),
+              border: Border.all(color: Palette.ink, width: InkLine.panel),
             ),
             child: BasicItemIcon(id: prop.id, fallback: prop.name.substring(0, 1)),
           ),
@@ -468,11 +455,7 @@ class PropRow extends StatelessWidget {
           Expanded(
             child: Text(
               prop.name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Palette.ink,
-              ),
+              style: context.display(16),
             ),
           ),
         ],
@@ -490,7 +473,7 @@ Future<String?> showPaintingPicker(BuildContext context, List<OwnedPaintingView>
     barrierColor: Palette.ink.withValues(alpha: 0.4),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-      side: BorderSide(color: Palette.ink, width: 2.5),
+      side: BorderSide(color: Palette.ink, width: InkLine.panel),
     ),
     builder: (context) => SafeArea(
       top: false,

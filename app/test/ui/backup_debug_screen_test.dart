@@ -21,7 +21,7 @@ void main() {
     final e = UiEnv();
     await e.seed(tester);
     await openOnTop(tester, e, const SettingsScreen(),
-        height: 1400, ready: () => find.text('백업 시험').evaluate().isNotEmpty);
+        height: 1700, ready: () => find.text('백업 시험').evaluate().isNotEmpty);
     expect(find.text('개발자 화면'), findsOneWidget);
 
     await tester.tap(find.text('백업 시험'));

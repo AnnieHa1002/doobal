@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../common/app_text.dart';
 import '../common/palette.dart';
 
 const _cellRadius = 12.0;
@@ -33,7 +34,7 @@ class SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Palette.ink),
+        style: context.display(14),
       ),
     );
   }
@@ -69,7 +70,7 @@ class SwatchDot extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
-                border: Border.all(color: Palette.ink, width: selected ? 4 : 2),
+                border: Border.all(color: Palette.ink, width: selected ? 3 : InkLine.panel),
               ),
               child: selected
                   ? Icon(
@@ -204,15 +205,11 @@ class _NumberCell extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected ? Palette.terracotta : Palette.paper,
             borderRadius: BorderRadius.circular(_cellRadius),
-            border: Border.all(color: Palette.ink, width: 2.5),
+            border: Border.all(color: Palette.ink, width: InkLine.panel),
           ),
           child: Text(
             '$number',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: selected ? Palette.paper : Palette.ink,
-            ),
+            style: context.display(18, color: selected ? Palette.paper : Palette.ink),
           ),
         ),
       ),
@@ -249,17 +246,13 @@ class OptionChip extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected ? Palette.terracotta : Palette.paper,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Palette.ink, width: 2.5),
+                border: Border.all(color: Palette.ink, width: InkLine.panel),
               ),
               child: Align(
                 widthFactor: 1,
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: selected ? Palette.paper : Palette.ink,
-                  ),
+                  style: context.display(14, color: selected ? Palette.paper : Palette.ink),
                 ),
               ),
             ),
@@ -298,7 +291,7 @@ class PropCell extends StatelessWidget {
               borderRadius: BorderRadius.circular(_cellRadius),
               border: Border.all(
                 color: selected ? Palette.terracotta : Palette.ink,
-                width: selected ? 4 : 2.5,
+                width: selected ? 3 : InkLine.panel,
               ),
             ),
             child: Stack(

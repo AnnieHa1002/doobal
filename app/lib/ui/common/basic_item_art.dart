@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'app_text.dart' show badgeMaxTextScale;
+import 'app_text.dart';
 import 'palette.dart';
 
 /// 그림이 준비된 기본 소품만 사용하고, 나머지는 기존 글자 표시를 유지한다.
@@ -27,11 +27,7 @@ class BasicItemIcon extends StatelessWidget {
             fallback,
             // 정해진 동그라미 안이라 글자 배율 상한을 둔다
             textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: badgeMaxTextScale),
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Palette.ink,
-            ),
+            style: context.display(18),
           )
         : Image.asset(
             path,

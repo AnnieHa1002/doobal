@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/notification_service.dart';
 import '../../app/providers.dart';
+import '../../domain/display_font.dart';
 import '../../domain/notification_policy.dart';
 import '../../domain/rules.dart';
 import '../../domain/time_kst.dart';
@@ -120,6 +121,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // 쉼터가 사라지기 전에 걸음·여정 상태를 다시 읽어서 설치 기록(SyncState·TravelFund 한 줄씩,
     // 경비 0)이 새로 생길 수 있다. 처음 설치해서 첫 동기화가 만드는 것과 같은 빈 상태다
     ref.invalidate(onboardingStepProvider);
+    ref.invalidate(displayFontProvider);
     ref.invalidate(snapshotProvider);
     ref.invalidate(mapDataProvider);
     Navigator.of(context).popUntil((r) => r.isFirst);
@@ -162,6 +164,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
+                  const _SectionLabel('글꼴 고르기'),
+                  const _FontGroup(),
+                  const SizedBox(height: 20),
                   const _SectionLabel('계정 연결'),
                   const _Group([
                     _Row('구글', note: '준비 중'),
@@ -229,8 +234,45 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-      child: Text(text, style: AppText.label.copyWith(fontWeight: FontWeight.w700)),
+      child: Text(text, style: context.display(12, color: Palette.subInk)),
     );
+  }
+}
+
+/// 표시 글꼴 고르기 (UI 명세 11장, 16장 11/3): 개구(기본) · 동글 · 고운 바탕. 이름은 그 글꼴로 보이고
+/// 고른 줄에 체크. 고르면 저장하고 앱 전체 제목·숫자·버튼·굵은 글자가 바로 바뀐다 (본문은 그대로)
+class _FontGroup extends ConsumerWidget {
+  const _FontGroup();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chosen = ref.watch(displayFontProvider).value ?? DisplayFont.gaegu;
+    return _Group([
+      for (final f in DisplayFont.values)
+        Semantics(
+          key: ValueKey('font-${f.name}'),
+          button: true,
+          selected: f == chosen,
+          label: f.label,
+          excludeSemantics: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => ref.read(displayFontProvider.notifier).choose(f),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 52),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(f.label, style: displayStyle(f, 18))),
+                    if (f == chosen) const Icon(Icons.check, color: Palette.terracotta),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+    ]);
   }
 }
 
@@ -247,7 +289,7 @@ class _Group extends StatelessWidget {
       child: Column(
         children: [
           for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const Divider(height: 2, thickness: 2, color: Palette.ink),
+            if (i > 0) const Divider(height: 2, thickness: InkLine.panel, color: Palette.ink),
             rows[i],
           ],
         ],
@@ -456,7 +498,7 @@ class _ConfirmDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title, style: AppText.cardTitle),
+            Text(title, style: AppText.cardTitle(context)),
             const SizedBox(height: 8),
             Text(message, style: AppText.body),
             const SizedBox(height: 20),
@@ -473,7 +515,7 @@ class _ConfirmDialog extends StatelessWidget {
                 Expanded(
                   child: GameButton(
                     label: confirmLabel,
-                    kind: danger ? GameButtonKind.primary : GameButtonKind.secondary,
+                    kind: danger ? GameButtonKind.danger : GameButtonKind.secondary,
                     onPressed: () => Navigator.of(context).pop(true),
                   ),
                 ),

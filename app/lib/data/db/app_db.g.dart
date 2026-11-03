@@ -3858,6 +3858,17 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _displayFontMeta = const VerificationMeta(
+    'displayFont',
+  );
+  @override
+  late final GeneratedColumn<String> displayFont = GeneratedColumn<String>(
+    'display_font',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3872,6 +3883,7 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
     onboardedAt,
     linkConsentAt,
     guestbookConsentAt,
+    displayFont,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3966,6 +3978,15 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
         ),
       );
     }
+    if (data.containsKey('display_font')) {
+      context.handle(
+        _displayFontMeta,
+        displayFont.isAcceptableOrUnknown(
+          data['display_font']!,
+          _displayFontMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4023,6 +4044,10 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
         DriftSqlType.int,
         data['${effectivePrefix}guestbook_consent_at'],
       ),
+      displayFont: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_font'],
+      ),
     );
   }
 
@@ -4057,6 +4082,9 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
   /// 계정 연결·방명록 동의 시각 (epoch ms). 쓰는 곳은 M5에서 붙인다
   final int? linkConsentAt;
   final int? guestbookConsentAt;
+
+  /// 설정에서 고른 표시 글꼴 이름(DisplayFont.name). null이면 기본 개구 (11/3)
+  final String? displayFont;
   const ProfileRow({
     required this.id,
     this.homeName,
@@ -4070,6 +4098,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     this.onboardedAt,
     this.linkConsentAt,
     this.guestbookConsentAt,
+    this.displayFont,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4108,6 +4137,9 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     if (!nullToAbsent || guestbookConsentAt != null) {
       map['guestbook_consent_at'] = Variable<int>(guestbookConsentAt);
     }
+    if (!nullToAbsent || displayFont != null) {
+      map['display_font'] = Variable<String>(displayFont);
+    }
     return map;
   }
 
@@ -4145,6 +4177,9 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       guestbookConsentAt: guestbookConsentAt == null && nullToAbsent
           ? const Value.absent()
           : Value(guestbookConsentAt),
+      displayFont: displayFont == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayFont),
     );
   }
 
@@ -4166,6 +4201,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       onboardedAt: serializer.fromJson<int?>(json['onboardedAt']),
       linkConsentAt: serializer.fromJson<int?>(json['linkConsentAt']),
       guestbookConsentAt: serializer.fromJson<int?>(json['guestbookConsentAt']),
+      displayFont: serializer.fromJson<String?>(json['displayFont']),
     );
   }
   @override
@@ -4184,6 +4220,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       'onboardedAt': serializer.toJson<int?>(onboardedAt),
       'linkConsentAt': serializer.toJson<int?>(linkConsentAt),
       'guestbookConsentAt': serializer.toJson<int?>(guestbookConsentAt),
+      'displayFont': serializer.toJson<String?>(displayFont),
     };
   }
 
@@ -4200,6 +4237,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     Value<int?> onboardedAt = const Value.absent(),
     Value<int?> linkConsentAt = const Value.absent(),
     Value<int?> guestbookConsentAt = const Value.absent(),
+    Value<String?> displayFont = const Value.absent(),
   }) => ProfileRow(
     id: id ?? this.id,
     homeName: homeName.present ? homeName.value : this.homeName,
@@ -4219,6 +4257,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     guestbookConsentAt: guestbookConsentAt.present
         ? guestbookConsentAt.value
         : this.guestbookConsentAt,
+    displayFont: displayFont.present ? displayFont.value : this.displayFont,
   );
   ProfileRow copyWithCompanion(ProfileCompanion data) {
     return ProfileRow(
@@ -4242,6 +4281,9 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       guestbookConsentAt: data.guestbookConsentAt.present
           ? data.guestbookConsentAt.value
           : this.guestbookConsentAt,
+      displayFont: data.displayFont.present
+          ? data.displayFont.value
+          : this.displayFont,
     );
   }
 
@@ -4259,7 +4301,8 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
           ..write('look: $look, ')
           ..write('onboardedAt: $onboardedAt, ')
           ..write('linkConsentAt: $linkConsentAt, ')
-          ..write('guestbookConsentAt: $guestbookConsentAt')
+          ..write('guestbookConsentAt: $guestbookConsentAt, ')
+          ..write('displayFont: $displayFont')
           ..write(')'))
         .toString();
   }
@@ -4278,6 +4321,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     onboardedAt,
     linkConsentAt,
     guestbookConsentAt,
+    displayFont,
   );
   @override
   bool operator ==(Object other) =>
@@ -4294,7 +4338,8 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
           other.look == this.look &&
           other.onboardedAt == this.onboardedAt &&
           other.linkConsentAt == this.linkConsentAt &&
-          other.guestbookConsentAt == this.guestbookConsentAt);
+          other.guestbookConsentAt == this.guestbookConsentAt &&
+          other.displayFont == this.displayFont);
 }
 
 class ProfileCompanion extends UpdateCompanion<ProfileRow> {
@@ -4310,6 +4355,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
   final Value<int?> onboardedAt;
   final Value<int?> linkConsentAt;
   final Value<int?> guestbookConsentAt;
+  final Value<String?> displayFont;
   const ProfileCompanion({
     this.id = const Value.absent(),
     this.homeName = const Value.absent(),
@@ -4323,6 +4369,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     this.onboardedAt = const Value.absent(),
     this.linkConsentAt = const Value.absent(),
     this.guestbookConsentAt = const Value.absent(),
+    this.displayFont = const Value.absent(),
   });
   ProfileCompanion.insert({
     this.id = const Value.absent(),
@@ -4337,6 +4384,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     this.onboardedAt = const Value.absent(),
     this.linkConsentAt = const Value.absent(),
     this.guestbookConsentAt = const Value.absent(),
+    this.displayFont = const Value.absent(),
   });
   static Insertable<ProfileRow> custom({
     Expression<int>? id,
@@ -4351,6 +4399,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     Expression<int>? onboardedAt,
     Expression<int>? linkConsentAt,
     Expression<int>? guestbookConsentAt,
+    Expression<String>? displayFont,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4366,6 +4415,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
       if (linkConsentAt != null) 'link_consent_at': linkConsentAt,
       if (guestbookConsentAt != null)
         'guestbook_consent_at': guestbookConsentAt,
+      if (displayFont != null) 'display_font': displayFont,
     });
   }
 
@@ -4382,6 +4432,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     Value<int?>? onboardedAt,
     Value<int?>? linkConsentAt,
     Value<int?>? guestbookConsentAt,
+    Value<String?>? displayFont,
   }) {
     return ProfileCompanion(
       id: id ?? this.id,
@@ -4396,6 +4447,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
       onboardedAt: onboardedAt ?? this.onboardedAt,
       linkConsentAt: linkConsentAt ?? this.linkConsentAt,
       guestbookConsentAt: guestbookConsentAt ?? this.guestbookConsentAt,
+      displayFont: displayFont ?? this.displayFont,
     );
   }
 
@@ -4438,6 +4490,9 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     if (guestbookConsentAt.present) {
       map['guestbook_consent_at'] = Variable<int>(guestbookConsentAt.value);
     }
+    if (displayFont.present) {
+      map['display_font'] = Variable<String>(displayFont.value);
+    }
     return map;
   }
 
@@ -4455,7 +4510,8 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
           ..write('look: $look, ')
           ..write('onboardedAt: $onboardedAt, ')
           ..write('linkConsentAt: $linkConsentAt, ')
-          ..write('guestbookConsentAt: $guestbookConsentAt')
+          ..write('guestbookConsentAt: $guestbookConsentAt, ')
+          ..write('displayFont: $displayFont')
           ..write(')'))
         .toString();
   }
@@ -8903,6 +8959,7 @@ typedef $$ProfileTableCreateCompanionBuilder = ProfileCompanion Function({
   Value<int?> onboardedAt,
   Value<int?> linkConsentAt,
   Value<int?> guestbookConsentAt,
+  Value<String?> displayFont,
 });
 typedef $$ProfileTableUpdateCompanionBuilder = ProfileCompanion Function({
   Value<int> id,
@@ -8917,6 +8974,7 @@ typedef $$ProfileTableUpdateCompanionBuilder = ProfileCompanion Function({
   Value<int?> onboardedAt,
   Value<int?> linkConsentAt,
   Value<int?> guestbookConsentAt,
+  Value<String?> displayFont,
 });
 
 class $$ProfileTableFilterComposer extends Composer<_$AppDb, $ProfileTable> {
@@ -8984,6 +9042,11 @@ class $$ProfileTableFilterComposer extends Composer<_$AppDb, $ProfileTable> {
 
   ColumnFilters<int> get guestbookConsentAt => $composableBuilder(
     column: $table.guestbookConsentAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayFont => $composableBuilder(
+    column: $table.displayFont,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -9055,6 +9118,11 @@ class $$ProfileTableOrderingComposer extends Composer<_$AppDb, $ProfileTable> {
     column: $table.guestbookConsentAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get displayFont => $composableBuilder(
+    column: $table.displayFont,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProfileTableAnnotationComposer
@@ -9109,6 +9177,11 @@ class $$ProfileTableAnnotationComposer
     column: $table.guestbookConsentAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get displayFont => $composableBuilder(
+    column: $table.displayFont,
+    builder: (column) => column,
+  );
 }
 
 class $$ProfileTableTableManager
@@ -9151,6 +9224,7 @@ class $$ProfileTableTableManager
                 Value<int?> onboardedAt = const Value.absent(),
                 Value<int?> linkConsentAt = const Value.absent(),
                 Value<int?> guestbookConsentAt = const Value.absent(),
+                Value<String?> displayFont = const Value.absent(),
               }) => ProfileCompanion(
                 id: id,
                 homeName: homeName,
@@ -9164,6 +9238,7 @@ class $$ProfileTableTableManager
                 onboardedAt: onboardedAt,
                 linkConsentAt: linkConsentAt,
                 guestbookConsentAt: guestbookConsentAt,
+                displayFont: displayFont,
               ),
           createCompanionCallback:
               ({
@@ -9179,6 +9254,7 @@ class $$ProfileTableTableManager
                 Value<int?> onboardedAt = const Value.absent(),
                 Value<int?> linkConsentAt = const Value.absent(),
                 Value<int?> guestbookConsentAt = const Value.absent(),
+                Value<String?> displayFont = const Value.absent(),
               }) => ProfileCompanion.insert(
                 id: id,
                 homeName: homeName,
@@ -9192,6 +9268,7 @@ class $$ProfileTableTableManager
                 onboardedAt: onboardedAt,
                 linkConsentAt: linkConsentAt,
                 guestbookConsentAt: guestbookConsentAt,
+                displayFont: displayFont,
               ),
           withReferenceMapper: (p0) => p0
               .map(

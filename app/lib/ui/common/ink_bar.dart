@@ -28,7 +28,7 @@ class InkBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.card,
         borderRadius: BorderRadius.circular(height / 2),
-        border: Border.all(color: Palette.ink, width: 2),
+        border: Border.all(color: Palette.ink, width: InkLine.panel),
       ),
       clipBehavior: Clip.antiAlias,
       child: Row(

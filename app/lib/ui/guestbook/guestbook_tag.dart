@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/sync_service.dart';
+import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 
@@ -31,11 +32,11 @@ class GuestbookTagPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Palette.ink, width: 2),
+        border: Border.all(color: Palette.ink, width: InkLine.pill),
       ),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Palette.ink),
+        style: context.display(14),
       ),
     );
   }

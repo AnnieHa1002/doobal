@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/journey.dart';
 import '../../domain/landmark.dart';
+import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/frame_style.dart';
 import '../common/game_button.dart';
@@ -40,7 +41,7 @@ class LandmarkCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Palette.ink, width: 2.5),
+        border: Border.all(color: Palette.ink, width: InkLine.panel),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -51,7 +52,7 @@ class LandmarkCard extends StatelessWidget {
             landmark.name,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
+            style: context.display(18),
           ),
           const SizedBox(height: 2),
           Text(
@@ -64,7 +65,7 @@ class LandmarkCard extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 20),
             child: Text(
               distance ?? '',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Palette.ink),
+              style: context.display(14),
             ),
           ),
           const SizedBox(height: 12),
@@ -82,11 +83,7 @@ class LandmarkCard extends StatelessWidget {
                 Flexible(
                   child: Text(
                     frameLabel(f),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Palette.ink,
-                    ),
+                    style: context.display(14),
                   ),
                 ),
               ],
@@ -133,7 +130,7 @@ class PaintingSlot extends StatelessWidget {
       decoration: BoxDecoration(
         color: f == null ? Palette.paper : frameColors[f],
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: f == null ? Palette.subInk : Palette.ink, width: 2),
+        border: Border.all(color: f == null ? Palette.subInk : Palette.ink, width: InkLine.panel),
       ),
       child: Container(
         color: Palette.paper,

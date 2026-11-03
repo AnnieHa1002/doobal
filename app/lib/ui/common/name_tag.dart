@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_text.dart';
 import 'palette.dart';
 
 /// 물건·버튼 아래에 붙는 작은 이름표
@@ -20,7 +21,7 @@ class NameTag extends StatelessWidget {
       child: Text(
         text,
         maxLines: 1,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Palette.ink),
+        style: context.display(12),
       ),
     );
   }

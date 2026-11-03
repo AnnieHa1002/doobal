@@ -304,6 +304,9 @@ void main() {
       expect(find.text('설정'), findsOneWidget);
       // 알림 줄이 늘어서 개발자 화면 줄은 스크롤해야 보인다
       await tester.scrollUntilVisible(find.text('개발자 화면'), 300);
+      // 화면 끝에 반쯤 걸쳐 멈출 수 있어서 다 보이게 한 번 더 민다
+      await tester.ensureVisible(find.text('개발자 화면'));
+      await tester.pump();
       await tester.tap(find.text('개발자 화면'));
       await _transition(tester);
       expect(find.text('두발 디버그'), findsOneWidget);

@@ -6,6 +6,7 @@ import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/guestbook.dart';
 import '../../domain/moderation.dart';
+import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
@@ -137,11 +138,7 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
                       Text(
                         '남은 ${formatInt(ticket.stepsLeft!)}보',
                         key: const ValueKey('guestbook-steps-left'),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Palette.terracotta,
-                        ),
+                        style: context.display(14, color: Palette.terracotta),
                       ),
                   ],
                 ),
@@ -215,9 +212,9 @@ InputDecoration _inputDecoration(String hint) {
     filled: true,
     fillColor: Palette.card,
     contentPadding: const EdgeInsets.all(14),
-    border: border(2.5),
-    enabledBorder: border(2.5),
-    focusedBorder: border(3.5),
+    border: border(InkLine.panel),
+    enabledBorder: border(InkLine.panel),
+    focusedBorder: border(InkLine.focus),
   );
 }
 

@@ -5,6 +5,7 @@ import '../../app/providers.dart';
 import '../../domain/look.dart';
 import '../../domain/look_palette.dart';
 import '../../domain/prop.dart';
+import '../common/app_text.dart';
 import '../common/confirm_sheet.dart';
 import '../common/figure_painter.dart';
 import '../common/format.dart';
@@ -17,6 +18,9 @@ import 'decorate_widgets.dart';
 import 'figure_preview.dart';
 
 const _myTabs = {'hair': '머리', 'face': '얼굴', 'skin': '피부'};
+
+/// 탭 줄 글자 배율 상한
+const _tabMaxTextScale = 1.5;
 
 /// 꾸미기 (UI 명세 12장): 위 절반은 캐릭터 미리보기와 끼운 소품 줄, 아래는 9개 탭
 /// (내 모습: 머리 · 얼굴 · 피부 / 소품: 옷 · 모자 · 손 · 가방 · 신발 · 어깨 친구)과 저장·되돌리기.
@@ -146,7 +150,12 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
             ],
           ),
         ),
-        _TabStrip(selected: _tab, onSelect: (id) => setState(() => _tab = id)),
+        // 탭 줄은 옆으로 밀리는 짧은 이름표라 글자를 1.5배까지만 키운다. 작은 화면·큰 글자·동글에서도
+        // 미리보기·소품 칸·버튼 자리가 남게 (11/3 표시 글꼴)
+        MediaQuery.withClampedTextScaling(
+          maxScaleFactor: _tabMaxTextScale,
+          child: _TabStrip(selected: _tab, onSelect: (id) => setState(() => _tab = id)),
+        ),
         Expanded(
           child: SingleChildScrollView(
             // 탭마다 맨 위에서 시작한다
@@ -251,11 +260,7 @@ class _Group extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Palette.subInk,
-            ),
+            style: context.display(12, color: Palette.subInk),
           ),
           const SizedBox(height: 2),
           Container(height: 2, color: Palette.ink.withValues(alpha: 0.25)),
@@ -314,15 +319,11 @@ class _TabChip extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected ? Palette.terracotta : Palette.paper,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Palette.ink, width: 2.5),
+                border: Border.all(color: Palette.ink, width: InkLine.panel),
               ),
               child: Text(
                 label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: selected ? Palette.paper : Palette.ink,
-                ),
+                style: context.display(15, color: selected ? Palette.paper : Palette.ink),
               ),
             ),
           ),

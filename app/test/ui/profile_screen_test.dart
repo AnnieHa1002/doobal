@@ -86,7 +86,7 @@ void main() {
     final box = card.decoration! as BoxDecoration;
     expect(box.color, Palette.card);
     expect((box.border! as Border).top.color, Palette.ink);
-    expect((box.border! as Border).top.width, 2.5);
+    expect((box.border! as Border).top.width, InkLine.panel);
     expect(find.text('나의 정보'), findsOneWidget);
     expect(tester.widget<Text>(find.text('나의 정보')).style!.fontSize, 22);
     await end(tester, e);

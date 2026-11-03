@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_text.dart';
 import 'palette.dart';
 
-/// 본격 걷기 딱지: 이끼색 바탕에 종이색 글자(Gowun Dodum 12). 걸음 알약의 `×1.3`과
+/// 본격 걷기 딱지: 이끼색 바탕에 종이색 표시 글꼴 12. 걸음 알약의 `×1.3`과
 /// 걷기 기록의 럭 `×2`가 같은 모양이다. 딱지는 칸이 정해진 표식이라 글자 배율은
 /// badgeMaxTextScale(1.3)에서 멈춘다
 class FocusBadge extends StatelessWidget {
@@ -28,7 +28,7 @@ class FocusBadge extends StatelessWidget {
           child: Text(
             text,
             maxLines: 1,
-            style: const TextStyle(fontFamily: bodyFont, fontSize: 12, color: Palette.paper),
+            style: context.display(12, color: Palette.paper),
           ),
         ),
       ),

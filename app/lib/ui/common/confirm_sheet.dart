@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_text.dart';
 import 'game_button.dart';
 import 'palette.dart';
 
@@ -15,7 +16,7 @@ Future<bool?> showConfirmSheet(BuildContext context, String text, String yes, St
     barrierColor: Palette.ink.withValues(alpha: 0.4),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-      side: BorderSide(color: Palette.ink, width: 2.5),
+      side: BorderSide(color: Palette.ink, width: InkLine.panel),
     ),
     builder: (context) => SafeArea(
       top: false,
@@ -29,11 +30,7 @@ Future<bool?> showConfirmSheet(BuildContext context, String text, String yes, St
               child: SingleChildScrollView(
                 child: Text(
                   text,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Palette.ink,
-                  ),
+                  style: context.display(16),
                 ),
               ),
             ),

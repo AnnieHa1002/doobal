@@ -89,16 +89,12 @@ class _Tab extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected ? Palette.terracotta : Palette.card,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Palette.ink, width: 2.5),
+            border: Border.all(color: Palette.ink, width: InkLine.panel),
           ),
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: selected ? Palette.paper : Palette.ink,
-            ),
+            style: context.display(16, color: selected ? Palette.paper : Palette.ink),
           ),
         ),
       ),
@@ -150,7 +146,7 @@ class _PostCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Palette.card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Palette.ink, width: 2.5),
+          border: Border.all(color: Palette.ink, width: InkLine.panel),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,7 +213,7 @@ class _DayHeader extends StatelessWidget {
       padding: const EdgeInsets.only(top: 12, bottom: 8),
       child: Text(
         formatMonthDay(dayFromKey(day)),
-        style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+        style: context.display(15),
       ),
     );
   }
@@ -252,7 +248,7 @@ class _WalkRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: Palette.card,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Palette.ink, width: 2.5),
+              border: Border.all(color: Palette.ink, width: InkLine.panel),
             ),
             // 시각·걸음은 왼쪽, 거리·화살표는 오른쪽 끝. 글자 크기를 키워 한 줄에 안 들어가면
             // 줄 전체가 줄어든다 (들어가면 줄 너비만큼 그대로 펴진다)
@@ -279,7 +275,7 @@ class _WalkRow extends StatelessWidget {
                                 padding: const EdgeInsets.only(right: 8),
                                 child: Text(
                                   formatKstClock(session.start),
-                                  style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                                  style: context.display(15),
                                 ),
                               ),
                             ),

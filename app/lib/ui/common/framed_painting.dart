@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/journey.dart' show Frame;
 import '../../domain/landmark.dart';
+import 'app_text.dart';
 import 'frame_style.dart';
 import 'palette.dart';
 
@@ -111,11 +112,7 @@ class PaintingFace extends StatelessWidget {
                       label!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Palette.ink,
-                      ),
+                      style: context.display(14),
                     ),
                   ),
                 ),

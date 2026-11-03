@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/landmark.dart';
+import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 
@@ -26,7 +27,7 @@ class MapSearchField extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Palette.ink, width: 2.5),
+        border: Border.all(color: Palette.ink, width: InkLine.panel),
       ),
       child: Row(
         children: [
@@ -81,7 +82,7 @@ class SearchResults extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Palette.ink, width: 2.5),
+        border: Border.all(color: Palette.ink, width: InkLine.panel),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -102,11 +103,7 @@ class SearchResults extends StatelessWidget {
                         l.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Palette.ink,
-                        ),
+                        style: context.display(16),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -173,15 +170,11 @@ class _Chip extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Palette.card,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Palette.ink, width: 2),
+                border: Border.all(color: Palette.ink, width: InkLine.panel),
               ),
               child: Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Palette.ink,
-                ),
+                style: context.display(14),
               ),
             ),
           ),

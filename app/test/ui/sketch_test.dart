@@ -108,7 +108,7 @@ void main() {
           .firstWhere((d) => d.border != null);
       expect(box.color, Palette.card);
       expect((box.border! as Border).top.color, Palette.ink);
-      expect((box.border! as Border).top.width, 2);
+      expect((box.border! as Border).top.width, InkLine.panel);
       await end(tester, e);
     });
 

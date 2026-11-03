@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../domain/sigungu.dart';
+import '../common/app_text.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
 import 'start_layout.dart';
@@ -96,7 +97,7 @@ class _HomePickScreenState extends ConsumerState<HomePickScreen> {
               decoration: BoxDecoration(
                 color: Palette.paper,
                 borderRadius: BorderRadius.circular(startRadius),
-                border: Border.all(color: Palette.ink, width: 2),
+                border: Border.all(color: Palette.ink, width: InkLine.panel),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(startRadius - 2),
@@ -146,15 +147,11 @@ class _Signpost extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Palette.card,
                 borderRadius: BorderRadius.circular(startRadius),
-                border: Border.all(color: Palette.ink, width: 2.5),
+                border: Border.all(color: Palette.ink, width: InkLine.panel),
               ),
               child: Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: Palette.ink,
-                ),
+                style: context.display(22),
               ),
             ),
             Container(width: 12, height: 48, color: Palette.ink),
@@ -184,7 +181,7 @@ class _SidoChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected ? Palette.terracotta : Palette.paper,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Palette.ink, width: 2),
+            border: Border.all(color: Palette.ink, width: InkLine.panel),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -193,11 +190,7 @@ class _SidoChip extends StatelessWidget {
               heightFactor: 1,
               child: Text(
                 label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Palette.paper : Palette.ink,
-                ),
+                style: context.display(14, color: selected ? Palette.paper : Palette.ink),
               ),
             ),
           ),
@@ -236,11 +229,8 @@ class _SigunguRow extends StatelessWidget {
             Expanded(
               child: Text(
                 text,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                  color: Palette.ink,
-                ),
+                // 고른 줄만 표시 글꼴 굵은 글자
+                style: selected ? context.display(15) : AppText.body,
               ),
             ),
             if (selected) const Icon(Icons.check, size: 20, color: Palette.terracotta),

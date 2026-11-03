@@ -646,6 +646,8 @@ void main() {
       final e = UiEnv(source: FakeStepSource()..granted = false);
       await e.seed(tester);
       await openSettings(tester, e, fit);
+      // 글꼴 고르기 줄이 위에 있어서, 작은 화면에서는 아직 만들어지지 않은 줄이다
+      await _scrollTo(tester, find.text('권한 다시 열기'));
       await _tap(tester, find.text('권한 다시 열기'));
       expect(find.textContaining('걸음 권한을 열지 못했어요'), findsOneWidget);
       fit.check('긴 토스트');
@@ -786,7 +788,7 @@ void main() {
       });
       await openRecord(tester, e, fit, review: false);
       expect(find.textContaining('(본격 걷기 ×1.3)'), findsOneWidget);
-      expect(find.textContaining('럭 +'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^\+[0-9,]+ 럭$')), findsOneWidget);
       fit.check('걷기 기록 (거리 두 줄·럭)');
       await end(tester, e);
     });

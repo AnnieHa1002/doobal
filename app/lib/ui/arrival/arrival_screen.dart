@@ -10,7 +10,7 @@ import '../../domain/journey.dart' show Frame;
 import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
 import '../album/album_screen.dart';
-import '../common/app_text.dart' show badgeMaxTextScale;
+import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/frame_style.dart';
@@ -232,11 +232,7 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
                 opacity: _frame.value,
                 child: Text(
                   frameLabel(v.newFrame),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Palette.ink,
-                  ),
+                  style: context.display(16),
                 ),
               ),
             ],
@@ -259,13 +255,13 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
         children: [
           Text(
             firstPack ? firstPackLabel : v.dest.name,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
+            style: context.display(18),
           ),
           const SizedBox(height: 4),
           // 명소는 몇 번째 방문, 첫 그림은 그림 이름
           Text(
             firstPack ? firstPackName : '${v.visitNo}번째 방문',
-            style: body.copyWith(fontWeight: FontWeight.w600),
+            style: context.display(14),
           ),
           const SizedBox(height: 8),
           Text('이번 여정 ${formatKm(v.journeyKm)}', style: body),
@@ -282,11 +278,7 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
             Text(
               revisit,
               key: const ValueKey('arrival-revisit'),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: v.frameUp ? Palette.terracotta : Palette.subInk,
-              ),
+              style: context.display(14, color: v.frameUp ? Palette.terracotta : Palette.subInk),
             ),
           ],
         ],
@@ -308,13 +300,13 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
             decoration: BoxDecoration(
               color: Palette.paper,
               shape: BoxShape.circle,
-              border: Border.all(color: Palette.ink, width: 2),
+              border: Border.all(color: Palette.ink, width: InkLine.panel),
             ),
             child: Text(
               prop.name.substring(0, 1),
               // 40pt 동그라미 안이라 글자 배율 상한을 둔다
               textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: badgeMaxTextScale),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Palette.ink),
+              style: context.display(18),
             ),
           ),
           const SizedBox(width: 12),
@@ -324,19 +316,11 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
               children: [
                 Text(
                   '${regionLabels[v.dest.region] ?? v.dest.region} 완성',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Palette.terracotta,
-                  ),
+                  style: context.display(14, color: Palette.terracotta),
                 ),
                 Text(
                   prop.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Palette.ink,
-                  ),
+                  style: context.display(16),
                 ),
               ],
             ),
@@ -359,7 +343,7 @@ class _Card extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Palette.ink, width: 2.5),
+        border: Border.all(color: Palette.ink, width: InkLine.panel),
       ),
       child: child,
     );

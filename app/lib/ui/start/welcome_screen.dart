@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../domain/rules.dart';
 import '../../domain/sky.dart';
+import '../common/app_text.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
 import '../scene/sky_painter.dart';
@@ -40,28 +41,34 @@ class WelcomeScreen extends ConsumerWidget {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(flex: 5),
-                  const Text(
-                    '두발: 여행하는 예술가',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: Palette.paper,
+              // 글자를 크게 키운 작은 화면에서는 넘치지 않고 스크롤된다 (보통은 빈 곳이 늘고 줄어든다)
+              child: LayoutBuilder(
+                builder: (context, box) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: box.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Spacer(flex: 5),
+                          Text(
+                            '두발: 여행하는 예술가',
+                            textAlign: TextAlign.center,
+                            style: context.display(28, color: Palette.paper),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            '걸은 만큼 내 화가가 실제 명소로 여행해요',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 16, height: 1.4, color: Palette.paper),
+                          ),
+                          const Spacer(flex: 4),
+                          GameButton(label: '만 14세 이상이에요', onPressed: () => _confirm(ref)),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    '걸은 만큼 내 화가가 실제 명소로 여행해요',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, height: 1.4, color: Palette.paper),
-                  ),
-                  const Spacer(flex: 4),
-                  GameButton(label: '만 14세 이상이에요', onPressed: () => _confirm(ref)),
-                ],
+                ),
               ),
             ),
           ),
