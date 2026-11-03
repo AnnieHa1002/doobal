@@ -9,6 +9,7 @@ import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
+import 'album_diary.dart';
 import 'album_widgets.dart';
 import 'painting_detail_screen.dart';
 
@@ -19,6 +20,7 @@ const albumFirstOnlyHint = '걸어서 명소에 닿으면 여기에 걸려요';
 const albumNoPropsLine = '아직 모은 소품이 없어요';
 
 /// 화집: 벽에 건 액자 4칸, 그림 탭(얻은 그림만: 첫 그림 + 얻은 명소)과 소품 탭(얻은 소품만).
+/// 그림 탭은 ‘일기 · 전체’ 두 보기이고 기본은 일기다 (UI 명세 10장, 16장 11/2).
 /// [hangLandmarkId]가 있으면 벽이 가득 찬 채 도착해서 연 것이라, 바꿀 액자를 눌러 거는 모드로 시작한다
 class AlbumScreen extends ConsumerStatefulWidget {
   const AlbumScreen({super.key, this.hangLandmarkId});
@@ -33,6 +35,9 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   /// 바꿀 칸을 기다리는 그림 (거는 모드). 칸을 누르면 비운다
   String? _hangId;
   var _tab = 0;
+
+  /// 그림 탭 보기: 일기(기본)인가, 전체(3열 격자)인가
+  var _diary = true;
 
   /// 그림 탭의 권역 거르기. null이면 전체
   String? _region;
@@ -161,12 +166,28 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
             ),
           ),
         ),
-        if (_tab == 0) ..._paintingSlivers(owned, landmarks) else _propSliver(),
+        if (_tab == 0) ...[
+          SliverToBoxAdapter(
+            child: _ViewSwitch(diary: _diary, onSelect: (d) => setState(() => _diary = d)),
+          ),
+          if (_diary) ..._diarySlivers() else ..._paintingSlivers(owned, landmarks),
+        ] else
+          _propSliver(),
       ],
     );
   }
 
-  /// 그림 탭: 권역 칩과 얻은 그림 3열 (첫 그림이 맨 앞, 명소는 landmarks.json 순서).
+  void _openDetail(String id) => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => PaintingDetailScreen(landmarkId: id)));
+
+  /// 그림 탭의 일기: 도착마다 한 항목, 최근이 위 (읽는 동안은 비워 둔다)
+  List<Widget> _diarySlivers() {
+    final entries = ref.watch(diaryProvider).value;
+    if (entries == null) return const [SliverToBoxAdapter()];
+    return diarySlivers(context, entries, onOpen: _openDetail);
+  }
+
+  /// 그림 탭의 전체: 권역 칩과 얻은 그림 3열 (첫 그림이 맨 앞, 명소는 landmarks.json 순서).
   /// 못 얻은 그림은 그리지 않는다. 칩은 `전체` + 얻은 그림이 있는 권역만이고,
   /// 첫 그림은 권역이 없어서 칩이 `전체`일 때만 나온다
   List<Widget> _paintingSlivers(Map<String, OwnedPaintingView> owned, List<Landmark> landmarks) {
@@ -183,8 +204,6 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     ];
     // 얻은 명소 그림이 아직 없으면 (첫 그림뿐이거나 아무것도 없으면) 격자 아래에 안내를 붙인다
     final hint = mine.isEmpty;
-    void openDetail(String id) => Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => PaintingDetailScreen(landmarkId: id)));
     return [
       SliverToBoxAdapter(
         child: RegionFilterChips(
@@ -205,7 +224,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
               p,
               key: ValueKey('cell-$id'),
               isNew: _newIds.contains(id),
-              onTap: () => openDetail(id),
+              onTap: () => _openDetail(id),
             );
           },
         ),
@@ -268,6 +287,65 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       sliver: SliverList(delegate: SliverChildListDelegate(children)),
+    );
+  }
+}
+
+/// 그림 탭 아래 작은 밑줄 전환 `일기 · 전체`. 고른 쪽은 표시 글꼴 + 잉크 밑줄
+class _ViewSwitch extends StatelessWidget {
+  const _ViewSwitch({required this.diary, required this.onSelect});
+
+  final bool diary;
+  final ValueChanged<bool> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget option(String label, bool isDiary) {
+      final on = diary == isDiary;
+      return Semantics(
+        button: true,
+        selected: on,
+        child: GestureDetector(
+          key: ValueKey(isDiary ? 'view-diary' : 'view-all'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onSelect(isDiary),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.only(bottom: 2),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: on ? Palette.ink : Colors.transparent,
+                      width: InkLine.panel,
+                    ),
+                  ),
+                ),
+                child: Text(
+                  label,
+                  style: on ? context.display(14) : AppText.label.copyWith(fontSize: 14),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          option('일기', true),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text('·', style: TextStyle(fontSize: 14, color: Palette.subInk)),
+          ),
+          option('전체', false),
+        ],
+      ),
     );
   }
 }

@@ -46,11 +46,14 @@ Future<void> _pumpRest(WidgetTester tester, UiEnv e) async {
   await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
 }
 
+/// 화집을 열고 그림 탭을 `전체`(격자) 보기로 둔다 (기본은 일기)
 Future<void> _openAlbum(WidgetTester tester, UiEnv e, {double height = 844}) async {
   await openOnTop(tester, e, const AlbumScreen(),
       height: height, ready: () => _wall(0).evaluate().isNotEmpty);
   // 그림·벽 값까지 한 박자 더
   await settle(tester, () => false, tries: 6);
+  await tester.tap(find.byKey(const ValueKey('view-all')));
+  await settle(tester, () => false, tries: 3);
 }
 
 Text _name(WidgetTester tester, Finder owner, String name) =>

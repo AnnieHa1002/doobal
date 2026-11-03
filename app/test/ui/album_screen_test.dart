@@ -4,6 +4,7 @@ import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/main.dart';
+import 'package:doobal/ui/album/album_diary.dart';
 import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/album/album_widgets.dart';
 import 'package:doobal/ui/album/painting_detail_screen.dart';
@@ -59,12 +60,17 @@ List<String> _cellIds(WidgetTester tester) => _keyNames(tester, 'cell-');
 /// 화면에 있는 권역 칩 (`전체`는 all)
 List<String> _chipKeys(WidgetTester tester) => _keyNames(tester, 'album-chip-');
 
+/// 화집을 연다. 그림 탭의 기본 보기는 일기라서, 격자를 보는 테스트는 [all]로 `전체`를 눌러 둔다
 Future<void> _openAlbum(WidgetTester tester, UiEnv e,
-    {Widget screen = const AlbumScreen(), double height = 844}) async {
+    {Widget screen = const AlbumScreen(), double height = 844, bool all = true}) async {
   await openOnTop(tester, e, screen,
       height: height, ready: () => _wall(0).evaluate().isNotEmpty);
   // 그림·벽 값까지 한 박자 더
   await settle(tester, () => false, tries: 6);
+  if (all) {
+    await tester.tap(find.byKey(const ValueKey('view-all')));
+    await settle(tester, () => false, tries: 3);
+  }
 }
 
 Future<List<String?>> _dbWall(WidgetTester tester, UiEnv e) async =>
@@ -103,7 +109,8 @@ void main() {
       expect(find.text('소품'), findsOneWidget);
       // 얻은 그림이 없어서 칩은 전체뿐이다
       expect(_chipKeys(tester), ['all']);
-      expect(find.text('전체'), findsOneWidget);
+      // `전체`는 칩 하나와 그림 탭 보기 전환(일기 · 전체)에 있다
+      expect(find.text('전체'), findsNWidgets(2));
       for (final label in regionLabels.values) {
         expect(find.text(label), findsNothing, reason: label);
       }
@@ -300,6 +307,132 @@ void main() {
       await settle(tester, () => _hung(2).evaluate().isNotEmpty);
       expect(await _dbWall(tester, e), ['kr002', null, 'kr001', null]);
       expect(find.text(_hangHint), findsNothing);
+      await end(tester, e);
+    });
+  });
+
+  group('그림 탭 일기 (UI 명세 10장, 16장 11/2)', () {
+    // 11월 18일 첫 그림, 21일 kr001, 24일 kr002, 27일 kr002 재방문(나무 → 은), 12월 8일 kr022
+    final day0 = t1;
+    Future<void> seedDiary(UiEnv e) async {
+      await e.insertArrival('j-sketch', sketchId, day0, km: 0.6);
+      await e.insertArrival('j-a', 'kr001', day0.add(const Duration(days: 3)), km: 12.4);
+      await e.insertArrival('j-b', 'kr002', day0.add(const Duration(days: 6)), km: 5);
+      await e.insertArrival('j-c', 'kr002', day0.add(const Duration(days: 9)),
+          visitNo: 2, prevFrame: Frame.wood, frame: Frame.silver, km: 32.7);
+      await e.insertArrival('j-d', 'kr022', day0.add(const Duration(days: 20)), km: 8.1);
+    }
+
+    Finder entry(String id) => find.byKey(ValueKey('diary-$id'));
+    List<String> entryOrder(WidgetTester tester) => [
+          for (final w in tester.widgetList<DiaryItem>(find.byType(DiaryItem)))
+            w.entry.journeyId,
+        ];
+
+    testWidgets('기본 보기는 일기: 도착마다 한 항목, 최근이 위, 첫 그림이 맨 아래, 달이 바뀌면 머리줄',
+        (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => seedDiary(e));
+      await _openAlbum(tester, e, height: 3000, all: false);
+
+      expect(find.byKey(const ValueKey('view-diary')), findsOneWidget);
+      expect(find.byType(GridView), findsNothing);
+      expect(_cellIds(tester), isEmpty);
+      // 재방문(j-c)도 새 항목이다
+      expect(entryOrder(tester), ['j-d', 'j-c', 'j-b', 'j-a', 'j-sketch']);
+      final dec = tester.getTopLeft(find.text('2026년 12월')).dy;
+      final nov = tester.getTopLeft(find.text('2026년 11월')).dy;
+      expect(dec, lessThan(tester.getTopLeft(entry('j-d')).dy));
+      expect(nov, greaterThan(tester.getTopLeft(entry('j-d')).dy));
+      expect(nov, lessThan(tester.getTopLeft(entry('j-c')).dy));
+      await end(tester, e);
+    });
+
+    testWidgets('메모: 날짜(요일)·이름·n번째 방문·이번 여정 km · 그날 걸음·액자(올랐으면 나무 → 은)',
+        (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => seedDiary(e));
+      await _openAlbum(tester, e, height: 3000, all: false);
+
+      String memo(String id) => [
+            for (final t in tester.widgetList<Text>(
+                find.descendant(of: entry(id), matching: find.byType(Text))))
+              t.data ?? '',
+          ].join(' / ');
+      expect(memo('j-c'), '11월 27일 (금) / 인천 차이나타운·월미도 / 2번째 방문 / 이번 여정 32.7km · 그날 0보 / 나무 → 은');
+      expect(memo('j-a'), contains('11월 21일 (토) / 경복궁 / 1번째 방문 / 이번 여정 12.4km'));
+      expect(memo('j-a'), endsWith('나무 액자'));
+      // 첫 그림: 제목과 받기까지 한 줄 (걸음 분이 없으면 걸음은 뺀다)
+      expect(memo('j-sketch'),
+          '첫 그림 · 첫 여행 짐 꾸러미 / 11월 18일 · $testHomeName에서 0.6km · 1분 걸려 받았어요');
+      // 사진 테두리는 받은 액자 색 (첫 그림은 나무 액자 그림)
+      final framed = tester.widget<FramedPainting>(
+          find.descendant(of: entry('j-c'), matching: find.byType(FramedPainting)));
+      expect((framed.frame, framed.landmark?.id), (Frame.silver, 'kr002'));
+      expect(
+          tester
+              .widget<FramedPainting>(
+                  find.descendant(of: entry('j-sketch'), matching: find.byType(FramedPainting)))
+              .firstPack,
+          isTrue);
+      await end(tester, e);
+    });
+
+    testWidgets('사진과 메모는 항목마다 좌우를 번갈아 둔다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => seedDiary(e));
+      await _openAlbum(tester, e, height: 3000, all: false);
+
+      bool photoLeft(String id) {
+        final photo = tester.getCenter(
+            find.descendant(of: entry(id), matching: find.byType(FramedPainting)));
+        final memo = tester.getCenter(find.descendant(
+            of: entry(id), matching: find.textContaining('번째 방문')).first);
+        return photo.dx < memo.dx;
+      }
+
+      expect([for (final id in ['j-d', 'j-c', 'j-b', 'j-a']) photoLeft(id)],
+          [true, false, true, false]);
+      await end(tester, e);
+    });
+
+    testWidgets('항목을 누르면 그 명소의 그림 상세', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => seedDiary(e));
+      await _openAlbum(tester, e, height: 3000, all: false);
+
+      await tester.tap(entry('j-c'));
+      await transition(tester);
+      await settle(tester, () => find.byType(PaintingDetailScreen).evaluate().isNotEmpty);
+      expect(tester.widget<PaintingDetailScreen>(find.byType(PaintingDetailScreen)).landmarkId,
+          'kr002');
+      await end(tester, e);
+    });
+
+    testWidgets('`전체`를 누르면 격자, `일기`를 누르면 다시 일기', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => seedDiary(e));
+      await _openAlbum(tester, e, height: 3000, all: false);
+
+      await tester.tap(find.byKey(const ValueKey('view-all')));
+      await settle(tester, () => false, tries: 3);
+      expect(find.byType(DiaryItem), findsNothing);
+      expect(_cellIds(tester), [sketchId, 'kr001', 'kr002', 'kr022']);
+      expect(_chipKeys(tester), contains('all'));
+
+      await tester.tap(find.byKey(const ValueKey('view-diary')));
+      await settle(tester, () => false, tries: 3);
+      expect(find.byType(DiaryItem), findsNWidgets(5));
+      expect(_cellIds(tester), isEmpty);
+      await end(tester, e);
+    });
+
+    testWidgets('아직 받은 그림이 없으면 일기에 한 줄 안내', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _openAlbum(tester, e, all: false);
+      expect(find.text(diaryEmptyLine), findsOneWidget);
+      expect(find.byType(DiaryItem), findsNothing);
       await end(tester, e);
     });
   });
@@ -620,7 +753,8 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('tab-paintings')));
       await tester.pump();
-      expect(find.text('전체'), findsOneWidget);
+      // 그림 탭으로 돌아오면 보던 보기(전체)와 칩이 그대로다
+      expect(find.byKey(const ValueKey('album-chip-all')), findsOneWidget);
       expect(find.text('모자'), findsNothing);
       await end(tester, e);
     });
@@ -661,6 +795,9 @@ void main() {
       await transition(tester);
       await tester.tap(find.text('열기'));
       await transition(tester);
+      // 새로 연 화집은 일기부터라 `전체`로 바꾼다
+      await settle(tester, () => find.byKey(const ValueKey('view-all')).evaluate().isNotEmpty);
+      await tester.tap(find.byKey(const ValueKey('view-all')));
       await settle(tester, () => _cell('kr002').evaluate().isNotEmpty);
       await settle(tester, () => false, tries: 6);
       expect(_cell('kr002'), findsOneWidget);

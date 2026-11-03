@@ -210,6 +210,54 @@ class OwnedPaintingView {
   final bool isFirstPack;
 }
 
+/// 화집 일기 항목 하나 = 도착 한 번 (재방문도 새 항목, UI 명세 10장)
+class DiaryEntry {
+  const DiaryEntry({
+    required this.journeyId,
+    required this.dest,
+    required this.visitNo,
+    required this.prevFrame,
+    required this.newFrame,
+    required this.journeyKm,
+    required this.startedAt,
+    required this.arrivedAt,
+    required this.daySteps,
+    this.isFirstPack = false,
+    this.fromName,
+    this.walkSteps = 0,
+  });
+
+  final String journeyId;
+
+  /// 도착지. 첫 그림이면 [firstPackLandmark] (id 'sketch')
+  final Landmark dest;
+  final int visitNo;
+
+  /// 도착 전 액자. 첫 방문이면 null
+  final Frame? prevFrame;
+  final Frame newFrame;
+
+  /// 이 여정의 거리(km, 도착 화면 ‘이번 여정’과 같은 값)
+  final double journeyKm;
+  final DateTime startedAt;
+  final DateTime arrivedAt;
+
+  /// 도착한 날(한국 날짜)의 걸음. 하루 요약이 없으면 0
+  final int daySteps;
+
+  /// 내 동네 스케치에서 받은 첫 그림(첫 여행 짐 꾸러미)
+  final bool isFirstPack;
+
+  /// 첫 그림: 출발 동네 이름 (모르면 null)
+  final String? fromName;
+
+  /// 첫 그림: 출발부터 도착까지 저장된 걸음 (걸음 분이 없으면 0, 예: 백업에서 되살린 뒤)
+  final int walkSteps;
+
+  /// 재방문해서 액자가 올랐는가
+  bool get frameUp => prevFrame != null && newFrame.index > prevFrame!.index;
+}
+
 /// 그림 상세의 방문 한 줄
 class VisitView {
   const VisitView({required this.visitNo, required this.km, required this.arrivedAt});
@@ -991,6 +1039,46 @@ class SyncService {
       lastArrivedAt: _utc(r.lastArrivedUtc),
       isFirstPack: isFirstPack,
     );
+  }
+
+  /// 화집 일기: 도착한 여정마다 한 항목, 최근 도착이 앞 (그래서 첫 그림이 맨 뒤). DB를 바꾸지 않고
+  /// 여정 기록·하루 요약·걸음 분으로 만든다. 명소 목록에 없는 도착(옛 데이터)은 뺀다
+  Future<List<DiaryEntry>> diary() async {
+    final rows = await (db.select(db.journeys)
+          ..where((t) =>
+              t.status.equalsValue(JourneyStatus.arrived) &
+              t.arrivedUtc.isNotNull() &
+              t.visitNo.isNotNull() &
+              t.newFrame.isNotNull())
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.arrivedUtc),
+            (t) => OrderingTerm.desc(t.id),
+          ]))
+        .get();
+    final days = {for (final d in await db.select(db.daySummaries).get()) d.day: d.steps};
+    final home = await this.home();
+    final entries = <DiaryEntry>[];
+    for (final r in rows) {
+      final first = r.destId == sketchId;
+      if (!first && !landmarks.containsKey(r.destId)) continue;
+      final started = _utc(r.startUtc);
+      final arrived = _utc(r.arrivedUtc!);
+      entries.add(DiaryEntry(
+        journeyId: r.id,
+        dest: first ? firstPackLandmark : landmarks[r.destId]!,
+        visitNo: r.visitNo!,
+        prevFrame: first ? null : r.prevFrame,
+        newFrame: r.newFrame!,
+        journeyKm: r.totalEffectiveKm,
+        startedAt: started,
+        arrivedAt: arrived,
+        daySteps: days[kstDayKey(arrived)] ?? 0,
+        isFirstPack: first,
+        fromName: first ? home?.name : null,
+        walkSteps: first ? await stepsFrom(started, arrived) : 0,
+      ));
+    }
+    return entries;
   }
 
   /// 그 명소에 도착한 기록을 도착 순서대로. 몇 번째인지는 도착할 때 적어 둔 값

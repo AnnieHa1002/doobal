@@ -326,6 +326,13 @@ final wallProvider = FutureProvider.autoDispose<List<String?>>((ref) async {
 });
 
 /// 얻은 그림 전부 (화집·그림 상세). 도착해서 상태가 바뀌면 새로 읽는다
+/// 화집 일기 (도착마다 한 항목, 최근이 앞). 동기화·도착으로 상태가 바뀌면 새로 읽는다
+final diaryProvider = FutureProvider.autoDispose<List<DiaryEntry>>((ref) async {
+  final svc = await ref.watch(syncServiceProvider.future);
+  await ref.watch(snapshotProvider.future);
+  return svc.diary();
+});
+
 final paintingsProvider = FutureProvider.autoDispose<List<OwnedPaintingView>>((ref) async {
   final svc = await ref.watch(syncServiceProvider.future);
   await ref.watch(snapshotProvider.future);

@@ -400,12 +400,14 @@ void main() {
   });
 
   group('화집', () {
-    Future<void> openAlbum(WidgetTester tester, UiEnv e, _Fit fit) async {
+    /// 화집을 연다. [all]이면 그림 탭을 `전체`(격자)로 바꿔 둔다 (기본은 일기)
+    Future<void> openAlbum(WidgetTester tester, UiEnv e, _Fit fit, {bool all = true}) async {
       await openOnTop(tester, e, const AlbumScreen(),
           width: fit.width,
           height: fit.height,
           ready: () => _key('wall-0').evaluate().isNotEmpty);
       await settle(tester, () => false, tries: 6);
+      if (all) await _tap(tester, _key('view-all'));
     }
 
     // 새 그림 점이 붙은 그림 몇 점을 얻고 벽에도 건다
@@ -429,6 +431,24 @@ void main() {
       // 이름이 긴 명소가 있는 권역
       await _tap(tester, _key('album-chip-gangwon'));
       fit.check('권역 칩 (강원)');
+      await end(tester, e);
+    });
+
+    _scaleCases('그림 탭 일기', (tester, fit) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await e.insertArrival('j-sketch', sketchId, t1, km: 0.6);
+        // 이름이 긴 명소, 재방문으로 액자가 오른 항목, 다음 달 항목
+        await e.insertArrival('j-a', 'kr002', t1.add(const Duration(days: 3)), km: 12.4);
+        await e.insertArrival('j-b', 'kr002', t1.add(const Duration(days: 9)),
+            visitNo: 2, prevFrame: Frame.wood, frame: Frame.silver, km: 32.7);
+        await e.insertArrival('j-c', 'kr022', t1.add(const Duration(days: 20)), km: 8.1);
+      });
+      await openAlbum(tester, e, fit, all: false);
+      expect(_key('diary-j-c'), findsOneWidget);
+      fit.check('일기 (위쪽)');
+      await _scrollTo(tester, _key('diary-j-sketch'));
+      fit.check('일기 (첫 그림까지)');
       await end(tester, e);
     });
 
