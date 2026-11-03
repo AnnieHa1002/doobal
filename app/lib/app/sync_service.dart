@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
@@ -35,6 +36,7 @@ class SyncReport {
     this.stepsBySource, {
     this.advancedKm = 0,
     this.notices = const [],
+    this.newProps = const [],
   });
 
   final int records;
@@ -51,6 +53,9 @@ class SyncReport {
   /// 이번 동기화에서 새로 생긴 일 (알림 후보 N1·N2·N4). 앱이 켜져 있는지·꺼진 종류인지·하루 최대는
   /// 아직 안 따진 것이다 (NotificationService가 이어서 정한다)
   final List<NoticeCandidate> notices;
+
+  /// 이번 동기화에서 새로 얻어 토스트로 알릴 소품 (거리·걸음, [announcesProp]). props.json 순서
+  final List<Prop> newProps;
 }
 
 /// 걷기 마치기 직후 걷기 기록 화면의 내용
@@ -436,6 +441,12 @@ class SyncService {
   /// 동기화가 끝나면 새로 생긴 일을 넘겨 알림을 판단하는 곳. 없으면 알림 판단을 하지 않는다
   final NotificationService? notificationService;
 
+  final _newProps = StreamController<List<Prop>>.broadcast();
+
+  /// 어느 화면에서 동기화했든 새로 얻은 소품([SyncReport.newProps])이 있으면 흘려보낸다.
+  /// AutoSync가 듣고 한 줄 토스트를 띄운다 (UI 명세 12장)
+  Stream<List<Prop>> get newProps => _newProps.stream;
+
   Future<SyncReport> sync(DateTime now) async {
     final state = await _ensureState(now);
     final install = _utc(state.installUtc);
@@ -455,6 +466,7 @@ class SyncService {
 
     var advancedKm = 0.0;
     final candidates = <NoticeCandidate>[];
+    var newProps = <Prop>[];
     await db.transaction(() async {
       final activeBefore = await _activeJourney();
       final progressBefore = await _progressOf(activeBefore, to);
@@ -468,7 +480,7 @@ class SyncService {
           ]));
       await _recomputeDays(kstDayKey(from), kstDayKey(to), state.restoreFloorDay, to);
       await _advanceJourney(to);
-      await _unlockProps(to);
+      newProps = await _unlockProps(to);
       final newMilestones = await _updateGuestbookTickets(to);
       await (db.update(db.syncState)..where((t) => t.id.equals(1)))
           .write(SyncStateCompanion(lastFetchedUtc: Value(to.millisecondsSinceEpoch)));
@@ -504,7 +516,8 @@ class SyncService {
       }
     });
     await notificationService?.afterSync(candidates, to);
-    return _report(raw, kept, advancedKm: advancedKm, notices: candidates);
+    if (newProps.isNotEmpty) _newProps.add(newProps);
+    return _report(raw, kept, advancedKm: advancedKm, notices: candidates, newProps: newProps);
   }
 
   /// 저장하지 않고 출처만 본다 (허용 목록을 정할 때)
@@ -701,8 +714,9 @@ class SyncService {
   }
 
   /// 새로 얻은 소품을 더한다 (한 번 얻은 소품은 없어지지 않는다).
-  /// 거리 소품은 앱 걷기 이동 거리(walkTravelM)의 합, 걸음은 하루 요약의 합, 권역은 그림을 얻은 명소로 센다
-  Future<void> _unlockProps(DateTime now) async {
+  /// 거리 소품은 앱 걷기 이동 거리(walkTravelM)의 합, 걸음은 하루 요약의 합, 권역은 그림을 얻은 명소로 센다.
+  /// 새로 더한 것 중 토스트로 알릴 소품([announcesProp])을 돌려준다
+  Future<List<Prop>> _unlockProps(DateTime now) async {
     final days = await db.select(db.daySummaries).get();
     final visited = await _visitedLandmarkIds();
     final earned = earnedPropIds(
@@ -721,6 +735,10 @@ class SyncService {
               PropsOwnedCompanion.insert(
                   propId: id, unlockedUtc: at, seen: Value(initial.contains(id))),
         ]));
+    return [
+      for (final p in props)
+        if (earned.contains(p.id) && !owned.contains(p.id) && announcesProp(p)) p,
+    ];
   }
 
   /// 도착한 여정의 방명록 기회를 연다. 열린 시각은 도착을 감지한 시각이다. 이미 있으면 그대로
@@ -1747,13 +1765,14 @@ class SyncService {
     List<StepRecord> kept, {
     double advancedKm = 0,
     List<NoticeCandidate> notices = const [],
+    List<Prop> newProps = const [],
   }) {
     final bySource = <String, int>{};
     for (final r in raw) {
       bySource[r.sourceId] = (bySource[r.sourceId] ?? 0) + r.steps;
     }
     return SyncReport(raw.length, raw.length - kept.length, bySource,
-        advancedKm: advancedKm, notices: notices);
+        advancedKm: advancedKm, notices: notices, newProps: newProps);
   }
 }
 

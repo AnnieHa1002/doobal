@@ -1340,6 +1340,30 @@ void main() {
       expect(await e.dump(), before);
     });
 
+    test('새로 얻은 거리 소품은 보고(newProps)와 흘려보내기(newProps 스트림)로 한 번만 알린다', () async {
+      final e = await _env();
+      final heard = <List<String>>[];
+      final sub = e.svc.newProps.listen((ps) => heard.add([for (final p in ps) p.id]));
+      addTearDown(sub.cancel);
+      // 기본 소품은 처음부터 가진 것이라 알리지 않는다
+      expect((await e.svc.sync(_t0)).newProps, isEmpty);
+
+      // 창 안에서 11km를 걸으면 이동 거리 약 14.6km: 10km 지팡이(hand_02)만
+      await _walkInApp(e, _walkKm(t1, 11));
+      final t2 = _t0.add(const Duration(hours: 4));
+      final report = await e.svc.sync(t2);
+      expect([for (final p in report.newProps) p.id], ['hand_02']);
+      await pumpEventQueue();
+      expect(heard, [
+        ['hand_02'],
+      ]);
+
+      // 같은 기록으로 또 돌리면 새로 얻은 것이 없어 알리지 않는다
+      expect((await e.svc.sync(t2.add(const Duration(hours: 1)))).newProps, isEmpty);
+      await pumpEventQueue();
+      expect(heard, hasLength(1));
+    });
+
     test('새로 얻은 소품만 표시가 켜지고, markPropsSeen으로 지워진다', () async {
       final e = await _env();
       await e.svc.sync(_t0);

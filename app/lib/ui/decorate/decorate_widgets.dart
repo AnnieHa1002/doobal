@@ -270,22 +270,20 @@ class OptionChip extends StatelessWidget {
   }
 }
 
-/// 소품 칸 하나: 아이콘(자리표시)과 이름. 고른 것은 테라코타 테두리와 체크, 잠긴 것은 흐리게 자물쇠.
-/// [icon]이 null이면 "없음" 칸이다
+/// 소품 칸 하나: 아이콘(자리표시)과 이름. 고른 것은 테라코타 테두리와 체크.
+/// [icon]이 null이면 "없음" 칸이다. 가진 소품만 칸이 된다 (잠긴 칸은 없다, 16장 11/3)
 class PropCell extends StatelessWidget {
   const PropCell({
     super.key,
     required this.name,
     required this.icon,
     required this.selected,
-    required this.locked,
     required this.onTap,
   });
 
   final String name;
   final IconData? icon;
   final bool selected;
-  final bool locked;
   final VoidCallback onTap;
 
   @override
@@ -311,12 +309,6 @@ class PropCell extends StatelessWidget {
                   size: 32,
                   color: icon == null ? Palette.subInk : Palette.ink,
                 ),
-                if (locked)
-                  const Positioned(
-                    right: 4,
-                    bottom: 4,
-                    child: Icon(Icons.lock, size: 16, color: Palette.ink),
-                  ),
                 if (selected)
                   const Positioned(
                     right: 4,
@@ -340,12 +332,12 @@ class PropCell extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: locked ? '$name, 잠김' : name,
+      label: name,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: locked ? Opacity(opacity: 0.45, child: cell) : cell,
+        child: cell,
       ),
     );
   }

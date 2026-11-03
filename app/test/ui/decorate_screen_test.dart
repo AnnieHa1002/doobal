@@ -5,6 +5,7 @@ import 'package:doobal/app/profile_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/color.dart';
 import 'package:doobal/domain/look.dart';
+import 'package:doobal/domain/prop.dart';
 import 'package:doobal/ui/common/figure_painter.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/toast.dart';
@@ -86,8 +87,7 @@ Future<void> _walked(AppDb db, double km) =>
           walkTravelM: Value(km * 1000),
         ));
 
-/// 소품 칸 안의 자물쇠·체크 표시
-Finder _lock(String id) => find.descendant(of: _key('prop-$id'), matching: find.byIcon(Icons.lock));
+/// 소품 칸 안의 체크 표시
 Finder _check(String id) =>
     find.descendant(of: _key('prop-$id'), matching: find.byIcon(Icons.check_circle));
 
@@ -633,9 +633,15 @@ void main() {
   });
 
   group('소품 탭', () {
-    testWidgets('그 칸의 MVP 소품을 4열 격자로, 옷이 아니면 맨 앞에 없음 칸', (tester) async {
+    testWidgets('그 칸의 가진 소품을 4열 격자로, 옷이 아니면 맨 앞에 없음 칸', (tester) async {
       final e = UiEnv();
-      await e.seed(tester);
+      // 모두 가진 상태에서 격자를 본다
+      await e.seed(
+          tester,
+          () => _ownProps(e.db, [
+                for (final p in props)
+                  if (p.kind != PropUnlockKind.initial) p.id,
+              ]));
       await _open(tester, e);
 
       // 모자: 없음 + 7개 = 8칸 (4열 두 줄)
@@ -668,25 +674,20 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('가진 것은 고를 수 있고 잠긴 것은 흐리게 보인다', (tester) async {
+    testWidgets('가진 소품만 칸이 되고 잠긴 소품은 보이지 않는다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => _ownProps(e.db, ['hat_02']));
       await _open(tester, e);
       await _goTab(tester, 'hat');
 
-      double opacityOf(String id) => tester
-          .widget<Opacity>(find
-              .descendant(of: _key('prop-$id'), matching: find.byType(Opacity))
-              .first)
-          .opacity;
-      // 가진 것(기본 hat_01, 얻은 hat_02)은 또렷하고 잠긴 것은 흐리다 (자물쇠)
-      for (final id in ['hat_01', 'hat_02']) {
-        expect(_lock(id), findsNothing);
-      }
+      // 없음 + 기본 hat_01 + 얻은 hat_02
+      expect(find.byType(PropCell), findsNWidgets(3));
       for (final id in ['hat_03', 'hat_04', 'hat_05', 'hat_10', 'hat_11']) {
-        expect(opacityOf(id), lessThan(1), reason: id);
-        expect(_lock(id), findsOneWidget, reason: id);
+        expect(_key('prop-$id'), findsNothing, reason: id);
       }
+      expect(find.byIcon(Icons.lock), findsNothing);
+      expect(find.descendant(of: find.byType(PropCell), matching: find.byType(Opacity)),
+          findsNothing);
       // 고른 것(hat_01)에 체크
       expect(_check('hat_01'), findsOneWidget);
       expect(_check('hat_02'), findsNothing);
@@ -699,49 +700,39 @@ void main() {
 
       await _save(tester);
       expect((await _stored(tester, e)).slots['hat'], 'hat_02');
+
+      // 옷은 기본 하나뿐이면 그 칸만 (없음 칸 없음)
+      await _goTab(tester, 'cloth');
+      expect(find.byType(PropCell), findsOneWidget);
+      expect(_key('prop-cloth_01'), findsOneWidget);
       await end(tester, e);
     });
 
-    testWidgets('잠긴 칸을 누르면 얻는 방법이 나오고 모습은 안 바뀐다 (거리)', (tester) async {
+    testWidgets('소품 칸 위에 다음 거리 소품까지 남은 본격 걷기 거리 한 줄 (무엇인지는 숨김)', (tester) async {
       final e = UiEnv();
+      // 이동 거리 87km: 다음 거리 소품은 100km(등산화)라 13km
       await e.seed(tester, () => _walked(e.db, 87));
       await _open(tester, e);
-      await _goTab(tester, 'hand');
 
-      await tester.tap(_key('prop-hand_03'));
-      await tester.pump();
-      expect(find.text('본격 걷기 150km · 지금 87km'), findsOneWidget);
-      expect(_worn(tester, 'hand'), '붓');
-      expect(_enabled(tester, '저장'), isFalse);
+      // 내 모습 탭에는 없다
+      expect(_key('next-prop'), findsNothing);
+      for (final slot in ['hat', 'cloth', 'pet']) {
+        await _goTab(tester, slot);
+        expect(find.text('다음 소품까지 본격 걷기 13km'), findsOneWidget, reason: slot);
+        // 줄은 칸들 위에 있다
+        expect(tester.getBottomLeft(_key('next-prop')).dy,
+            lessThan(tester.getTopLeft(find.byType(PropCell).first).dy));
+      }
+      expect(find.textContaining('등산화'), findsNothing);
       await end(tester, e);
     });
 
-    testWidgets('잠긴 칸 얻는 방법: 권역·걸음·동행 소품은 화집과 같은 문구', (tester) async {
+    testWidgets('거리 소품을 다 얻었으면 남은 거리 줄이 없다', (tester) async {
       final e = UiEnv();
-      await e.seed(tester);
+      await e.seed(tester, () => _walked(e.db, 1000));
       await _open(tester, e);
-
-      // 토스트는 앞 것이 사라진 뒤에 새 것이 뜬다
-      Future<void> showHowTo(String id) async {
-        await tester.tap(_key('prop-$id'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 600));
-      }
-
-      await _goTab(tester, 'pet');
-      await showHowTo('pet_02');
-      expect(find.text('수도권 0/12'), findsOneWidget);
-
-      await _goTab(tester, 'hat');
-      await showHowTo('hat_10');
-      expect(find.text('동행 이야기 완결'), findsOneWidget);
-      expect(find.text('수도권 0/12'), findsNothing);
-
-      await _goTab(tester, 'cloth');
-      await showHowTo('cloth_04');
-      expect(find.text('누적 1,000,000보 · 지금 0보'), findsOneWidget);
-      expect(find.text('동행 이야기 완결'), findsNothing);
-      expect(_enabled(tester, '저장'), isFalse);
+      await _goTab(tester, 'hand');
+      expect(_key('next-prop'), findsNothing);
       await end(tester, e);
     });
 
@@ -779,7 +770,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('이름과 잠김은 접근성 label로도 읽힌다', (tester) async {
+    testWidgets('소품 이름은 접근성 label로도 읽히고, 잠긴 소품은 읽히지도 않는다', (tester) async {
       final handle = tester.ensureSemantics();
       final e = UiEnv();
       await e.seed(tester);
@@ -787,7 +778,7 @@ void main() {
       await _goTab(tester, 'hand');
 
       expect(find.bySemanticsLabel('붓'), findsOneWidget);
-      expect(find.bySemanticsLabel('나침반, 잠김'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('나침반')), findsNothing);
       expect(find.bySemanticsLabel('없음'), findsWidgets);
       handle.dispose();
       await end(tester, e);

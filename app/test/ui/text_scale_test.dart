@@ -10,7 +10,6 @@ import 'package:doobal/domain/guestbook.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/onboarding.dart';
-import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/main.dart';
@@ -883,18 +882,15 @@ void main() {
       await end(tester, e);
     });
 
-    _scaleCases('소품 (모자: 잠긴 소품 토스트)', (tester, fit) async {
+    _scaleCases('소품 (모자: 다음 소품 한 줄)', (tester, fit) async {
       final e = UiEnv();
       await e.seed(tester, () => ownProps(e, ['hat_02']));
       await openDecorate(tester, e, fit);
       await _tap(tester, _key('tab-hat'));
+      // 가진 소품 위에 다음 거리 소품까지 남은 거리 한 줄이 있다
+      expect(_key('next-prop'), findsOneWidget);
       await _tap(tester, _key('prop-hat_02'));
       fit.check('모자 하나를 끼움');
-      // 잠긴 소품을 누르면 얻는 방법이 토스트로 나온다
-      final locked = props.firstWhere(
-          (p) => p.slot == 'hat' && p.kind != PropUnlockKind.initial && p.id != 'hat_02');
-      await _tap(tester, _key('prop-${locked.id}'));
-      fit.check('잠긴 소품 토스트');
       await end(tester, e);
     });
 

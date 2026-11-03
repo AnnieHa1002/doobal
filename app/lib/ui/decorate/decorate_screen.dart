@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
-import '../../domain/landmark.dart';
 import '../../domain/look.dart';
 import '../../domain/look_palette.dart';
 import '../../domain/prop.dart';
-import '../album/prop_text.dart';
 import '../common/confirm_sheet.dart';
 import '../common/figure_painter.dart';
 import '../common/format.dart';
@@ -86,10 +84,8 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
     final palette = ref.watch(lookPaletteProvider).value;
     final props = ref.watch(propsProvider).value;
     final owned = ref.watch(ownedPropIdsProvider).value;
-    // 잠긴 소품을 얻는 방법(누적 거리·걸음·다녀온 곳)에 쓴다
+    // 다음 거리 소품까지 남은 거리: 거리 소품은 앱 걷기 이동 거리로 센다 (Snapshot.walkTravelKm)
     final snap = ref.watch(snapshotProvider).value;
-    final landmarks = ref.watch(landmarksProvider).value ?? const <Landmark>[];
-    final paintings = ref.watch(paintingsProvider).value ?? const [];
     final look = _look;
     final ready = look != null && palette != null && props != null && owned != null;
     final dirty = ready && look != _saved;
@@ -118,16 +114,9 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
                           for (final p in props)
                             if (p.kind == PropUnlockKind.initial) p.id,
                         },
-                        howTo: (p) => propHowTo(
-                          p,
-                          // 거리 소품은 앱 걷기 이동 거리로 센다 (Snapshot.walkTravelKm)
-                          totalKm: snap?.walkTravelKm ?? 0,
-                          totalSteps: snap?.totalSteps ?? 0,
-                          progress: regionProgress({
-                            for (final v in paintings)
-                              if (!v.isFirstPack) v.landmark.id,
-                          }, landmarks),
-                        ),
+                        nextKm: snap == null
+                            ? null
+                            : kmToNextDistanceProp(props, snap.walkTravelKm),
                       )
                     : const SizedBox(),
               ),
@@ -144,7 +133,7 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
     bool dirty, {
     required List<Prop> props,
     required Set<String> have,
-    required String? Function(Prop) howTo,
+    required double? nextKm,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -170,14 +159,12 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
               final slot => PropTab(
                   slot: slot,
                   look: look,
-                  props: [for (final p in props) if (p.slot == slot) p],
-                  owned: have,
+                  props: [
+                    for (final p in props)
+                      if (p.slot == slot && have.contains(p.id)) p,
+                  ],
+                  nextKm: nextKm,
                   onPick: (id) => _set(look.withSlot(slot, id)),
-                  // 잠긴 소품은 얻는 방법을 토스트로 (화집 소품 탭과 같은 문구)
-                  onLocked: (p) {
-                    final text = howTo(p);
-                    if (text != null) showToast(context, text);
-                  },
                 ),
             },
           ),

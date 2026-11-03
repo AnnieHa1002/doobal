@@ -99,4 +99,70 @@ void main() {
     expect(find.text('그동안 2.1km 걸었어요'), findsOneWidget);
     await tester.runAsync(db.close);
   });
+
+  testWidgets('어느 동기화든 소품을 새로 얻으면 한 줄 토스트로 알린다 (켤 때 동기화)', (tester) async {
+    final db = AppDb(NativeDatabase.memory());
+    final source = FakeStepSource();
+    final now = DateTime.now().toUtc();
+    final svc = SyncService(
+      db: db,
+      source: source,
+      rules: rules,
+      allowedSources: const [],
+      landmarks: const {},
+      props: props,
+    );
+    // 5시간 전에 설치. 4시간 전부터 걷는 중 화면을 열고 160분 동안 분당 100보(약 11km)를 걸었다:
+    // 본격 걷기 이동 거리 10km를 넘겨 지팡이를 얻을 걸음이 쌓였지만 아직 동기화 전이다
+    final start = now.subtract(const Duration(hours: 4));
+    final end = start.add(const Duration(minutes: 160));
+    await tester.runAsync(() async {
+      await svc.sync(now.subtract(const Duration(hours: 5)));
+      await completeOnboarding(db);
+      final id = await svc.startAppWalk(start);
+      source.records.add(StepRecord(
+        start: start,
+        end: end,
+        steps: 16000,
+        sourceId: 'iphone',
+        method: RecordingMethod.automatic,
+      ));
+      await svc.finishAppWalk(id, end);
+    });
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        rulesProvider.overrideWith((ref) => rules),
+        landmarksProvider.overrideWith((ref) => landmarks),
+        propsProvider.overrideWith((ref) => props),
+        milestonesProvider.overrideWith((ref) => milestones),
+        noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
+        campThemeProvider.overrideWith((ref) => campTheme),
+        mapProjectionProvider.overrideWith((ref) => mapProjection),
+        mapRegionsProvider.overrideWith((ref) => mapRegions),
+        dbProvider.overrideWithValue(db),
+        stepSourceProvider.overrideWithValue(source),
+      ],
+      child: const DoobalApp(),
+    ));
+    // 같은 동기화의 `그동안 n km 걸었어요`를 지우지 않고 그 앞이나 뒤에 이어서 뜬다
+    final toast = find.text('새 소품을 얻었어요 · 지팡이');
+    var walked = false;
+    for (var i = 0; i < 60 && toast.evaluate().isEmpty; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump(const Duration(milliseconds: 200));
+      walked |= find.textContaining('km 걸었어요').evaluate().isNotEmpty;
+    }
+    expect(toast, findsOneWidget);
+    for (var i = 0; i < 30 && !walked; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+      walked |= find.textContaining('km 걸었어요').evaluate().isNotEmpty;
+    }
+    expect(walked, isTrue);
+    expect(
+        (await tester.runAsync(() => db.select(db.propsOwned).get()))!.map((r) => r.propId),
+        contains('hand_02'));
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(db.close);
+  });
 }

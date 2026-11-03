@@ -177,4 +177,38 @@ void main() {
       expect(completedRegions({for (final l in landmarks) l.id}, landmarks), hasLength(7));
     });
   });
+
+  group('다음 거리 소품 · 새 소품 토스트 (16장 11/3)', () {
+    test('다음 거리 소품까지: 지금 거리보다 먼 것 중 가장 가까운 것까지 남은 km', () {
+      // 거리 소품 10·25·50·100·150·200·300·500·700·1000km
+      expect(kmToNextDistanceProp(props, 0), 10);
+      expect(kmToNextDistanceProp(props, 9.5), closeTo(0.5, 1e-9));
+      // 딱 닿은 것은 얻은 것이라 그다음
+      expect(kmToNextDistanceProp(props, 10), 15);
+      expect(kmToNextDistanceProp(props, 87), 13);
+      expect(kmToNextDistanceProp(props, 999), 1);
+      // 다 얻었으면 없다
+      expect(kmToNextDistanceProp(props, 1000), isNull);
+      expect(kmToNextDistanceProp(props, 1500), isNull);
+    });
+
+    test('한 줄 문구: 올림, 1km 미만도 1km, 더한 거리의 아주 작은 오차는 올리지 않는다', () {
+      expect(nextPropText(13), '다음 소품까지 본격 걷기 13km');
+      expect(nextPropText(62.3), '다음 소품까지 본격 걷기 63km');
+      expect(nextPropText(0.2), '다음 소품까지 본격 걷기 1km');
+      expect(nextPropText(63.0000000001), '다음 소품까지 본격 걷기 63km');
+      expect(nextPropText(1000), '다음 소품까지 본격 걷기 1,000km');
+    });
+
+    test('새 소품 토스트: 하나면 이름, 여럿이면 첫 이름 외 n개', () {
+      Prop p(String id) => props.firstWhere((x) => x.id == id);
+      expect(newPropToast([p('hand_02')]), '새 소품을 얻었어요 · 지팡이');
+      expect(newPropToast([p('hand_02'), p('hat_02')]), '새 소품을 얻었어요 · 지팡이 외 1개');
+    });
+
+    test('토스트로 알리는 소품: 거리·걸음만 (권역은 도착 화면, 기본은 처음부터 가짐)', () {
+      final kinds = {for (final p in props) if (announcesProp(p)) p.kind};
+      expect(kinds, {PropUnlockKind.distance, PropUnlockKind.steps});
+    });
+  });
 }

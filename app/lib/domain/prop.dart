@@ -1,3 +1,7 @@
+import 'dart:math' as math;
+
+import 'format_int.dart';
+
 /// 소품 해금 조건. props.json의 unlock.kind (default는 예약어라 initial)
 enum PropUnlockKind { initial, distance, region, steps, companion }
 
@@ -75,3 +79,27 @@ Set<String> earnedPropIds(
         p.id,
   };
 }
+
+/// 다음 거리 소품까지 남은 본격 걷기 이동 거리(km): [totalKm]보다 먼 거리 소품 중 가장 가까운 것까지.
+/// 거리 소품을 다 얻었으면 null. 무엇인지는 화면에 보이지 않는다 (UI 명세 12장, 16장 11/3)
+double? kmToNextDistanceProp(List<Prop> props, double totalKm) {
+  double? next;
+  for (final p in props) {
+    if (p.kind != PropUnlockKind.distance || p.km! <= totalKm) continue;
+    if (next == null || p.km! < next) next = p.km;
+  }
+  return next == null ? null : next - totalKm;
+}
+
+/// 꾸미기 소품 칸 위 한 줄: `다음 소품까지 본격 걷기 63km`. 남은 거리는 올림이라 1km보다 적게 남아도
+/// 0km로 보이지 않는다 (더한 거리의 소수 오차로 한 칸 더 올라가지 않게 아주 작은 값은 뺀다)
+String nextPropText(double km) =>
+    '다음 소품까지 본격 걷기 ${formatInt(math.max(1, (km - 1e-6).ceil()))}km';
+
+/// 새로 얻은 소품 토스트 한 줄 (가안): `새 소품을 얻었어요 · 지팡이`, 여럿이면 `… · 지팡이 외 1개`
+String newPropToast(List<Prop> props) => '새 소품을 얻었어요 · ${props.first.name}'
+    '${props.length > 1 ? ' 외 ${props.length - 1}개' : ''}';
+
+/// 토스트로 알리는 소품인가: 거리·걸음 소품만. 권역 소품은 도착 화면이 따로 알리고,
+/// 기본 소품은 처음부터 가진 것이다 (동행 소품은 M4에서 이야기를 마칠 때 준다)
+bool announcesProp(Prop p) => p.kind == PropUnlockKind.distance || p.kind == PropUnlockKind.steps;

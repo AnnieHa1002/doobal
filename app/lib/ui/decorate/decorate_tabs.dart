@@ -5,6 +5,7 @@ import '../../domain/look.dart';
 import '../../domain/look_palette.dart';
 import '../../domain/prop.dart';
 import '../../domain/tint.dart';
+import '../common/app_text.dart';
 import '../common/palette.dart';
 import 'color_picker.dart';
 import 'decorate_widgets.dart';
@@ -335,35 +336,35 @@ class SkinTab extends StatelessWidget {
   }
 }
 
-/// 소품 탭: 한 칸([slot])의 MVP 소품을 4열로. 옷이 아니면 맨 앞에 "없음" 칸.
-/// 가진 소품은 골라 끼우고, 잠긴 소품은 흐리게 보이며 누르면 [onLocked]
+/// 소품 탭: 한 칸([slot])의 가진 소품만 4열로. 옷이 아니면 맨 앞에 "없음" 칸.
+/// 잠긴 소품은 보여 주지 않고, 칸 위에 다음 거리 소품까지 남은 본격 걷기 거리 한 줄만 둔다
+/// (무엇인지는 숨긴다, UI 명세 12장·16장 11/3). 거리 소품을 다 얻었으면 그 줄도 없다
 class PropTab extends StatelessWidget {
   const PropTab({
     super.key,
     required this.slot,
     required this.look,
     required this.props,
-    required this.owned,
+    required this.nextKm,
     required this.onPick,
-    required this.onLocked,
   });
 
   final String slot;
   final Look look;
 
-  /// 그 칸의 소품 (props.json 순서)
+  /// 그 칸의 가진 소품 (props.json 순서)
   final List<Prop> props;
 
-  /// 가진 소품 id
-  final Set<String> owned;
+  /// 다음 거리 소품까지 남은 km ([kmToNextDistanceProp]), 없으면 null
+  final double? nextKm;
 
   /// 고른 소품 id, "없음"이면 null
   final ValueChanged<String?> onPick;
-  final ValueChanged<Prop> onLocked;
 
   @override
   Widget build(BuildContext context) {
     final current = look.slots[slot];
+    final next = nextKm;
     final cells = <Widget>[
       if (slot != alwaysWornSlot)
         PropCell(
@@ -371,7 +372,6 @@ class PropTab extends StatelessWidget {
           name: '없음',
           icon: null,
           selected: current == null,
-          locked: false,
           onTap: () => onPick(null),
         ),
       for (final p in props)
@@ -380,14 +380,22 @@ class PropTab extends StatelessWidget {
           name: p.name,
           icon: slotIcons[slot],
           selected: current == p.id,
-          locked: !owned.contains(p.id),
-          onTap: owned.contains(p.id) ? () => onPick(p.id) : () => onLocked(p),
+          onTap: () => onPick(p.id),
         ),
     ];
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (next != null) ...[
+            Text(
+              nextPropText(next),
+              key: const ValueKey('next-prop'),
+              style: AppText.bodySub,
+            ),
+            const SizedBox(height: 12),
+          ],
           for (var start = 0; start < cells.length; start += _propColumns) ...[
             if (start > 0) const SizedBox(height: 12),
             Row(

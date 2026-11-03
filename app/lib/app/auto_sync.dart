@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/backup_policy.dart';
 import '../domain/focus_walk.dart';
+import '../domain/prop.dart';
 import '../ui/arrival/arrival_screen.dart';
 import '../ui/common/toast.dart';
 import 'backup_runner.dart';
@@ -30,7 +31,8 @@ const _toastMinKm = 0.1;
 /// 앱 걷기(본격 걷기 보너스의 창)를 위해 앱이 살아 있는 동안 config sync.aliveSaveSec마다와
 /// 백그라운드로 갈 때 '살아 있던 시각'을 적는다. 앱을 켠 직후에는 앞 실행에서 끝나지 않은 앱 걷기를
 /// 그 시각에서 닫고(동기화보다 먼저) 동기화한다. 닫은 창이 있으면(걷는 중에 앱이 끝났다) 첫 동기화 뒤에
-/// 쉼터에 토스트를 한 번 띄운다: 창이 끝난 뒤 쌓인 걸음은 평소 걸음으로 더해졌다고 알린다
+/// 쉼터에 토스트를 한 번 띄운다: 창이 끝난 뒤 쌓인 걸음은 평소 걸음으로 더해졌다고 알린다.
+/// 어느 화면의 동기화든 소품을 새로 얻으면(SyncService.newProps) 지금 화면 위에 한 줄 토스트를 띄운다
 class AutoSync extends ConsumerStatefulWidget {
   const AutoSync({super.key, required this.child});
 
@@ -50,6 +52,9 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   /// 이번 실행에서 도착 화면을 이미 띄운 여정 (같은 여정을 두 번 띄우지 않는다)
   final _arrivalsShown = <String>{};
 
+  /// 새로 얻은 소품 듣기 (동기화 서비스가 새로 만들어지면 다시 듣는다)
+  StreamSubscription<List<Prop>>? _propSub;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +66,12 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     );
     ref.listenManual(snapshotProvider, (_, next) => _checkArrival(next.value),
         fireImmediately: true);
+    ref.listenManual(syncServiceProvider, (_, next) {
+      final svc = next.value;
+      if (svc == null) return;
+      _propSub?.cancel();
+      _propSub = svc.newProps.listen(_showNewProps);
+    }, fireImmediately: true);
     // 앱을 새로 켠 것도 연 것이다 (앞 실행이 백그라운드에서 끝났으면 예약된 N5가 남아 있다)
     _notice((svc, now) => svc.onOpen(now));
     _startUp();
@@ -69,6 +80,7 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   @override
   void dispose() {
     _aliveTimer?.cancel();
+    _propSub?.cancel();
     _lifecycle.dispose();
     super.dispose();
   }
@@ -98,6 +110,15 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     if (!mounted || messenger == null) return;
     messenger.clearSnackBars();
     showToastOn(messenger, orphanWalkToast(steps));
+  }
+
+  /// 새로 얻은 소품 한 줄 토스트. 같은 동기화의 `그동안 n km 걸었어요`나 걷는 중 토스트를 지우지 않고
+  /// 그 뒤에 이어서 띄운다
+  void _showNewProps(List<Prop> props) {
+    final messenger = scaffoldMessengerKey.currentState;
+    if (!mounted || messenger == null) return;
+    ref.invalidate(ownedPropIdsProvider);
+    queueToastOn(messenger, newPropToast(props));
   }
 
   /// 앱이 살아 있는 동안 rules.aliveSaveSec마다 살아 있다고 적는다

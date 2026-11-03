@@ -489,8 +489,8 @@ void main() {
       await end(tester, e);
     });
 
-    // 화집 소품 탭에는 얻는 방법이 없다. 얻는 방법은 꾸미기의 잠긴 칸에서 본다
-    testWidgets('꾸미기 잠긴 칸의 권역 진행에는 첫 그림이 세지 않는다', (tester) async {
+    // 꾸미기는 가진 소품만 보여 준다 (16장 11/3): 첫 그림이 서울이어도 수도권 소품(해치)은 없다
+    testWidgets('꾸미기: 첫 그림은 권역에 세지 않아 수도권 소품이 생기지 않는다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         await e.arriveAtSketch();
@@ -503,13 +503,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('tab-pet')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
-      // 수도권 소품(해치)은 잠긴 채, 얻는 방법의 진행 숫자는 0곳 (첫 그림은 서울이어도 세지 않는다)
-      await tester.tap(find.byKey(const ValueKey('prop-pet_02')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
-      final capital = landmarks.where((l) => l.region == 'capital').length;
-      expect(find.text('수도권 0/$capital'), findsOneWidget);
-      expect(find.textContaining('수도권 1/'), findsNothing);
+      expect(find.byKey(const ValueKey('prop-pet_01')), findsOneWidget);
+      expect(find.byKey(const ValueKey('prop-pet_02')), findsNothing);
       await end(tester, e);
     });
   });
