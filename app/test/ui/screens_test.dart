@@ -520,6 +520,8 @@ void main() {
         e.live.push(total);
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
+        // 걸음 알약 숫자는 3초에 걸쳐 따라 오른다 (CountFollower)
+        await tester.pump(const Duration(milliseconds: 3100));
       }
 
       testWidgets('센서 값을 밀어 넣으면 이번 걸음이 바로 오르고 (health 기록이 없어도), 거리가 따라 흐른다',
@@ -546,6 +548,27 @@ void main() {
           await tester.pump(const Duration(milliseconds: 500));
         }
         expect(find.text('걸음 · 0.04 km'), findsOneWidget);
+        await _end(tester, e);
+      });
+
+      // 멈췄다 다시 걸으면 센서가 몇 걸음을 지켜본 뒤 몰아서 준다
+      testWidgets('걸음이 한꺼번에(9보) 들어와도 숫자가 뛰지 않고 3초에 걸쳐 오른다',
+          (tester) async {
+        final e = _Env();
+        await e.seed(tester, dest: 'kr003');
+        await openWalking(tester, e);
+        e.live.push(50000);
+        await tester.pump(const Duration(milliseconds: 100));
+
+        e.now = e.now.add(const Duration(seconds: 6));
+        e.live.push(50009);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(_pillSteps('0'), findsOneWidget);
+        // 초당 3보로 고르게
+        await tester.pump(const Duration(milliseconds: 1400));
+        expect(_pillSteps('4'), findsOneWidget);
+        await tester.pump(const Duration(milliseconds: 1600));
+        expect(_pillSteps('9'), findsOneWidget);
         await _end(tester, e);
       });
 
@@ -766,6 +789,8 @@ void main() {
         e.live.push(total);
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
+        // 걸음 알약 숫자는 3초에 걸쳐 따라 오른다 (CountFollower)
+        await tester.pump(const Duration(milliseconds: 3100));
       }
 
       /// 앱을 뒤로 보낸다 / 다시 앞으로 가져온다

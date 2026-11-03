@@ -74,4 +74,54 @@ void main() {
       shown = next;
     }
   });
+
+  group('CountFollower: 걸음 숫자를 부드럽게 따라 올린다', () {
+    /// 60fps로 [sec]초 동안 [target]을 따라간다
+    void run(CountFollower f, int target, double sec) {
+      for (var t = 0.0; t < sec - 1e-9; t += 1 / 60) {
+        f.step(target, 1 / 60);
+      }
+    }
+
+    test('한꺼번에 7보가 들어와도 바로 뛰지 않고 1.5초 동안 고르게 올라 다 따라간다', () {
+      final f = CountFollower()..snap(9);
+      f.step(16, 1 / 60);
+      expect(f.shown, 9);
+      run(f, 16, 0.75);
+      expect(f.shown, 12);
+      run(f, 16, 0.75);
+      expect(f.shown, 16);
+    });
+
+    test('한 걸음씩 들어오면(초당 2.5보) 늦지 않고 바로바로 따라간다 (초당 3보보다 느리지 않다)', () {
+      final f = CountFollower();
+      for (var n = 1; n <= 10; n++) {
+        run(f, n, 0.4);
+        expect(f.shown, n, reason: '$n');
+      }
+    });
+
+    test('큰 차이(500보)도 1.5초 안이고, 다 따라잡은 뒤 다시 몰려 오면 빠르기를 새로 잰다', () {
+      final f = CountFollower();
+      run(f, 500, 1.5);
+      expect(f.shown, 500);
+      // 500보 때의 빠르기(초당 333보)로 7보를 한 번에 넘기지 않는다
+      f.step(507, 1 / 60);
+      expect(f.shown, 500);
+      run(f, 507, 1.5);
+      expect(f.shown, 507);
+    });
+
+    test('목표를 넘지 않고 뒤로 가지 않는다. snap은 바로 맞춘다', () {
+      final f = CountFollower()..snap(20);
+      f.step(16, 1);
+      expect(f.shown, 20);
+      f.step(30, 0);
+      expect(f.shown, 20);
+      f.snap(40);
+      expect(f.shown, 40);
+      f.snap(10);
+      expect(f.shown, 40);
+    });
+  });
 }

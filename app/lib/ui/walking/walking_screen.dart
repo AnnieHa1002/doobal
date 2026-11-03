@@ -41,6 +41,9 @@ class WalkingScreen extends ConsumerStatefulWidget {
   ConsumerState<WalkingScreen> createState() => _WalkingScreenState();
 }
 
+/// 몰려 온 걸음을 화면 숫자가 따라잡는 시간(초)
+const _stepCatchUpSec = 3.0;
+
 class _WalkingScreenState extends ConsumerState<WalkingScreen>
     with SingleTickerProviderStateMixin {
   late final DateTime _start;
@@ -52,6 +55,11 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   /// 화면에 보이는 이번 걷기 거리(m)와 마지막으로 받은 이번 걷기 기록
   var _shownM = 0.0;
   WalkRecord? _record;
+
+  /// 걸음 알약에 보이는 걸음 수: 한꺼번에 들어온 걸음도 뛰지 않고 부드럽게 오른다 (거리와 같이).
+  /// 멈췄다 다시 걸으면 폰 걸음 센서가 3~5초 지켜본 뒤 몰아서 보내서, 그 걸음을 3초에 걸쳐 걷는 속도처럼
+  /// 차분히 푼다 (11/4 Annie, 폰 확인)
+  final _stepFollower = CountFollower(catchUpSec: _stepCatchUpSec);
 
   /// 기기 걸음 센서. 센서나 권한이 없으면 값이 오지 않는다
   LiveWalker? _live;
@@ -329,16 +337,19 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
       dt,
       rules.walkingRefreshSec.toDouble(),
     );
+    final shownSteps = _stepFollower.shown;
+    _stepFollower.step(summary?.steps ?? 0, dt);
     // 숨어 있던 동안의 걸음이 한꺼번에 들어왔으면 따라가지 않고 바로 맞춘다
     final catchUps = _live?.walk.catchUps ?? 0;
     if (catchUps != _catchUps) {
       _catchUps = catchUps;
       shown = math.max(shown, summary?.distanceM ?? 0);
+      _stepFollower.snap(summary?.steps ?? 0);
     }
-    // 거리가 움직이거나 초가 바뀔 때만 다시 그린다
+    // 거리·걸음 숫자가 움직이거나 초가 바뀔 때만 다시 그린다
     final secondChanged =
         now.difference(_start).inSeconds != _now.difference(_start).inSeconds;
-    if (shown == _shownM && !secondChanged) return;
+    if (shown == _shownM && _stepFollower.shown == shownSteps && !secondChanged) return;
     setState(() {
       _shownM = shown;
       _now = now;
@@ -395,6 +406,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             snap: snap,
             summary: summary,
             shownM: _shownM,
+            shownSteps: _stepFollower.shown,
             walkingTime: _now.difference(_start),
             running: running,
             nextMilestone: _nextMilestone(snap),

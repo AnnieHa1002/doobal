@@ -24,6 +24,7 @@ class WalkingHud extends StatefulWidget {
     required this.snap,
     required this.summary,
     required this.shownM,
+    required this.shownSteps,
     required this.walkingTime,
     required this.running,
     required this.nextMilestone,
@@ -37,6 +38,9 @@ class WalkingHud extends StatefulWidget {
 
   /// 화면에 보이는 이번 걷기 거리(m)
   final double shownM;
+
+  /// 걸음 알약에 보이는 걸음 수 (걷는 중 화면이 부드럽게 따라 올린 값, CountFollower)
+  final int shownSteps;
   final Duration walkingTime;
   final bool running;
 
@@ -111,7 +115,7 @@ class _WalkingHudState extends State<WalkingHud> {
               ProgressLine(ratio: j?.progress.ratio ?? 0),
               const SizedBox(height: HudMetrics.pillGap),
               StepPill(
-                steps: widget.summary?.steps ?? 0,
+                steps: widget.shownSteps,
                 km: widget.shownM / 1000,
                 running: widget.running,
                 badge: widget.focusBadge,

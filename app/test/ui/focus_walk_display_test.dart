@@ -59,25 +59,31 @@ void main() {
 
   /// 건강 기록 [minutes]분 × [spm]보가 [fromMin](t1 기준 분)부터 들어오고 시계가 그 끝까지 흘러
   /// 갱신 주기가 지난 상태. 알약의 걸음이 [total]이 될 때까지 가짜 시간을 0.1초씩 보낸다
-  Future<void> healthWalk(
+  /// 건강 기록을 넣고 걸음 알약이 [total]까지 따라 오를 때까지 기다린다 (숫자는 3초에 걸쳐 오른다).
+  /// [watch]를 주면 기다리는 동안 한 번이라도 보였는지 돌려준다 (그 사이 사라지는 토스트를 볼 때)
+  Future<bool> healthWalk(
     WidgetTester tester,
     UiEnv e, {
     required int fromMin,
     required int minutes,
     required int spm,
     required int total,
+    Finder? watch,
   }) async {
     e.source.records.add(walkRecord(_t(fromMin), minutes, spm));
     e.now = _t(fromMin + minutes);
     final done = _pill(formatInt(total));
+    var seen = false;
     for (var i = 0; i < 600 && done.evaluate().isEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 100));
+      seen |= watch != null && watch.evaluate().isNotEmpty;
       if (i % 10 == 0) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
       }
     }
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+    return seen || (watch != null && watch.evaluate().isNotEmpty);
   }
 
   /// 시계가 [sec]초 흐른 뒤 센서가 누적 걸음 [total]을 준다
@@ -86,6 +92,8 @@ void main() {
     e.live.push(total);
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
+    // 걸음 알약 숫자는 3초에 걸쳐 따라 오른다 (CountFollower)
+    await tester.pump(const Duration(milliseconds: 3100));
   }
 
   group('걷는 중: 걸음 알약 딱지·토스트·알림 (건강 기록으로 걷기 1번)', () {
@@ -101,13 +109,15 @@ void main() {
       expect(_pillBadge, findsNothing);
       expect(find.textContaining('본격 걷기'), findsNothing);
 
-      // 이어서 5분 · 500보: 10분 · 1,000보가 되어 걷기 1번으로 인정된다
-      await healthWalk(tester, e, fromMin: 5, minutes: 5, spm: 100, total: 1000);
+      // 이어서 5분 · 500보: 10분 · 1,000보가 되어 걷기 1번으로 인정된다.
+      // 토스트(2.5초)는 숫자가 1,000까지 따라 오르는(3초) 동안 떴다 사라진다
+      final toastSeen = await healthWalk(tester, e,
+          fromMin: 5, minutes: 5, spm: 100, total: 1000, watch: find.text(_toast));
       expect(_pill('1,000'), findsOneWidget);
       expect(_pillBadge, findsOneWidget);
       expect(find.descendant(of: _pillBadge, matching: find.text('×1.3')), findsOneWidget);
+      expect(toastSeen, isTrue);
       // 럭 단가가 아직 없어서(config coins.perKm null) 토스트에 럭 이야기가 없다
-      expect(find.text(_toast), findsOneWidget);
       expect(find.textContaining('럭'), findsNothing);
 
       // 토스트는 2.5초 뒤 사라지고, 딱지는 마칠 때까지 남으며, 같은 걷기에서 다시 뜨지 않는다
