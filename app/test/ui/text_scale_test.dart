@@ -452,12 +452,12 @@ void main() {
       await end(tester, e);
     });
 
-    // 빈 벽 4칸(점선 액자 + 길게 눌러 걸기)과 첫 그림 아래 한 줄 안내
+    // 빈 벽 4칸(점선 액자 + 바꾸기 아이콘)과 첫 그림 아래 한 줄 안내
     _scaleCases('그림 탭 (첫 그림뿐)', (tester, fit) async {
       final e = UiEnv();
       await e.seed(tester, () => e.ownPaintings({sketchId: Frame.wood}));
       await openAlbum(tester, e, fit);
-      expect(find.text('길게 눌러 걸기'), findsNWidgets(4));
+      expect(find.byIcon(Icons.sync), findsNWidgets(4));
       expect(find.text('걸어서 명소에 닿으면 여기에 걸려요'), findsOneWidget);
       fit.check('그림 탭 (첫 그림뿐)');
       await end(tester, e);
@@ -860,7 +860,7 @@ void main() {
       await openOnTop(tester, e, const DecorateScreen(),
           width: fit.width,
           height: fit.height,
-          ready: () => _key('tab-hair').evaluate().isNotEmpty);
+          ready: () => _key('tab-face').evaluate().isNotEmpty);
       await settle(tester, () => false, tries: 6);
     }
 
@@ -869,7 +869,7 @@ void main() {
               for (final id in ids) PropsOwnedCompanion.insert(propId: id, unlockedUtc: 1),
             ]));
 
-    const tabs = ['hair', 'face', 'skin', 'cloth', 'hat', 'hand', 'bag', 'shoe', 'pet'];
+    const tabs = ['face', 'cloth', 'hat', 'hand', 'bag', 'shoe', 'pet'];
 
     _scaleCases('모든 탭', (tester, fit) async {
       final e = UiEnv();
@@ -879,28 +879,6 @@ void main() {
         await _tap(tester, _key('tab-$t'));
         fit.check('탭 $t');
       }
-      await end(tester, e);
-    });
-
-    _scaleCases('머리 (직접 고르기·그라데이션)', (tester, fit) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await openDecorate(tester, e, fit);
-      await _tap(tester, _key('hair-custom'));
-      fit.check('머리 직접 고르기');
-      await _tap(tester, _key('hair-gradient'));
-      await _tap(tester, _key('grad-custom'));
-      fit.check('그라데이션 직접 고르기');
-      await end(tester, e);
-    });
-
-    _scaleCases('피부 (직접 고르기)', (tester, fit) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await openDecorate(tester, e, fit);
-      await _tap(tester, _key('tab-skin'));
-      await _tap(tester, _key('skin-custom'));
-      fit.check('피부 직접 고르기');
       await end(tester, e);
     });
 
@@ -920,7 +898,7 @@ void main() {
       final e = UiEnv();
       await e.seed(tester);
       await openDecorate(tester, e, fit);
-      await _tap(tester, _key('hair-3'));
+      await _tap(tester, _key('eyes-3'));
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
       expect(find.text('저장하지 않고 나갈까요?'), findsOneWidget);

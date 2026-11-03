@@ -1,16 +1,18 @@
 import 'dart:convert';
-import 'dart:math' as math;
 
 import 'package:doobal/app/profile_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/color.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/prop.dart';
+import 'package:doobal/ui/common/app_theme.dart';
 import 'package:doobal/ui/common/figure_painter.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/toast.dart';
 import 'package:doobal/ui/decorate/decorate_screen.dart';
+import 'package:doobal/ui/decorate/decorate_tabs.dart';
 import 'package:doobal/ui/decorate/decorate_widgets.dart';
+import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,14 +23,14 @@ import 'ui_env.dart';
 /// 탭 내용이 스크롤 없이 다 보이도록 길게 잡은 높이
 const _tall = 1400.0;
 
-const _tabs = ['hair', 'face', 'skin', 'cloth', 'hat', 'hand', 'bag', 'shoe', 'pet'];
-const _tabLabels = ['머리', '얼굴', '피부', '옷', '모자', '손', '가방', '신발', '어깨 친구'];
+const _tabs = ['face', 'cloth', 'hat', 'hand', 'bag', 'shoe', 'pet'];
+const _tabLabels = ['얼굴', '옷', '모자', '손', '가방', '신발', '어깨 친구'];
 
 Finder _key(String k) => find.byKey(ValueKey(k));
 
 Future<void> _open(WidgetTester tester, UiEnv e, {double height = _tall}) =>
     openOnTop(tester, e, const DecorateScreen(),
-        height: height, ready: () => _key('tab-hair').evaluate().isNotEmpty);
+        height: height, ready: () => _key('tab-face').evaluate().isNotEmpty);
 
 /// 가려진 곳(옆으로 미는 탭 줄, 스크롤 안의 칸)도 보이게 한 뒤 누른다
 Future<void> _tap(WidgetTester tester, Finder f) async {
@@ -45,11 +47,59 @@ Future<void> _tap(WidgetTester tester, Finder f) async {
 /// 탭을 누르면 가려진 탭을 보이게 미는 애니메이션(0.2초)이 돈다. _tap이 끝까지 기다린다
 Future<void> _goTab(WidgetTester tester, String id) => _tap(tester, _key('tab-$id'));
 
-/// 미리보기 자리표시 그림
-FigurePainter _painter(WidgetTester tester) => tester
-    .widget<CustomPaint>(
-        find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FigurePainter))
-    .painter! as FigurePainter;
+/// 꾸미기에서 숨긴 머리·피부 탭을 따로 띄운 것: 고른 모습을 담는다
+class _Picked {
+  _Picked(this.start) : look = start;
+
+  final Look start;
+  Look look;
+
+  /// 고른 모습의 머리 모양·머리색·피부색 (예전 사람 그림의 값)
+  FigurePainter get shown => figureOf(look, lookPalette);
+  bool get changed => look != start;
+}
+
+/// 숨긴 머리·피부 탭(정령 몸 색·베레모 색에 다시 쓴다)을 꾸미기 아래 칸과 같은 틀로 띄운다.
+/// 화면 아래 [bodyHeight]만큼이 스크롤 칸이다
+Future<_Picked> _openTab(
+  WidgetTester tester,
+  String tab, {
+  Look look = Look.initial,
+  double width = 390,
+  double bodyHeight = 420,
+}) async {
+  phone(tester, width: width);
+  final picked = _Picked(look);
+  await tester.pumpWidget(MaterialApp(
+    theme: testDisplayFont == null ? null : doobalTheme(testDisplayFont!),
+    home: Scaffold(
+      body: Align(
+        alignment: Alignment.bottomCenter,
+        child: SizedBox(
+          height: bodyHeight,
+          child: StatefulBuilder(builder: (context, setState) {
+            void set(Look l) => setState(() => picked.look = l);
+            return SingleChildScrollView(
+              key: ValueKey('body-$tab'),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: tab == 'hair'
+                  ? HairTab(look: picked.look, palette: lookPalette, onChanged: set)
+                  : SkinTab(look: picked.look, palette: lookPalette, onChanged: set),
+            );
+          }),
+        ),
+      ),
+    ),
+  ));
+  await tester.pump();
+  return picked;
+}
+
+/// 번호 칸(눈·코 등)이 골라져 있는지
+bool _chosen(WidgetTester tester, String key) => tester
+    .widget<Semantics>(find.descendant(of: _key(key), matching: find.byType(Semantics)).first)
+    .properties
+    .selected!;
 
 bool _enabled(WidgetTester tester, String label) =>
     tester.widget<GameButton>(find.widgetWithText(GameButton, label)).onPressed != null;
@@ -98,7 +148,7 @@ void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   group('틀', () {
-    testWidgets('제목, 묶음 머리줄(내 모습·소품), 탭 9개가 명세 순서로 있다', (tester) async {
+    testWidgets('제목, 묶음 머리줄(내 모습·소품), 탭 7개가 순서대로 있다 (머리·피부는 숨김)', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
@@ -112,10 +162,13 @@ void main() {
             findsOneWidget,
             reason: label);
       }
+      // 정령에는 머리·피부가 없다 (11/4)
+      expect(_key('tab-hair'), findsNothing);
+      expect(_key('tab-skin'), findsNothing);
       // 왼쪽부터 순서대로 (옆으로 밀어야 보이는 탭도 자리는 순서대로다)
       final xs = [for (final t in _tabs) tester.getTopLeft(_key('tab-$t')).dx];
       expect(xs, orderedEquals([...xs]..sort()));
-      // 묶음 머리줄: 내 모습은 머리·얼굴·피부 위, 소품은 옷 위
+      // 묶음 머리줄: 내 모습은 얼굴 위, 소품은 옷 위
       final mine = tester.getTopLeft(find.text('내 모습'));
       final props = tester.getTopLeft(find.text('소품'));
       final cloth = tester.getTopLeft(_key('tab-cloth'));
@@ -125,22 +178,37 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('처음에는 저장된 모습이 미리보기에 나오고 저장·되돌리기는 눌리지 않는다', (tester) async {
+    testWidgets('미리보기는 쉼터와 같은 정령이고, 사람 그림은 없다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
 
-      final p = _painter(tester);
-      expect(p.hair, 1);
-      expect(p.hairColor, Color(hairSwatches.first.color));
-      expect(p.hairGradient, isNull);
-      expect(p.skin, Color(lookPalette.skin.swatches.first.color));
+      expect(find.descendant(of: _key('preview'), matching: find.byType(SpiritCharacter)),
+          findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FigurePainter),
+          findsNothing);
+      // 정령은 미리보기 칸 가운데에 선다
+      final box = tester.getRect(_key('preview'));
+      final spirit = tester.getRect(find.byType(SpiritCharacter));
+      expect(spirit.center.dx, closeTo(box.center.dx, 1));
+      // 눌러도 저장할 것이 생기지 않는다
+      await tester.tap(_key('preview'));
+      await tester.pump();
+      expect(_enabled(tester, '저장'), isFalse);
+      await end(tester, e);
+    });
+
+    testWidgets('처음에는 얼굴 탭이 열려 있고 저장·되돌리기는 눌리지 않는다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+
+      expect(_key('eyes-1'), findsOneWidget);
+      expect(_chosen(tester, 'eyes-1'), isTrue);
       expect(_enabled(tester, '저장'), isFalse);
       expect(_enabled(tester, '되돌리기'), isFalse);
       expect(find.text('저장'), findsOneWidget);
       expect(find.text('되돌리기'), findsOneWidget);
-      // 첫 탭은 머리
-      expect(_key('hair-1'), findsOneWidget);
       await end(tester, e);
     });
 
@@ -174,24 +242,19 @@ void main() {
       });
       await _open(tester, e);
 
-      final p = _painter(tester);
-      expect(p.hair, 4);
-      expect(p.hairColor, Color(hairSwatches[2].color));
-      expect(p.skin, Color(lookPalette.skin.swatches.first.color));
+      expect(_chosen(tester, 'eyes-1'), isTrue);
       expect(_worn(tester, 'cloth'), '앞치마 작업복');
       expect(_enabled(tester, '저장'), isFalse);
       await end(tester, e);
     });
 
-    testWidgets('탭 9개를 눌러 바꾸면 그 탭의 내용이 나온다', (tester) async {
+    testWidgets('탭 7개를 눌러 바꾸면 그 탭의 내용이 나온다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
 
       const marker = {
-        'hair': 'hair-1',
         'face': 'eyes-1',
-        'skin': 'skin-swatch-1',
         'cloth': 'prop-cloth_01',
         'hat': 'prop-hat_01',
         'hand': 'prop-hand_01',
@@ -207,8 +270,8 @@ void main() {
         }
       }
       // 되돌아와도 된다
-      await _goTab(tester, 'hair');
-      expect(_key('hair-1'), findsOneWidget);
+      await _goTab(tester, 'face');
+      expect(_key('eyes-1'), findsOneWidget);
       expect(_key('prop-pet_01'), findsNothing);
       await end(tester, e);
     });
@@ -218,44 +281,19 @@ void main() {
       await e.seed(tester);
       await _open(tester, e);
 
-      await _tap(tester, _key('hair-swatch-6'));
-      await _goTab(tester, 'skin');
+      await _tap(tester, _key('eyes-3'));
       await _goTab(tester, 'hat');
-      await _goTab(tester, 'hair');
-      expect(_painter(tester).hairColor, Color(hairSwatches[5].color));
+      await _goTab(tester, 'face');
+      expect(_chosen(tester, 'eyes-3'), isTrue);
       expect(_enabled(tester, '저장'), isTrue);
-      await end(tester, e);
-    });
-
-    testWidgets('미리보기를 누르면 작게 흔들렸다가 가만히 선다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
-
-      double tilt() {
-        final t = tester.widget<Transform>(_key('figure-wiggle'));
-        return math.asin(t.transform.storage[1]);
-      }
-
-      expect(tilt(), 0);
-      await tester.tap(_key('preview'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(tilt().abs(), greaterThan(0.01));
-      expect(tilt().abs(), lessThan(0.1));
-      await tester.pump(const Duration(seconds: 1));
-      expect(tilt().abs(), lessThan(1e-9));
-      // 저장할 것이 생기지 않는다
-      expect(_enabled(tester, '저장'), isFalse);
       await end(tester, e);
     });
   });
 
-  group('머리 탭', () {
+  // 머리·피부 탭은 꾸미기에서 숨겼다 (11/4). 정령 몸 색·베레모 색에 다시 쓸 때까지 탭만 따로 본다
+  group('머리 탭 (숨김)', () {
     testWidgets('모양 6칸과 색 견본 10개, 직접 고르기·그라데이션 단추', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+      await _openTab(tester, 'hair');
 
       for (var i = 1; i <= 6; i++) {
         expect(_key('hair-$i'), findsOneWidget);
@@ -267,51 +305,36 @@ void main() {
       expect(find.text('직접 고르기'), findsOneWidget);
       expect(find.text('그라데이션'), findsOneWidget);
       expect(_key('picker'), findsNothing);
-      await end(tester, e);
     });
 
-    testWidgets('견본을 고르면 미리보기 머리색이 바뀌고 저장이 켜진다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+    testWidgets('견본을 고르면 머리색이 바뀐다', (tester) async {
+      final picked = await _openTab(tester, 'hair');
 
       await _tap(tester, _key('hair-swatch-10'));
-      expect(_painter(tester).hairColor, const Color(0xFFE39AB0));
-      expect(_enabled(tester, '저장'), isTrue);
-      expect(_enabled(tester, '되돌리기'), isTrue);
-      await end(tester, e);
+      expect(picked.shown.hairColor, const Color(0xFFE39AB0));
+      expect(picked.changed, isTrue);
     });
 
-    testWidgets('머리 모양을 고르면 미리보기 모양이 바뀐다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+    testWidgets('머리 모양을 고르면 모양이 바뀐다', (tester) async {
+      final picked = await _openTab(tester, 'hair');
 
       await _tap(tester, _key('hair-4'));
-      expect(_painter(tester).hair, 4);
-      expect(_enabled(tester, '저장'), isTrue);
-      await end(tester, e);
+      expect(picked.shown.hair, 4);
     });
 
-    testWidgets('같은 견본을 다시 누르면 바뀐 게 없어서 저장은 꺼진 채다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+    testWidgets('같은 견본을 다시 누르면 바뀐 게 없다', (tester) async {
+      final picked = await _openTab(tester, 'hair');
 
       await _tap(tester, _key('hair-swatch-1'));
-      expect(_enabled(tester, '저장'), isFalse);
+      expect(picked.changed, isFalse);
       await _tap(tester, _key('hair-swatch-5'));
-      expect(_enabled(tester, '저장'), isTrue);
+      expect(picked.changed, isTrue);
       await _tap(tester, _key('hair-swatch-1'));
-      // 저장된 모습으로 돌아왔으니 다시 꺼진다
-      expect(_enabled(tester, '저장'), isFalse);
-      await end(tester, e);
+      expect(picked.changed, isFalse);
     });
 
     testWidgets('직접 고르기: 색상환(색조 링)과 밝기 막대가 뜨고 지금 색에서 시작한다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+      final picked = await _openTab(tester, 'hair');
 
       await _tap(tester, _key('hair-custom'));
       expect(_key('picker'), findsOneWidget);
@@ -319,32 +342,26 @@ void main() {
       expect(_key('light-bar'), findsOneWidget);
       expect(find.textContaining('밝기'), findsOneWidget);
       // 견본 1에서 시작: 색은 그대로 (범위 안이라 안 잘린다)
-      expect(_painter(tester).hairColor, Color(hairSwatches.first.color));
-      // 종류가 견본에서 직접 고르기로 바뀌었으니 저장은 켜진다
-      expect(_enabled(tester, '저장'), isTrue);
+      expect(picked.shown.hairColor, Color(hairSwatches.first.color));
+      // 종류가 견본에서 직접 고르기로 바뀌었다
+      expect(picked.changed, isTrue);
 
       // 견본을 누르면 직접 고르기는 닫힌다
       await _tap(tester, _key('hair-swatch-3'));
       expect(_key('picker'), findsNothing);
-      await end(tester, e);
     });
 
     testWidgets('직접 고르기가 스크롤 아래에서 열려도 색상환·밝기 막대가 보이게 민다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e, height: 844);
+      await _openTab(tester, 'hair', bodyHeight: 300);
 
       await _tap(tester, _key('hair-custom'));
       final viewport = tester.getRect(_key('body-hair'));
       expect(viewport.contains(tester.getCenter(_key('hue-ring'))), isTrue);
       expect(viewport.contains(tester.getCenter(_key('light-bar'))), isTrue);
-      await end(tester, e);
     });
 
     testWidgets('직접 고르기 밝기 제한: 막대 끝까지 끌어도 15~90%를 넘지 않는다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+      final picked = await _openTab(tester, 'hair');
       await _tap(tester, _key('hair-custom'));
 
       final bar = _key('light-bar');
@@ -355,40 +372,37 @@ void main() {
       // 가운데: 범위의 한가운데 (52.5%)
       await tester.tapAt(mid);
       await tester.pump();
-      expect(_light(_painter(tester).hairColor), closeTo(0.525, 0.01));
+      expect(_light(picked.shown.hairColor), closeTo(0.525, 0.01));
 
       // 왼쪽 끝을 지나 끌기: 15%
       await tester.dragFrom(mid, const Offset(-2000, 0));
       await tester.pump();
-      expect(_light(_painter(tester).hairColor), closeTo(0.15, 0.01));
-      expect(_light(_painter(tester).hairColor), greaterThan(0.14));
+      expect(_light(picked.shown.hairColor), closeTo(0.15, 0.01));
+      expect(_light(picked.shown.hairColor), greaterThan(0.14));
       expect(find.text('밝기 15%'), findsOneWidget);
 
       // 오른쪽 끝을 지나 끌기: 90%
       await tester.dragFrom(mid, const Offset(2000, 0));
       await tester.pump();
-      expect(_light(_painter(tester).hairColor), closeTo(0.90, 0.01));
-      expect(_light(_painter(tester).hairColor), lessThan(0.91));
+      expect(_light(picked.shown.hairColor), closeTo(0.90, 0.01));
+      expect(_light(picked.shown.hairColor), lessThan(0.91));
       expect(find.text('밝기 90%'), findsOneWidget);
-      await end(tester, e);
     });
 
     testWidgets('색상환을 누르면 그 방향의 색조가 되고, 밝기는 그대로다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+      final picked = await _openTab(tester, 'hair');
       await _tap(tester, _key('hair-custom'));
 
       // 밝기를 가운데로
       final bar = _key('light-bar');
       await tester.tapAt(tester.getCenter(bar));
       await tester.pump();
-      final l0 = _light(_painter(tester).hairColor);
+      final l0 = _light(picked.shown.hairColor);
 
       final ring = _key('hue-ring');
       final c = tester.getCenter(ring);
       final r = tester.getSize(ring).width / 2 - 18;
-      double hue() => hslOfArgb(_painter(tester).hairColor.toARGB32()).h;
+      double hue() => hslOfArgb(picked.shown.hairColor.toARGB32()).h;
 
       await tester.tapAt(c + Offset(0, r)); // 아래쪽 = 90도 (시계 방향으로 3시에서 90도)
       await tester.pump();
@@ -399,36 +413,28 @@ void main() {
       await tester.tapAt(c + Offset(0, -r)); // 위쪽 = 270도
       await tester.pump();
       expect(hue(), closeTo(270, 3));
-      expect(_light(_painter(tester).hairColor), closeTo(l0, 0.01));
+      expect(_light(picked.shown.hairColor), closeTo(l0, 0.01));
 
       // 가운데 원 안은 눌러도 안 바뀐다
-      final before = _painter(tester).hairColor;
+      final before = picked.shown.hairColor;
       await tester.tapAt(c);
       await tester.pump();
-      expect(_painter(tester).hairColor, before);
-      await end(tester, e);
+      expect(picked.shown.hairColor, before);
     });
 
-    testWidgets('직접 고른 색은 저장하면 custom hex로 남는다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+    testWidgets('직접 고른 색은 custom hex로 남는다', (tester) async {
+      final picked = await _openTab(tester, 'hair');
       await _tap(tester, _key('hair-custom'));
       final ring = _key('hue-ring');
       await tester.tapAt(tester.getCenter(ring) + Offset(tester.getSize(ring).width / 2 - 18, 0));
       await tester.pump();
-      final color = _painter(tester).hairColor;
-      await _save(tester);
 
-      final look = await _stored(tester, e);
-      expect(look.hairColor, CustomHairColor(hexFromArgb(color.toARGB32())));
-      await end(tester, e);
+      final color = picked.shown.hairColor;
+      expect(picked.look.hairColor, CustomHairColor(hexFromArgb(color.toARGB32())));
     });
 
-    testWidgets('그라데이션: 뿌리색·끝색 두 칸을 견본으로 골라 미리보기에 이어서 보인다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+    testWidgets('그라데이션: 뿌리색·끝색 두 칸을 견본으로 골라 이어서 보인다', (tester) async {
+      final picked = await _openTab(tester, 'hair');
 
       await _tap(tester, _key('hair-gradient'));
       expect(_key('grad-root'), findsOneWidget);
@@ -436,11 +442,11 @@ void main() {
       expect(find.text('뿌리색'), findsOneWidget);
       expect(find.text('끝색'), findsOneWidget);
       // 처음에는 두 칸 모두 지금 색
-      expect(_painter(tester).hairGradient!.tip, Color(hairSwatches.first.color));
+      expect(picked.shown.hairGradient!.tip, Color(hairSwatches.first.color));
 
       await _tap(tester, _key('grad-tip'));
       await _tap(tester, _key('grad-swatch-10'));
-      var p = _painter(tester);
+      var p = picked.shown;
       expect(p.hairColor, Color(hairSwatches.first.color));
       expect(p.hairGradient!.tip, Color(hairSwatches.last.color));
       // 구간은 palette.json (30%·85%)
@@ -449,20 +455,14 @@ void main() {
 
       await _tap(tester, _key('grad-root'));
       await _tap(tester, _key('grad-swatch-6'));
-      p = _painter(tester);
+      p = picked.shown;
       expect(p.hairColor, Color(hairSwatches[5].color));
       expect(p.hairGradient!.tip, Color(hairSwatches.last.color));
-      expect(_enabled(tester, '저장'), isTrue);
-
-      await _save(tester);
-      expect((await _stored(tester, e)).hairColor, const GradientHairColor('#D6B26E', '#E39AB0'));
-      await end(tester, e);
+      expect(picked.look.hairColor, const GradientHairColor('#D6B26E', '#E39AB0'));
     });
 
     testWidgets('그라데이션 칸도 직접 고르기: 밝기 제한을 받는다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+      final picked = await _openTab(tester, 'hair');
       await _tap(tester, _key('hair-gradient'));
       await _tap(tester, _key('grad-tip'));
       expect(_key('picker'), findsNothing);
@@ -475,59 +475,70 @@ void main() {
       final mid = tester.getCenter(bar);
       await tester.dragFrom(mid, const Offset(2000, 0));
       await tester.pump();
-      var p = _painter(tester);
+      var p = picked.shown;
       expect(_light(p.hairGradient!.tip), closeTo(0.90, 0.01));
       // 뿌리색은 그대로
       expect(p.hairColor, Color(hairSwatches.first.color));
 
       await tester.dragFrom(mid, const Offset(-2000, 0));
       await tester.pump();
-      p = _painter(tester);
+      p = picked.shown;
       expect(_light(p.hairGradient!.tip), closeTo(0.15, 0.01));
 
-      // 견본을 고르면 직접 고르기는 닫히고, 뿌리색 칸으로 가면 견본(체크)이 보인다
+      // 견본을 고르면 직접 고르기는 닫힌다
       await _tap(tester, _key('grad-swatch-7'));
       expect(_key('picker'), findsNothing);
-      expect(_painter(tester).hairGradient!.tip, Color(hairSwatches[6].color));
-      await end(tester, e);
+      expect(picked.shown.hairGradient!.tip, Color(hairSwatches[6].color));
     });
 
     testWidgets('견본·직접 고르기·그라데이션을 오가면 마지막 것이 머리색', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
+      final picked = await _openTab(tester, 'hair');
 
       await _tap(tester, _key('hair-gradient'));
-      expect(_painter(tester).hairGradient, isNotNull);
+      expect(picked.shown.hairGradient, isNotNull);
       await _tap(tester, _key('hair-custom'));
-      expect(_painter(tester).hairGradient, isNull);
+      expect(picked.shown.hairGradient, isNull);
       expect(_key('picker'), findsOneWidget);
       expect(_key('grad-root'), findsNothing);
       await _tap(tester, _key('hair-swatch-2'));
-      expect(_painter(tester).hairColor, Color(hairSwatches[1].color));
+      expect(picked.shown.hairColor, Color(hairSwatches[1].color));
       expect(_key('picker'), findsNothing);
-      await end(tester, e);
     });
 
-    testWidgets('저장된 그라데이션·직접 고른 색은 열 때 해당 칸이 열려 있다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () async {
-        final look = const Look(
-          hair: 2,
-          hairColor: GradientHairColor('#2B2522', '#102030'),
-        );
-        await e.db.into(e.db.profile).insertOnConflictUpdate(
-            ProfileCompanion(id: const Value(1), look: Value(jsonEncode(look.toJson()))));
-      });
-      await _open(tester, e);
+    testWidgets('그라데이션·직접 고른 색으로 열면 해당 칸이 열려 있다', (tester) async {
+      final picked = await _openTab(tester, 'hair',
+          look: const Look(hair: 2, hairColor: GradientHairColor('#2B2522', '#102030')));
 
-      expect(_painter(tester).hairGradient!.tip, const Color(0xFF102030));
+      expect(picked.shown.hairGradient!.tip, const Color(0xFF102030));
       expect(_key('grad-root'), findsOneWidget);
       // 끝색 칸은 견본이 아닌 색이라 직접 고르기가 열려 있다
       await _tap(tester, _key('grad-tip'));
       expect(_key('picker'), findsOneWidget);
-      expect(_enabled(tester, '저장'), isFalse);
-      await end(tester, e);
+      expect(picked.changed, isFalse);
+    });
+
+    testWidgets('좁은 화면(320)에서 직접 고르기·그라데이션이 열려도 넘치지 않는다', (tester) async {
+      await _openTab(tester, 'hair', width: 320, bodyHeight: 260);
+      await _tap(tester, _key('hair-custom'));
+      expect(tester.takeException(), isNull);
+      await _tap(tester, _key('hair-gradient'));
+      await _tap(tester, _key('grad-custom'));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('색상환·밝기 막대를 끌어도 안쪽 스크롤은 움직이지 않는다', (tester) async {
+      await _openTab(tester, 'hair', bodyHeight: 300);
+      await _tap(tester, _key('hair-custom'));
+
+      final scroll = tester.state<ScrollableState>(find
+          .descendant(of: _key('body-hair'), matching: find.byType(Scrollable))
+          .first);
+      final before = scroll.position.pixels;
+      final ring = _key('hue-ring');
+      final c = tester.getCenter(ring);
+      await tester.dragFrom(c + const Offset(70, 0), const Offset(0, -60));
+      await tester.pump();
+      expect(scroll.position.pixels, before);
     });
   });
 
@@ -575,60 +586,51 @@ void main() {
     });
   });
 
-  group('피부 탭', () {
-    testWidgets('견본 7개를 고르면 미리보기 얼굴색이 바뀐다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
-      await _goTab(tester, 'skin');
+  group('피부 탭 (숨김)', () {
+    testWidgets('견본 7개를 고르면 얼굴색이 바뀐다', (tester) async {
+      final picked = await _openTab(tester, 'skin');
 
       for (final s in lookPalette.skin.swatches) {
         expect(_key('skin-swatch-${s.id}'), findsOneWidget, reason: s.name);
       }
       expect(_key('skin-swatch-8'), findsNothing);
       await _tap(tester, _key('skin-swatch-7'));
-      expect(_painter(tester).skin, const Color(0xFF966242));
-      expect(_enabled(tester, '저장'), isTrue);
-      await end(tester, e);
+      expect(picked.shown.skin, const Color(0xFF966242));
+      expect(picked.look.skin, const SwatchSkinColor(7));
     });
 
     testWidgets('직접 고르기 밝기 제한: 35~95%', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
-      await _goTab(tester, 'skin');
+      final picked = await _openTab(tester, 'skin');
       await _tap(tester, _key('skin-custom'));
       expect(_key('picker'), findsOneWidget);
 
       final mid = tester.getCenter(_key('light-bar'));
       await tester.dragFrom(mid, const Offset(-2000, 0));
       await tester.pump();
-      expect(_light(_painter(tester).skin), closeTo(0.35, 0.01));
-      expect(_light(_painter(tester).skin), greaterThan(0.34));
+      expect(_light(picked.shown.skin), closeTo(0.35, 0.01));
+      expect(_light(picked.shown.skin), greaterThan(0.34));
       expect(find.text('밝기 35%'), findsOneWidget);
 
       await tester.dragFrom(mid, const Offset(2000, 0));
       await tester.pump();
-      expect(_light(_painter(tester).skin), closeTo(0.95, 0.01));
-      expect(_light(_painter(tester).skin), lessThan(0.96));
+      expect(_light(picked.shown.skin), closeTo(0.95, 0.01));
+      expect(_light(picked.shown.skin), lessThan(0.96));
       expect(find.text('밝기 95%'), findsOneWidget);
-
-      await _save(tester);
-      final stored = (await _stored(tester, e)).skin;
-      expect(stored, isA<CustomSkinColor>());
-      await end(tester, e);
+      expect(picked.look.skin, isA<CustomSkinColor>());
     });
 
     testWidgets('직접 고르기는 머리와 달리 피부 견본으로 돌아가면 닫힌다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
-      await _goTab(tester, 'skin');
+      final picked = await _openTab(tester, 'skin');
       await _tap(tester, _key('skin-custom'));
       await _tap(tester, _key('skin-swatch-2'));
       expect(_key('picker'), findsNothing);
-      expect(_painter(tester).skin, Color(lookPalette.skin.swatches[1].color));
-      await end(tester, e);
+      expect(picked.shown.skin, Color(lookPalette.skin.swatches[1].color));
+    });
+
+    testWidgets('좁은 화면(320)에서 직접 고르기가 열려도 넘치지 않는다', (tester) async {
+      await _openTab(tester, 'skin', width: 320, bodyHeight: 260);
+      await _tap(tester, _key('skin-custom'));
+      expect(tester.takeException(), isNull);
     });
   });
 
@@ -791,18 +793,17 @@ void main() {
       await e.seed(tester, () => _ownProps(e.db, ['hand_02']));
       await _open(tester, e);
 
-      await _tap(tester, _key('hair-5'));
-      await _tap(tester, _key('hair-swatch-4'));
-      await _goTab(tester, 'skin');
-      await _tap(tester, _key('skin-swatch-3'));
+      await _tap(tester, _key('eyes-2'));
+      await _tap(tester, _key('nose-3'));
       await _goTab(tester, 'hand');
       await _tap(tester, _key('prop-hand_02'));
       await _save(tester);
 
       final look = await _stored(tester, e);
-      expect(look.hair, 5);
-      expect(look.hairColor, const SwatchHairColor(4));
-      expect(look.skin, const SwatchSkinColor(3));
+      expect((look.eyes, look.nose), (2, 3));
+      // 숨긴 머리·피부는 그대로
+      expect(look.hair, Look.initial.hair);
+      expect(look.skin, Look.initial.skin);
       expect(look.slots['hand'], 'hand_02');
       expect(look.slots['hat'], 'hat_01');
       expect(_enabled(tester, '저장'), isFalse);
@@ -819,13 +820,13 @@ void main() {
       await e.seed(tester);
       await _open(tester, e);
 
-      await _tap(tester, _key('hair-swatch-6'));
+      await _tap(tester, _key('eyes-3'));
       await _save(tester);
-      await _tap(tester, _key('hair-swatch-2'));
+      await _tap(tester, _key('eyes-2'));
       expect(_enabled(tester, '저장'), isTrue);
       await tester.tap(find.widgetWithText(GameButton, '되돌리기'));
       await tester.pump();
-      expect(_painter(tester).hairColor, Color(hairSwatches[5].color));
+      expect(_chosen(tester, 'eyes-3'), isTrue);
       expect(_enabled(tester, '저장'), isFalse);
       await end(tester, e);
     });
@@ -834,7 +835,7 @@ void main() {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
-      await _tap(tester, _key('hair-swatch-6'));
+      await _tap(tester, _key('eyes-2'));
       await tester.tap(find.widgetWithText(GameButton, '저장'));
       await settle(tester, () => find.text('저장했어요').evaluate().isNotEmpty);
       expect(find.text('저장했어요'), findsOneWidget);
@@ -842,30 +843,23 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('되돌리기: 머리·피부·소품 모두 저장된 모습으로, 직접 고르기도 닫힌다', (tester) async {
+    testWidgets('되돌리기: 얼굴·소품 모두 저장된 모습으로', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
 
-      await _tap(tester, _key('hair-3'));
-      await _tap(tester, _key('hair-custom'));
-      await _goTab(tester, 'skin');
-      await _tap(tester, _key('skin-swatch-6'));
+      await _tap(tester, _key('brows-3'));
       await _goTab(tester, 'shoe');
       await _tap(tester, _key('prop-none'));
       expect(_enabled(tester, '되돌리기'), isTrue);
 
       await tester.tap(find.widgetWithText(GameButton, '되돌리기'));
       await tester.pump();
-      final p = _painter(tester);
-      expect(p.hair, 1);
-      expect(p.hairColor, Color(hairSwatches.first.color));
-      expect(p.skin, Color(lookPalette.skin.swatches.first.color));
       expect(_worn(tester, 'shoe'), '갈색 신발');
       expect(_enabled(tester, '저장'), isFalse);
       expect(_enabled(tester, '되돌리기'), isFalse);
-      await _goTab(tester, 'hair');
-      expect(_key('picker'), findsNothing);
+      await _goTab(tester, 'face');
+      expect(_chosen(tester, 'brows-1'), isTrue);
       // DB는 그대로 (저장한 적 없다)
       final row = await tester.runAsync(() => e.db.select(e.db.profile).getSingle());
       expect(Look.fromJson(jsonDecode(row!.look!) as Map<String, dynamic>), Look.initial);
@@ -901,7 +895,7 @@ void main() {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
-      await _tap(tester, _key('hair-swatch-8'));
+      await _tap(tester, _key('eyes-3'));
 
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
@@ -918,7 +912,7 @@ void main() {
       await transition(tester);
       expect(find.text('저장하지 않고 나갈까요?'), findsNothing);
       expect(find.byType(DecorateScreen), findsOneWidget);
-      expect(_painter(tester).hairColor, Color(hairSwatches[7].color));
+      expect(_chosen(tester, 'eyes-3'), isTrue);
       expect(_enabled(tester, '저장'), isTrue);
 
       await tester.tap(find.byTooltip('뒤로'));
@@ -937,7 +931,7 @@ void main() {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
-      await _tap(tester, _key('hair-2'));
+      await _tap(tester, _key('eyes-2'));
 
       await tester.binding.handlePopRoute();
       await transition(tester);
@@ -952,7 +946,7 @@ void main() {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
-      await _tap(tester, _key('hair-2'));
+      await _tap(tester, _key('eyes-2'));
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
       await tester.tapAt(const Offset(195, 30));
@@ -966,7 +960,7 @@ void main() {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
-      await _tap(tester, _key('hair-2'));
+      await _tap(tester, _key('eyes-2'));
       await _save(tester);
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
@@ -977,7 +971,7 @@ void main() {
       final e2 = UiEnv();
       await e2.seed(tester);
       await _open(tester, e2);
-      await _tap(tester, _key('hair-3'));
+      await _tap(tester, _key('eyes-3'));
       await tester.tap(find.widgetWithText(GameButton, '되돌리기'));
       await tester.pump();
       await tester.tap(find.byTooltip('뒤로'));
@@ -1000,16 +994,6 @@ void main() {
         await _goTab(tester, t);
         expect(tester.takeException(), isNull, reason: t);
       }
-      // 직접 고르기(색상환 + 밝기 막대)와 그라데이션이 열려도
-      await _goTab(tester, 'hair');
-      await _tap(tester, _key('hair-custom'));
-      expect(tester.takeException(), isNull);
-      await _tap(tester, _key('hair-gradient'));
-      await _tap(tester, _key('grad-custom'));
-      expect(tester.takeException(), isNull);
-      await _goTab(tester, 'skin');
-      await _tap(tester, _key('skin-custom'));
-      expect(tester.takeException(), isNull);
       // 소품 이름이 길어도 (모자 8칸)
       await _goTab(tester, 'hat');
       await _tap(tester, _key('prop-hat_02'));
@@ -1017,22 +1001,5 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('색상환·밝기 막대를 끌어도 안쪽 스크롤은 움직이지 않는다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e, height: 700);
-      await _tap(tester, _key('hair-custom'));
-
-      final scroll = tester.state<ScrollableState>(find
-          .descendant(of: _key('body-hair'), matching: find.byType(Scrollable))
-          .first);
-      final before = scroll.position.pixels;
-      final ring = _key('hue-ring');
-      final c = tester.getCenter(ring);
-      await tester.dragFrom(c + const Offset(70, 0), const Offset(0, -60));
-      await tester.pump();
-      expect(scroll.position.pixels, before);
-      await end(tester, e);
-    });
   });
 }

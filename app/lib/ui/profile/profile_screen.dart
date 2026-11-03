@@ -4,18 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/profile_service.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
-import '../../domain/look_palette.dart';
 import '../../domain/time_kst.dart';
 import '../../domain/walk_history.dart';
 import '../common/app_text.dart';
 import '../common/big_number.dart';
-import '../common/figure_painter.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
 import '../common/ink_card.dart';
 import '../common/palette.dart';
 import '../common/screen_header.dart';
 import '../decorate/decorate_screen.dart';
+import '../scene/spirit_character.dart';
 
 /// 걸음 막대 영역의 높이와, 걸음이 0인 날도 남기는 막대의 최소 높이
 const _chartHeight = 96.0;
@@ -35,9 +34,8 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final snap = ref.watch(snapshotProvider).value;
     final me = ref.watch(meProvider).value;
-    final palette = ref.watch(lookPaletteProvider).value;
     final bars = ref.watch(recentDaysProvider).value;
-    final ready = snap != null && me != null && palette != null && bars != null;
+    final ready = snap != null && me != null && bars != null;
 
     return Scaffold(
       body: SafeArea(
@@ -45,7 +43,7 @@ class ProfileScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const ScreenHeader('나의 정보'),
-            Expanded(child: ready ? _content(context, snap, me, palette, bars) : const SizedBox()),
+            Expanded(child: ready ? _content(context, snap, me, bars) : const SizedBox()),
           ],
         ),
       ),
@@ -56,7 +54,6 @@ class ProfileScreen extends ConsumerWidget {
     BuildContext context,
     Snapshot snap,
     Me me,
-    LookPalette palette,
     List<DayBar> bars,
   ) {
     return SingleChildScrollView(
@@ -66,7 +63,6 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           _ProfileCard(
             me: me,
-            painter: figureOf(me.look, palette),
             onDecorate: () => Navigator.of(context)
                 .push(MaterialPageRoute<void>(builder: (_) => const DecorateScreen())),
           ),
@@ -141,10 +137,9 @@ class ProfileScreen extends ConsumerWidget {
 
 /// 위: 캐릭터 초상, 닉네임, 보조 버튼 `꾸미기`
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.me, required this.painter, required this.onDecorate});
+  const _ProfileCard({required this.me, required this.onDecorate});
 
   final Me me;
-  final FigurePainter painter;
   final VoidCallback onDecorate;
 
   @override
@@ -162,7 +157,8 @@ class _ProfileCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Palette.ink, width: InkLine.panel),
             ),
-            child: CustomPaint(painter: painter),
+            // 쉼터·꾸미기와 같은 정령 (얼굴·소품은 정령 꾸미기가 오면 입힌다)
+            child: const SpiritStanding(share: 0.72, footAt: 0.92),
           ),
           const SizedBox(width: 16),
           Expanded(

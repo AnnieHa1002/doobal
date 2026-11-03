@@ -16,7 +16,8 @@ const _propColumns = 4;
 List<SwatchItem> _hairItems(HairPalette p) =>
     [for (final s in p.swatches) (id: s.id, name: s.name, color: s.color)];
 
-/// 머리 탭: 모양 6칸, 색 견본 10개, 직접 고르기(색상환 + 밝기), 그라데이션(뿌리색 → 끝색)
+/// 머리 탭: 모양 6칸, 색 견본 10개, 직접 고르기(색상환 + 밝기), 그라데이션(뿌리색 → 끝색).
+/// 정령에는 머리가 없어 꾸미기에서 빠져 있다 (11/4). 색 고르기는 베레모 색에 다시 쓴다
 class HairTab extends StatefulWidget {
   const HairTab({super.key, required this.look, required this.palette, required this.onChanged});
 
@@ -278,7 +279,8 @@ class FaceTab extends StatelessWidget {
   }
 }
 
-/// 피부 탭: 견본 7개, 직접 고르기(색상환 + 밝기)
+/// 피부 탭: 견본 7개, 직접 고르기(색상환 + 밝기).
+/// 정령 몸 색을 칠할 수 있을 때까지 꾸미기에서 빠져 있다 (11/4)
 class SkinTab extends StatelessWidget {
   const SkinTab({super.key, required this.look, required this.palette, required this.onChanged});
 

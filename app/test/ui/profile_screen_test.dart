@@ -1,15 +1,14 @@
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/journey.dart';
-import 'package:doobal/domain/look.dart';
 import 'package:doobal/ui/common/figure_painter.dart';
 import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/decorate/decorate_screen.dart';
 import 'package:doobal/ui/profile/profile_screen.dart';
+import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../domain/helpers.dart';
 import 'ui_env.dart';
 
 /// 한 화면에 다 보이도록 길게 잡은 높이
@@ -164,7 +163,7 @@ void main() {
     await end(tester, e);
   });
 
-  testWidgets('초상은 프로필의 머리 모양·머리색으로 그리고, 닉네임을 보인다', (tester) async {
+  testWidgets('초상은 쉼터·꾸미기와 같은 정령이고, 닉네임을 보인다', (tester) async {
     final e = UiEnv();
     await e.seed(tester, () async {
       await e.db.into(e.db.profile).insertOnConflictUpdate(ProfileCompanion(
@@ -176,11 +175,11 @@ void main() {
     await _open(tester, e);
 
     expect(find.text('나그네'), findsOneWidget);
-    final paint = tester.widget<CustomPaint>(find.descendant(
-        of: find.byKey(const ValueKey('portrait')), matching: find.byType(CustomPaint)));
-    final painter = paint.painter! as FigurePainter;
-    expect(painter.hair, 4);
-    expect(painter.hairColor, Color(hairArgb(const SwatchHairColor(3), hairSwatches)));
+    final portrait = find.byKey(const ValueKey('portrait'));
+    expect(find.descendant(of: portrait, matching: find.byType(SpiritCharacter)), findsOneWidget);
+    // 예전 사람 그림(머리·피부)은 없다
+    expect(find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FigurePainter),
+        findsNothing);
     await end(tester, e);
   });
 
@@ -208,10 +207,10 @@ void main() {
 
     await tester.tap(find.text('꾸미기'));
     await transition(tester);
-    await settle(tester, () => find.byKey(const ValueKey('tab-hair')).evaluate().isNotEmpty);
+    await settle(tester, () => find.byKey(const ValueKey('tab-face')).evaluate().isNotEmpty);
     expect(find.text('꾸미기'), findsOneWidget);
     expect(find.byType(DecorateScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('tab-hair')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tab-face')), findsOneWidget);
     expect(find.text('준비 중'), findsNothing);
     expect(find.text('나의 정보'), findsNothing);
 
@@ -224,38 +223,6 @@ void main() {
     await tester.tap(find.byTooltip('뒤로'));
     await transition(tester);
     expect(find.text('열기'), findsOneWidget);
-    await end(tester, e);
-  });
-
-  testWidgets('꾸미기에서 저장하고 돌아오면 초상이 새 머리색·피부색으로 바뀐다', (tester) async {
-    final e = UiEnv();
-    await e.seed(tester);
-    await _open(tester, e);
-    FigurePainter portrait() => tester
-        .widget<CustomPaint>(find.descendant(
-            of: find.byKey(const ValueKey('portrait')), matching: find.byType(CustomPaint)))
-        .painter! as FigurePainter;
-    expect(portrait().hairColor, Color(hairSwatches.first.color));
-    expect(portrait().skin, FigurePainter.defaultSkin);
-
-    await tester.tap(find.text('꾸미기'));
-    await transition(tester);
-    await settle(tester, () => find.byKey(const ValueKey('tab-hair')).evaluate().isNotEmpty);
-    await tester.tap(find.byKey(const ValueKey('hair-swatch-9')));
-    await tester.pump();
-    await tester.ensureVisible(find.byKey(const ValueKey('tab-skin')));
-    await tester.tap(find.byKey(const ValueKey('tab-skin')));
-    await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('skin-swatch-5')));
-    await tester.pump();
-    await tester.tap(find.text('저장'));
-    await settle(tester, () => find.text('저장했어요').evaluate().isNotEmpty);
-
-    await tester.tap(find.byTooltip('뒤로'));
-    await transition(tester);
-    await settle(tester, () => portrait().skin != FigurePainter.defaultSkin);
-    expect(portrait().hairColor, Color(hairSwatches[8].color));
-    expect(portrait().skin, Color(lookPalette.skin.swatches[4].color));
     await end(tester, e);
   });
 }

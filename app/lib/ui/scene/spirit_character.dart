@@ -115,3 +115,33 @@ class _SpiritCharacterState extends State<SpiritCharacter>
     );
   }
 }
+
+/// 상자 안에 정령을 세운다 (꾸미기 미리보기·나의 정보 초상). 쉼터와 같은 잣대로
+/// 머리 위 y150~발바닥 y440을 키로 보고, 키는 짧은 변의 [share], 발바닥은 위에서 [footAt] 높이다.
+/// 상자 밖으로 나간 캔버스 가장자리는 잘린다
+class SpiritStanding extends StatelessWidget {
+  const SpiritStanding({super.key, this.share = 0.6, this.footAt = 0.88});
+
+  final double share, footAt;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, box) {
+      final scale = (box.maxWidth < box.maxHeight ? box.maxWidth : box.maxHeight) *
+          share /
+          (440 - 150);
+      return Stack(
+        children: [
+          if (scale > 0)
+            Positioned(
+              left: box.maxWidth / 2 - 300 * scale,
+              top: box.maxHeight * footAt - 440 * scale,
+              width: 600 * scale,
+              height: 600 * scale,
+              child: const SpiritCharacter(),
+            ),
+        ],
+      );
+    });
+  }
+}

@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../domain/look.dart';
-import '../../domain/look_palette.dart';
 import '../../domain/prop.dart';
 import '../common/app_text.dart';
 import '../common/confirm_sheet.dart';
-import '../common/figure_painter.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
@@ -17,14 +15,16 @@ import 'decorate_tabs.dart';
 import 'decorate_widgets.dart';
 import 'figure_preview.dart';
 
-const _myTabs = {'hair': '머리', 'face': '얼굴', 'skin': '피부'};
+/// 내 모습 탭. 정령에는 머리·피부가 없어 얼굴만 둔다 (11/4 임시, 정령 꾸미기로 바꾸기 전).
+/// 머리·피부 탭(HairTab·SkinTab)은 정령 몸 색·베레모 색 견본에 다시 쓸 때까지 남겨 둔다
+const _myTabs = {'face': '얼굴'};
 
 /// 탭 줄 글자 배율 상한
 const _tabMaxTextScale = 1.5;
 
-/// 꾸미기 (UI 명세 12장): 위 절반은 캐릭터 미리보기와 끼운 소품 줄, 아래는 9개 탭
-/// (내 모습: 머리 · 얼굴 · 피부 / 소품: 옷 · 모자 · 손 · 가방 · 신발 · 어깨 친구)과 저장·되돌리기.
-/// 고르는 대로 미리보기가 바뀌고, 저장해야 프로필(Profile.look)에 남는다.
+/// 꾸미기 (UI 명세 12장): 위 절반은 정령 미리보기와 끼운 소품 줄, 아래는 7개 탭
+/// (내 모습: 얼굴 / 소품: 옷 · 모자 · 손 · 가방 · 신발 · 어깨 친구)과 저장·되돌리기.
+/// 고른 것은 끼운 소품 줄에 바로 보이고, 저장해야 프로필(Profile.look)에 남는다.
 /// 저장하지 않고 나가려 하면 확인 시트를 띄운다
 class DecorateScreen extends ConsumerStatefulWidget {
   const DecorateScreen({super.key});
@@ -38,8 +38,8 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
   Look? _saved;
   Look? _look;
 
-  /// 지금 탭: 'hair' · 'face' · 'skin' 또는 소품 칸 이름
-  var _tab = 'hair';
+  /// 지금 탭: 'face' 또는 소품 칸 이름
+  var _tab = 'face';
   var _saving = false;
 
   @override
@@ -85,13 +85,12 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = ref.watch(lookPaletteProvider).value;
     final props = ref.watch(propsProvider).value;
     final owned = ref.watch(ownedPropIdsProvider).value;
     // 다음 거리 소품까지 남은 거리: 거리 소품은 앱 걷기 이동 거리로 센다 (Snapshot.walkTravelKm)
     final snap = ref.watch(snapshotProvider).value;
     final look = _look;
-    final ready = look != null && palette != null && props != null && owned != null;
+    final ready = look != null && props != null && owned != null;
     final dirty = ready && look != _saved;
 
     return PopScope(
@@ -109,7 +108,6 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
                 child: ready
                     ? _content(
                         look,
-                        palette,
                         dirty,
                         props: props,
                         // 기본 소품은 처음부터 가진 것이라, 아직 기록이 없어도 고를 수 있다
@@ -133,7 +131,6 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
 
   Widget _content(
     Look look,
-    LookPalette palette,
     bool dirty, {
     required List<Prop> props,
     required Set<String> have,
@@ -145,7 +142,7 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
         Expanded(
           child: Column(
             children: [
-              Expanded(child: FigurePreview(painter: figureOf(look, palette))),
+              const Expanded(child: SpiritPreview()),
               EquippedRow(look: look, props: props),
             ],
           ),
@@ -162,9 +159,7 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
             key: ValueKey('body-$_tab'),
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: switch (_tab) {
-              'hair' => HairTab(look: look, palette: palette, onChanged: _set),
               'face' => FaceTab(look: look, onChanged: _set),
-              'skin' => SkinTab(look: look, palette: palette, onChanged: _set),
               final slot => PropTab(
                   slot: slot,
                   look: look,
@@ -203,7 +198,7 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
   }
 }
 
-/// 탭 두 묶음: 위에 "내 모습" · "소품" 머리줄, 아래에 탭 9개. 좁으면 옆으로 민다
+/// 탭 두 묶음: 위에 "내 모습" · "소품" 머리줄, 아래에 탭 7개. 좁으면 옆으로 민다
 class _TabStrip extends StatelessWidget {
   const _TabStrip({required this.selected, required this.onSelect});
 
