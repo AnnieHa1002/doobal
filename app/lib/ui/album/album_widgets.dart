@@ -41,11 +41,10 @@ SliverGridDelegate paintingGridDelegate(BuildContext context) {
   );
 }
 
-/// 빈 칸 안내 글. 길게 눌러서 건다는 뜻이다
-const emptyWallHint = '길게 눌러 걸기';
-
-/// 화집 벽: 액자 [wall].length칸을 한 줄로. 건 칸은 색 액자(첫 그림은 나무 액자),
-/// 빈 칸은 점선 액자와 `길게 눌러 걸기`. [replacing]이면 칸마다 테라코타 테두리를 둘러 눌러서 고르게 한다.
+/// 화집 벽: 액자 [wall].length칸을 한 줄로. 건 칸은 색 액자(첫 그림은 나무 액자), 빈 칸은 점선 액자만
+/// (안내 글 없음, 11/3 ‘잠금 표시 없음’·UI 명세 v3 10장). 칸마다 오른쪽 위 모서리에 바꾸기 아이콘(24pt,
+/// 휘어진 화살표 둘)이 있고 누르면 [onLongPress]와 같이 걸 그림을 고른다 (길게 누르기도 그대로).
+/// [replacing]이면 칸마다 테라코타 테두리를 둘러 눌러서 고르게 하고 바꾸기 아이콘은 숨긴다.
 /// 벽 그림(나무 선반·못과 끈) 에셋은 아직 없어서 벽 뒤는 비워 둔다. 나오면 이 줄 뒤에 깐다
 class WallRow extends StatelessWidget {
   const WallRow({
@@ -77,7 +76,7 @@ class WallRow extends StatelessWidget {
 
   Widget _slot(int i) {
     final p = wall[i] == null ? null : owned[wall[i]];
-    return AspectRatio(
+    final slot = AspectRatio(
       aspectRatio: _wallSlotAspect,
       child: GestureDetector(
         key: ValueKey('wall-$i'),
@@ -103,31 +102,63 @@ class WallRow extends StatelessWidget {
         ),
       ),
     );
+    if (replacing) return slot;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        slot,
+        Positioned(
+          top: -8,
+          right: -8,
+          child: _SwapButton(key: ValueKey('wall-swap-$i'), onTap: () => onLongPress(i)),
+        ),
+      ],
+    );
   }
 }
 
-/// 벽의 빈 칸: 점선 액자 안에 안내 글. 부모를 꽉 채운다
-class _EmptyWallSlot extends StatelessWidget {
-  const _EmptyWallSlot();
+/// 액자 모서리의 바꾸기 아이콘: 24pt 동그라미 안에 휘어진 화살표 둘. 누르는 자리는 40pt
+class _SwapButton extends StatelessWidget {
+  const _SwapButton({super.key, required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: const DottedFramePainter(),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 3),
-          child: Text(
-            emptyWallHint,
-            textAlign: TextAlign.center,
-            // 칸 크기가 정해져 있어서 글자 배율 상한을 둔다
-            textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: badgeMaxTextScale),
-            style: const TextStyle(fontSize: 11, color: Palette.subInk),
+    return Semantics(
+      button: true,
+      label: '바꾸기',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox.square(
+          dimension: 40,
+          child: Center(
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Palette.card,
+                shape: BoxShape.circle,
+                border: Border.all(color: Palette.ink, width: InkLine.pill),
+              ),
+              child: const Icon(Icons.sync, size: 16, color: Palette.ink),
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// 벽의 빈 칸: 점선 액자만 (안내 글 없음). 부모를 꽉 채운다
+class _EmptyWallSlot extends StatelessWidget {
+  const _EmptyWallSlot();
+
+  @override
+  Widget build(BuildContext context) =>
+      const CustomPaint(painter: DottedFramePainter(), child: SizedBox.expand());
 }
 
 /// 둥근 네모 점선 테두리 (빈 액자 자리). [dash]·[gap]은 점선 한 토막과 틈의 길이

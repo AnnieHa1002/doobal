@@ -10,6 +10,9 @@ const _pathLine = 2.0;
 const _pathDash = 6.0;
 const _pathGap = 4.0;
 const _hollowR = 4.5;
+
+/// 안 가 본 명소 점의 진하기 (잉크 흐린색)
+const _faintAlpha = 0.3;
 const _visitedR = 5.5;
 const _destR = 9.0;
 const _selectedRing = 5.0;
@@ -88,8 +91,13 @@ class MapPainter extends CustomPainter {
 
     for (final e in geometry.landmarkPoints.entries) {
       if (e.key == data.destId) continue;
-      final visited = data.visited.containsKey(e.key);
-      circle(e.value, visited ? _visitedR : _hollowR, visited ? Palette.moss : Palette.card, 1.5);
+      if (data.visited.containsKey(e.key)) {
+        circle(e.value, _visitedR, Palette.moss, 1.5);
+      } else {
+        // 안 가 본 명소는 흐린 점 (테두리 없이, 11/3 ‘잠금 표시 없음’, UI 명세 v3 7장)
+        fill.color = Palette.ink.withValues(alpha: _faintAlpha);
+        canvas.drawCircle(e.value, _hollowR * k, fill);
+      }
     }
     // 목적지: 명소면 그 자리, 내 동네 스케치처럼 명소가 아닌 가상 지점이면 그 좌표
     final virtual = data.destPoint;

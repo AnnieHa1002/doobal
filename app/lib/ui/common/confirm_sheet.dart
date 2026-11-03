@@ -5,8 +5,15 @@ import 'game_button.dart';
 import 'palette.dart';
 
 /// 아래에서 올라오는 카드색 시트 (뒤는 잉크 40%). 위 버튼은 true, 아래 버튼은 false를 돌려주고,
-/// 시트 밖을 눌러 닫으면 null이다. 글자 크기를 키워 글이 길어지면 글만 스크롤하고 버튼은 늘 보인다
-Future<bool?> showConfirmSheet(BuildContext context, String text, String yes, String no) {
+/// 시트 밖을 눌러 닫으면 null이다. 글자 크기를 키워 글이 길어지면 글만 스크롤하고 버튼은 늘 보인다.
+/// [trailing]이 있으면 글 오른쪽에 붙인다 (글 대신 뜻을 전하는 작은 아이콘)
+Future<bool?> showConfirmSheet(
+  BuildContext context,
+  String text,
+  String yes,
+  String no, {
+  Widget? trailing,
+}) {
   return showModalBottomSheet<bool>(
     context: context,
     // 기본은 화면 높이의 9/16까지라, 큰 글자에서는 글이 먼저 잘린다
@@ -28,9 +35,12 @@ Future<bool?> showConfirmSheet(BuildContext context, String text, String yes, St
           children: [
             Flexible(
               child: SingleChildScrollView(
-                child: Text(
-                  text,
-                  style: context.display(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: Text(text, style: context.display(16))),
+                    if (trailing != null) ...[const SizedBox(width: 8), trailing],
+                  ],
                 ),
               ),
             ),

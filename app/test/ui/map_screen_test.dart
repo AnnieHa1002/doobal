@@ -14,6 +14,7 @@ import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/map/landmark_card.dart';
 import 'package:doobal/ui/map/map_geometry.dart';
 import 'package:doobal/ui/map/map_screen.dart';
+import 'package:doobal/ui/map/map_sheets.dart' show NoEventIcon;
 import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -355,14 +356,15 @@ void main() {
   });
 
   group('카드', () {
-    testWidgets('안 가 본 곳: 이름·시도·지형, 그림 칸 3개가 모두 잠김, 액자 글자 없음', (tester) async {
+    testWidgets('안 가 본 곳: 이름·시도·지형, 그림 칸 3개가 모두 흐린 점(자물쇠 없음), 액자 글자 없음', (tester) async {
       final e = _Env();
       await e.seed(tester);
       await _openMap(tester, e);
       await _searchAndPick(tester, '경복궁', 'kr001');
 
       expect(find.byType(PaintingSlot), findsNWidgets(3));
-      expect(find.byIcon(Icons.lock_outline), findsNWidgets(3));
+      expect(find.byKey(const ValueKey('painting-slot-dot')), findsNWidgets(3));
+      expect(find.byIcon(Icons.lock_outline), findsNothing);
       expect(find.byIcon(Icons.landscape_outlined), findsNothing);
       expect(find.textContaining('액자'), findsNothing);
       // 지금 자리(서울시청)에서 가는 거리
@@ -371,7 +373,7 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('다녀온 곳: 첫 칸이 액자 색, 나머지는 잠김, `금 액자`', (tester) async {
+    testWidgets('다녀온 곳: 첫 칸이 액자 색, 나머지는 흐린 점, `금 액자`', (tester) async {
       final e = _Env();
       await e.seed(tester, () async {
         await e.db.into(e.db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
@@ -387,7 +389,7 @@ void main() {
       await _searchAndPick(tester, '경복궁', 'kr001');
 
       expect(find.byIcon(Icons.landscape_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.lock_outline), findsNWidgets(2));
+      expect(find.byKey(const ValueKey('painting-slot-dot')), findsNWidgets(2));
       expect(_card('금 액자'), findsOneWidget);
       await _end(tester, e);
     });
@@ -438,7 +440,9 @@ void main() {
 
       await tester.tap(find.text('여기로 가기'));
       await _transition(tester);
-      expect(find.text('경비 2.1 km를 더할까요? (경비로 가는 구간에는 이벤트가 없어요)'), findsOneWidget);
+      expect(find.text('경비 2.1 km를 더할까요?'), findsOneWidget);
+      // 이벤트가 없다는 것은 글 대신 아이콘 (화면 읽기에는 그 말로 읽힌다)
+      expect(find.byType(NoEventIcon), findsOneWidget);
       await tester.tap(find.text('아껴 두기'));
       await _settle(tester, () => find.text('여기로 가기').evaluate().isEmpty);
 

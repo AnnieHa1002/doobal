@@ -24,7 +24,11 @@ import '../domain/helpers.dart';
 import 'ui_env.dart';
 
 const _hangHint = '바꿀 액자를 누르세요';
+/// 예전 빈 칸 안내 글 (11/3 ‘잠금 표시 없음’으로 뺐다)
 const _wallHint = '길게 눌러 걸기';
+
+/// 벽 칸 모서리의 바꾸기 아이콘
+Finder _swap(int i) => find.byKey(ValueKey('wall-swap-$i'));
 const _firstOnlyHint = '걸어서 명소에 닿으면 여기에 걸려요';
 const _noPropsLine = '아직 모은 소품이 없어요';
 
@@ -91,7 +95,8 @@ void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   group('화면 틀·벽', () {
-    testWidgets('뒤로와 제목 `화집`, 빈 벽 4칸은 점선 액자와 `길게 눌러 걸기`, 탭 둘, 칩은 `전체`뿐', (tester) async {
+    testWidgets('뒤로와 제목 `화집`, 빈 벽 4칸은 점선 액자만(안내 글 없음)·칸마다 바꾸기 아이콘, 탭 둘, 칩은 `전체`뿐',
+        (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _openAlbum(tester, e);
@@ -101,9 +106,11 @@ void main() {
       for (var i = 0; i < 4; i++) {
         expect(_dotted(i), findsOneWidget, reason: 'wall-$i');
         expect(_hung(i), findsNothing, reason: 'wall-$i');
-        expect(find.descendant(of: _wall(i), matching: find.text(_wallHint)), findsOneWidget);
+        expect(_swap(i), findsOneWidget, reason: 'wall-swap-$i');
+        // 바꾸기 아이콘은 칸의 오른쪽 위 모서리에 걸친다
+        expect((tester.getCenter(_swap(i)) - tester.getTopRight(_wall(i))).distance, lessThan(20));
       }
-      expect(find.text(_wallHint), findsNWidgets(4));
+      expect(find.text(_wallHint), findsNothing);
       expect(_wall(4), findsNothing);
       expect(find.text('그림'), findsOneWidget);
       expect(find.text('소품'), findsOneWidget);
@@ -159,17 +166,17 @@ void main() {
       expect(_framed(tester, _wall(2)).landmark!.id, 'kr001');
       expect(_framed(tester, _wall(2)).frame, Frame.gold);
       expect(frameColors[Frame.gold], isNot(frameColors[Frame.wood]));
-      // 걸린 칸에는 점선도 안내 글도 없고, 빈 두 칸에만 있다
+      // 걸린 칸에는 점선이 없고, 빈 두 칸에만 있다. 바꾸기 아이콘은 네 칸 모두
       for (final i in [0, 2]) {
         expect(_dotted(i), findsNothing, reason: 'wall-$i');
-        expect(find.descendant(of: _wall(i), matching: find.text(_wallHint)), findsNothing);
       }
       for (final i in [1, 3]) {
         expect(_hung(i), findsNothing, reason: 'wall-$i');
         expect(_dotted(i), findsOneWidget, reason: 'wall-$i');
-        expect(find.descendant(of: _wall(i), matching: find.text(_wallHint)), findsOneWidget);
       }
-      expect(find.text(_wallHint), findsNWidgets(2));
+      for (var i = 0; i < 4; i++) {
+        expect(_swap(i), findsOneWidget, reason: 'wall-swap-$i');
+      }
 
       await tester.tap(_wall(1));
       await tester.pump(const Duration(milliseconds: 300));
@@ -178,7 +185,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('벽을 다 채우면 점선 칸도 안내 글도 없다', (tester) async {
+    testWidgets('벽을 다 채우면 점선 칸이 없다 (바꾸기 아이콘은 그대로)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         await e.ownPaintings({
@@ -195,8 +202,8 @@ void main() {
       await settle(tester, () => _hung(3).evaluate().isNotEmpty);
       for (var i = 0; i < 4; i++) {
         expect(_dotted(i), findsNothing, reason: 'wall-$i');
+        expect(_swap(i), findsOneWidget, reason: 'wall-swap-$i');
       }
-      expect(find.text(_wallHint), findsNothing);
       await end(tester, e);
     });
 
@@ -229,6 +236,21 @@ void main() {
       expect(_framed(tester, _wall(3)).landmark!.id, 'kr002');
       expect(_dotted(1), findsOneWidget);
       expect(_dotted(3), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('바꾸기 아이콘을 눌러도 길게 누르기처럼 시트가 열리고, 고르면 그 칸에 건다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.ownPaintings({'kr001': Frame.gold, 'kr002': Frame.wood}));
+      await _openAlbum(tester, e);
+
+      await tester.tap(_swap(2));
+      await transition(tester);
+      expect(find.byKey(const ValueKey('pick-kr001')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('pick-kr001')));
+      await transition(tester);
+      await settle(tester, () => _hung(2).evaluate().isNotEmpty);
+      expect(await _dbWall(tester, e), [null, null, 'kr001', null]);
       await end(tester, e);
     });
 
@@ -273,6 +295,8 @@ void main() {
       await _openAlbum(tester, e, screen: const AlbumScreen(hangLandmarkId: 'kr001'));
 
       expect(find.text(_hangHint), findsOneWidget);
+      // 거는 모드에서는 칸을 바로 누르니 바꾸기 아이콘이 없다
+      expect(_swap(0), findsNothing);
       await tester.tap(_wall(0));
       await settle(tester, () => find.text(_hangHint).evaluate().isEmpty);
       expect(find.text(_hangHint), findsNothing);

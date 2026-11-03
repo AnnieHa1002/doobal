@@ -135,11 +135,18 @@ class PaintingSlot extends StatelessWidget {
       child: Container(
         color: Palette.paper,
         alignment: Alignment.center,
-        child: Icon(
-          f == null ? Icons.lock_outline : Icons.landscape_outlined,
-          size: 18,
-          color: Palette.subInk,
-        ),
+        // 아직 얻지 못한 칸은 자물쇠 없이 흐린 점 (11/3 ‘잠금 표시 없음’, UI 명세 v3 7장)
+        child: f == null
+            ? Container(
+                key: const ValueKey('painting-slot-dot'),
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: Palette.ink.withValues(alpha: 0.25),
+                  shape: BoxShape.circle,
+                ),
+              )
+            : const Icon(Icons.landscape_outlined, size: 18, color: Palette.subInk),
       ),
     );
   }
