@@ -108,6 +108,10 @@ void main() {
     c.play(SpiritMotion.sleep);
     tick(c, 30);
     expect(c.motion, SpiritMotion.sleep);
+    expect(c.direction, 0);
+    final sleepingFace = c.artboard.component('front_face_pose')!;
+    expect(sleepingFace.rotation, closeTo(-1.0471975512, .001));
+    sleepingFace.dispose();
     c.press(SpiritPress.head);
     tick(c, 15);
     c.press(SpiritPress.belly);
@@ -117,6 +121,7 @@ void main() {
     c.release();
     tick(c, 50);
     expect(c.motion, SpiritMotion.sleep);
+    expect(c.direction, 0);
     c.setLook(double.infinity, 20);
     expect(c.instance.number('lookX')!.value, 0);
     expect(c.instance.number('lookY')!.value, 1);
@@ -197,6 +202,36 @@ void main() {
         await tester.pump(const Duration(milliseconds: 16));
       }
       await capture('flutter_${motion.name}');
+    }
+    if (Platform.environment['DOOBAL_SPIRIT_DEMO'] == '1') {
+      final folder = Platform.environment['DOOBAL_SPIRIT_CAPTURE_DIR']!;
+      await tester.runAsync(() => Directory('$folder/demo_frames').create(recursive: true));
+      var frame = 0;
+      Future<void> demoFrame() async => capture('demo_frames/${(frame++).toString().padLeft(3, '0')}');
+      controller!.play(SpiritMotion.idle);
+      for (var f = 0; f < 40; f++) { await tester.pump(const Duration(milliseconds: 16)); }
+      for (final motion in [SpiritMotion.wave, SpiritMotion.walk, SpiritMotion.sit, SpiritMotion.fall, SpiritMotion.run, SpiritMotion.laugh, SpiritMotion.sleep]) {
+        controller!.play(motion);
+        final step = {SpiritMotion.wave:12, SpiritMotion.walk:8, SpiritMotion.sit:11, SpiritMotion.fall:15, SpiritMotion.run:5, SpiritMotion.laugh:13, SpiritMotion.sleep:22}[motion]!;
+        for (var shot=0;shot<8;shot++) {
+          for (var f=0;f<step;f++) { await tester.pump(const Duration(milliseconds:16)); }
+          await demoFrame();
+        }
+      }
+      for(final region in SpiritPress.values) {
+        controller!.play(SpiritMotion.idle);
+        for(var f=0;f<40;f++) { await tester.pump(const Duration(milliseconds:16)); }
+        controller!.press(region);
+        for(var shot=0;shot<6;shot++) {
+          for(var f=0;f<4;f++) { await tester.pump(const Duration(milliseconds:16)); }
+          await demoFrame();
+        }
+        controller!.release();
+        for(var shot=0;shot<6;shot++) {
+          for(var f=0;f<6;f++) { await tester.pump(const Duration(milliseconds:16)); }
+          await demoFrame();
+        }
+      }
     }
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());

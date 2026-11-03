@@ -95,7 +95,6 @@ final class SpiritController extends rive.RiveWidgetController {
         (direction ??
                 (value == SpiritMotion.walk ||
                         value == SpiritMotion.run ||
-                        value == SpiritMotion.sleep ||
                         value == SpiritMotion.lie
                     ? 1
                     : 0))
