@@ -147,7 +147,9 @@ final notificationGrantedProvider = FutureProvider.autoDispose<bool?>(
 final noticeCatalogProvider = FutureProvider<NoticeCatalog>((ref) => loadNoticeCatalog());
 
 /// 시스템 알림을 띄우는 곳. M6에서 flutter_local_notifications로 바꾼다 (지금은 아무것도 안 띄우는 자리표시)
-final systemNotifierProvider = Provider<SystemNotifier>((ref) => PlaceholderNotifier());
+final systemNotifierProvider = Provider<SystemNotifier>((ref) => Platform.isAndroid
+    ? AndroidSystemNotifier(ref.watch(localNotificationsProvider))
+    : PlaceholderNotifier());
 
 /// 앱이 앞에 있는가 (알림 판단이 앞이면 화면 안 표시만 하려고 읽는다). AutoSync가 lifecycle에 따라 바꾼다.
 /// 앞에서 시작한다. TODO(M6): 백그라운드 동기화는 앱 화면 없이 도니까 거기서는 false로 덮어쓴다

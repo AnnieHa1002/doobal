@@ -622,4 +622,24 @@ void main() {
       expect(back.enabled, {NoticeKind.n1, NoticeKind.n3, NoticeKind.n4, NoticeKind.n5});
     });
   });
+
+  group('누른 알림 payload', () {
+    test('종류 id와 key로 나눈다 (key 안의 :는 그대로)', () {
+      expect(parseNoticePayload('N1:m:3000'), (kind: NoticeKind.n1, key: 'm:3000'));
+      expect(parseNoticePayload('N2:j-1'), (kind: NoticeKind.n2, key: 'j-1'));
+      expect(parseNoticePayload('N5:'), (kind: NoticeKind.n5, key: ''));
+      expect(parseNoticePayload('N5'), (kind: NoticeKind.n5, key: ''));
+    });
+
+    test('모르는 종류·빈 글이면 null', () {
+      expect(parseNoticePayload('N9:x'), isNull);
+      expect(parseNoticePayload(''), isNull);
+      expect(parseNoticePayload('walk'), isNull);
+    });
+
+    test('보낼 알림의 payload를 다시 나누면 같은 종류·key', () {
+      const m = NoticeMessage(NoticeKind.n1, 'm:3000', '제목', '본문');
+      expect(parseNoticePayload(m.payload), (kind: NoticeKind.n1, key: 'm:3000'));
+    });
+  });
 }

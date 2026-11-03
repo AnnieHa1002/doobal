@@ -88,8 +88,8 @@ class NoticeCandidate {
   final Map<String, Object> vars;
 }
 
-/// 보낼 알림의 글과 눌렀을 때 쓸 값. payload는 'N1:m:3000' 꼴 (종류 id : key).
-/// TODO(M6): 눌렀을 때 N1 → 방명록 쓰기, N2 → 도착 화면, N3 → 동행 화면의 그 장, N4·N5 → 쉼터
+/// 보낼 알림의 글과 눌렀을 때 쓸 값. payload는 'N1:m:3000' 꼴 (종류 id : key, [parseNoticePayload]).
+/// 눌렀을 때 N1 → 방명록 쓰기, N2 → 도착 화면, N3 → 동행 화면의 그 장(M4), N4·N5 → 쉼터 (UI 명세 13장)
 class NoticeMessage {
   const NoticeMessage(this.kind, this.key, this.title, this.body);
 
@@ -99,6 +99,15 @@ class NoticeMessage {
   final String body;
 
   String get payload => '${kind.id}:$key';
+}
+
+/// 누른 알림의 payload('N1:m:3000')를 (종류, key)로 나눈다. key 안의 ':'는 그대로 둔다.
+/// 모르는 종류면 null
+({NoticeKind kind, String key})? parseNoticePayload(String payload) {
+  final colon = payload.indexOf(':');
+  final kind = NoticeKind.fromId(colon < 0 ? payload : payload.substring(0, colon));
+  if (kind == null) return null;
+  return (kind: kind, key: colon < 0 ? '' : payload.substring(colon + 1));
 }
 
 /// 알림 종류별 켜고 끄기: 전체 + 종류별. 기본은 모두 켬. 전체가 꺼져 있으면 종류별 값과 상관없이 모두 꺼진다
