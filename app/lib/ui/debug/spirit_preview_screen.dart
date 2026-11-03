@@ -12,6 +12,7 @@ class SpiritPreviewScreen extends StatefulWidget {
 
 class _SpiritPreviewScreenState extends State<SpiritPreviewScreen> {
   SpiritController? _controller;
+  bool _cape = true;
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('정령 움직임')),
@@ -25,6 +26,7 @@ class _SpiritPreviewScreenState extends State<SpiritPreviewScreen> {
                 child: ColoredBox(
                   color: const Color(0xfff4eddf),
                   child: SpiritCharacter(
+                    capeEnabled: _cape,
                     onReady: (c) {
                       if (mounted) setState(() => _controller = c);
                     },
@@ -32,6 +34,11 @@ class _SpiritPreviewScreenState extends State<SpiritPreviewScreen> {
                 ),
               ),
             ),
+          ),
+          SwitchListTile(
+            title: const Text('여행 망토'),
+            value: _cape,
+            onChanged: (value) => setState(() => _cape = value),
           ),
           const Padding(
             padding: EdgeInsets.all(8),

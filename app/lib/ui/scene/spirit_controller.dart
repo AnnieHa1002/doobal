@@ -46,6 +46,11 @@ final class SpiritController extends rive.RiveWidgetController {
   bool get bellyPressed => _belly.value;
   int get direction => _direction.value.round();
   int get expression => _expression.value.round();
+  bool get capeEnabled => instance.boolean('cape')!.value;
+  void setCape(bool enabled) {
+    instance.boolean('cape')!.value = enabled;
+    scheduleRepaint();
+  }
 
   void setScene({
     required double speed,

@@ -136,7 +136,10 @@ void main() {
       MaterialApp(
         home: RepaintBoundary(
           key: key,
-          child: SpiritCharacter(onReady: (c) => controller = c),
+          child: SpiritCharacter(
+            capeEnabled: true,
+            onReady: (c) => controller = c,
+          ),
         ),
       ),
     );
@@ -164,6 +167,18 @@ void main() {
     }
 
     await capture('flutter_idle');
+    expect(controller!.capeEnabled, isTrue);
+    controller!.setCape(false);
+    for (var f = 0; f < 20; f++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(controller!.capeEnabled, isFalse);
+    await capture('flutter_cape_off');
+    controller!.setCape(true);
+    for (var f = 0; f < 20; f++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(controller!.capeEnabled, isTrue);
     var gesture = await tester.startGesture(const Offset(300, 220));
     for (var f = 0; f < 16; f++) {
       await tester.pump(const Duration(milliseconds: 16));
@@ -205,30 +220,59 @@ void main() {
     }
     if (Platform.environment['DOOBAL_SPIRIT_DEMO'] == '1') {
       final folder = Platform.environment['DOOBAL_SPIRIT_CAPTURE_DIR']!;
-      await tester.runAsync(() => Directory('$folder/demo_frames').create(recursive: true));
+      await tester.runAsync(
+        () => Directory('$folder/demo_frames').create(recursive: true),
+      );
       var frame = 0;
-      Future<void> demoFrame() async => capture('demo_frames/${(frame++).toString().padLeft(3, '0')}');
+      Future<void> demoFrame() async =>
+          capture('demo_frames/${(frame++).toString().padLeft(3, '0')}');
       controller!.play(SpiritMotion.idle);
-      for (var f = 0; f < 40; f++) { await tester.pump(const Duration(milliseconds: 16)); }
-      for (final motion in [SpiritMotion.wave, SpiritMotion.walk, SpiritMotion.sit, SpiritMotion.fall, SpiritMotion.run, SpiritMotion.laugh, SpiritMotion.sleep]) {
+      for (var f = 0; f < 40; f++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      for (final motion in [
+        SpiritMotion.wave,
+        SpiritMotion.walk,
+        SpiritMotion.sit,
+        SpiritMotion.fall,
+        SpiritMotion.run,
+        SpiritMotion.laugh,
+        SpiritMotion.sleep,
+      ]) {
         controller!.play(motion);
-        final step = {SpiritMotion.wave:12, SpiritMotion.walk:8, SpiritMotion.sit:11, SpiritMotion.fall:15, SpiritMotion.run:5, SpiritMotion.laugh:13, SpiritMotion.sleep:22}[motion]!;
-        for (var shot=0;shot<8;shot++) {
-          for (var f=0;f<step;f++) { await tester.pump(const Duration(milliseconds:16)); }
+        final step = {
+          SpiritMotion.wave: 12,
+          SpiritMotion.walk: 8,
+          SpiritMotion.sit: 11,
+          SpiritMotion.fall: 15,
+          SpiritMotion.run: 5,
+          SpiritMotion.laugh: 13,
+          SpiritMotion.sleep: 22,
+        }[motion]!;
+        for (var shot = 0; shot < 8; shot++) {
+          for (var f = 0; f < step; f++) {
+            await tester.pump(const Duration(milliseconds: 16));
+          }
           await demoFrame();
         }
       }
-      for(final region in SpiritPress.values) {
+      for (final region in SpiritPress.values) {
         controller!.play(SpiritMotion.idle);
-        for(var f=0;f<40;f++) { await tester.pump(const Duration(milliseconds:16)); }
+        for (var f = 0; f < 40; f++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
         controller!.press(region);
-        for(var shot=0;shot<6;shot++) {
-          for(var f=0;f<4;f++) { await tester.pump(const Duration(milliseconds:16)); }
+        for (var shot = 0; shot < 6; shot++) {
+          for (var f = 0; f < 4; f++) {
+            await tester.pump(const Duration(milliseconds: 16));
+          }
           await demoFrame();
         }
         controller!.release();
-        for(var shot=0;shot<6;shot++) {
-          for(var f=0;f<6;f++) { await tester.pump(const Duration(milliseconds:16)); }
+        for (var shot = 0; shot < 6; shot++) {
+          for (var f = 0; f < 6; f++) {
+            await tester.pump(const Duration(milliseconds: 16));
+          }
           await demoFrame();
         }
       }
