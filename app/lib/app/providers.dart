@@ -83,8 +83,18 @@ final minuteClockProvider = StreamProvider<DateTime>((ref) {
   return Stream<DateTime>.periodic(const Duration(minutes: 1), (_) => clock());
 });
 
+/// 앱 DB. 앱이 닫혀 있을 때 도는 백그라운드 동기화(다른 Flutter 엔진)도 같은 파일을 열어서,
+/// WAL로 읽기와 쓰기가 서로 막지 않게 하고 쓰기가 겹치면 5초까지 기다린다 (database is locked 방지)
 final dbProvider = Provider<AppDb>((ref) {
-  final db = AppDb(driftDatabase(name: 'doobal'));
+  final db = AppDb(driftDatabase(
+    name: 'doobal',
+    native: DriftNativeOptions(
+      setup: (raw) {
+        raw.execute('PRAGMA journal_mode = WAL');
+        raw.execute('PRAGMA busy_timeout = 5000');
+      },
+    ),
+  ));
   ref.onDispose(db.close);
   return db;
 });
@@ -152,7 +162,7 @@ final systemNotifierProvider = Provider<SystemNotifier>((ref) => Platform.isAndr
     : PlaceholderNotifier());
 
 /// 앱이 앞에 있는가 (알림 판단이 앞이면 화면 안 표시만 하려고 읽는다). AutoSync가 lifecycle에 따라 바꾼다.
-/// 앞에서 시작한다. TODO(M6): 백그라운드 동기화는 앱 화면 없이 도니까 거기서는 false로 덮어쓴다
+/// 앞에서 시작한다. 앱 화면 없이 도는 백그라운드 동기화(background_sync.dart)는 false로 덮어쓴다
 class AppForeground extends Notifier<bool> {
   @override
   bool build() => true;

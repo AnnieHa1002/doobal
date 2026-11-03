@@ -58,6 +58,43 @@ void main() {
     });
   });
 
+  group('closeStaleAppWalks (백그라운드 동기화 전에)', () {
+    const stale = Duration(seconds: 90);
+
+    test('앱이 최근(90초 안)에 살아 있다고 적었으면 열린 창을 그대로 둔다 (걷는 중 화면이 살아 있다)',
+        () async {
+      final e = UiEnv();
+      addTearDown(e.db.close);
+      await e.svc.sync(t0);
+      await e.db.into(e.db.appWalks).insert(AppWalksCompanion.insert(startUtc: _ms(t0)));
+      await e.svc.saveAlive(_t(59));
+
+      expect(await e.svc.closeStaleAppWalks(_t(60), stale), 0);
+      expect((await e.db.select(e.db.appWalks).get()).single.endUtc, isNull);
+    });
+
+    test('90초보다 오래 소식이 없으면 앱이 꺼진 것: 마지막으로 살아 있던 시각에서 닫는다', () async {
+      final e = UiEnv();
+      addTearDown(e.db.close);
+      await e.svc.sync(t0);
+      await e.db.into(e.db.appWalks).insert(AppWalksCompanion.insert(startUtc: _ms(t0)));
+      await e.svc.saveAlive(_t(20));
+
+      expect(await e.svc.closeStaleAppWalks(_t(60), stale), 1);
+      final row = (await e.db.select(e.db.appWalks).get()).single;
+      expect((row.endUtc, row.endReason), (_ms(_t(20)), AppWalkEnd.appEnded));
+      // 앱을 켤 때는 닫을 창이 없다
+      expect(await e.svc.closeOrphanAppWalksEnd(_t(61)), isNull);
+    });
+
+    test('열린 창이 없으면 0이고 아무것도 건드리지 않는다', () async {
+      final e = UiEnv();
+      addTearDown(e.db.close);
+      expect(await e.svc.closeStaleAppWalks(_t(60), stale), 0);
+      expect(await e.db.select(e.db.syncState).get(), isEmpty);
+    });
+  });
+
   group('stepsFrom: 분 시작이 from 이상, upTo가 속한 분까지', () {
     /// 분 5~9(500보), 20~22(300보), 40·41(200보)가 저장돼 있다
     Future<UiEnv> env() async {

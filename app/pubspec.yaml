@@ -25,6 +25,7 @@ dependencies:
   # 알림 예약(zonedSchedule)이 받는 시각 타입(TZDateTime). flutter_local_notifications가 이미 쓰는 판이라
   # 새로 들어오는 코드는 없다
   timezone: ^0.11.2
+  workmanager: ^0.10.10
 
 dev_dependencies:
   flutter_test:

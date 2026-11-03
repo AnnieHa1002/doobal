@@ -1223,6 +1223,23 @@ class SyncService {
   /// 앱을 켠 직후 '걷기가 멈췄어요' 토스트가 이 시각 뒤에 쌓인 걸음([stepsFrom])을 센다
   Future<DateTime?> closeOrphanAppWalksEnd(DateTime now) async => (await _closeOrphans(now)).end;
 
+  /// 백그라운드 동기화 전에 (앱이 닫혀 있을 때 도는 동기화, background_sync.dart): 앱이 [staleAfter]보다
+  /// 오래 '살아 있다'고 적지 않았으면 앱이 꺼진 것이라 열린 앱 걷기를 마지막으로 살아 있던 시각에서 닫는다
+  /// (앱을 켤 때 [closeOrphanAppWalks]와 같다. 닫지 않으면 꺼진 뒤 걸음에도 본격 걷기 보너스가 붙는다).
+  /// 앱이 살아 있으면(걷는 중 화면이 켜진 채 화면만 꺼졌다) 그대로 둔다. 닫은 창 수를 돌려준다
+  Future<int> closeStaleAppWalks(DateTime now, Duration staleAfter) => db.transaction(() async {
+        final open = await (db.select(db.appWalks)..where((t) => t.endUtc.isNull())).get();
+        if (open.isEmpty) return 0;
+        final state = await _ensureState(now);
+        final alive = state.lastAliveUtc;
+        if (alive != null &&
+            now.toUtc().millisecondsSinceEpoch - alive <= staleAfter.inMilliseconds) {
+          return 0;
+        }
+        await _closeAppWalks(open, alive, now);
+        return open.length;
+      });
+
   Future<({int count, DateTime? end})> _closeOrphans(DateTime now) => db.transaction(() async {
         final open = await (db.select(db.appWalks)..where((t) => t.endUtc.isNull())).get();
         if (open.isEmpty) return (count: 0, end: null);

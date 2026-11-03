@@ -10,6 +10,7 @@ import '../domain/prop.dart';
 import '../ui/arrival/arrival_screen.dart';
 import '../ui/common/toast.dart';
 import '../ui/guestbook/guestbook_write_screen.dart';
+import 'background_sync.dart';
 import 'backup_runner.dart';
 import 'notification_service.dart';
 import 'providers.dart';
@@ -35,7 +36,8 @@ const _toastMinKm = 0.1;
 /// 그 시각에서 닫고(동기화보다 먼저) 동기화한다. 닫은 창이 있으면(걷는 중에 앱이 끝났다) 첫 동기화 뒤에
 /// 쉼터에 토스트를 한 번 띄운다: 창이 끝난 뒤 쌓인 걸음은 평소 걸음으로 더해졌다고 알린다.
 /// 어느 화면의 동기화든 소품을 새로 얻으면(SyncService.newProps) 지금 화면 위에 한 줄 토스트를 띄운다.
-/// 알림을 눌러 들어오면(앱이 켜져 있을 때·알림으로 켜졌을 때) 그 알림이 가리키는 화면을 연다
+/// 알림을 눌러 들어오면(앱이 켜져 있을 때·알림으로 켜졌을 때) 그 알림이 가리키는 화면을 연다.
+/// 켤 때 앱이 닫혀 있어도 동기화하는 주기 작업(backgroundSyncProvider)을 건다
 class AutoSync extends ConsumerStatefulWidget {
   const AutoSync({super.key, required this.child});
 
@@ -110,6 +112,19 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     await _sync();
     final end = orphanEnd;
     if (end != null) await _showOrphanToast(end);
+    await _startBackgroundSync();
+  }
+
+  /// 앱이 닫혀 있어도 걸음을 가져오는 주기 작업을 건다 (안드로이드 WorkManager, config sync.backgroundMin).
+  /// 켤 때마다 불러서 간격이 바뀌면 맞춘다. 실패해도 앱은 그대로다 (앱을 열면 동기화한다)
+  Future<void> _startBackgroundSync() async {
+    try {
+      final rules = await ref.read(rulesProvider.future);
+      if (!mounted) return;
+      await ref.read(backgroundSyncProvider).start(rules.backgroundSyncMin);
+    } catch (e) {
+      debugPrint('백그라운드 동기화 걸기 실패: $e');
+    }
   }
 
   /// 걷는 중에 앱이 끝나 닫은 창 [end] 뒤 지금까지 쌓인 걸음을 세어 `걷기가 멈췄어요` 토스트를 띄운다

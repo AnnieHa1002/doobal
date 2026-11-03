@@ -91,6 +91,7 @@ class Rules {
     required this.refetchHours,
     required this.walkingRefreshSec,
     required this.aliveSaveSec,
+    required this.backgroundSyncMin,
     required this.liveCadenceWindowSec,
     required this.liveNoticeUpdateSec,
     required this.lapKm,
@@ -164,6 +165,10 @@ class Rules {
   /// 앱이 살아 있는 동안 '마지막으로 살아 있던 시각'을 적는 간격(초) (config sync.aliveSaveSec).
   /// 앱이 갑자기 끝났을 때 열려 있던 앱 걷기를 이 시각에서 닫는다
   final int aliveSaveSec;
+
+  /// 앱이 닫혀 있을 때 걸음을 가져와 동기화하는 간격(분) (config sync.backgroundMin, 안드로이드 WorkManager).
+  /// 안드로이드가 정하는 최소는 15분이고, 실제로 도는 때는 안드로이드가 배터리에 맞춰 늦출 수 있다
+  final int backgroundSyncMin;
 
   /// 걸음 센서로 분당 걸음을 낼 때 보는 최근 시간(초) (config live.cadenceWindowSec)
   final int liveCadenceWindowSec;
@@ -353,6 +358,9 @@ class Rules {
     if ((sync['aliveSaveSec'] as int) <= 0) {
       throw const FormatException('sync.aliveSaveSec는 0보다 커야 한다');
     }
+    if ((sync['backgroundMin'] as int) < 15) {
+      throw const FormatException('sync.backgroundMin은 15(안드로이드 최소) 이상이어야 한다');
+    }
 
     return Rules(
       walkMaxSpm: gait['walkMaxSpm'] as int,
@@ -366,6 +374,7 @@ class Rules {
       refetchHours: sync['refetchHours'] as int,
       walkingRefreshSec: sync['walkingRefreshSec'] as int,
       aliveSaveSec: sync['aliveSaveSec'] as int,
+      backgroundSyncMin: sync['backgroundMin'] as int,
       liveCadenceWindowSec: live['cadenceWindowSec'] as int,
       liveNoticeUpdateSec: live['noticeUpdateSec'] as int,
       lapKm: _d(record['lapKm']),
