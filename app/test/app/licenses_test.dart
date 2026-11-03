@@ -21,8 +21,8 @@ void main() {
   test('pubspec에 적은 글꼴 파일이 모두 있다', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final assets = RegExp(r'asset: (assets/fonts/\S+\.ttf)').allMatches(pubspec).map((m) => m[1]!);
-    // 개구 Bold·동글 Bold·고운 바탕 Regular·Bold·고운 돋움 Regular
-    expect(assets, hasLength(5));
+    // 개구 Bold·동글 Bold·고운 바탕 Bold·고운 돋움 Regular
+    expect(assets, hasLength(4));
     for (final path in assets) {
       expect(File(path).existsSync(), isTrue, reason: path);
     }

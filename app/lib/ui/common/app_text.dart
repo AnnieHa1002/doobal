@@ -35,9 +35,11 @@ extension DisplayText on BuildContext {
       displayStyle(displayFont, size, color: color);
 }
 
-/// [font]로 쓴 표시 글꼴 굵은 글자 (BuildContext 없이 고를 때)
+/// [font]로 쓴 표시 글꼴 굵은 글자 (BuildContext 없이 고를 때).
+/// 개구에 없는 기호(· × … → 등)는 휴대폰 기본 글꼴 대신 고운 바탕으로 보인다
 TextStyle displayStyle(DisplayFont font, double size, {Color color = Palette.ink}) => TextStyle(
       fontFamily: font.family,
+      fontFamilyFallback: const ['GowunBatang'],
       fontSize: size * font.scale,
       fontWeight: FontWeight.w700,
       height: font.height,

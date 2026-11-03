@@ -1,9 +1,11 @@
-"""앱 글꼴(고운바탕·고운돋움)을 자주 쓰는 글자만 남겨 줄인다.
+"""앱 글꼴(개구·동글·고운바탕 Bold, 고운돋움)을 자주 쓰는 글자만 남겨 줄인다.
 
     python -m venv .venv && .venv/bin/pip install fonttools
     .venv/bin/python tools/subset_fonts.py <원본 폴더> app/assets/fonts
 
-- 원본 TTF는 Drive Assets/05_UI_화면/fonts(GowunBatang-Regular·Bold, GowunDodum-Regular).
+- 원본 TTF: 고운 글꼴은 Drive Assets/05_UI_화면/fonts(GowunBatang-Bold, GowunDodum-Regular),
+  개구·동글은 Google Fonts(github.com/google/fonts ofl/gaegu/Gaegu-Bold.ttf, ofl/dongle/Dongle-Bold.ttf).
+  원본 폴더에 없는 글꼴은 건너뛴다 (일부만 다시 만들 때).
 - 남기는 글자: 영문·숫자·기호, 자주 쓰는 한글 2,350자(KS X 1001), 한글 자모,
   그리고 앱 코드(app/lib)와 데이터(app/assets/data)에 실제로 쓰인 글자 전부.
   빠진 글자(드문 한글 등)는 휴대폰 기본 글꼴로 보인다.
@@ -18,7 +20,7 @@ from fontTools.ttLib import TTFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.normpath(os.path.join(HERE, '..', 'app'))
-FONTS = ['GowunBatang-Regular.ttf', 'GowunBatang-Bold.ttf', 'GowunDodum-Regular.ttf']
+FONTS = ['Gaegu-Bold.ttf', 'Dongle-Bold.ttf', 'GowunBatang-Bold.ttf', 'GowunDodum-Regular.ttf']
 
 # 영문·숫자·기호, 라틴-1 기호(· × 등), 일반 문장 부호(… ‘’ “” 등), 화살표, 한중일 기호(「」 등), 한글 자모
 RANGES = [(0x20, 0x7E), (0xA0, 0xFF), (0x2010, 0x2027), (0x2030, 0x203B), (0x2190, 0x2199),
@@ -57,6 +59,9 @@ def main(src, dst):
         codepoints.update(range(lo, hi + 1))
     os.makedirs(dst, exist_ok=True)
     for name in FONTS:
+        if not os.path.exists(os.path.join(src, name)):
+            print(f'{name}: 원본 폴더에 없어 건너뜀')
+            continue
         font = TTFont(os.path.join(src, name))
         have = set(font.getBestCmap())
         opts = subset.Options()
