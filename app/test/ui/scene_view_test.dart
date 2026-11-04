@@ -98,9 +98,8 @@ void main() {
     expect(backdropTints.containsKey('sea'), isTrue);
   });
 
-  test('계절마다 숲·풀밭·땅 색이 있다', () {
+  test('계절마다 풀밭·땅 색이 있다', () {
     for (final season in Season.values) {
-      expect(groveColors.containsKey(season), isTrue, reason: season.name);
       expect(meadowColors.containsKey(season), isTrue, reason: season.name);
       expect(groundColors.containsKey(season), isTrue, reason: season.name);
       expect(tuftColors.containsKey(season), isTrue, reason: season.name);
@@ -249,17 +248,17 @@ void main() {
           groundColors[Season.winter]!);
     });
 
-    testWidgets('배 구간: 능선·숲·풀밭이 숨겨져 지평선 아래는 바다색', (tester) async {
+    testWidgets('배 구간: 풀밭이 숨겨져 지평선 아래는 바다색', (tester) async {
       final look = held(SkyPhase.day);
       final image =
           (await tester.runAsync(() => render(look, mode: SceneMode.walking, onSea: true)))!;
-      // 지평선(1580) 아래 1700: 능선·숲이 있었다면 그 색이다
-      expectNear((await tester.runAsync(() => pixel(image, 20, py(1700))))!, seaColor);
-      // 육지에서는 같은 자리에 숲이 있다
+      // 지평선(1580) 아래 1700: 풀밭이 있었다면 그 색이다
+      expectNear((await tester.runAsync(() => pixel(image, 20, py(1950))))!, seaColor);
+      // 육지에서는 같은 자리에 풀밭이 있다
       final land =
           (await tester.runAsync(() => render(look, mode: SceneMode.walking)))!;
-      expectNear((await tester.runAsync(() => pixel(land, 20, py(1900))))!,
-          groveColors[Season.winter]!);
+      expectNear((await tester.runAsync(() => pixel(land, 20, py(1950))))!,
+          meadowColors[Season.winter]!);
     });
   });
 }

@@ -57,9 +57,9 @@ const _noseStyles = [3, 1, 2, 4, 5, 0, 6];
 /// Rive에 붙은 소품 → 값 (v25는 5종). 나머지 소품은 리깅 전이라 정령에 보이지 않는다.
 /// cloth_02·pet_05는 지금 props.json의 id, 나머지는 소품 목록(props v4)의 id다.
 /// 큰 붓·봇짐·연두 망토는 지금 props.json에 없어서 props v4가 들어와야 고를 수 있다
-const _bagStyles = {'brush_bag': 1, 'walking_stick_pack': 2};
-const _outfitStyles = {'cloth_02': 1, 'travel_vest': 1, 'travel_cape': 2};
-const _companionStyles = {'pet_05': 1, 'gull_friend': 1};
+const _bagStyles = {'hand_01': 1, 'hand_02': 2};
+const _outfitStyles = {'cloth_02': 1, 'cloth_05': 2};
+const _companionStyles = {'pet_05': 1};
 
 /// 저장된 모습을 정령 입력값으로 바꾼다
 SpiritLook spiritLookOf(Look look) => SpiritLook(

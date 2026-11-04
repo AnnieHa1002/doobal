@@ -26,7 +26,6 @@ const _pathHalfWidth = 40.0;
 /// 땅 한 장을 줄무늬 몇 칸으로 나눌지(짝수여야 한 바퀴 돌아도 무늬가 이어진다),
 /// 숲 덩이·전경 풀 개수
 const _groundStripes = 32;
-const _groveCount = 16;
 const _tuftCount = 28;
 
 /// 바다 후경(울릉도 등)의 먼 산은 띠 안에서 이만큼만 오르내린다
@@ -141,11 +140,9 @@ class ScenePainter extends CustomPainter {
     }
   }
 
-  /// 캐릭터 뒤 레이어: 후경 → 능선 → 숲 → 풀밭 → 땅(배 구간은 물결). 바다에서는 숨기는 레이어를 건너뛴다
+  /// 캐릭터 뒤 레이어: 후경 → 풀밭 → 땅(배 구간은 물결). 바다에서는 숨기는 레이어를 건너뛴다
   void _scenery(Canvas canvas, Size size, double k) {
     if (_shown(SceneLayerId.backdrop)) _backdrop(canvas, size, k);
-    if (_shown(SceneLayerId.ridge)) _ridge(canvas, size, k);
-    if (_shown(SceneLayerId.grove)) _grove(canvas, size, k);
     if (_shown(SceneLayerId.meadow)) _meadow(canvas, size, k);
     if (_sea) {
       _seaGround(canvas, size, k);
@@ -213,8 +210,11 @@ class ScenePainter extends CustomPainter {
   }) {
     const step = 12.0;
     final period = layer.widthPx! * k;
-    final bandBottom = layer.bandBottom! * k;
-    final span = (layer.bandBottom! - layer.bandTop!) * k * flatten;
+    // 후경 판에는 띠 값이 없다 (v10 그림 규격): 판의 위쪽 1/10~1/4을 윗선 자리로 쓴다
+    final top = layer.bandTop ?? layer.topY! + layer.heightPx! * 0.1;
+    final under = layer.bandBottom ?? layer.topY! + layer.heightPx! * 0.25;
+    final bandBottom = under * k;
+    final span = (under - top) * k * flatten;
     final path = Path()..moveTo(0, bottom);
     for (var x = 0.0; x <= size.width + step; x += step) {
       final t = 2 * math.pi * (x + offset) / period;
@@ -246,54 +246,6 @@ class ScenePainter extends CustomPainter {
       bottom,
       flatten: sea ? _seaHillFlatten : 1,
     );
-  }
-
-  /// L2 능선 (모든 지역 공통)
-  void _ridge(Canvas canvas, Size size, double k) {
-    final layer = _layer(SceneLayerId.ridge);
-    _silhouette(
-      canvas,
-      size,
-      k,
-      layer,
-      _offset(SceneLayerId.ridge, k),
-      Color.lerp(ridgeColor, Color(look.sky.horizon), 0.25)!,
-      (layer.topY! + layer.heightPx!) * k,
-      waves: const [2, 5, 11],
-      phase: 1.7,
-    );
-  }
-
-  /// L3 숲: 둥근 나무 덩이들. 덩이 꼭대기는 띠 안에, 아래는 레이어 바닥까지 채운다
-  void _grove(Canvas canvas, Size size, double k) {
-    final layer = _layer(SceneLayerId.grove);
-    final offset = _offset(SceneLayerId.grove, k);
-    final period = layer.widthPx! * k;
-    final bandTop = layer.bandTop! * k;
-    final bandBottom = layer.bandBottom! * k;
-    final paint = Paint()..color = groveColors[look.season]!;
-    canvas.drawRect(
-      Rect.fromLTRB(
-        0,
-        bandBottom,
-        size.width,
-        (layer.topY! + layer.heightPx!) * k,
-      ),
-      paint,
-    );
-    final spacing = period / _groveCount;
-    for (var i = 0; i < _groveCount; i++) {
-      // 덩이마다 크기·높이를 다르게 하는 고정된 값 (i로만 정해 항상 같다)
-      final jitter = (i * 37 % 11) / 11;
-      final r = (110 + 60 * ((i * 53 % 7) / 7)) * k;
-      final top = bandTop + (bandBottom - bandTop) * ((i * 29 % 5) / 4);
-      final worldX = (i + 0.2 + 0.6 * jitter) * spacing;
-      for (final x in _repeats(worldX, offset, period, size.width, r * 2)) {
-        canvas.drawCircle(Offset(x, top + r), r, paint);
-        canvas.drawCircle(Offset(x - r * 0.9, top + r * 1.2), r * 0.7, paint);
-        canvas.drawCircle(Offset(x + r * 0.9, top + r * 1.2), r * 0.7, paint);
-      }
-    }
   }
 
   /// L4 길 뒤 풀밭: 잔물결 치는 풀 띠

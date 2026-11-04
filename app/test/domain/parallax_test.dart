@@ -15,22 +15,24 @@ void main() {
       expect(rules.groundPxPerM, closeTo(40.96, 1e-9));
     });
 
-    test('레이어 속도: 하늘 0.03 · 후경 0.05 · 능선 0.10 · 숲 0.30 · 풀밭 0.50 · 땅 1.0 · 전경 1.0', () {
+    test('레이어 속도: 하늘 0.03 · 후경 0.05 · 군락 0.10 · 길 근방 0.30 · 풀밭 0.50 · 땅 1.0 · 전경 1.0', () {
       expect({for (final e in rules.layers.entries) e.key: e.value.speed}, {
         SceneLayerId.sky: 0.03,
         SceneLayerId.backdrop: 0.05,
-        SceneLayerId.ridge: 0.10,
-        SceneLayerId.grove: 0.30,
+        SceneLayerId.grove: 0.10,
+        SceneLayerId.roadside: 0.30,
         SceneLayerId.meadow: 0.50,
         SceneLayerId.ground: 1.0,
         SceneLayerId.foreground: 1.0,
       });
     });
 
-    test('레이어마다 규격이 있다: 크기·위 y, 띠는 그 이미지 안에 들어간다', () {
+    test('그림 레이어마다 규격이 있다: 크기·위 y, 띠는 그 이미지 안에 들어간다 (군락·길 근방은 조각이라 없다)', () {
       for (final id in SceneLayerId.values) {
         final l = rules.layers[id]!;
-        if (id == SceneLayerId.sky) continue;
+        if (const {SceneLayerId.sky, SceneLayerId.grove, SceneLayerId.roadside}.contains(id)) {
+          continue;
+        }
         expect(l.widthPx, isNotNull, reason: id.name);
         expect(l.heightPx, isNotNull, reason: id.name);
         expect(l.topY, isNotNull, reason: id.name);
@@ -40,17 +42,16 @@ void main() {
         expect(l.bandBottom!, lessThanOrEqualTo(l.topY! + l.heightPx!), reason: id.name);
       }
       final backdrop = rules.layers[SceneLayerId.backdrop]!;
-      expect((backdrop.widthPx, backdrop.heightPx, backdrop.topY), (1764, 662, 912));
-      expect((backdrop.bandTop, backdrop.bandBottom), (1050, 1200));
+      expect((backdrop.widthPx, backdrop.heightPx, backdrop.topY), (4800, 1230, 912));
       final ground = rules.layers[SceneLayerId.ground]!;
       expect((ground.widthPx, ground.heightPx, ground.topY), (4096, 640, 1892));
       expect(ground.bandTop, isNull);
     });
 
-    test('바다에서는 능선·숲·풀밭·전경을 숨긴다 (하늘·후경·땅은 남는다)', () {
+    test('바다에서는 군락·길 근방·풀밭·전경을 숨긴다 (하늘·후경·땅은 남는다)', () {
       expect(rules.seaHiddenLayers, {
-        SceneLayerId.ridge,
         SceneLayerId.grove,
+        SceneLayerId.roadside,
         SceneLayerId.meadow,
         SceneLayerId.foreground,
       });
@@ -99,14 +100,6 @@ void main() {
       expect(offset(SceneLayerId.meadow, 150), closeTo(3072, 1e-6));
     });
 
-    test('숲 100m × 0.3 → 1228.8', () {
-      expect(offset(SceneLayerId.grove, 100), closeTo(1228.8, 1e-6));
-    });
-
-    test('능선 500m × 0.10 = 2048 (가로 2400), 1000m → 4096 - 2400 = 1696', () {
-      expect(offset(SceneLayerId.ridge, 500), closeTo(2048, 1e-6));
-      expect(offset(SceneLayerId.ridge, 1000), closeTo(1696, 1e-6));
-    });
 
     test('후경 250m × 0.05 → 512 (가로 1764), 1000m → 2048 - 1764 = 284', () {
       expect(offset(SceneLayerId.backdrop, 250), closeTo(512, 1e-6));

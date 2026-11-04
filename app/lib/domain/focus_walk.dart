@@ -273,15 +273,16 @@ List<StepMinute> toStepMinutes(List<GaitMinute> minutes) {
   return [for (final k in keys) StepMinute(k, byMinute[k]!)];
 }
 
-/// 하루 럭 = floor((보너스 밖 실제 km + 보너스 분의 실제 km × bonus.coinMultiplier) × coins.perKm).
-/// coins.perKm가 null이면(기획 미정) 0. 같은 하루 합으로 몇 번을 다시 계산해도 같다
+/// 하루 럭 = min(coins.dailyCap, floor((보너스 밖 실제 km + 보너스 분의 실제 km × bonus.coinMultiplier)
+/// × coins.perKm)). coins.perKm가 null이면 0. 같은 하루 합으로 몇 번을 다시 계산해도 같다
 int dailyCoins(TravelTotals day, Rules rules) {
   final perKm = rules.coinsPerKm;
   if (perKm == null) return 0;
   final outsideKm = (day.actualM - day.bonusActualM) / 1000;
   final bonusKm = day.bonusActualM / 1000;
   // 나눗셈·곱셈의 부동소수 오차가 정수 바로 아래로 떨어져 한 개 모자라지 않게 아주 작은 값을 더한다
-  return ((outsideKm + bonusKm * rules.bonusCoinMultiplier) * perKm + 1e-9).floor();
+  final coins = ((outsideKm + bonusKm * rules.bonusCoinMultiplier) * perKm + 1e-9).floor();
+  return coins < rules.coinsDailyCap ? coins : rules.coinsDailyCap;
 }
 
 /// 액자 등급의 기준 거리(km) = min(경비 + 여정 시작 뒤 실제로 걸은 거리, 여정 전체 환산 거리).

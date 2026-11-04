@@ -48,6 +48,10 @@ class SkinPalette {
   final int lightMax;
 }
 
+/// palette.json v6의 옛 사람형 견본 (legacy 아래로 옮겨졌다). 시작 화면을 정령으로 바꾸면 없앤다
+Map<String, dynamic> legacyPalette(Map<String, dynamic> json, String key) =>
+    (json['legacy'] as Map<String, dynamic>)[key] as Map<String, dynamic>;
+
 /// 꾸미기가 읽는 palette.json: 머리와 피부 (잔디는 쉼터 쪽이 읽는다)
 class LookPalette {
   const LookPalette({required this.hair, required this.skin});
@@ -57,11 +61,12 @@ class LookPalette {
 
   /// 모양이 틀리면 FormatException (견본 없음, 범위가 거꾸로, 그러데이션 구간이 0~1 밖 …)
   factory LookPalette.fromJson(Map<String, dynamic> json) {
-    final hair = json['hair'] as Map<String, dynamic>;
-    final skin = json['skin'] as Map<String, dynamic>;
-    final hairLight = _lightRange(hair['custom'], '머리');
-    final skinLight = _lightRange(skin['custom'], '피부');
-    final gradient = hair['gradient'] as Map<String, dynamic>;
+    final hair = legacyPalette(json, 'hair');
+    final skin = legacyPalette(json, 'skin');
+    final hairLight = _lightRange(hair['custom'] ?? const {'lightMin': 15, 'lightMax': 90}, '머리');
+    final skinLight = _lightRange(skin['custom'] ?? const {'lightMin': 35, 'lightMax': 95}, '피부');
+    final gradient =
+        hair['gradient'] as Map<String, dynamic>? ?? const {'rootUntil': 0.3, 'tipFrom': 0.85};
     final rootUntil = _fraction(gradient['rootUntil'], 'rootUntil');
     final tipFrom = _fraction(gradient['tipFrom'], 'tipFrom');
     if (rootUntil >= tipFrom) {
@@ -91,7 +96,7 @@ class LookPalette {
 
 /// palette.json 전체에서 skin.swatches만 읽는다
 List<SkinSwatch> parseSkinSwatches(Map<String, dynamic> json) {
-  final skin = json['skin'] as Map<String, dynamic>;
+  final skin = legacyPalette(json, 'skin');
   return [
     for (final s in skin['swatches'] as List)
       SkinSwatch(

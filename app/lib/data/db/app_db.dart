@@ -293,8 +293,8 @@ class AppWalks extends Table {
 }
 
 /// 럭 장부 행의 종류: earn은 걸어서 번 것(하루 한 행, 다시 계산하면 덮어쓴다), ad는 광고 보상,
-/// spend는 쓴 것 (ad·spend는 한 번 쓰고 고치지 않는다)
-enum CoinKind { earn, ad, spend }
+/// spend는 쓴 것, gift는 첫 선물 (ad·spend·gift는 한 번 쓰고 고치지 않는다)
+enum CoinKind { earn, ad, spend, gift }
 
 /// 럭 장부. day는 한국 날짜, amount는 늘어난 만큼 양수(spend도 양수로 두고 kind로 가린다), refId는
 /// 그 일을 가리키는 값 (광고 id·산 물건 등)

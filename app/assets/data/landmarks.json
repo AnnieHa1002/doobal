@@ -1,5 +1,5 @@
 {
- "version": 2,
+ "version": 3,
  "asOf": "2026-07-01",
  "landmarks": [
   {
@@ -16,7 +16,8 @@
    "lat": 37.57761,
    "lng": 126.9769,
    "island": "mainland",
-   "painting": "landmark_001"
+   "painting": "landmark_001",
+   "firstPainting": "landmark_001_v1_a"
   },
   {
    "id": "kr002",
@@ -32,7 +33,8 @@
    "lat": 37.4756,
    "lng": 126.61794,
    "island": "mainland",
-   "painting": "landmark_002"
+   "painting": "landmark_002",
+   "firstPainting": "landmark_002_v1_a"
   },
   {
    "id": "kr003",
@@ -48,7 +50,8 @@
    "lat": 36.37663,
    "lng": 127.38808,
    "island": "mainland",
-   "painting": "landmark_003"
+   "painting": "landmark_003",
+   "firstPainting": "landmark_003_v1_b"
   },
   {
    "id": "kr004",
@@ -64,7 +67,8 @@
    "lat": 36.49807,
    "lng": 127.2733,
    "island": "mainland",
-   "painting": "landmark_004"
+   "painting": "landmark_004",
+   "firstPainting": "landmark_004_v1_b"
   },
   {
    "id": "kr005",
@@ -80,7 +84,8 @@
    "lat": 35.1207,
    "lng": 127.00286,
    "island": "mainland",
-   "painting": "landmark_005"
+   "painting": "landmark_005",
+   "firstPainting": "landmark_005_v1_b"
   },
   {
    "id": "kr006",
@@ -97,7 +102,8 @@
    "lat": 35.99322,
    "lng": 128.70424,
    "island": "mainland",
-   "painting": "landmark_006"
+   "painting": "landmark_006",
+   "firstPainting": "landmark_006_v1_a"
   },
   {
    "id": "kr007",
@@ -113,7 +119,8 @@
    "lat": 35.49229,
    "lng": 129.43993,
    "island": "mainland",
-   "painting": "landmark_007"
+   "painting": "landmark_007",
+   "firstPainting": "landmark_007_v1_b"
   },
   {
    "id": "kr008",
@@ -130,7 +137,8 @@
    "lat": 35.15852,
    "lng": 129.15985,
    "island": "mainland",
-   "painting": "landmark_008"
+   "painting": "landmark_008",
+   "firstPainting": "landmark_008_v1_b"
   },
   {
    "id": "kr009",
@@ -146,7 +154,8 @@
    "lat": 33.45913,
    "lng": 126.94054,
    "island": "jeju",
-   "painting": "landmark_009"
+   "painting": "landmark_009",
+   "firstPainting": "landmark_009_v1_a"
   },
   {
    "id": "kr010",
@@ -162,7 +171,8 @@
    "lat": 33.36232,
    "lng": 126.53333,
    "island": "jeju",
-   "painting": "landmark_010"
+   "painting": "landmark_010",
+   "firstPainting": "landmark_010_v1_a"
   },
   {
    "id": "kr011",
@@ -178,7 +188,8 @@
    "lat": 37.28696,
    "lng": 127.0118,
    "island": "mainland",
-   "painting": "landmark_011"
+   "painting": "landmark_011",
+   "firstPainting": "landmark_011_v1_b"
   },
   {
    "id": "kr012",
@@ -194,7 +205,8 @@
    "lat": 37.89228,
    "lng": 126.74392,
    "island": "mainland",
-   "painting": "landmark_012"
+   "painting": "landmark_012",
+   "firstPainting": "landmark_012_v1_b"
   },
   {
    "id": "kr013",
@@ -210,7 +222,8 @@
    "lat": 37.53281,
    "lng": 127.31583,
    "island": "mainland",
-   "painting": "landmark_013"
+   "painting": "landmark_013",
+   "firstPainting": "landmark_013_v1_b"
   },
   {
    "id": "kr014",
@@ -226,7 +239,8 @@
    "lat": 37.743,
    "lng": 127.35166,
    "island": "mainland",
-   "painting": "landmark_014"
+   "painting": "landmark_014",
+   "firstPainting": "landmark_014_v1_a"
   },
   {
    "id": "kr015",
@@ -242,7 +256,8 @@
    "lat": 38.07116,
    "lng": 127.32087,
    "island": "mainland",
-   "painting": "landmark_015"
+   "painting": "landmark_015",
+   "firstPainting": "landmark_015_v1_b"
   },
   {
    "id": "kr016",
@@ -258,7 +273,8 @@
    "lat": 38.07693,
    "lng": 127.14337,
    "island": "mainland",
-   "painting": "landmark_016"
+   "painting": "landmark_016",
+   "firstPainting": "landmark_016_v1_a"
   },
   {
    "id": "kr017",
@@ -274,7 +290,8 @@
    "lat": 37.19404,
    "lng": 127.27845,
    "island": "mainland",
-   "painting": "landmark_017"
+   "painting": "landmark_017",
+   "firstPainting": "landmark_017_v1_b"
   },
   {
    "id": "kr018",
@@ -290,7 +307,8 @@
    "lat": 37.02648,
    "lng": 127.39789,
    "island": "mainland",
-   "painting": "landmark_018"
+   "painting": "landmark_018",
+   "firstPainting": "landmark_018_v1_a"
   },
   {
    "id": "kr019",
@@ -306,7 +324,8 @@
    "lat": 37.29755,
    "lng": 127.66155,
    "island": "mainland",
-   "painting": "landmark_019"
+   "painting": "landmark_019",
+   "firstPainting": "landmark_019_v1_a"
   },
   {
    "id": "kr020",
@@ -322,7 +341,8 @@
    "lat": 37.17221,
    "lng": 126.62402,
    "island": "mainland",
-   "painting": "landmark_020"
+   "painting": "landmark_020",
+   "firstPainting": "landmark_020_v1_b"
   },
   {
    "id": "kr021",
@@ -338,7 +358,8 @@
    "lat": 37.79145,
    "lng": 127.52523,
    "island": "mainland",
-   "painting": "landmark_021"
+   "painting": "landmark_021",
+   "firstPainting": "landmark_021_v1_a"
   },
   {
    "id": "kr022",
@@ -354,7 +375,8 @@
    "lat": 38.1063,
    "lng": 127.7083,
    "island": "mainland",
-   "painting": "landmark_022"
+   "painting": "landmark_022",
+   "firstPainting": "landmark_022_v1_a"
   },
   {
    "id": "kr023",
@@ -370,7 +392,8 @@
    "lat": 38.2552,
    "lng": 127.20199,
    "island": "mainland",
-   "painting": "landmark_023"
+   "painting": "landmark_023",
+   "firstPainting": "landmark_023_v1_a"
   },
   {
    "id": "kr024",
@@ -386,7 +409,8 @@
    "lat": 38.23276,
    "lng": 127.98194,
    "island": "mainland",
-   "painting": "landmark_024"
+   "painting": "landmark_024",
+   "firstPainting": "landmark_024_v1_a"
   },
   {
    "id": "kr025",
@@ -402,7 +426,8 @@
    "lat": 37.98819,
    "lng": 128.19899,
    "island": "mainland",
-   "painting": "landmark_025"
+   "painting": "landmark_025",
+   "firstPainting": "landmark_025_v1_a"
   },
   {
    "id": "kr026",
@@ -418,7 +443,8 @@
    "lat": 38.58669,
    "lng": 128.37489,
    "island": "mainland",
-   "painting": "landmark_026"
+   "painting": "landmark_026",
+   "firstPainting": "landmark_026_v1_a"
   },
   {
    "id": "kr027",
@@ -434,7 +460,8 @@
    "lat": 38.1192,
    "lng": 128.4655,
    "island": "mainland",
-   "painting": "landmark_027"
+   "painting": "landmark_027",
+   "firstPainting": "landmark_027_v1_a"
   },
   {
    "id": "kr028",
@@ -450,7 +477,8 @@
    "lat": 38.0211,
    "lng": 128.7349,
    "island": "mainland",
-   "painting": "landmark_028"
+   "painting": "landmark_028",
+   "firstPainting": "landmark_028_v1_a"
   },
   {
    "id": "kr029",
@@ -467,7 +495,8 @@
    "lat": 37.79507,
    "lng": 128.89664,
    "island": "mainland",
-   "painting": "landmark_029"
+   "painting": "landmark_029",
+   "firstPainting": "landmark_029_v1_a"
   },
   {
    "id": "kr030",
@@ -483,7 +512,8 @@
    "lat": 37.68979,
    "lng": 128.75297,
    "island": "mainland",
-   "painting": "landmark_030"
+   "painting": "landmark_030",
+   "firstPainting": "landmark_030_v1_a"
   },
   {
    "id": "kr031",
@@ -499,7 +529,8 @@
    "lat": 37.38039,
    "lng": 128.66522,
    "island": "mainland",
-   "painting": "landmark_031"
+   "painting": "landmark_031",
+   "firstPainting": "landmark_031_v1_a"
   },
   {
    "id": "kr032",
@@ -515,7 +546,8 @@
    "lat": 37.47922,
    "lng": 129.15987,
    "island": "mainland",
-   "painting": "landmark_032"
+   "painting": "landmark_032",
+   "firstPainting": "landmark_032_v1_a"
   },
   {
    "id": "kr033",
@@ -531,7 +563,8 @@
    "lat": 37.28852,
    "lng": 129.31787,
    "island": "mainland",
-   "painting": "landmark_033"
+   "painting": "landmark_033",
+   "firstPainting": "landmark_033_v1_b"
   },
   {
    "id": "kr034",
@@ -547,7 +580,8 @@
    "lat": 37.09646,
    "lng": 128.91648,
    "island": "mainland",
-   "painting": "landmark_034"
+   "painting": "landmark_034",
+   "firstPainting": "landmark_034_v1_a"
   },
   {
    "id": "kr035",
@@ -563,7 +597,8 @@
    "lat": 37.17502,
    "lng": 128.4446,
    "island": "mainland",
-   "painting": "landmark_035"
+   "painting": "landmark_035",
+   "firstPainting": "landmark_035_v1_a"
   },
   {
    "id": "kr036",
@@ -579,7 +614,8 @@
    "lat": 37.36867,
    "lng": 127.82468,
    "island": "mainland",
-   "painting": "landmark_036"
+   "painting": "landmark_036",
+   "firstPainting": "landmark_036_v1_a"
   },
   {
    "id": "kr037",
@@ -595,7 +631,8 @@
    "lat": 37.6985,
    "lng": 127.9591,
    "island": "mainland",
-   "painting": "landmark_037"
+   "painting": "landmark_037",
+   "firstPainting": "landmark_037_v1_a"
   },
   {
    "id": "kr038",
@@ -611,7 +648,8 @@
    "lat": 36.6623,
    "lng": 127.5414,
    "island": "mainland",
-   "painting": "landmark_038"
+   "painting": "landmark_038",
+   "firstPainting": "landmark_038_v1_b"
   },
   {
    "id": "kr039",
@@ -627,7 +665,8 @@
    "lat": 37.00008,
    "lng": 128.34397,
    "island": "mainland",
-   "painting": "landmark_039"
+   "painting": "landmark_039",
+   "firstPainting": "landmark_039_v1_a"
   },
   {
    "id": "kr040",
@@ -644,7 +683,8 @@
    "lat": 37.17318,
    "lng": 128.21071,
    "island": "mainland",
-   "painting": "landmark_040"
+   "painting": "landmark_040",
+   "firstPainting": "landmark_040_v1_a"
   },
   {
    "id": "kr041",
@@ -660,7 +700,8 @@
    "lat": 36.98937,
    "lng": 127.90063,
    "island": "mainland",
-   "painting": "landmark_041"
+   "painting": "landmark_041",
+   "firstPainting": "landmark_041_v1_a"
   },
   {
    "id": "kr042",
@@ -676,7 +717,8 @@
    "lat": 36.76171,
    "lng": 127.83871,
    "island": "mainland",
-   "painting": "landmark_042"
+   "painting": "landmark_042",
+   "firstPainting": "landmark_042_v1_a"
   },
   {
    "id": "kr043",
@@ -693,7 +735,8 @@
    "lat": 36.54172,
    "lng": 127.83296,
    "island": "mainland",
-   "painting": "landmark_043"
+   "painting": "landmark_043",
+   "firstPainting": "landmark_043_v1_a"
   },
   {
    "id": "kr044",
@@ -709,7 +752,8 @@
    "lat": 36.22829,
    "lng": 127.88769,
    "island": "mainland",
-   "painting": "landmark_044"
+   "painting": "landmark_044",
+   "firstPainting": "landmark_044_v1_a"
   },
   {
    "id": "kr045",
@@ -725,7 +769,8 @@
    "lat": 36.78367,
    "lng": 127.22281,
    "island": "mainland",
-   "painting": "landmark_045"
+   "painting": "landmark_045",
+   "firstPainting": "landmark_045_v1_a"
   },
   {
    "id": "kr046",
@@ -741,7 +786,8 @@
    "lat": 36.55949,
    "lng": 127.0122,
    "island": "mainland",
-   "painting": "landmark_046"
+   "painting": "landmark_046",
+   "firstPainting": "landmark_046_v1_a"
   },
   {
    "id": "kr047",
@@ -757,7 +803,8 @@
    "lat": 36.27912,
    "lng": 126.91521,
    "island": "mainland",
-   "painting": "landmark_047"
+   "painting": "landmark_047",
+   "firstPainting": "landmark_047_v1_a"
   },
   {
    "id": "kr048",
@@ -773,7 +820,8 @@
    "lat": 36.18092,
    "lng": 127.15995,
    "island": "mainland",
-   "painting": "landmark_048"
+   "painting": "landmark_048",
+   "firstPainting": "landmark_048_v1_b"
   },
   {
    "id": "kr049",
@@ -789,7 +837,8 @@
    "lat": 36.31023,
    "lng": 126.51348,
    "island": "mainland",
-   "painting": "landmark_049"
+   "painting": "landmark_049",
+   "firstPainting": "landmark_049_v1_a"
   },
   {
    "id": "kr050",
@@ -805,7 +854,8 @@
    "lat": 36.49718,
    "lng": 126.33602,
    "island": "mainland",
-   "painting": "landmark_050"
+   "painting": "landmark_050",
+   "firstPainting": "landmark_050_v1_a"
   },
   {
    "id": "kr051",
@@ -821,7 +871,8 @@
    "lat": 36.71266,
    "lng": 126.54822,
    "island": "mainland",
-   "painting": "landmark_051"
+   "painting": "landmark_051",
+   "firstPainting": "landmark_051_v1_a"
   },
   {
    "id": "kr052",
@@ -837,7 +888,8 @@
    "lat": 37.04492,
    "lng": 126.52462,
    "island": "mainland",
-   "painting": "landmark_052"
+   "painting": "landmark_052",
+   "firstPainting": "landmark_052_v1_a"
   },
   {
    "id": "kr053",
@@ -854,7 +906,8 @@
    "lat": 35.81478,
    "lng": 127.15256,
    "island": "mainland",
-   "painting": "landmark_053"
+   "painting": "landmark_053",
+   "firstPainting": "landmark_053_v1_a"
   },
   {
    "id": "kr054",
@@ -870,7 +923,8 @@
    "lat": 35.98893,
    "lng": 126.71114,
    "island": "mainland",
-   "painting": "landmark_054"
+   "painting": "landmark_054",
+   "firstPainting": "landmark_054_v1_a"
   },
   {
    "id": "kr055",
@@ -886,7 +940,8 @@
    "lat": 35.62424,
    "lng": 126.46606,
    "island": "mainland",
-   "painting": "landmark_055"
+   "painting": "landmark_055",
+   "firstPainting": "landmark_055_v1_a"
   },
   {
    "id": "kr056",
@@ -902,7 +957,8 @@
    "lat": 35.44737,
    "lng": 126.64696,
    "island": "mainland",
-   "painting": "landmark_056"
+   "painting": "landmark_056",
+   "firstPainting": "landmark_056_v1_a"
   },
   {
    "id": "kr057",
@@ -918,7 +974,8 @@
    "lat": 35.47834,
    "lng": 126.88901,
    "island": "mainland",
-   "painting": "landmark_057"
+   "painting": "landmark_057",
+   "firstPainting": "landmark_057_v1_a"
   },
   {
    "id": "kr058",
@@ -934,7 +991,8 @@
    "lat": 35.85988,
    "lng": 127.74632,
    "island": "mainland",
-   "painting": "landmark_058"
+   "painting": "landmark_058",
+   "firstPainting": "landmark_058_v1_a"
   },
   {
    "id": "kr059",
@@ -950,7 +1008,8 @@
    "lat": 35.76055,
    "lng": 127.4115,
    "island": "mainland",
-   "painting": "landmark_059"
+   "painting": "landmark_059",
+   "firstPainting": "landmark_059_v1_a"
   },
   {
    "id": "kr060",
@@ -966,7 +1025,8 @@
    "lat": 35.40392,
    "lng": 127.37978,
    "island": "mainland",
-   "painting": "landmark_060"
+   "painting": "landmark_060",
+   "firstPainting": "landmark_060_v1_a"
   },
   {
    "id": "kr061",
@@ -983,7 +1043,8 @@
    "lat": 34.78991,
    "lng": 126.37263,
    "island": "mainland",
-   "painting": "landmark_061"
+   "painting": "landmark_061",
+   "firstPainting": "landmark_061_v1_a"
   },
   {
    "id": "kr062",
@@ -999,7 +1060,8 @@
    "lat": 34.70728,
    "lng": 126.12909,
    "island": "mainland",
-   "painting": "landmark_062"
+   "painting": "landmark_062",
+   "firstPainting": "landmark_062_v1_a"
   },
   {
    "id": "kr063",
@@ -1015,7 +1077,8 @@
    "lat": 34.29852,
    "lng": 126.52709,
    "island": "mainland",
-   "painting": "landmark_063"
+   "painting": "landmark_063",
+   "firstPainting": "landmark_063_v1_a"
   },
   {
    "id": "kr064",
@@ -1031,7 +1094,8 @@
    "lat": 34.31077,
    "lng": 126.76657,
    "island": "mainland",
-   "painting": "landmark_064"
+   "painting": "landmark_064",
+   "firstPainting": "landmark_064_v1_a"
   },
   {
    "id": "kr065",
@@ -1047,7 +1111,8 @@
    "lat": 34.57633,
    "lng": 126.74985,
    "island": "mainland",
-   "painting": "landmark_065"
+   "painting": "landmark_065",
+   "firstPainting": "landmark_065_v1_a"
   },
   {
    "id": "kr066",
@@ -1063,7 +1128,8 @@
    "lat": 34.71596,
    "lng": 127.0779,
    "island": "mainland",
-   "painting": "landmark_066"
+   "painting": "landmark_066",
+   "firstPainting": "landmark_066_v1_a"
   },
   {
    "id": "kr067",
@@ -1079,7 +1145,8 @@
    "lat": 34.88561,
    "lng": 127.50956,
    "island": "mainland",
-   "painting": "landmark_067"
+   "painting": "landmark_067",
+   "firstPainting": "landmark_067_v1_a"
   },
   {
    "id": "kr068",
@@ -1095,7 +1162,8 @@
    "lat": 34.7446,
    "lng": 127.76629,
    "island": "mainland",
-   "painting": "landmark_068"
+   "painting": "landmark_068",
+   "firstPainting": "landmark_068_v1_a"
   },
   {
    "id": "kr069",
@@ -1111,7 +1179,8 @@
    "lat": 35.32784,
    "lng": 126.98593,
    "island": "mainland",
-   "painting": "landmark_069"
+   "painting": "landmark_069",
+   "firstPainting": "landmark_069_v1_a"
   },
   {
    "id": "kr070",
@@ -1127,7 +1196,8 @@
    "lat": 35.20068,
    "lng": 126.54972,
    "island": "mainland",
-   "painting": "landmark_070"
+   "painting": "landmark_070",
+   "firstPainting": "landmark_070_v1_b"
   },
   {
    "id": "kr071",
@@ -1143,7 +1213,8 @@
    "lat": 35.25729,
    "lng": 127.49797,
    "island": "mainland",
-   "painting": "landmark_071"
+   "painting": "landmark_071",
+   "firstPainting": "landmark_071_v1_a"
   },
   {
    "id": "kr072",
@@ -1159,7 +1230,8 @@
    "lat": 34.45341,
    "lng": 127.51774,
    "island": "mainland",
-   "painting": "landmark_072"
+   "painting": "landmark_072",
+   "firstPainting": "landmark_072_v1_a"
   },
   {
    "id": "kr073",
@@ -1175,7 +1247,8 @@
    "lat": 35.78991,
    "lng": 129.33184,
    "island": "mainland",
-   "painting": "landmark_073"
+   "painting": "landmark_073",
+   "firstPainting": "landmark_073_v1_a"
   },
   {
    "id": "kr074",
@@ -1191,7 +1264,8 @@
    "lat": 36.07806,
    "lng": 129.56974,
    "island": "mainland",
-   "painting": "landmark_074"
+   "painting": "landmark_074",
+   "firstPainting": "landmark_074_v1_a"
   },
   {
    "id": "kr075",
@@ -1207,7 +1281,8 @@
    "lat": 36.53898,
    "lng": 128.51814,
    "island": "mainland",
-   "painting": "landmark_075"
+   "painting": "landmark_075",
+   "firstPainting": "landmark_075_v1_a"
   },
   {
    "id": "kr076",
@@ -1223,7 +1298,8 @@
    "lat": 36.99847,
    "lng": 128.6871,
    "island": "mainland",
-   "painting": "landmark_076"
+   "painting": "landmark_076",
+   "firstPainting": "landmark_076_v1_a"
   },
   {
    "id": "kr077",
@@ -1240,7 +1316,8 @@
    "lat": 36.76191,
    "lng": 128.07669,
    "island": "mainland",
-   "painting": "landmark_077"
+   "painting": "landmark_077",
+   "firstPainting": "landmark_077_v1_a"
   },
   {
    "id": "kr078",
@@ -1256,7 +1333,8 @@
    "lat": 36.43992,
    "lng": 128.25971,
    "island": "mainland",
-   "painting": "landmark_078"
+   "painting": "landmark_078",
+   "firstPainting": "landmark_078_v1_b"
   },
   {
    "id": "kr079",
@@ -1272,7 +1350,8 @@
    "lat": 36.0919,
    "lng": 128.30015,
    "island": "mainland",
-   "painting": "landmark_079"
+   "painting": "landmark_079",
+   "firstPainting": "landmark_079_v1_b"
   },
   {
    "id": "kr080",
@@ -1288,7 +1367,8 @@
    "lat": 36.11648,
    "lng": 128.00387,
    "island": "mainland",
-   "painting": "landmark_080"
+   "painting": "landmark_080",
+   "firstPainting": "landmark_080_v1_a"
   },
   {
    "id": "kr081",
@@ -1304,7 +1384,8 @@
    "lat": 35.72627,
    "lng": 128.2531,
    "island": "mainland",
-   "painting": "landmark_081"
+   "painting": "landmark_081",
+   "firstPainting": "landmark_081_v1_b"
   },
   {
    "id": "kr082",
@@ -1320,7 +1401,8 @@
    "lat": 35.66125,
    "lng": 128.9603,
    "island": "mainland",
-   "painting": "landmark_082"
+   "painting": "landmark_082",
+   "firstPainting": "landmark_082_v1_a"
   },
   {
    "id": "kr083",
@@ -1336,7 +1418,8 @@
    "lat": 36.16391,
    "lng": 128.97627,
    "island": "mainland",
-   "painting": "landmark_083"
+   "painting": "landmark_083",
+   "firstPainting": "landmark_083_v1_a"
   },
   {
    "id": "kr084",
@@ -1352,7 +1435,8 @@
    "lat": 36.393,
    "lng": 129.166,
    "island": "mainland",
-   "painting": "landmark_084"
+   "painting": "landmark_084",
+   "firstPainting": "landmark_084_v1_a"
   },
   {
    "id": "kr085",
@@ -1368,7 +1452,8 @@
    "lat": 36.42628,
    "lng": 129.43484,
    "island": "mainland",
-   "painting": "landmark_085"
+   "painting": "landmark_085",
+   "firstPainting": "landmark_085_v1_a"
   },
   {
    "id": "kr086",
@@ -1384,7 +1469,8 @@
    "lat": 36.9562,
    "lng": 129.37962,
    "island": "mainland",
-   "painting": "landmark_086"
+   "painting": "landmark_086",
+   "firstPainting": "landmark_086_v1_a"
   },
   {
    "id": "kr087",
@@ -1400,7 +1486,8 @@
    "lat": 36.79434,
    "lng": 128.90855,
    "island": "mainland",
-   "painting": "landmark_087"
+   "painting": "landmark_087",
+   "firstPainting": "landmark_087_v1_a"
   },
   {
    "id": "kr088",
@@ -1416,7 +1503,9 @@
    "lat": 36.45827,
    "lng": 128.75061,
    "island": "mainland",
-   "painting": "landmark_088"
+   "painting": "landmark_088",
+   "firstPainting": "landmark_088_v1_a",
+   "note": "산불 이전 모습"
   },
   {
    "id": "kr089",
@@ -1432,7 +1521,8 @@
    "lat": 37.49799,
    "lng": 130.86706,
    "island": "ulleung",
-   "painting": "landmark_089"
+   "painting": "landmark_089",
+   "firstPainting": "landmark_089_v1_a"
   },
   {
    "id": "kr090",
@@ -1448,7 +1538,8 @@
    "lat": 36.5756,
    "lng": 128.32132,
    "island": "mainland",
-   "painting": "landmark_090"
+   "painting": "landmark_090",
+   "firstPainting": "landmark_090_v1_a"
   },
   {
    "id": "kr091",
@@ -1464,7 +1555,8 @@
    "lat": 34.84531,
    "lng": 128.42763,
    "island": "mainland",
-   "painting": "landmark_091"
+   "painting": "landmark_091",
+   "firstPainting": "landmark_091_v1_a"
   },
   {
    "id": "kr092",
@@ -1480,7 +1572,8 @@
    "lat": 34.74462,
    "lng": 128.66315,
    "island": "mainland",
-   "painting": "landmark_092"
+   "painting": "landmark_092",
+   "firstPainting": "landmark_092_v1_a"
   },
   {
    "id": "kr093",
@@ -1496,7 +1589,8 @@
    "lat": 34.80007,
    "lng": 128.03855,
    "island": "mainland",
-   "painting": "landmark_093"
+   "painting": "landmark_093",
+   "firstPainting": "landmark_093_v1_a"
   },
   {
    "id": "kr094",
@@ -1512,7 +1606,8 @@
    "lat": 35.3369,
    "lng": 127.73062,
    "island": "mainland",
-   "painting": "landmark_094"
+   "painting": "landmark_094",
+   "firstPainting": "landmark_094_v1_a"
   },
   {
    "id": "kr095",
@@ -1528,7 +1623,8 @@
    "lat": 35.18955,
    "lng": 128.07998,
    "island": "mainland",
-   "painting": "landmark_095"
+   "painting": "landmark_095",
+   "firstPainting": "landmark_095_v1_a"
   },
   {
    "id": "kr096",
@@ -1545,7 +1641,8 @@
    "lat": 35.16223,
    "lng": 128.66041,
    "island": "mainland",
-   "painting": "landmark_096"
+   "painting": "landmark_096",
+   "firstPainting": "landmark_096_v1_a"
   },
   {
    "id": "kr097",
@@ -1561,7 +1658,8 @@
    "lat": 35.23531,
    "lng": 128.8785,
    "island": "mainland",
-   "painting": "landmark_097"
+   "painting": "landmark_097",
+   "firstPainting": "landmark_097_v1_a"
   },
   {
    "id": "kr098",
@@ -1577,7 +1675,8 @@
    "lat": 35.49156,
    "lng": 128.75508,
    "island": "mainland",
-   "painting": "landmark_098"
+   "painting": "landmark_098",
+   "firstPainting": "landmark_098_v1_a"
   },
   {
    "id": "kr099",
@@ -1593,7 +1692,8 @@
    "lat": 35.80094,
    "lng": 128.09754,
    "island": "mainland",
-   "painting": "landmark_099"
+   "painting": "landmark_099",
+   "firstPainting": "landmark_099_v1_a"
   },
   {
    "id": "kr100",
@@ -1609,7 +1709,8 @@
    "lat": 35.52863,
    "lng": 127.71682,
    "island": "mainland",
-   "painting": "landmark_100"
+   "painting": "landmark_100",
+   "firstPainting": "landmark_100_v1_a"
   },
   {
    "id": "kr101",
@@ -1625,7 +1726,8 @@
    "lat": 35.48828,
    "lng": 129.06468,
    "island": "mainland",
-   "painting": "landmark_101"
+   "painting": "landmark_101",
+   "firstPainting": "landmark_101_v1_a"
   }
  ]
 }

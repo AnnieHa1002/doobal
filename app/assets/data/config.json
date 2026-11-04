@@ -1,34 +1,147 @@
 {
- "version": 2,
- "gait": { "walkMaxSpm": 130, "runMinSpm": 140, "walkStrideM": 0.7, "runStrideM": 1.0 },
- "session": { "maxGapMin": 2, "minMin": 10, "minSteps": 1000, "maxPerDay": 3 },
- "sync": { "refetchHours": 48, "walkingRefreshSec": 30, "aliveSaveSec": 30, "backgroundMin": 15 },
- "live": { "cadenceWindowSec": 30, "noticeUpdateSec": 60 },
- "record": { "lapKm": 1 },
- "bonus": { "appliesTo": "qualifiedSession", "travelMultiplier": 1.3, "coinMultiplier": 2.0 },
- "coins": { "perKm": null },
+ "version": 8,
+ "changes": "v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
+ "gait": {
+  "walkMaxSpm": 130,
+  "runMinSpm": 140,
+  "walkStrideM": 0.7,
+  "runStrideM": 1.0
+ },
+ "session": {
+  "maxGapMin": 2,
+  "minMin": 10,
+  "minSteps": 1000,
+  "maxPerDay": 3
+ },
+ "bonus": {
+  "approx": true,
+  "appliesTo": "qualifiedSession",
+  "travelMultiplier": 1.3,
+  "coinMultiplier": 2.0,
+  "note": "qualifiedSession = 앱 걷는 중(출발하기~걷기 마치기) 창 안에서 인정된 걷기 1번 구간(11/1)"
+ },
+ "appWalk": {
+  "endOnAppKilled": "lastAliveUtc",
+  "androidForegroundService": true,
+  "aliveSaveKey": "sync.aliveSaveSec"
+ },
+ "props": {
+  "distanceBasis": "walkTravel"
+ },
+ "coins": {
+  "displayName": "럭",
+  "perKm": 10,
+  "dailyCap": 400,
+  "welcomeGift": 100,
+  "welcomeGiftOn": "firstSketchArrival",
+  "format": {
+   "amount": "{n} 럭",
+   "gain": "+{n} 럭",
+   "buyQuestion": "{item}을(를) {n} 럭에 구매할까요?",
+   "buyButton": "구매",
+   "note": "숫자 뒤 단위(11/3). 문구 최종은 UI 명세 15장. 조사는 앱이 받침으로 고름"
+  }
+ },
+ "shop": {
+  "dailyEffectCapKm": 3,
+  "maxHoldPerItem": 9,
+  "itemsFile": "shop.json"
+ },
+ "ads": {
+  "rewardedPerDay": 1,
+  "rewardKind": "addTodayEarnedSoFar",
+  "maxRewardCoins": 400
+ },
+ "sync": {
+  "refetchHours": 48,
+  "walkingRefreshSec": 30,
+  "aliveSaveSec": 30,
+  "backgroundMin": 15
+ },
  "route": {
   "seaFactor": 0.3333333333,
   "earthRadiusKm": 6371.0088,
   "ports": {
-   "wando":  { "lat": 34.315,  "lng": 126.755, "approx": true },
-   "jeju":   { "lat": 33.5275, "lng": 126.543, "approx": true },
-   "pohang": { "lat": 36.035,  "lng": 129.375, "approx": true },
-   "dodong": { "lat": 37.484,  "lng": 130.906, "approx": true }
+   "wando": {
+    "lat": 34.315,
+    "lng": 126.755,
+    "approx": true
+   },
+   "jeju": {
+    "lat": 33.5275,
+    "lng": 126.543,
+    "approx": true
+   },
+   "pohang": {
+    "lat": 36.035,
+    "lng": 129.375,
+    "approx": true
+   },
+   "dodong": {
+    "lat": 37.484,
+    "lng": 130.906,
+    "approx": true
+   }
   },
   "islands": {
-   "jeju":    { "latMin": 33.1, "latMax": 33.6, "lngMin": 126.1,  "lngMax": 127.0 },
-   "ulleung": { "latMin": 37.4, "latMax": 37.6, "lngMin": 130.75, "lngMax": 130.95 }
+   "jeju": {
+    "latMin": 33.1,
+    "latMax": 33.6,
+    "lngMin": 126.1,
+    "lngMax": 127.0
+   },
+   "ulleung": {
+    "latMin": 37.4,
+    "latMax": 37.6,
+    "lngMin": 130.75,
+    "lngMax": 130.95
+   }
   }
  },
  "journey": {
-  "firstSketchKm": { "min": 0.5, "max": 0.8 },
-  "frame": { "silverKm": 20, "goldKm": 50 },
+  "firstSketchKm": {
+   "min": 0.5,
+   "max": 0.8
+  },
+  "firstSketchLocksDestination": true,
+  "frame": {
+   "silverKm": 20,
+   "goldKm": 50
+  },
   "travelFundCapKm": 15,
-  "eta": { "windowDays": 30, "defaultDailySteps": 7000 }
+  "eta": {
+   "windowDays": 30,
+   "defaultDailySteps": 7000
+  }
  },
- "events": { "everyKm": 2, "propChance": 0.0, "propChanceAfterLaunch": 0.1 },
- "seasons": { "spring": [3, 4, 5], "summer": [6, 7, 8], "autumn": [9, 10, 11], "winter": [12, 1, 2] },
+ "events": {
+  "everyKm": 2,
+  "propChance": 0.0,
+  "propChanceAfterLaunch": 0.1,
+  "distanceBasis": "actualForeground"
+ },
+ "seasons": {
+  "spring": [
+   3,
+   4,
+   5
+  ],
+  "summer": [
+   6,
+   7,
+   8
+  ],
+  "autumn": [
+   9,
+   10,
+   11
+  ],
+  "winter": [
+   12,
+   1,
+   2
+  ]
+ },
  "scene": {
   "groundWidthPx": 4096,
   "groundMeters": 100,
@@ -37,59 +150,395 @@
   "pathY": 2171,
   "characterHeightPx": 820,
   "layers": {
-   "sky":        { "speed": 0.03 },
-   "backdrop":   { "speed": 0.05, "widthPx": 1764, "heightPx": 662,  "topY": 912,  "bandTop": 1050, "bandBottom": 1200 },
-   "ridge":      { "speed": 0.10, "widthPx": 2400, "heightPx": 1000, "topY": 1000, "bandTop": 1300, "bandBottom": 1450 },
-   "grove":      { "speed": 0.30, "widthPx": 4096, "heightPx": 900,  "topY": 1500, "bandTop": 1600, "bandBottom": 1800 },
-   "meadow":     { "speed": 0.50, "widthPx": 4096, "heightPx": 650,  "topY": 1880, "bandTop": 1900, "bandBottom": 2050 },
-   "ground":     { "speed": 1.0,  "widthPx": 4096, "heightPx": 640,  "topY": 1892 },
-   "foreground": { "speed": 1.0,  "widthPx": 4096, "heightPx": 580,  "topY": 1676, "bandTop": 1900, "bandBottom": 2100 }
+   "sky": {
+    "speed": 0.03
+   },
+   "backdrop": {
+    "speed": 0.05,
+    "sourceWidthPx": 6144,
+    "sourceHeightPx": 1536,
+    "widthPx": 4800,
+    "heightPx": 1230,
+    "topY": 912,
+    "seaHeightPx": 1280,
+    "landscape": {
+     "widthPx": 3744,
+     "heightPx": 959,
+     "topY": 151
+    }
+   },
+   "grove": {
+    "approx": true,
+    "speed": 0.1
+   },
+   "roadside": {
+    "approx": true,
+    "speed": 0.3,
+    "bigHeightPx": [
+     900,
+     1100
+    ],
+    "smallHeightPx": [
+     380,
+     480
+    ],
+    "tallObjectClearX": 250,
+    "tallNearCharacterOpacity": 0.35
+   },
+   "people": {
+    "approx": true,
+    "layer": "roadside",
+    "heightPx": [
+     300,
+     400
+    ],
+    "row": "back"
+   },
+   "meadow": {
+    "speed": 0.5,
+    "widthPx": 4096,
+    "heightPx": 650,
+    "topY": 1880,
+    "bandTop": 1900,
+    "bandBottom": 2050
+   },
+   "ground": {
+    "speed": 1.0,
+    "widthPx": 4096,
+    "heightPx": 640,
+    "topY": 1892
+   },
+   "foreground": {
+    "speed": 1.0,
+    "widthPx": 4096,
+    "heightPx": 580,
+    "topY": 1676,
+    "bandTop": 1900,
+    "bandBottom": 2100
+   }
   },
-  "seaHiddenLayers": ["ridge", "grove", "meadow", "foreground"],
+  "seaHiddenLayers": [
+   "grove",
+   "roadside",
+   "meadow",
+   "foreground"
+  ],
+  "seasonTint": {
+   "approx": true,
+   "autumn": {
+    "layers": [
+     "backdrop",
+     "grove",
+     "meadow"
+    ],
+    "multiply": "#C79A5B",
+    "strength": 0.18,
+    "range": [
+     0.15,
+     0.2
+    ]
+   },
+   "winter": {
+    "backdropSwap": true,
+    "layers": [
+     "grove",
+     "meadow"
+    ],
+    "saturation": -0.45,
+    "brightness": 0.12,
+    "multiply": "#EEF0F2",
+    "strength": 0.15
+   }
+  },
   "sunZenithDeg": 90.833,
   "sky": {
    "midStop": 0.6,
-   "fromSunriseMin": { "nightEnd": -70, "dawn": -20, "morning": 60, "dayStart": 150 },
-   "fromSunsetMin": { "dayEnd": -120, "sunset": 0, "nightStart": 60 },
-   "keys": {
-    "night":   { "top": "#18213A", "mid": "#263250", "horizon": "#3A4660", "glow": "#6A7699", "glowStrength": 0.18 },
-    "dawn":    { "top": "#3E4468", "mid": "#7C7499", "horizon": "#D9AFB2", "glow": "#F2C9A0", "glowStrength": 0.35 },
-    "morning": { "top": "#7FA6C4", "mid": "#B4CBD6", "horizon": "#F2DCBC", "glow": "#FBE7C6", "glowStrength": 0.25 },
-    "day":     { "top": "#7FA8C8", "mid": "#A9C6D8", "horizon": "#E6E4D4", "glow": "#FFF6E0", "glowStrength": 0.15 },
-    "sunset":  { "top": "#4E4E74", "mid": "#A8708A", "horizon": "#EE9C68", "glow": "#F7B575", "glowStrength": 0.45 }
+   "fromSunriseMin": {
+    "nightEnd": -70,
+    "dawn": -20,
+    "morning": 60,
+    "dayStart": 150
    },
-   "stars": { "approx": true, "night": 1.0, "dawn": 0.4 },
-   "arc": { "approx": true, "leftX": 0.12, "rightX": 0.88, "peakY": 380, "glowRadiusPx": 700 }
+   "fromSunsetMin": {
+    "dayEnd": -120,
+    "sunset": 0,
+    "nightStart": 60
+   },
+   "keys": {
+    "night": {
+     "top": "#18213A",
+     "mid": "#263250",
+     "horizon": "#3A4660",
+     "glow": "#6A7699",
+     "glowStrength": 0.18
+    },
+    "dawn": {
+     "top": "#3E4468",
+     "mid": "#7C7499",
+     "horizon": "#D9AFB2",
+     "glow": "#F2C9A0",
+     "glowStrength": 0.35
+    },
+    "morning": {
+     "top": "#7FA6C4",
+     "mid": "#B4CBD6",
+     "horizon": "#F2DCBC",
+     "glow": "#FBE7C6",
+     "glowStrength": 0.25
+    },
+    "day": {
+     "top": "#7FA8C8",
+     "mid": "#A9C6D8",
+     "horizon": "#E6E4D4",
+     "glow": "#FFF6E0",
+     "glowStrength": 0.15
+    },
+    "sunset": {
+     "top": "#4E4E74",
+     "mid": "#A8708A",
+     "horizon": "#EE9C68",
+     "glow": "#F7B575",
+     "glowStrength": 0.45
+    }
+   },
+   "stars": {
+    "approx": true,
+    "night": 1.0,
+    "dawn": 0.4
+   },
+   "arc": {
+    "approx": true,
+    "leftX": 0.12,
+    "rightX": 0.88,
+    "peakY": 380,
+    "glowRadiusPx": 700
+   },
+   "texture": {
+    "approx": true,
+    "washAmp": 0.035,
+    "grainAmp": 0.025
+   },
+   "passers": {
+    "approx": true,
+    "avgEveryMin": 6,
+    "birds": {
+     "phases": [
+      "morning",
+      "day",
+      "sunset"
+     ],
+     "crossSec": 6
+    },
+    "meteor": {
+     "phases": [
+      "night",
+      "dawn"
+     ],
+     "crossSec": 1.2
+    }
+   }
   },
   "tint": {
-   "dawn":    { "color": "#8C7BA8", "bg": 0.32, "char": 0.25 },
-   "morning": { "color": "#F2C9A0", "bg": 0.20, "char": 0.15 },
-   "sunset":  { "color": "#E58A6A", "bg": 0.32, "char": 0.25 },
-   "night":   { "color": "#1F2A3C", "bg": 0.65, "char": 0.40 }
+   "dawn": {
+    "color": "#8C7BA8",
+    "bg": 0.32,
+    "char": 0.25
+   },
+   "morning": {
+    "color": "#F2C9A0",
+    "bg": 0.2,
+    "char": 0.15
+   },
+   "sunset": {
+    "color": "#E58A6A",
+    "bg": 0.32,
+    "char": 0.25
+   },
+   "night": {
+    "color": "#1F2A3C",
+    "bg": 0.65,
+    "char": 0.4
+   }
   }
  },
  "companions": {
   "firstMeet": "firstEventOfFirstRealJourney",
-  "guaranteeByDay": [14, 28],
+  "guaranteeByDay": [
+   14,
+   28
+  ],
   "walksPerChapter": 4,
   "chapters": 8,
-  "pace": { "approx": true, "aheadEverySec": 90, "aheadAwaySec": 8, "lagCatchUpMps": 0.5, "lateArrivalMaxSec": 600 }
+  "pace": {
+   "approx": true,
+   "aheadEverySec": 90,
+   "aheadAwaySec": 8,
+   "lagCatchUpMps": 0.5,
+   "lateArrivalMaxSec": 600
+  },
+  "facing": {
+   "rest": "front",
+   "companionScreen": "front",
+   "meet": "front",
+   "walking": "side",
+   "departMoment": "side"
+  }
  },
  "guestbook": {
   "maxChars": 200,
   "milestoneWindowSteps": 500,
   "readCount": 5,
-  "blindMinX": 5,
-  "xMinTotalSteps": 10000,
+  "blindMinReports": 5,
+  "blindNeedsMoreThanHearts": true,
+  "reportCountMinTotalSteps": 10000,
   "reviewHours": 48,
   "banAfterDeletes": 3,
-  "banDays": 7
+  "banDays": 7,
+  "note": "11/3: X 대신 신고(모두에게 보임). 누적 1만 보 미만 계정의 신고는 받아 두되 셈에서만 뺌. 옛 키 blindMinX·xMinTotalSteps는 폐기"
  },
- "profile": { "nicknameMin": 2, "nicknameMax": 10 },
  "character": {
-  "blink": { "approx": true, "minGapSec": 3, "maxGapSec": 6, "doubleChance": 0.15, "doubleGapSec": 0.3 }
+  "blink": {
+   "approx": true,
+   "minGapSec": 3,
+   "maxGapSec": 6,
+   "doubleChance": 0.15,
+   "doubleGapSec": 0.3,
+   "note": "Rive v24는 blinkMode 0(자동)으로 스스로 깜빡임. 이 값은 Rive를 쓰지 않는 자리(동행 정지 그림 등)용"
+  },
+  "facing": {
+   "approx": true,
+   "rest": "front",
+   "customize": "front",
+   "profile": "front",
+   "arrival": "front",
+   "walking": "side",
+   "running": "side",
+   "fall": "side",
+   "sit": "side",
+   "departMoment": "back",
+   "splash": "back",
+   "viewScenery": "back"
+  },
+  "canvas": {
+   "sizePx": [
+    1024,
+    1024
+   ],
+   "feetY": 960,
+   "headTopY": 192,
+   "heightPx": 768,
+   "centerX": 512,
+   "floatTopY": [
+    0,
+    153
+   ],
+   "screenHeightPx": {
+    "portrait": 820,
+    "landscape": 616
+   },
+   "scale": {
+    "portrait": 1.068,
+    "landscape": 0.802
+   },
+   "riveArtboardPx": 600,
+   "note": "정령·동행 PNG 공통. Rive v24 600 아트보드는 1024 좌표에 맞춰져 있음. 배·쉼터는 발 y 960을 갑판·땅 기준선에 맞춤. 옆면은 머리 가운데 x 512"
+  },
+  "tapReaction": {
+   "approx": true,
+   "screens": [
+    "rest",
+    "customize"
+   ],
+   "happyMaxTaps": 2,
+   "angry": {
+    "windowSec": 3,
+    "taps": 5,
+    "holdSec": 2
+   },
+   "note": "쉼터·꾸미기에서 정령 몸을 누르면 행복(머리·배 누르기 동작 그대로), 3초 안에 5번이면 2초 화남 뒤 기본. 화면 글 없음"
+  }
  },
- "notifications": { "quietFromHour": 22, "quietToHour": 8, "dailyMax": 2, "nearDestKm": 10, "inactiveHours": 72, "inactiveDeferHour": 10 },
- "backup": { "minIntervalMin": 10, "maxChars": 1000000 },
- "allowedSources": { "ios": [], "android": [] }
+ "notifications": {
+  "quietFromHour": 22,
+  "quietToHour": 8,
+  "dailyMax": 2,
+  "nearDestKm": 10,
+  "inactiveHours": 72,
+  "inactiveDeferHour": 10
+ },
+ "allowedSources": {
+  "ios": [],
+  "android": []
+ },
+ "live": {
+  "cadenceWindowSec": 30,
+  "noticeUpdateSec": 60
+ },
+ "record": {
+  "lapKm": 1
+ },
+ "profile": {
+  "nicknameMin": 2,
+  "nicknameMax": 10
+ },
+ "backup": {
+  "minIntervalMin": 10,
+  "maxChars": 1000000
+ },
+ "ui": {
+  "displayFonts": {
+   "default": "gaegu",
+   "options": {
+    "gaegu": {
+     "family": "Gaegu",
+     "scale": 1.3
+    },
+    "dongle": {
+     "family": "Dongle",
+     "scale": 1.5
+    },
+    "gowunBatang": {
+     "family": "Gowun Batang",
+     "scale": 1.0
+    }
+   },
+   "bodyFamily": "Gowun Dodum",
+   "note": "제목·숫자·버튼·딱지·이름표·굵은 글자만 표시 글꼴, 설정에서 고름(기기 저장, 백업 profile.displayFont)"
+  },
+  "fontPt": {
+   "min": 11,
+   "body": 15,
+   "label": 12
+  },
+  "splash": {
+   "bySeason": true,
+   "files": "splash_{season}_v02",
+   "note": "네이티브 스플래시는 종이색 + 로고 한 장(계절 바꾸기 불가), 앱 첫 화면에서 계절 스플래시를 이어 보여 줌(브랜드 v02)"
+  }
+ },
+ "rest": {
+  "approx": true,
+  "sceneWidthRatio": 1.5,
+  "startAt": "left",
+  "scroll": "horizontal",
+  "fixedHud": [
+   "profile",
+   "settings",
+   "gem",
+   "statusLabel",
+   "departButton"
+  ],
+  "firstScreenObjects": [
+   "map",
+   "backpack",
+   "note",
+   "companion",
+   "character"
+  ],
+  "rightEdgeObjects": [
+   "cart"
+  ],
+  "parallax": "sky·backdrop는 걷는 중 속도(0.03·0.05)로, 캠프 판은 1.0",
+  "layoutFile": "themes/camp.json v2"
+ }
 }

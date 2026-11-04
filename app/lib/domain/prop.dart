@@ -3,9 +3,9 @@ import 'dart:math' as math;
 import 'format_int.dart';
 
 /// 소품 해금 조건. props.json의 unlock.kind (default는 예약어라 initial)
-enum PropUnlockKind { initial, distance, region, steps, companion }
+enum PropUnlockKind { initial, distance, region, steps, companion, shop }
 
-/// props.json의 소품 하나 (MVP 27개만 읽는다)
+/// props.json의 소품 하나 (status mvp만 읽는다)
 class Prop {
   const Prop({
     required this.id,
@@ -16,6 +16,7 @@ class Prop {
     this.region,
     this.steps,
     this.companion,
+    this.price,
   });
 
   final String id;
@@ -31,6 +32,9 @@ class Prop {
   /// companion: 이 소품을 주는 동료 id. companions.json이 생기면 채워진다 (그전에는 null)
   final String? companion;
 
+  /// shop: 상점 값(럭). 사면 얻은 소품에 들어간다
+  final int? price;
+
   factory Prop.fromJson(Map<String, dynamic> j) {
     final u = j['unlock'] as Map<String, dynamic>;
     return Prop(
@@ -43,12 +47,14 @@ class Prop {
         'region' => PropUnlockKind.region,
         'steps' => PropUnlockKind.steps,
         'companion' => PropUnlockKind.companion,
+        'shop' => PropUnlockKind.shop,
         final k => throw FormatException('모르는 소품 해금 조건: $k (${j['id']})'),
       },
       km: (u['km'] as num?)?.toDouble(),
       region: u['region'] as String?,
       steps: u['steps'] as int?,
       companion: u['companion'] as String?,
+      price: u['price'] as int?,
     );
   }
 }
@@ -60,7 +66,7 @@ List<Prop> parseProps(Map<String, dynamic> json) => [
     ];
 
 /// 지금 얻은 소품 id. 거리 소품은 걷는 중 화면에서 걸은 이동 거리(본격 걷기 보너스 포함, 배 구간 환산 아님)로 센다.
-/// 동료 소품은 여기서 주지 않는다 (동료 이야기를 마칠 때 준다, M4)
+/// 동료 소품은 동료 이야기를 마칠 때(M4), 상점 소품은 살 때(M4.5) 주므로 여기서 주지 않는다
 Set<String> earnedPropIds(
   List<Prop> props,
   double totalKm,
@@ -74,7 +80,7 @@ Set<String> earnedPropIds(
         PropUnlockKind.distance => totalKm >= p.km!,
         PropUnlockKind.region => completedRegions.contains(p.region),
         PropUnlockKind.steps => totalSteps >= p.steps!,
-        PropUnlockKind.companion => false,
+        PropUnlockKind.companion || PropUnlockKind.shop => false,
       })
         p.id,
   };

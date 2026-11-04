@@ -23,16 +23,7 @@ const backdropTints = {
 
 const fallbackBackdropTint = Color(0xFF8FA38A);
 
-/// 능선(ridge)은 지역과 상관없이 같은 색
-const ridgeColor = Color(0xFF7F9A8C);
-
-/// 숲(grove)·풀밭(meadow) 색 (계절별)
-const groveColors = {
-  Season.spring: Color(0xFF6E9A58),
-  Season.summer: Color(0xFF3F6B33),
-  Season.autumn: Color(0xFFB5602A),
-  Season.winter: Color(0xFF8E8A80),
-};
+/// 풀밭(meadow) 색 (계절별)
 const meadowColors = {
   Season.spring: Color(0xFFA8BC72),
   Season.summer: Color(0xFF7FA050),

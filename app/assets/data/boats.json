@@ -1,0 +1,254 @@
+{
+ "version": 2,
+ "asOf": "2026-11-04",
+ "source": "기준 문서 4장(11/3 Annie 배 9척), Codex 납품 boat_upgrades_3stages_layered_v02·boat_skins_premium_3types_layered_v01·boat_skins_cruise_speed_pirate_recolor_v01(Assets/02_Backgrounds_배경), 고칠 것 디자인기획/codex_boats_fix_v01.md. 파일 이름·발 자리는 Codex가 합친 boat_layers.json(9척 한 파일) 납품 뒤 layers에 채움 / v2(11/4): layers는 Drive boats_9_fix_v01_검토_20261103/boat_layers.json(1ErhP2ERbebPfSNHKaXOI7Z57KeG_Zvg8, 고친 판 5항목 반영, 런타임 미검증)",
+ "canvas": [
+  3072,
+  1536
+ ],
+ "deckY": 1216,
+ "layersFile": "boat_layers.json",
+ "layersPending": null,
+ "rules": [
+  "배는 영구 소유, 고른 배는 Profile.boatId(기본 boat_raft). 배 구간 그림만 바뀜, 진행·거리와 무관",
+  "islandArrival: 제주(jeju)·울릉(ulleung) 섬 명소에 도착한 적이 있는지(내 동네 스케치 제외). all false = 둘 중 하나, all true = 둘 다. 동기화 끝 소품 해금과 같은 자리에서 판정, 한 번 받으면 끝",
+  "shop: shop.json boat 탭 상품(boatId)과 값이 같아야 함(빌드 검사)",
+  "밤 창문 불빛(theme_01)은 nightOverlay가 있으면 밤·새벽에만 켬(시간대 보정 뒤 위에 얹음)",
+  "새 배를 받으면 한 줄 토스트, 자동으로 바꿔 타지 않음",
+  "앞판·뒤판은 같은 원점·같은 흔들림 변환을 씀(따로 자르거나 다시 맞추지 않음). 동행 키는 정령의 80~90%"
+ ],
+ "boats": [
+  {
+   "id": "boat_raft",
+   "codexId": "upgrade_01",
+   "name": "튼튼한 뗏목",
+   "unlock": {
+    "kind": "default"
+   },
+   "order": 1,
+   "layers": {
+    "rear": "prop_boat_upgrade_01_rear_v02_clean.png",
+    "front": "prop_boat_upgrade_01_front_v02_clean.png",
+    "full": "prop_boat_upgrade_01_full_v02_clean.png",
+    "mainFoot": [
+     1480,
+     1216
+    ],
+    "companionFoot": [
+     2190,
+     1216
+    ]
+   },
+   "nightOverlay": null
+  },
+  {
+   "id": "boat_skiff",
+   "codexId": "upgrade_02",
+   "name": "나무 조각배",
+   "unlock": {
+    "kind": "islandArrival",
+    "islands": [
+     "jeju",
+     "ulleung"
+    ],
+    "all": false
+   },
+   "order": 2,
+   "layers": {
+    "rear": "prop_boat_upgrade_02_rear_v02_clean.png",
+    "front": "prop_boat_upgrade_02_front_v02_clean.png",
+    "full": "prop_boat_upgrade_02_full_v02_clean.png",
+    "mainFoot": [
+     1430,
+     1216
+    ],
+    "companionFoot": [
+     2100,
+     1216
+    ]
+   },
+   "nightOverlay": null
+  },
+  {
+   "id": "boat_voyage",
+   "codexId": "upgrade_03",
+   "name": "여행 돛단배",
+   "unlock": {
+    "kind": "islandArrival",
+    "islands": [
+     "jeju",
+     "ulleung"
+    ],
+    "all": true
+   },
+   "order": 3,
+   "layers": {
+    "rear": "prop_boat_upgrade_03_rear_v02_clean.png",
+    "front": "prop_boat_upgrade_03_front_v02_clean.png",
+    "full": "prop_boat_upgrade_03_full_v02_clean.png",
+    "mainFoot": [
+     1450,
+     1216
+    ],
+    "companionFoot": [
+     2160,
+     1216
+    ]
+   },
+   "nightOverlay": null
+  },
+  {
+   "id": "boat_cruise",
+   "codexId": "theme_01",
+   "name": "유람선",
+   "unlock": {
+    "kind": "shop",
+    "price": 5000
+   },
+   "order": 4,
+   "layers": {
+    "rear": "prop_boat_theme_01_rear_v02_clean.png",
+    "front": "prop_boat_theme_01_front_v02_clean.png",
+    "full": "prop_boat_theme_01_full_v02_clean.png",
+    "mainFoot": [
+     2280,
+     1216
+    ],
+    "companionFoot": [
+     1720,
+     1216
+    ]
+   },
+   "nightOverlay": "prop_boat_theme_01_windowlight_v01_clean.png"
+  },
+  {
+   "id": "boat_speed",
+   "codexId": "theme_02",
+   "name": "스피드보트",
+   "unlock": {
+    "kind": "shop",
+    "price": 5000
+   },
+   "order": 5,
+   "layers": {
+    "rear": "prop_boat_theme_02_rear_v02_clean.png",
+    "front": "prop_boat_theme_02_front_v02_clean.png",
+    "full": "prop_boat_theme_02_full_v02_clean.png",
+    "mainFoot": [
+     1120,
+     1216
+    ],
+    "companionFoot": [
+     1740,
+     1216
+    ]
+   },
+   "nightOverlay": null
+  },
+  {
+   "id": "boat_pirate",
+   "codexId": "theme_03",
+   "name": "해적선",
+   "unlock": {
+    "kind": "shop",
+    "price": 5000
+   },
+   "order": 6,
+   "layers": {
+    "rear": "prop_boat_theme_03_rear_v02_clean.png",
+    "front": "prop_boat_theme_03_front_v02_clean.png",
+    "full": "prop_boat_theme_03_full_v02_clean.png",
+    "mainFoot": [
+     1900,
+     1216
+    ],
+    "companionFoot": [
+     1390,
+     1216
+    ]
+   },
+   "nightOverlay": null
+  },
+  {
+   "id": "boat_canopy",
+   "codexId": "premium_01",
+   "name": "차양 보트",
+   "unlock": {
+    "kind": "shop",
+    "price": 8000
+   },
+   "order": 7,
+   "layers": {
+    "rear": "prop_boat_premium_01_rear_v01_clean.png",
+    "front": "prop_boat_premium_01_front_v01_clean.png",
+    "full": "prop_boat_premium_01_full_v01_clean.png",
+    "mainFoot": [
+     2340,
+     1216
+    ],
+    "companionFoot": [
+     1930,
+     1216
+    ]
+   },
+   "nightOverlay": null
+  },
+  {
+   "id": "boat_atelier",
+   "codexId": "premium_02",
+   "name": "화가 오두막 돛배",
+   "unlock": {
+    "kind": "shop",
+    "price": 8000
+   },
+   "order": 8,
+   "layers": {
+    "rear": "prop_boat_premium_02_rear_v01_clean.png",
+    "front": "prop_boat_premium_02_front_v01_clean.png",
+    "full": "prop_boat_premium_02_full_v01_clean.png",
+    "mainFoot": [
+     1740,
+     1216
+    ],
+    "companionFoot": [
+     2360,
+     1216
+    ]
+   },
+   "nightOverlay": null
+  },
+  {
+   "id": "boat_starlight",
+   "codexId": "premium_03",
+   "name": "별빛 항해선",
+   "unlock": {
+    "kind": "shop",
+    "price": 12000
+   },
+   "order": 9,
+   "layers": {
+    "rear": "prop_boat_premium_03_rear_v01_clean.png",
+    "front": "prop_boat_premium_03_front_v01_clean.png",
+    "full": "prop_boat_premium_03_full_v01_clean.png",
+    "mainFoot": [
+     1700,
+     1216
+    ],
+    "companionFoot": [
+     2310,
+     1216
+    ]
+   },
+   "nightOverlay": null
+  }
+ ],
+ "assetDir": "boats/v01fix",
+ "drawOrder": [
+  "rear",
+  "nightOverlay(밤·새벽, 시간대 보정 안 함)",
+  "player",
+  "companion",
+  "front",
+  "water foreground"
+ ]
+}

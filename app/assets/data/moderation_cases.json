@@ -1,0 +1,556 @@
+{
+ "version": 1,
+ "asOf": "2026-11-03",
+ "doc": "방명록 금칙어 시험 문장. Dart(앱)·TypeScript(서버)·데이터/check_moderation.py 세 쪽 테스트가 이 파일 하나를 함께 읽는다. 결과가 하나라도 다르면 빌드 실패. cat은 막힌 분류(A 욕설·B 혐오·C 성적·D 개인정보·E 광고). 새 오탐·놓친 글은 여기에 한 줄씩 더한다.",
+ "cases": [
+  {
+   "id": "K001",
+   "text": "씨발 오늘 너무 힘들다",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K002",
+   "text": "씨 .발 진짜",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K003",
+   "text": "씨이이발 다리 아파",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K004",
+   "text": "시1발 비 온다",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K005",
+   "text": "병 신 같은 날씨",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K006",
+   "text": "존나 멀다",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K007",
+   "text": "존 나 멀다",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K008",
+   "text": "ㅅㅂ 길 잃었어",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K009",
+   "text": "개새끼야",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K010",
+   "text": "ㄱㅐ새끼",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K011",
+   "text": "미친놈 여기까지 왔네",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K012",
+   "text": "지랄하네",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K013",
+   "text": "tlqkf 진짜",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K014",
+   "text": "느금마",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K015",
+   "text": "씨발놈아!!!",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K016",
+   "text": "씨 발놈",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K017",
+   "text": "한남충들 다 꺼져라",
+   "expect": "block",
+   "cat": "B"
+  },
+  {
+   "id": "K018",
+   "text": "김치녀 같은 소리",
+   "expect": "block",
+   "cat": "B"
+  },
+  {
+   "id": "K019",
+   "text": "틀 딱 들 많네",
+   "expect": "block",
+   "cat": "B"
+  },
+  {
+   "id": "K020",
+   "text": "전라디언 클라스",
+   "expect": "block",
+   "cat": "B"
+  },
+  {
+   "id": "K021",
+   "text": "짱깨 많더라",
+   "expect": "block",
+   "cat": "B"
+  },
+  {
+   "id": "K022",
+   "text": "홍어 새끼들",
+   "expect": "pass",
+   "note": "홍어는 목록에서 뺌(11/3), 신고 블라인드가 받음"
+  },
+  {
+   "id": "K023",
+   "text": "저런 한남 수준",
+   "expect": "block",
+   "cat": "B"
+  },
+  {
+   "id": "K024",
+   "text": "똥남아 출신",
+   "expect": "block",
+   "cat": "B"
+  },
+  {
+   "id": "K025",
+   "text": "섹스 하고 싶다",
+   "expect": "block",
+   "cat": [
+    "C",
+    "A"
+   ]
+  },
+  {
+   "id": "K026",
+   "text": "야 동 보러 감",
+   "expect": "block",
+   "cat": "C"
+  },
+  {
+   "id": "K027",
+   "text": "조건만남 연락",
+   "expect": "block",
+   "cat": "C"
+  },
+  {
+   "id": "K028",
+   "text": "원나잇 할 사람",
+   "expect": "block",
+   "cat": "C"
+  },
+  {
+   "id": "K029",
+   "text": "성 매 매",
+   "expect": "block",
+   "cat": "C"
+  },
+  {
+   "id": "K030",
+   "text": "010-1234-5678 연락 주세요",
+   "expect": "block",
+   "cat": "D"
+  },
+  {
+   "id": "K031",
+   "text": "제 번호 010 1234 5678",
+   "expect": "block",
+   "cat": "D"
+  },
+  {
+   "id": "K032",
+   "text": "walker@gmail.com 으로 메일",
+   "expect": "block",
+   "cat": "D"
+  },
+  {
+   "id": "K033",
+   "text": "900101-1234567",
+   "expect": "block",
+   "cat": "D"
+  },
+  {
+   "id": "K034",
+   "text": "https://open.kakao.com/o/abcd 들어와",
+   "expect": "block",
+   "cat": "E"
+  },
+  {
+   "id": "K035",
+   "text": "www.example.com 놀러오세요",
+   "expect": "block",
+   "cat": "E"
+  },
+  {
+   "id": "K036",
+   "text": "카톡 아이디 doobal2027",
+   "expect": "block",
+   "cat": "E"
+  },
+  {
+   "id": "K037",
+   "text": "텔레 walker99",
+   "expect": "block",
+   "cat": "E"
+  },
+  {
+   "id": "K038",
+   "text": "시발점부터 종점까지 완주!",
+   "expect": "pass"
+  },
+  {
+   "id": "K039",
+   "text": "시발역 앞에서 출발",
+   "expect": "pass"
+  },
+  {
+   "id": "K040",
+   "text": "수박씨 뱉으며 걷기",
+   "expect": "pass"
+  },
+  {
+   "id": "K041",
+   "text": "병신년 새해에 다짐했던 길",
+   "expect": "pass"
+  },
+  {
+   "id": "K042",
+   "text": "한남동에서 한남대교까지 걸었어요",
+   "expect": "pass"
+  },
+  {
+   "id": "K043",
+   "text": "한 남자가 강아지랑 걷고 있었다",
+   "expect": "pass"
+  },
+  {
+   "id": "K044",
+   "text": "목포에서 홍어삼합 먹고 출발",
+   "expect": "pass"
+  },
+  {
+   "id": "K045",
+   "text": "홍어 처음 먹어 봤어요",
+   "expect": "pass",
+   "note": "홍어는 목록에서 뺌(11/3), 신고 블라인드가 받음"
+  },
+  {
+   "id": "K046",
+   "text": "보지 마 앞만 보고 걸어",
+   "expect": "pass"
+  },
+  {
+   "id": "K047",
+   "text": "자지 않고 새벽에 출발했어요",
+   "expect": "pass"
+  },
+  {
+   "id": "K048",
+   "text": "도시 발전이 빠르네요",
+   "expect": "pass"
+  },
+  {
+   "id": "K049",
+   "text": "보존 나무 아래서 쉬었다",
+   "expect": "pass"
+  },
+  {
+   "id": "K050",
+   "text": "새끼 고양이가 따라왔어요",
+   "expect": "pass"
+  },
+  {
+   "id": "K051",
+   "text": "새끼손가락에 반창고",
+   "expect": "pass"
+  },
+  {
+   "id": "K052",
+   "text": "불이 꺼져 있어서 별이 잘 보였다",
+   "expect": "block",
+   "cat": "A",
+   "note": "알려진 오탐: 앞뒤 띄어쓰기 규칙(11/3)"
+  },
+  {
+   "id": "K053",
+   "text": "한파가 닥쳐도 걷는다",
+   "expect": "pass"
+  },
+  {
+   "id": "K054",
+   "text": "산딸기 따먹으며 걸었어요",
+   "expect": "pass"
+  },
+  {
+   "id": "K055",
+   "text": "민들레 씨 바람에 날린다",
+   "expect": "pass"
+  },
+  {
+   "id": "K056",
+   "text": "시바견이랑 같이 산책",
+   "expect": "pass"
+  },
+  {
+   "id": "K057",
+   "text": "전성기 때 체력이 그립다",
+   "expect": "pass"
+  },
+  {
+   "id": "K058",
+   "text": "남자 위로 단풍잎이 떨어졌다",
+   "expect": "pass"
+  },
+  {
+   "id": "K059",
+   "text": "상당산성 기슭을 한 바퀴",
+   "expect": "pass"
+  },
+  {
+   "id": "K060",
+   "text": "떡메치기 체험 했어요",
+   "expect": "pass"
+  },
+  {
+   "id": "K061",
+   "text": "당근 찌개 맛집",
+   "expect": "pass"
+  },
+  {
+   "id": "K062",
+   "text": "영양보충 하고 다시 출발",
+   "expect": "pass"
+  },
+  {
+   "id": "K063",
+   "text": "작은 곤충을 봤다",
+   "expect": "pass"
+  },
+  {
+   "id": "K064",
+   "text": "미친듯이 걸었다",
+   "expect": "pass"
+  },
+  {
+   "id": "K065",
+   "text": "애비뉴 거리 구경",
+   "expect": "pass"
+  },
+  {
+   "id": "K066",
+   "text": "검색기록 보다가 왔어요",
+   "expect": "pass"
+  },
+  {
+   "id": "K067",
+   "text": "부녀자 걷기 모임 회원입니다",
+   "expect": "pass"
+  },
+  {
+   "id": "K068",
+   "text": "호구조사 하듯 걸음 수 세기",
+   "expect": "pass"
+  },
+  {
+   "id": "K069",
+   "text": "사가지고 온 김밥",
+   "expect": "pass"
+  },
+  {
+   "id": "K070",
+   "text": "노무현 대통령 생가 다녀왔어요",
+   "expect": "pass"
+  },
+  {
+   "id": "K071",
+   "text": "우리 家族 모두 왔어요",
+   "expect": "pass"
+  },
+  {
+   "id": "K072",
+   "text": "개기일식 보러 가고 싶다",
+   "expect": "pass"
+  },
+  {
+   "id": "K073",
+   "text": "즐 거 운 하루",
+   "expect": "pass"
+  },
+  {
+   "id": "K074",
+   "text": "오늘 10,000보 달성! 7,777보 기념",
+   "expect": "pass"
+  },
+  {
+   "id": "K075",
+   "text": "18km 걸었다 대단해",
+   "expect": "pass"
+  },
+  {
+   "id": "K076",
+   "text": "경복궁 돌담길 정말 예뻐요",
+   "expect": "pass"
+  },
+  {
+   "id": "K077",
+   "text": "해운대 바다 냄새 최고",
+   "expect": "pass"
+  },
+  {
+   "id": "K078",
+   "text": "엑스포과학공원 한빛탑 야경",
+   "expect": "pass"
+  },
+  {
+   "id": "K079",
+   "text": "문경새재 넘어 왔어요",
+   "expect": "pass"
+  },
+  {
+   "id": "K080",
+   "text": "씨앗 심듯 한 걸음씩",
+   "expect": "pass"
+  },
+  {
+   "id": "K081",
+   "text": "개구리 소리 들으며 걸었다",
+   "expect": "pass"
+  },
+  {
+   "id": "K082",
+   "text": "세 번째 방문인데 또 좋네요",
+   "expect": "pass"
+  },
+  {
+   "id": "K083",
+   "text": "2027.3.30 첫 방문",
+   "expect": "pass"
+  },
+  {
+   "id": "K084",
+   "text": "하하하 너무 좋다 ㅋㅋㅋㅋ",
+   "expect": "pass"
+  },
+  {
+   "id": "K085",
+   "text": "라인 따라 걸었더니 도착",
+   "expect": "pass"
+  },
+  {
+   "id": "K086",
+   "text": "오늘도 잘 해냈다 :)",
+   "expect": "pass"
+  },
+  {
+   "id": "K087",
+   "text": "언젠가 다시 올게요~",
+   "expect": "pass"
+  },
+  {
+   "id": "K088",
+   "text": "아이 셋 데리고 왔어요",
+   "expect": "pass"
+  },
+  {
+   "id": "K089",
+   "text": "정신 차리고 다시 출발",
+   "expect": "pass"
+  },
+  {
+   "id": "K090",
+   "text": "한남!",
+   "expect": "block",
+   "cat": "B"
+  },
+  {
+   "id": "K091",
+   "text": "한남 같은 소리 하네",
+   "expect": "block",
+   "cat": "B"
+  },
+  {
+   "id": "K092",
+   "text": "한남들 몰려옴",
+   "expect": "pass"
+  },
+  {
+   "id": "K093",
+   "text": "한남동 맛집",
+   "expect": "pass"
+  },
+  {
+   "id": "K094",
+   "text": "이 새끼 뭐야",
+   "expect": "pass",
+   "note": "새끼는 목록에서 뺌(11/3), 신고 블라인드가 받음"
+  },
+  {
+   "id": "K095",
+   "text": "꺼져!",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K096",
+   "text": "닥쳐 좀",
+   "expect": "block",
+   "cat": "A"
+  },
+  {
+   "id": "K097",
+   "text": "홍어 같은 소리",
+   "expect": "pass",
+   "note": "홍어는 목록에서 뺌(11/3), 신고 블라인드가 받음"
+  },
+  {
+   "id": "K098",
+   "text": "새끼오리 세 마리",
+   "expect": "pass"
+  },
+  {
+   "id": "K099",
+   "text": "추위가 닥쳐도 걷는다",
+   "expect": "pass"
+  },
+  {
+   "id": "K100",
+   "text": "홍어탕 먹고 출발",
+   "expect": "pass"
+  }
+ ]
+}

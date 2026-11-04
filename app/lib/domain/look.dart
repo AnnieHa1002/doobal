@@ -356,7 +356,7 @@ class HairSwatch {
 
 /// palette.json 전체에서 hair.swatches만 읽는다 (피부·그러데이션·범위까지 읽는 것은 look_palette.dart)
 List<HairSwatch> parseHairSwatches(Map<String, dynamic> json) {
-  final hair = json['hair'] as Map<String, dynamic>;
+  final hair = (json['legacy'] as Map<String, dynamic>)['hair'] as Map<String, dynamic>;
   return [
     for (final s in hair['swatches'] as List)
       HairSwatch(

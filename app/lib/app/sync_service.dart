@@ -738,7 +738,7 @@ class SyncService {
   }
 
   /// 내 동네 스케치에 도착: 고정 그림 '첫 여행 짐 꾸러미'를 소장한다 (visits 1과 도착 시각만 남긴다).
-  /// 액자 등급·권역은 건드리지 않는다
+  /// 액자 등급·권역은 건드리지 않고, 첫 선물 럭을 준다
   Future<void> _arriveSketch(JourneyRow active, Landmark dest, int at) async {
     await db.into(db.paintingsOwned).insertOnConflictUpdate(PaintingsOwnedCompanion.insert(
           landmarkId: sketchId,
@@ -758,6 +758,15 @@ class SyncService {
       visitNo: const Value(1),
       newFrame: const Value(Frame.wood),
     ));
+    // 첫 선물은 첫 그림에 도착할 때 한 번 (config coins.welcomeGift)
+    final gift = rules.coinsWelcomeGift;
+    if (gift > 0) {
+      await db.into(db.coinLedger).insert(CoinLedgerCompanion.insert(
+            day: kstDayKey(DateTime.fromMillisecondsSinceEpoch(at, isUtc: true)),
+            kind: CoinKind.gift,
+            amount: gift,
+          ));
+    }
     await _openArrivalTicket(active.id, sketchId, at);
   }
 

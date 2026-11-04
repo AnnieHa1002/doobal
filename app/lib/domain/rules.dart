@@ -12,8 +12,8 @@ class TimeTint {
   final double character;
 }
 
-/// 장면 레이어 이름 (config scene.layers). 그리는 순서는 painter가 정한다
-enum SceneLayerId { sky, backdrop, ridge, grove, meadow, ground, foreground }
+/// 장면 레이어 이름 (config scene.layers, 6역할 + 하늘). 그리는 순서는 painter가 정한다
+enum SceneLayerId { sky, backdrop, grove, roadside, meadow, ground, foreground }
 
 /// 레이어 하나의 규격 (config scene.layers). 좌표는 기준 화면(1170×2532) px.
 /// sky는 그린 하늘이라 speed만 있고, 땅 이미지(ground)에는 띠가 없다
@@ -98,6 +98,8 @@ class Rules {
     required this.bonusTravelMultiplier,
     required this.bonusCoinMultiplier,
     required this.coinsPerKm,
+    required this.coinsDailyCap,
+    required this.coinsWelcomeGift,
     required this.seaFactor,
     required this.earthRadiusKm,
     required this.ports,
@@ -186,6 +188,12 @@ class Rules {
 
   /// 실제 1km당 하루 럭 (config coins.perKm). 기획이 아직 안 정해서 null이면 럭은 늘 0이다
   final double? coinsPerKm;
+
+  /// 걸어서 버는 럭의 하루 상한 (config coins.dailyCap). 광고·첫 선물은 따로다
+  final int coinsDailyCap;
+
+  /// 첫 그림(내 동네 스케치) 도착 때 한 번 주는 첫 선물 (config coins.welcomeGift)
+  final int coinsWelcomeGift;
 
   final double seaFactor;
   final double earthRadiusKm;
@@ -324,9 +332,10 @@ class Rules {
 
     SceneLayerId layerId(String name) =>
         SceneLayerId.values.asNameMap()[name] ?? (throw FormatException('모르는 레이어: $name'));
+    // speed가 없는 항목은 레이어가 아니라 조각 묶음이다 (people: 11/4 쓰지 않음)
     final layers = {
       for (final e in (scene['layers'] as Map<String, dynamic>).entries)
-        layerId(e.key): SceneLayer(
+        if (e.value['speed'] != null) layerId(e.key): SceneLayer(
           speed: _d(e.value['speed']),
           widthPx: _dn(e.value['widthPx']),
           heightPx: _dn(e.value['heightPx']),
@@ -355,6 +364,12 @@ class Rules {
     if (_dn(coins['perKm']) case final perKm? when perKm < 0) {
       throw const FormatException('coins.perKm는 0 이상이거나 null이어야 한다');
     }
+    if ((coins['dailyCap'] as int) <= 0) {
+      throw const FormatException('coins.dailyCap은 0보다 커야 한다');
+    }
+    if ((coins['welcomeGift'] as int) < 0) {
+      throw const FormatException('coins.welcomeGift는 0 이상이어야 한다');
+    }
     if ((sync['aliveSaveSec'] as int) <= 0) {
       throw const FormatException('sync.aliveSaveSec는 0보다 커야 한다');
     }
@@ -381,6 +396,8 @@ class Rules {
       bonusTravelMultiplier: _d(bonus['travelMultiplier']),
       bonusCoinMultiplier: _d(bonus['coinMultiplier']),
       coinsPerKm: _dn(coins['perKm']),
+      coinsDailyCap: coins['dailyCap'] as int,
+      coinsWelcomeGift: coins['welcomeGift'] as int,
       seaFactor: _d(route['seaFactor']),
       earthRadiusKm: _d(route['earthRadiusKm']),
       ports: (route['ports'] as Map<String, dynamic>)
