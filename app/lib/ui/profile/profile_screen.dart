@@ -23,11 +23,7 @@ const _barMinHeight = 4.0;
 
 const _weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
 
-/// 동행 도감의 칸 힌트. 퐁·휴·심 박사 순이고, 이름은 만나기 전이라 숨긴다 (UI 명세 6장).
-/// TODO(M4): 동행 데이터(companions.json)와 만남 기록이 생기면 만난 동행은 이름·그림으로 바꾼다
-const _companionHints = ['바닷가를 걷다 보면…', '도시를 걷다 보면…', '산길을 걷다 보면…'];
-
-/// 나의 정보: 프로필, 숫자 카드 4개, 최근 14일 걸음 막대, 동행 도감 (UI 명세 11장)
+/// 나의 정보: 프로필, 숫자 카드 4개, 최근 14일 걸음 막대 (UI 명세 11장)
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -128,8 +124,6 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _DaysCard(bars: bars, today: snap.today),
-          const SizedBox(height: 12),
-          const _CompanionCard(),
         ],
       ),
     );
@@ -288,63 +282,6 @@ class _DaysCard extends StatelessWidget {
           border: Border.all(color: Palette.ink, width: 1.5),
         ),
       ),
-    );
-  }
-}
-
-/// 동행 도감: 만난 동행 자리. 지금은 3칸 모두 실루엣과 지형 힌트
-class _CompanionCard extends StatelessWidget {
-  const _CompanionCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return InkCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('동행 도감', style: AppText.cardTitle(context)),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (var i = 0; i < _companionHints.length; i++)
-                Expanded(
-                  child: _CompanionSlot(key: ValueKey('companion-$i'), hint: _companionHints[i]),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 아직 못 만난 동행: 어두운 실루엣과 힌트 한 줄 (이름은 숨긴다)
-class _CompanionSlot extends StatelessWidget {
-  const _CompanionSlot({super.key, required this.hint});
-
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Palette.ink.withValues(alpha: 0.12),
-            border: Border.all(color: Palette.ink.withValues(alpha: 0.35), width: InkLine.panel),
-          ),
-          child: Icon(Icons.person, size: 32, color: Palette.ink.withValues(alpha: 0.4)),
-        ),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(hint, textAlign: TextAlign.center, style: AppText.label),
-        ),
-      ],
     );
   }
 }

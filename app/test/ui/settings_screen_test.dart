@@ -6,12 +6,10 @@ import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/notification_permission.dart';
 import 'package:doobal/data/notifier.dart';
 import 'package:doobal/data/step_source.dart';
-import 'package:doobal/domain/display_font.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/notification_policy.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/main.dart';
-import 'package:doobal/ui/common/app_theme.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/notice_page.dart';
 import 'package:doobal/ui/debug/debug_screen.dart';
@@ -20,7 +18,6 @@ import 'package:doobal/ui/settings/settings_screen.dart';
 import 'package:doobal/ui/start/welcome_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -59,14 +56,28 @@ class _FakePermission implements NotificationPermission {
   Future<bool?> isGranted() async => state;
 }
 
-/// 알림 줄까지 읽혀서 그려질 때까지 기다린다
+/// 알림 줄의 상태까지 읽혀서 그려질 때까지 기다린다
+/// 설정에서 `알림` 줄을 눌러 알림 화면을 연다
+Future<void> _openNotice(WidgetTester tester, UiEnv e, {List<Override> extra = const []}) async {
+  await _open(tester, e, extra: extra);
+  await tester.tap(find.text('알림'));
+  await transition(tester);
+}
+
+/// 설정에서 `앱 정보` 줄을 눌러 앱 정보 화면을 연다
+Future<void> _openAbout(WidgetTester tester, UiEnv e) async {
+  await _open(tester, e);
+  await tester.tap(find.text('앱 정보'));
+  await transition(tester);
+}
+
 Future<void> _open(WidgetTester tester, UiEnv e, {List<Override> extra = const []}) =>
     openOnTop(tester, e, const SettingsScreen(),
         height: _tall,
         extra: extra,
         ready: () =>
             find.text('권한 다시 열기').evaluate().isNotEmpty &&
-            find.text('알림 받기').evaluate().isNotEmpty);
+            (find.text('켜짐').evaluate().isNotEmpty || find.text('꺼짐').evaluate().isNotEmpty));
 
 /// 앱을 뒤로 보냈다가 앞으로 가져온다 (휴대폰 설정에 다녀오는 것과 같다)
 void _leaveAndReturn(WidgetTester tester) {
@@ -128,12 +139,12 @@ void main() {
       for (final t in ['계정 연결', '구글', '애플', '카카오', '알림']) {
         expect(find.text(t), findsOneWidget, reason: t);
       }
-      // 구글·애플·카카오 세 줄
-      expect(find.text('준비 중'), findsNWidgets(3));
+      // 구글·애플·카카오 세 줄 + 광고 동의 (M4.5)
+      expect(find.text('준비 중'), findsNWidgets(4));
+      expect(find.text('글꼴 고르기'), findsNothing);
 
       // 눌러도 아무 일도 없다
       await tester.tap(find.text('구글'));
-      await tester.tap(find.text('알림'));
       await transition(tester);
       expect(find.byType(NoticePage), findsNothing);
       expect(find.text('설정'), findsOneWidget);
@@ -147,7 +158,7 @@ void main() {
     testWidgets('그림 출처·AI 사용 고지·이용약관·개인정보처리방침은 빈 문서 화면', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
-      await _open(tester, e);
+      await _openAbout(tester, e);
 
       for (final title in ['그림 출처', 'AI 사용 고지', '이용약관', '개인정보처리방침']) {
         await tester.tap(find.text(title));
@@ -155,12 +166,12 @@ void main() {
         expect(find.byType(NoticePage), findsOneWidget, reason: title);
         expect(find.text(title), findsOneWidget, reason: title);
         expect(find.text('문서를 준비하고 있어요'), findsOneWidget, reason: title);
-        expect(find.text('설정'), findsNothing);
+        expect(find.text('앱 정보'), findsNothing);
 
         await tester.tap(find.byTooltip('뒤로'));
         await transition(tester);
         expect(find.byType(NoticePage), findsNothing);
-        expect(find.text('설정'), findsOneWidget);
+        expect(find.text('앱 정보'), findsOneWidget);
       }
       await end(tester, e);
     });
@@ -168,7 +179,7 @@ void main() {
     testWidgets('오픈소스 라이선스는 라이선스 화면을 연다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
-      await _open(tester, e);
+      await _openAbout(tester, e);
 
       await tester.tap(find.text('오픈소스 라이선스'));
       await transition(tester);
@@ -191,14 +202,13 @@ void main() {
   });
 
   group('알림', () {
-    const kinds = ['방명록 기회', '도착', '이야기', '거의 다 왔어(10km)', '다시 부르기(3일)'];
+    const kinds = ['방명록 기회', '도착', '이야기', '거의 다 왔어', '다시 부르기'];
 
     testWidgets('전체 켜기 한 줄 + 종류별 다섯 줄이 모두 켜져 있고, 안내 글이 config 숫자다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
-      await _open(tester, e);
+      await _openNotice(tester, e);
 
-      expect(find.text('알림'), findsOneWidget);
       expect(find.text('알림 받기'), findsOneWidget);
       for (final t in kinds) {
         expect(find.text(t), findsOneWidget, reason: t);
@@ -208,10 +218,10 @@ void main() {
         expect(_on(tester, i), isTrue, reason: '$i');
         expect(_opacity(tester, i), 1, reason: '$i');
       }
-      expect(find.text('하루 최대 2개, 밤 10시~아침 8시에는 보내지 않아요'), findsOneWidget);
+      expect(find.text('하루 2개까지 · 밤 10시~아침 8시 쉼'), findsOneWidget);
       // 권한을 모르면(자리표시) 꺼진 것으로 보지 않는다: 경고 줄이 없다
-      expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsNothing);
-      expect(find.text('설정 열기'), findsNothing);
+      expect(find.text('알림이 꺼져 있어요 · 휴대폰 설정에서 켜 주세요'), findsNothing);
+      expect(find.text('휴대폰 설정'), findsNothing);
       await end(tester, e);
     });
 
@@ -225,26 +235,26 @@ void main() {
         'inactiveHours': 48,
       }));
       await e.seed(tester);
-      await _open(tester, e);
+      await _openNotice(tester, e);
 
-      expect(find.text('하루 최대 3개, 밤 11시~아침 7시에는 보내지 않아요'), findsOneWidget);
-      expect(find.text('거의 다 왔어(5km)'), findsOneWidget);
-      expect(find.text('다시 부르기(2일)'), findsOneWidget);
+      expect(find.text('하루 3개까지 · 밤 11시~아침 7시 쉼'), findsOneWidget);
+      expect(find.text('5km 남았을 때'), findsOneWidget);
+      expect(find.text('2일 쉬었을 때'), findsOneWidget);
       await end(tester, e);
 
       // 소수 km·하루로 안 나눠지는 시간
       final e2 = UiEnv(appRules: _rulesWith({'nearDestKm': 7.5, 'inactiveHours': 36}));
       await e2.seed(tester);
-      await _open(tester, e2);
-      expect(find.text('거의 다 왔어(7.5km)'), findsOneWidget);
-      expect(find.text('다시 부르기(36시간)'), findsOneWidget);
+      await _openNotice(tester, e2);
+      expect(find.text('7.5km 남았을 때'), findsOneWidget);
+      expect(find.text('36시간 쉬었을 때'), findsOneWidget);
       await end(tester, e2);
     });
 
     testWidgets('종류 하나를 끄면 저장되고, 화면을 다시 열어도 그대로다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
-      await _open(tester, e);
+      await _openNotice(tester, e);
       expect(await _settingsRows(tester, e.db), isEmpty);
 
       await tester.tap(find.text('도착'));
@@ -265,7 +275,7 @@ void main() {
       // 닫았다 다시 열면 저장한 대로 읽힌다
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
-      await tester.tap(find.text('열기'));
+      await tester.tap(find.text('알림'));
       await transition(tester);
       await settle(tester, () => find.text('알림 받기').evaluate().isNotEmpty);
       await tester.pump();
@@ -281,7 +291,7 @@ void main() {
     testWidgets('전체를 끄면 종류별 다섯이 흐려져서 눌리지 않고, 다시 켜면 앞서 고른 대로다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
-      await _open(tester, e);
+      await _openNotice(tester, e);
 
       // 이야기만 먼저 끈다
       await tester.tap(find.text('이야기'));
@@ -318,17 +328,17 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('휴대폰 권한이 꺼져 있으면 경고 줄과 설정 열기 버튼이 뜨고 토글이 흐려진다', (tester) async {
+    testWidgets('휴대폰 권한이 꺼져 있으면 경고 줄과 휴대폰 설정 버튼이 뜨고 토글이 흐려진다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       final permission = _FakePermission(false, grantOnRequest: true);
-      await _open(tester, e,
+      await _openNotice(tester, e,
           extra: [notificationPermissionProvider.overrideWithValue(permission)]);
-      await settle(tester, () => find.text('휴대폰 설정에서 알림을 켜 주세요').evaluate().isNotEmpty);
+      await settle(tester, () => find.text('알림이 꺼져 있어요 · 휴대폰 설정에서 켜 주세요').evaluate().isNotEmpty);
       await tester.pump();
 
-      expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsOneWidget);
-      expect(_gameButton(tester, '설정 열기').kind, GameButtonKind.secondary);
+      expect(find.text('알림이 꺼져 있어요 · 휴대폰 설정에서 켜 주세요'), findsOneWidget);
+      expect(_gameButton(tester, '휴대폰 설정').kind, GameButtonKind.secondary);
       for (var i = 0; i < 6; i++) {
         expect(_opacity(tester, i), closeTo(0.4, 1e-9), reason: '$i');
       }
@@ -341,23 +351,23 @@ void main() {
       expect([for (var i = 0; i < 6; i++) _on(tester, i)], everyElement(isTrue));
       expect(await _settingsRows(tester, e.db), isEmpty);
 
-      // 설정 열기: 이 앱의 알림 설정을 연다 (권한을 다시 묻지 않는다). 그대로 두면 경고가 남는다
+      // 휴대폰 설정: 이 앱의 알림 설정을 연다 (권한을 다시 묻지 않는다). 그대로 두면 경고가 남는다
       expect(e.appSettings.noticeOpens, 0);
-      await tester.tap(find.text('설정 열기'));
+      await tester.tap(find.text('휴대폰 설정'));
       await tester.pump();
       expect(e.appSettings.noticeOpens, 1);
       expect(e.appSettings.appOpens, 0);
       expect(permission.requests, 0);
-      expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsOneWidget);
+      expect(find.text('알림이 꺼져 있어요 · 휴대폰 설정에서 켜 주세요'), findsOneWidget);
 
       // 설정에서 켜고 돌아오면 권한을 다시 읽어서 경고가 사라지고 토글이 켜진다
       permission.state = true;
       _leaveAndReturn(tester);
-      await settle(tester, () => find.text('설정 열기').evaluate().isEmpty);
+      await settle(tester, () => find.text('휴대폰 설정').evaluate().isEmpty);
       await tester.pump();
       expect(e.appSettings.noticeOpens, 1);
       expect(permission.requests, 0);
-      expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsNothing);
+      expect(find.text('알림이 꺼져 있어요 · 휴대폰 설정에서 켜 주세요'), findsNothing);
       for (var i = 0; i < 6; i++) {
         expect(_opacity(tester, i), 1, reason: '$i');
       }
@@ -367,28 +377,28 @@ void main() {
     testWidgets('권한이 허용돼 있으면 경고가 없고, 돌아와도 거부면 경고가 남는다', (tester) async {
       final granted = UiEnv();
       await granted.seed(tester);
-      await _open(tester, granted,
+      await _openNotice(tester, granted,
           extra: [notificationPermissionProvider.overrideWithValue(_FakePermission(true))]);
       await tester.pump();
-      expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsNothing);
+      expect(find.text('알림이 꺼져 있어요 · 휴대폰 설정에서 켜 주세요'), findsNothing);
       expect(_opacity(tester, 0), 1);
       await end(tester, granted);
 
       final denied = UiEnv();
       await denied.seed(tester);
       final permission = _FakePermission(false);
-      await _open(tester, denied,
+      await _openNotice(tester, denied,
           extra: [notificationPermissionProvider.overrideWithValue(permission)]);
-      await settle(tester, () => find.text('설정 열기').evaluate().isNotEmpty);
+      await settle(tester, () => find.text('휴대폰 설정').evaluate().isNotEmpty);
       await tester.pump();
-      await tester.tap(find.text('설정 열기'));
+      await tester.tap(find.text('휴대폰 설정'));
       await tester.pump();
       expect(denied.appSettings.noticeOpens, 1);
       // 켜지 않고 돌아오면 여전히 꺼져 있다
       _leaveAndReturn(tester);
       await settle(tester, () => false, tries: 6);
       expect(permission.requests, 0);
-      expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsOneWidget);
+      expect(find.text('알림이 꺼져 있어요 · 휴대폰 설정에서 켜 주세요'), findsOneWidget);
       await end(tester, denied);
     });
 
@@ -396,15 +406,15 @@ void main() {
       final e = UiEnv();
       e.appSettings.fail = true;
       await e.seed(tester);
-      await _open(tester, e,
+      await _openNotice(tester, e,
           extra: [notificationPermissionProvider.overrideWithValue(_FakePermission(false))]);
-      await settle(tester, () => find.text('설정 열기').evaluate().isNotEmpty);
+      await settle(tester, () => find.text('휴대폰 설정').evaluate().isNotEmpty);
       await tester.pump();
-      await tester.tap(find.text('설정 열기'));
+      await tester.tap(find.text('휴대폰 설정'));
       await tester.pump();
       expect(e.appSettings.noticeOpens, 1);
-      expect(find.text('휴대폰 설정에서 알림을 켜 주세요'), findsOneWidget);
-      expect(find.text('설정'), findsOneWidget);
+      expect(find.text('알림이 꺼져 있어요 · 휴대폰 설정에서 켜 주세요'), findsOneWidget);
+      expect(find.text('알림 받기'), findsOneWidget);
       await end(tester, e);
     });
   });
@@ -474,72 +484,6 @@ void main() {
       expect(find.textContaining('걸음 권한을 열지 못했어요'), findsOneWidget);
       expect(find.text('설정'), findsOneWidget);
       await end(tester, broken);
-    });
-  });
-
-  group('글꼴 고르기 (16장 11/3)', () {
-    /// 앱처럼 고른 글꼴을 테마로 쓰는 앱에 설정을 띄운다
-    Future<void> openThemed(WidgetTester tester, UiEnv e) async {
-      phone(tester, height: _tall);
-      await tester.pumpWidget(ProviderScope(
-        overrides: e.overrides,
-        child: Consumer(
-          builder: (context, ref, _) => MaterialApp(
-            theme: doobalTheme(ref.watch(displayFontProvider).value ?? DisplayFont.gaegu),
-            home: const SettingsScreen(),
-          ),
-        ),
-      ));
-      await settle(tester, () => find.text('권한 다시 열기').evaluate().isNotEmpty);
-    }
-
-    TextStyle labelStyle(WidgetTester tester) => tester.widget<Text>(find.text('글꼴 고르기')).style!;
-    Finder checkIn(String name) => find.descendant(
-        of: find.byKey(ValueKey('font-$name')), matching: find.byIcon(Icons.check));
-
-    testWidgets('맨 위에 개구·동글·고운 바탕, 이름은 그 글꼴로 보이고 기본 개구에 체크', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await openThemed(tester, e);
-
-      for (final f in DisplayFont.values) {
-        final name = tester.widget<Text>(find.descendant(
-            of: find.byKey(ValueKey('font-${f.name}')), matching: find.byType(Text)));
-        expect(name.data, f.label);
-        expect(name.style!.fontFamily, f.family);
-        expect(name.style!.fontSize, closeTo(18 * f.scale, 1e-9));
-      }
-      expect(checkIn('gaegu'), findsOneWidget);
-      expect(checkIn('dongle'), findsNothing);
-      // 글꼴 줄이 계정 연결보다 위
-      expect(tester.getTopLeft(find.text('글꼴 고르기')).dy,
-          lessThan(tester.getTopLeft(find.text('계정 연결')).dy));
-      // 화면의 굵은 글자(묶음 이름)도 개구 1.3배
-      expect((labelStyle(tester).fontFamily, labelStyle(tester).fontSize), ('Gaegu', 12 * 1.3));
-      await end(tester, e);
-    });
-
-    testWidgets('동글을 고르면 저장되고 체크가 옮겨 가며, 화면 굵은 글자가 바로 동글 1.5배가 된다',
-        (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await openThemed(tester, e);
-
-      await tester.tap(find.byKey(const ValueKey('font-dongle')));
-      await settle(tester, () => checkIn('dongle').evaluate().isNotEmpty);
-      // 테마가 바뀌는 0.2초 애니메이션이 끝나길 기다린다
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(checkIn('gaegu'), findsNothing);
-      expect((labelStyle(tester).fontFamily, labelStyle(tester).fontSize), ('Dongle', 12 * 1.5));
-      final row = await tester.runAsync(() => e.db.select(e.db.profile).getSingle());
-      expect(row!.displayFont, 'dongle');
-
-      // 고운 바탕은 배율 1.0이라 명세 pt 그대로
-      await tester.tap(find.byKey(const ValueKey('font-batang')));
-      await settle(tester, () => checkIn('batang').evaluate().isNotEmpty);
-      await tester.pump(const Duration(milliseconds: 300));
-      expect((labelStyle(tester).fontFamily, labelStyle(tester).fontSize), ('GowunBatang', 12.0));
-      await end(tester, e);
     });
   });
 

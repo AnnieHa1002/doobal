@@ -323,8 +323,8 @@ void main() {
 
       await _tapIcon(tester, Icons.person);
       expect(find.text('나의 정보'), findsOneWidget);
-      await _settle(tester, () => find.text('동행 도감').evaluate().isNotEmpty);
-      expect(find.text('동행 도감'), findsOneWidget);
+      await _settle(tester, () => find.text('최근 14일').evaluate().isNotEmpty);
+      expect(find.text('최근 14일'), findsOneWidget);
       await _tapIcon(tester, Icons.arrow_back);
 
       await _tapIcon(tester, Icons.settings);

@@ -39,7 +39,7 @@ Color _barColor(WidgetTester tester, String day) =>
 
 Future<void> _open(WidgetTester tester, UiEnv e) =>
     openOnTop(tester, e, const ProfileScreen(),
-        height: _tall, ready: () => find.text('동행 도감').evaluate().isNotEmpty);
+        height: _tall, ready: () => find.text('최근 14일').evaluate().isNotEmpty);
 
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
@@ -140,26 +140,11 @@ void main() {
     await end(tester, e);
   });
 
-  testWidgets('동행 도감: 3칸 모두 실루엣과 지형 힌트, 이름은 숨긴다', (tester) async {
+  testWidgets('동행 도감은 없다 (11/4, 동행 화면과 겹쳐서 뺌)', (tester) async {
     final e = UiEnv();
     await e.seed(tester);
     await _open(tester, e);
-
-    expect(find.text('동행 도감'), findsOneWidget);
-    for (var i = 0; i < 3; i++) {
-      expect(find.byKey(ValueKey('companion-$i')), findsOneWidget);
-    }
-    expect(_in(find.byKey(const ValueKey('companion-0')), '바닷가를 걷다 보면…'), findsOneWidget);
-    expect(_in(find.byKey(const ValueKey('companion-1')), '도시를 걷다 보면…'), findsOneWidget);
-    expect(_in(find.byKey(const ValueKey('companion-2')), '산길을 걷다 보면…'), findsOneWidget);
-    expect(
-      find.descendant(
-          of: find.byKey(const ValueKey('companion-0')), matching: find.byIcon(Icons.person)),
-      findsOneWidget,
-    );
-    for (final name in ['퐁', '휴', '심 박사']) {
-      expect(find.textContaining(name), findsNothing, reason: name);
-    }
+    expect(find.text('동행 도감'), findsNothing);
     await end(tester, e);
   });
 
