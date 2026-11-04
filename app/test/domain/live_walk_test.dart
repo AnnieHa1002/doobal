@@ -28,6 +28,42 @@ void main() {
     expect(rules.liveNoticeUpdateSec, 60);
   });
 
+  group('foregroundM: 길 위 이벤트가 세는 앱이 앞에 있는 동안의 거리', () {
+    test('센 걸음 × 보폭이고, 첫 값(기준)은 세지 않는다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      expect(w.foregroundM, 0);
+      _feed(w, 10, 1010);
+      _feed(w, 20, 1030);
+      expect(w.foregroundM, closeTo(30 * rules.walkStrideM, 1e-9));
+      expect(w.foregroundM, w.distanceM);
+    });
+
+    test('숨어 있던 동안 따라잡은 걸음은 거리에는 들어가도 foregroundM에는 안 들어간다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 10, 1020); // 앞에서 20걸음
+      w.pause(_at(20));
+      _feed(w, 120, 1220); // 숨어 있던 200걸음을 한꺼번에 받는다
+      expect(w.catchUps, 1);
+      expect(w.steps, 220);
+      expect(w.foregroundM, closeTo(20 * rules.walkStrideM, 1e-9));
+      expect(w.distanceM, greaterThan(w.foregroundM));
+      // 돌아온 뒤 앞에서 센 걸음은 다시 센다
+      _feed(w, 130, 1230);
+      expect(w.foregroundM, closeTo(30 * rules.walkStrideM, 1e-9));
+    });
+
+    test('센서가 재부팅으로 기준을 다시 잡아도 쌓인 값은 그대로다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      _feed(w, 10, 1010);
+      _feed(w, 20, 5); // 카운터가 0부터 다시 시작
+      _feed(w, 30, 25);
+      expect(w.foregroundM, closeTo(30 * rules.walkStrideM, 1e-9));
+    });
+  });
+
   group('previewSteps: 숨어 있는 동안 본 센서 값으로 낸 걸음 (상태는 그대로)', () {
     test('기준을 받기 전에는 센 걸음(0) 그대로', () {
       final w = LiveWalk(rules);

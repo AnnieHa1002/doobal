@@ -56,6 +56,9 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
 
   /// 다시 볼 때만: 그날 인정된 걷기 1번 중 이 걷기가 몇 번째인지
   int? _nth;
+
+  /// 이 걷기 시간대에 생긴 길 위 이벤트 (2km 이정표). 없으면 빈 목록
+  var _events = const <RoadEventView>[];
   Object? _error;
 
   @override
@@ -71,6 +74,7 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
       final record = await svc.walkRecord(widget.start, widget.end, live: widget.liveMinutes);
       final nth =
           widget.review ? await ref.read(statsServiceProvider).countedNth(widget.start) : null;
+      final events = await svc.eventsBetween(widget.start, widget.end);
       // 기다리는 동안 화면을 떠났으면 ref를 더 쓰지 않는다
       if (!mounted) return;
       final snap = widget.review
@@ -81,6 +85,7 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
         _record = record;
         _snapshot = snap;
         _nth = nth;
+        _events = events;
       });
     } catch (e) {
       debugPrint('걷기 기록 실패: $e');
@@ -212,6 +217,24 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
     ];
   }
 
+  /// 이 걷기에서 지난 2km 이정표: 칸마다 칭찬 한 줄과 풍경 한 줄 (짧게, 작은 글씨)
+  List<Widget> _eventLines(Rules rules) => [
+        const SizedBox(height: 12),
+        Text('${_plainKm(rules.eventEveryKm)}km 이정표', style: AppText.label),
+        for (final e in _events)
+          Padding(
+            key: ValueKey('walk-event-${e.k}'),
+            padding: const EdgeInsets.only(top: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(e.praiseText, style: AppText.body),
+                Text(e.sceneText, style: AppText.bodySub),
+              ],
+            ),
+          ),
+      ];
+
   Widget _content(Rules rules, WalkRecord record, Snapshot snap, List<int>? milestones) {
     final s = record.summary;
     final run = s.runRatio;
@@ -255,6 +278,7 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
           const SizedBox(height: 4),
           ..._lapRows(record.laps),
         ],
+        if (_events.isNotEmpty) ..._eventLines(rules),
         const SizedBox(height: 16),
         Text(
           _sessionText(rules, record),

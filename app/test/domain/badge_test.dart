@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:doobal/domain/badge.dart';
+import 'package:doobal/domain/sun.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _badges = parseBadges(
@@ -80,6 +81,40 @@ void main() {
         expect(badgeMet(_badge(e.key).cond, e.value.$2), isTrue);
       });
     }
+  });
+
+  group('하늘 구간 (badges.json phases)', () {
+    final phases = BadgePhases.fromJson(
+        (jsonDecode(File('assets/data/badges.json').readAsStringSync())
+            as Map<String, dynamic>)['phases'] as Map<String, dynamic>);
+    final sun = SunTimes(DateTime.utc(2026, 11, 17, 22), DateTime.utc(2026, 11, 18, 8)); // 07:00·17:00 KST
+    DateTime at(DateTime base, int min) => base.add(Duration(minutes: min));
+
+    test('새벽은 일출 -70분 ~ +60분 (끝은 미만)', () {
+      expect(phases.phaseAt(at(sun.sunrise, -71), sun), 'night');
+      expect(phases.phaseAt(at(sun.sunrise, -70), sun), 'dawn');
+      expect(phases.phaseAt(at(sun.sunrise, 59), sun), 'dawn');
+      expect(phases.phaseAt(at(sun.sunrise, 60), sun), isNull);
+    });
+
+    test('노을은 일몰 -60분 ~ +60분, 그 뒤는 밤', () {
+      expect(phases.phaseAt(at(sun.sunset, -61), sun), isNull);
+      expect(phases.phaseAt(at(sun.sunset, -60), sun), 'sunset');
+      expect(phases.phaseAt(at(sun.sunset, 59), sun), 'sunset');
+      expect(phases.phaseAt(at(sun.sunset, 60), sun), 'night');
+      expect(phases.phaseAt(at(sun.sunset, 300), sun), 'night');
+    });
+
+    test('한낮은 어느 구간도 아니다', () {
+      expect(phases.phaseAt(DateTime.utc(2026, 11, 18, 3), sun), isNull);
+    });
+  });
+
+  test('도장 묶음: 지형과 계절은 한 묶음, 설명(desc)을 읽는다', () {
+    final sections = badgeSections(_badges);
+    expect([for (final s in sections) (s.name, s.badges.length)],
+        [('걷기 습관', 6), ('시간대', 3), ('지형·계절', 5), ('여정', 4), ('동행', 2)]);
+    expect(_badge('b_walk_5km').desc, '걷기 한 번에 5km');
   });
 
   test('이미 받은 도장은 다시 주지 않고, 같은 기록이면 같은 결과', () {

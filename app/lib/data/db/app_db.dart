@@ -10,7 +10,7 @@ part 'app_db.g.dart';
 // + 스키마 4 (화집 벽) + 스키마 5 (새 그림 표시) + 스키마 6 (프로필: 시작 흐름)
 // + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지) + 스키마 8 (방명록 쓸 기회·쓴 글)
 // + 스키마 9 (알림 기록·알림 켜고 끄기) + 스키마 10 (복원한 하루 요약 지키기: 동기화 상태 열)
-// + 스키마 11 (본격 걷기: 앱 걷기 창·이동 거리·럭 장부).
+// + 스키마 11 (본격 걷기: 앱 걷기 창·이동 거리·럭 장부) + 스키마 13 (길 위 이벤트·도장, 화집 벽 표 삭제).
 // 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
@@ -94,6 +94,10 @@ class Journeys extends Table {
   RealColumn get destLat => real().nullable()();
   RealColumn get destLng => real().nullable()();
 
+  /// 앱이 켜져 있는 동안 센서 걸음 × 보폭으로 센 실제 걸은 거리(m) 누적 (스키마 13, 길 위 이벤트의 칸 기준).
+  /// 경비로 더한 거리·배 환산·화면이 꺼진 동안 따라잡은 걸음은 들어 있지 않다. 진행 거리와는 따로다
+  RealColumn get eventM => real().withDefault(const Constant(0.0))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -127,18 +131,6 @@ class PropsOwned extends Table {
 
   @override
   Set<Column> get primaryKey => {propId};
-}
-
-/// 화집 벽에 건 그림. 칸(0~3)마다 한 점이고, 안 건 칸은 행이 없다.
-/// 같은 그림이 두 칸에 걸리지 않게 하는 건 SyncService가 한다
-/// 화집 벽 액자 (11/4 없앰, 더 쓰지 않는다). 다음에 스키마를 올릴 때 지운다
-@DataClassName('WallSlotRow')
-class WallSlots extends Table {
-  IntColumn get slot => integer()();
-  TextColumn get landmarkId => text()();
-
-  @override
-  Set<Column> get primaryKey => {slot};
 }
 
 /// 1행. fundedUntilUtc = 어디까지 경비에 넣었는지 (다시 동기화해도 두 번 넣지 않게)
@@ -308,6 +300,38 @@ class CoinLedger extends Table {
   TextColumn get refId => text().nullable()();
 }
 
+/// 길 위 이벤트 한 칸 (스키마 13). 여정(journeyId)의 k번째 칸(2km마다)을 넘는 그 자리에서 한 줄을 만들고,
+/// 한 번 만들면 다시 계산하지 않는다. praiseText는 빈칸을 채운 칭찬 문구의 스냅샷이고, 풍경 문구는 id로
+/// events.json에서 찾는다. progressPct는 그때의 여정 진행률(%, 다음 칸의 '기준을 넘었나' 비교용),
+/// atUtc는 만든 시각(걷기 기록이 그 걷기 시간대의 줄을 찾는다), terrain·season은 장면 값(night는 낮밤)
+@DataClassName('JourneyEventRow')
+class JourneyEvents extends Table {
+  TextColumn get journeyId => text()();
+  IntColumn get k => integer()();
+  TextColumn get terrain => text()();
+  TextColumn get season => text()();
+  BoolColumn get night => boolean()();
+  TextColumn get sceneTextId => text()();
+  TextColumn get praiseId => text()();
+  TextColumn get praiseText => text()();
+  RealColumn get progressPct => real().withDefault(const Constant(0.0))();
+  IntColumn get atUtc => integer()();
+
+  @override
+  Set<Column> get primaryKey => {journeyId, k};
+}
+
+/// 받은 도장 (스키마 13). 한 번 받으면 지우지 않는다. seen이 false면 배낭에 새 도장 표시
+@DataClassName('BadgeOwnedRow')
+class BadgesOwned extends Table {
+  TextColumn get badgeId => text()();
+  IntColumn get atUtc => integer()();
+  BoolColumn get seen => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {badgeId};
+}
+
 @DriftDatabase(
   tables: [
     StepMinutes,
@@ -319,20 +343,21 @@ class CoinLedger extends Table {
     PaintingsOwned,
     PropsOwned,
     Profile,
-    WallSlots,
     GuestbookTickets,
     GuestbookPosts,
     NotificationLog,
     NotificationSettings,
     AppWalks,
     CoinLedger,
+    JourneyEvents,
+    BadgesOwned,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -354,9 +379,7 @@ class AppDb extends _$AppDb {
           if (from < 3) {
             await m.createTable(profile);
           }
-          if (from < 4) {
-            await m.createTable(wallSlots);
-          }
+          // 4에서 만들던 화집 벽 표(wall_slots)는 13에서 없앴다 (아래)
           // 2에서 새로 만든 그림 표는 지금 정의라 seen 열이 이미 있다. 2~4에서 올라올 때만 더한다
           // (옛 행은 기본값 true, 곧 본 것)
           if (from >= 2 && from < 5) await m.addColumn(paintingsOwned, paintingsOwned.seen);
@@ -403,6 +426,14 @@ class AppDb extends _$AppDb {
           }
           // 2 이하에서 올라올 때는 위 createTable(profile)이 지금 정의라 이미 있다
           if (from >= 3 && from < 12) await m.addColumn(profile, profile.displayFont);
+          // 13: 길 위 이벤트·도장. 여정 표는 어디서 올라와도 열을 더한다. 화집 벽 표는 더 안 써서 지운다
+          // (없는 DB에서도 안전하게)
+          if (from < 13) {
+            await m.addColumn(journeys, journeys.eventM);
+            await m.createTable(journeyEvents);
+            await m.createTable(badgesOwned);
+            await customStatement('DROP TABLE IF EXISTS wall_slots');
+          }
         },
       );
 }

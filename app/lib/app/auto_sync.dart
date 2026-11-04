@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/backup_policy.dart';
+import '../domain/badge.dart' as stamp;
 import '../domain/focus_walk.dart';
 import '../domain/notification_policy.dart' show NoticeKind, parseNoticePayload;
 import '../domain/prop.dart';
@@ -61,6 +62,9 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   /// 새로 얻은 소품 듣기 (동기화 서비스가 새로 만들어지면 다시 듣는다)
   StreamSubscription<List<Prop>>? _propSub;
 
+  /// 새로 받은 도장 듣기 (동기화 서비스가 새로 만들어지면 다시 듣는다)
+  StreamSubscription<List<stamp.Badge>>? _badgeSub;
+
   /// 누른 알림 듣기
   StreamSubscription<String>? _tapSub;
 
@@ -85,6 +89,8 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
       if (svc == null) return;
       _propSub?.cancel();
       _propSub = svc.newProps.listen(_showNewProps);
+      _badgeSub?.cancel();
+      _badgeSub = svc.newBadges.listen(_showNewBadges);
     }, fireImmediately: true);
     final notices = ref.read(localNotificationsProvider);
     _tapSub = notices.taps.listen(_openNotice);
@@ -100,6 +106,7 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   void dispose() {
     _aliveTimer?.cancel();
     _propSub?.cancel();
+    _badgeSub?.cancel();
     _tapSub?.cancel();
     _lifecycle.dispose();
     super.dispose();
@@ -162,6 +169,16 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     if (!mounted || messenger == null) return;
     ref.invalidate(ownedPropIdsProvider);
     queueToastOn(messenger, newPropToast(props));
+  }
+
+  /// 새로 받은 도장 한 줄 토스트 (소품과 같은 방식). 배낭 알림 점은 안 본 도장 수로 켜지니 상태를 새로 읽는다.
+  /// 걷는 중 화면이 떠 있으면 그 화면이 걸음 알약 아래 작은 줄로 알리므로 토스트는 띄우지 않는다
+  void _showNewBadges(List<stamp.Badge> badges) {
+    if (!mounted) return;
+    ref.invalidate(snapshotProvider);
+    final messenger = scaffoldMessengerKey.currentState;
+    if (messenger == null || ref.read(walkingActiveProvider) > 0) return;
+    queueToastOn(messenger, stamp.newBadgeToast(badges));
   }
 
   /// 앱이 살아 있는 동안 rules.aliveSaveSec마다 살아 있다고 적는다

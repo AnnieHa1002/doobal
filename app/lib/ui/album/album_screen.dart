@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/badge.dart' as stamp;
 import '../../domain/landmark.dart';
 import '../../domain/sketch.dart';
 import '../common/app_text.dart';
@@ -10,6 +11,7 @@ import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 import 'album_diary.dart';
+import 'album_stamps.dart';
 import 'album_widgets.dart';
 import 'painting_detail_screen.dart';
 
@@ -49,6 +51,14 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   void _openTab(int i) {
     setState(() => _tab = i);
     if (i == 1) _seeProps();
+    if (i == 2) _seeStamps();
+  }
+
+  /// 도장 탭을 열면 새 도장 표시(배낭의 점)를 지운다
+  Future<void> _seeStamps() async {
+    final svc = await ref.read(syncServiceProvider.future);
+    await svc.markBadgesSeen();
+    if (mounted) ref.invalidate(snapshotProvider);
   }
 
   /// 화집을 열면 안 본 그림을 이번 방문의 새 그림 칸으로 담고, 새 그림 표시(배낭의 점)를 지운다
@@ -106,7 +116,15 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
 
   Widget _content(List<OwnedPaintingView> paintings, List<Landmark> landmarks) {
     final owned = {for (final p in paintings) p.landmark.id: p};
-    final propsDot = (ref.watch(snapshotProvider).value?.unseenProps ?? 0) > 0;
+    final snap = ref.watch(snapshotProvider).value;
+    final propsDot = (snap?.unseenProps ?? 0) > 0;
+    // 도장 탭 안에 있으면 그 자리에서 바로 본 것이라 점을 달지 않는다
+    final stampsDot = (snap?.unseenBadges ?? 0) > 0 && _tab != 2;
+    final badges = ref.watch(badgeCatalogProvider).value?.badges;
+    final ownedBadges = ref.watch(ownedBadgesProvider).value;
+    final stampsLabel = badges == null || ownedBadges == null
+        ? '도장'
+        : '도장 ${badges.where((b) => ownedBadges.containsKey(b.id)).length} / ${badges.length}';
     const gutter = EdgeInsets.symmetric(horizontal: 16);
     return CustomScrollView(
       slivers: [
@@ -116,7 +134,13 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AlbumTabs(selected: _tab, onSelect: _openTab, propsDot: propsDot),
+                AlbumTabs(
+                  selected: _tab,
+                  onSelect: _openTab,
+                  propsDot: propsDot,
+                  stampsDot: stampsDot,
+                  stampsLabel: stampsLabel,
+                ),
                 const SizedBox(height: 4),
               ],
             ),
@@ -127,9 +151,25 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
             child: _ViewSwitch(diary: _diary, onSelect: (d) => setState(() => _diary = d)),
           ),
           if (_diary) ..._diarySlivers() else ..._paintingSlivers(owned, landmarks),
-        ] else
-          _propSliver(),
+        ] else if (_tab == 1)
+          _propSliver()
+        else
+          _stampSliver(),
       ],
+    );
+  }
+
+  /// 도장 탭: 묶음별 격자. 받은 도장만 진하게, 못 받은 도장은 흐린 빈 고리 (이름·진행도 없음)
+  Widget _stampSliver() {
+    final badges = ref.watch(badgeCatalogProvider).value?.badges;
+    final owned = ref.watch(ownedBadgesProvider).value;
+    // 읽어 오는 동안은 비워 둔다
+    if (badges == null || owned == null) return const SliverToBoxAdapter();
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      sliver: SliverToBoxAdapter(
+        child: StampSections(sections: stamp.badgeSections(badges), owned: owned),
+      ),
     );
   }
 

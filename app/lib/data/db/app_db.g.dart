@@ -1449,6 +1449,16 @@ class $JourneysTable extends Journeys
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _eventMMeta = const VerificationMeta('eventM');
+  @override
+  late final GeneratedColumn<double> eventM = GeneratedColumn<double>(
+    'event_m',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1469,6 +1479,7 @@ class $JourneysTable extends Journeys
     arrivalShown,
     destLat,
     destLng,
+    eventM,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1589,6 +1600,12 @@ class $JourneysTable extends Journeys
         destLng.isAcceptableOrUnknown(data['dest_lng']!, _destLngMeta),
       );
     }
+    if (data.containsKey('event_m')) {
+      context.handle(
+        _eventMMeta,
+        eventM.isAcceptableOrUnknown(data['event_m']!, _eventMMeta),
+      );
+    }
     return context;
   }
 
@@ -1676,6 +1693,10 @@ class $JourneysTable extends Journeys
         DriftSqlType.double,
         data['${effectivePrefix}dest_lng'],
       ),
+      eventM: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}event_m'],
+      )!,
     );
   }
 
@@ -1725,6 +1746,10 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
   /// 가상 목적지의 좌표 (destId가 'sketch'인 첫 여정만). 명소 여정은 null
   final double? destLat;
   final double? destLng;
+
+  /// 앱이 켜져 있는 동안 센서 걸음 × 보폭으로 센 실제 걸은 거리(m) 누적 (스키마 13, 길 위 이벤트의 칸 기준).
+  /// 경비로 더한 거리·배 환산·화면이 꺼진 동안 따라잡은 걸음은 들어 있지 않다. 진행 거리와는 따로다
+  final double eventM;
   const JourneyRow({
     required this.id,
     required this.originLat,
@@ -1744,6 +1769,7 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     required this.arrivalShown,
     this.destLat,
     this.destLng,
+    required this.eventM,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1792,6 +1818,7 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     if (!nullToAbsent || destLng != null) {
       map['dest_lng'] = Variable<double>(destLng);
     }
+    map['event_m'] = Variable<double>(eventM);
     return map;
   }
 
@@ -1833,6 +1860,7 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
       destLng: destLng == null && nullToAbsent
           ? const Value.absent()
           : Value(destLng),
+      eventM: Value(eventM),
     );
   }
 
@@ -1866,6 +1894,7 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
       arrivalShown: serializer.fromJson<bool>(json['arrivalShown']),
       destLat: serializer.fromJson<double?>(json['destLat']),
       destLng: serializer.fromJson<double?>(json['destLng']),
+      eventM: serializer.fromJson<double>(json['eventM']),
     );
   }
   @override
@@ -1896,6 +1925,7 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
       'arrivalShown': serializer.toJson<bool>(arrivalShown),
       'destLat': serializer.toJson<double?>(destLat),
       'destLng': serializer.toJson<double?>(destLng),
+      'eventM': serializer.toJson<double>(eventM),
     };
   }
 
@@ -1918,6 +1948,7 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     bool? arrivalShown,
     Value<double?> destLat = const Value.absent(),
     Value<double?> destLng = const Value.absent(),
+    double? eventM,
   }) => JourneyRow(
     id: id ?? this.id,
     originLat: originLat ?? this.originLat,
@@ -1937,6 +1968,7 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     arrivalShown: arrivalShown ?? this.arrivalShown,
     destLat: destLat.present ? destLat.value : this.destLat,
     destLng: destLng.present ? destLng.value : this.destLng,
+    eventM: eventM ?? this.eventM,
   );
   JourneyRow copyWithCompanion(JourneysCompanion data) {
     return JourneyRow(
@@ -1964,6 +1996,7 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
           : this.arrivalShown,
       destLat: data.destLat.present ? data.destLat.value : this.destLat,
       destLng: data.destLng.present ? data.destLng.value : this.destLng,
+      eventM: data.eventM.present ? data.eventM.value : this.eventM,
     );
   }
 
@@ -1987,7 +2020,8 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
           ..write('newFrame: $newFrame, ')
           ..write('arrivalShown: $arrivalShown, ')
           ..write('destLat: $destLat, ')
-          ..write('destLng: $destLng')
+          ..write('destLng: $destLng, ')
+          ..write('eventM: $eventM')
           ..write(')'))
         .toString();
   }
@@ -2012,6 +2046,7 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
     arrivalShown,
     destLat,
     destLng,
+    eventM,
   );
   @override
   bool operator ==(Object other) =>
@@ -2034,7 +2069,8 @@ class JourneyRow extends DataClass implements Insertable<JourneyRow> {
           other.newFrame == this.newFrame &&
           other.arrivalShown == this.arrivalShown &&
           other.destLat == this.destLat &&
-          other.destLng == this.destLng);
+          other.destLng == this.destLng &&
+          other.eventM == this.eventM);
 }
 
 class JourneysCompanion extends UpdateCompanion<JourneyRow> {
@@ -2056,6 +2092,7 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
   final Value<bool> arrivalShown;
   final Value<double?> destLat;
   final Value<double?> destLng;
+  final Value<double> eventM;
   final Value<int> rowid;
   const JourneysCompanion({
     this.id = const Value.absent(),
@@ -2076,6 +2113,7 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     this.arrivalShown = const Value.absent(),
     this.destLat = const Value.absent(),
     this.destLng = const Value.absent(),
+    this.eventM = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   JourneysCompanion.insert({
@@ -2097,6 +2135,7 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     this.arrivalShown = const Value.absent(),
     this.destLat = const Value.absent(),
     this.destLng = const Value.absent(),
+    this.eventM = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        originLat = Value(originLat),
@@ -2125,6 +2164,7 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     Expression<bool>? arrivalShown,
     Expression<double>? destLat,
     Expression<double>? destLng,
+    Expression<double>? eventM,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2146,6 +2186,7 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
       if (arrivalShown != null) 'arrival_shown': arrivalShown,
       if (destLat != null) 'dest_lat': destLat,
       if (destLng != null) 'dest_lng': destLng,
+      if (eventM != null) 'event_m': eventM,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2169,6 +2210,7 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     Value<bool>? arrivalShown,
     Value<double?>? destLat,
     Value<double?>? destLng,
+    Value<double>? eventM,
     Value<int>? rowid,
   }) {
     return JourneysCompanion(
@@ -2190,6 +2232,7 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
       arrivalShown: arrivalShown ?? this.arrivalShown,
       destLat: destLat ?? this.destLat,
       destLng: destLng ?? this.destLng,
+      eventM: eventM ?? this.eventM,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2257,6 +2300,9 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
     if (destLng.present) {
       map['dest_lng'] = Variable<double>(destLng.value);
     }
+    if (eventM.present) {
+      map['event_m'] = Variable<double>(eventM.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2284,6 +2330,7 @@ class JourneysCompanion extends UpdateCompanion<JourneyRow> {
           ..write('arrivalShown: $arrivalShown, ')
           ..write('destLat: $destLat, ')
           ..write('destLng: $destLng, ')
+          ..write('eventM: $eventM, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4512,203 +4559,6 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
           ..write('linkConsentAt: $linkConsentAt, ')
           ..write('guestbookConsentAt: $guestbookConsentAt, ')
           ..write('displayFont: $displayFont')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $WallSlotsTable extends WallSlots
-    with TableInfo<$WallSlotsTable, WallSlotRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $WallSlotsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _slotMeta = const VerificationMeta('slot');
-  @override
-  late final GeneratedColumn<int> slot = GeneratedColumn<int>(
-    'slot',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _landmarkIdMeta = const VerificationMeta(
-    'landmarkId',
-  );
-  @override
-  late final GeneratedColumn<String> landmarkId = GeneratedColumn<String>(
-    'landmark_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [slot, landmarkId];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'wall_slots';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<WallSlotRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('slot')) {
-      context.handle(
-        _slotMeta,
-        slot.isAcceptableOrUnknown(data['slot']!, _slotMeta),
-      );
-    }
-    if (data.containsKey('landmark_id')) {
-      context.handle(
-        _landmarkIdMeta,
-        landmarkId.isAcceptableOrUnknown(data['landmark_id']!, _landmarkIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_landmarkIdMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {slot};
-  @override
-  WallSlotRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return WallSlotRow(
-      slot: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}slot'],
-      )!,
-      landmarkId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}landmark_id'],
-      )!,
-    );
-  }
-
-  @override
-  $WallSlotsTable createAlias(String alias) {
-    return $WallSlotsTable(attachedDatabase, alias);
-  }
-}
-
-class WallSlotRow extends DataClass implements Insertable<WallSlotRow> {
-  final int slot;
-  final String landmarkId;
-  const WallSlotRow({required this.slot, required this.landmarkId});
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['slot'] = Variable<int>(slot);
-    map['landmark_id'] = Variable<String>(landmarkId);
-    return map;
-  }
-
-  WallSlotsCompanion toCompanion(bool nullToAbsent) {
-    return WallSlotsCompanion(slot: Value(slot), landmarkId: Value(landmarkId));
-  }
-
-  factory WallSlotRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return WallSlotRow(
-      slot: serializer.fromJson<int>(json['slot']),
-      landmarkId: serializer.fromJson<String>(json['landmarkId']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'slot': serializer.toJson<int>(slot),
-      'landmarkId': serializer.toJson<String>(landmarkId),
-    };
-  }
-
-  WallSlotRow copyWith({int? slot, String? landmarkId}) => WallSlotRow(
-    slot: slot ?? this.slot,
-    landmarkId: landmarkId ?? this.landmarkId,
-  );
-  WallSlotRow copyWithCompanion(WallSlotsCompanion data) {
-    return WallSlotRow(
-      slot: data.slot.present ? data.slot.value : this.slot,
-      landmarkId: data.landmarkId.present
-          ? data.landmarkId.value
-          : this.landmarkId,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('WallSlotRow(')
-          ..write('slot: $slot, ')
-          ..write('landmarkId: $landmarkId')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(slot, landmarkId);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is WallSlotRow &&
-          other.slot == this.slot &&
-          other.landmarkId == this.landmarkId);
-}
-
-class WallSlotsCompanion extends UpdateCompanion<WallSlotRow> {
-  final Value<int> slot;
-  final Value<String> landmarkId;
-  const WallSlotsCompanion({
-    this.slot = const Value.absent(),
-    this.landmarkId = const Value.absent(),
-  });
-  WallSlotsCompanion.insert({
-    this.slot = const Value.absent(),
-    required String landmarkId,
-  }) : landmarkId = Value(landmarkId);
-  static Insertable<WallSlotRow> custom({
-    Expression<int>? slot,
-    Expression<String>? landmarkId,
-  }) {
-    return RawValuesInsertable({
-      if (slot != null) 'slot': slot,
-      if (landmarkId != null) 'landmark_id': landmarkId,
-    });
-  }
-
-  WallSlotsCompanion copyWith({Value<int>? slot, Value<String>? landmarkId}) {
-    return WallSlotsCompanion(
-      slot: slot ?? this.slot,
-      landmarkId: landmarkId ?? this.landmarkId,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (slot.present) {
-      map['slot'] = Variable<int>(slot.value);
-    }
-    if (landmarkId.present) {
-      map['landmark_id'] = Variable<String>(landmarkId.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('WallSlotsCompanion(')
-          ..write('slot: $slot, ')
-          ..write('landmarkId: $landmarkId')
           ..write(')'))
         .toString();
   }
@@ -6950,6 +6800,884 @@ class CoinLedgerCompanion extends UpdateCompanion<CoinLedgerRow> {
   }
 }
 
+class $JourneyEventsTable extends JourneyEvents
+    with TableInfo<$JourneyEventsTable, JourneyEventRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $JourneyEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _journeyIdMeta = const VerificationMeta(
+    'journeyId',
+  );
+  @override
+  late final GeneratedColumn<String> journeyId = GeneratedColumn<String>(
+    'journey_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kMeta = const VerificationMeta('k');
+  @override
+  late final GeneratedColumn<int> k = GeneratedColumn<int>(
+    'k',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _terrainMeta = const VerificationMeta(
+    'terrain',
+  );
+  @override
+  late final GeneratedColumn<String> terrain = GeneratedColumn<String>(
+    'terrain',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _seasonMeta = const VerificationMeta('season');
+  @override
+  late final GeneratedColumn<String> season = GeneratedColumn<String>(
+    'season',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nightMeta = const VerificationMeta('night');
+  @override
+  late final GeneratedColumn<bool> night = GeneratedColumn<bool>(
+    'night',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("night" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _sceneTextIdMeta = const VerificationMeta(
+    'sceneTextId',
+  );
+  @override
+  late final GeneratedColumn<String> sceneTextId = GeneratedColumn<String>(
+    'scene_text_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _praiseIdMeta = const VerificationMeta(
+    'praiseId',
+  );
+  @override
+  late final GeneratedColumn<String> praiseId = GeneratedColumn<String>(
+    'praise_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _praiseTextMeta = const VerificationMeta(
+    'praiseText',
+  );
+  @override
+  late final GeneratedColumn<String> praiseText = GeneratedColumn<String>(
+    'praise_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _progressPctMeta = const VerificationMeta(
+    'progressPct',
+  );
+  @override
+  late final GeneratedColumn<double> progressPct = GeneratedColumn<double>(
+    'progress_pct',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _atUtcMeta = const VerificationMeta('atUtc');
+  @override
+  late final GeneratedColumn<int> atUtc = GeneratedColumn<int>(
+    'at_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    journeyId,
+    k,
+    terrain,
+    season,
+    night,
+    sceneTextId,
+    praiseId,
+    praiseText,
+    progressPct,
+    atUtc,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'journey_events';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<JourneyEventRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('journey_id')) {
+      context.handle(
+        _journeyIdMeta,
+        journeyId.isAcceptableOrUnknown(data['journey_id']!, _journeyIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_journeyIdMeta);
+    }
+    if (data.containsKey('k')) {
+      context.handle(_kMeta, k.isAcceptableOrUnknown(data['k']!, _kMeta));
+    } else if (isInserting) {
+      context.missing(_kMeta);
+    }
+    if (data.containsKey('terrain')) {
+      context.handle(
+        _terrainMeta,
+        terrain.isAcceptableOrUnknown(data['terrain']!, _terrainMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_terrainMeta);
+    }
+    if (data.containsKey('season')) {
+      context.handle(
+        _seasonMeta,
+        season.isAcceptableOrUnknown(data['season']!, _seasonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_seasonMeta);
+    }
+    if (data.containsKey('night')) {
+      context.handle(
+        _nightMeta,
+        night.isAcceptableOrUnknown(data['night']!, _nightMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nightMeta);
+    }
+    if (data.containsKey('scene_text_id')) {
+      context.handle(
+        _sceneTextIdMeta,
+        sceneTextId.isAcceptableOrUnknown(
+          data['scene_text_id']!,
+          _sceneTextIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sceneTextIdMeta);
+    }
+    if (data.containsKey('praise_id')) {
+      context.handle(
+        _praiseIdMeta,
+        praiseId.isAcceptableOrUnknown(data['praise_id']!, _praiseIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_praiseIdMeta);
+    }
+    if (data.containsKey('praise_text')) {
+      context.handle(
+        _praiseTextMeta,
+        praiseText.isAcceptableOrUnknown(data['praise_text']!, _praiseTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_praiseTextMeta);
+    }
+    if (data.containsKey('progress_pct')) {
+      context.handle(
+        _progressPctMeta,
+        progressPct.isAcceptableOrUnknown(
+          data['progress_pct']!,
+          _progressPctMeta,
+        ),
+      );
+    }
+    if (data.containsKey('at_utc')) {
+      context.handle(
+        _atUtcMeta,
+        atUtc.isAcceptableOrUnknown(data['at_utc']!, _atUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_atUtcMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {journeyId, k};
+  @override
+  JourneyEventRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return JourneyEventRow(
+      journeyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}journey_id'],
+      )!,
+      k: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}k'],
+      )!,
+      terrain: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}terrain'],
+      )!,
+      season: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}season'],
+      )!,
+      night: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}night'],
+      )!,
+      sceneTextId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scene_text_id'],
+      )!,
+      praiseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}praise_id'],
+      )!,
+      praiseText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}praise_text'],
+      )!,
+      progressPct: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}progress_pct'],
+      )!,
+      atUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}at_utc'],
+      )!,
+    );
+  }
+
+  @override
+  $JourneyEventsTable createAlias(String alias) {
+    return $JourneyEventsTable(attachedDatabase, alias);
+  }
+}
+
+class JourneyEventRow extends DataClass implements Insertable<JourneyEventRow> {
+  final String journeyId;
+  final int k;
+  final String terrain;
+  final String season;
+  final bool night;
+  final String sceneTextId;
+  final String praiseId;
+  final String praiseText;
+  final double progressPct;
+  final int atUtc;
+  const JourneyEventRow({
+    required this.journeyId,
+    required this.k,
+    required this.terrain,
+    required this.season,
+    required this.night,
+    required this.sceneTextId,
+    required this.praiseId,
+    required this.praiseText,
+    required this.progressPct,
+    required this.atUtc,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['journey_id'] = Variable<String>(journeyId);
+    map['k'] = Variable<int>(k);
+    map['terrain'] = Variable<String>(terrain);
+    map['season'] = Variable<String>(season);
+    map['night'] = Variable<bool>(night);
+    map['scene_text_id'] = Variable<String>(sceneTextId);
+    map['praise_id'] = Variable<String>(praiseId);
+    map['praise_text'] = Variable<String>(praiseText);
+    map['progress_pct'] = Variable<double>(progressPct);
+    map['at_utc'] = Variable<int>(atUtc);
+    return map;
+  }
+
+  JourneyEventsCompanion toCompanion(bool nullToAbsent) {
+    return JourneyEventsCompanion(
+      journeyId: Value(journeyId),
+      k: Value(k),
+      terrain: Value(terrain),
+      season: Value(season),
+      night: Value(night),
+      sceneTextId: Value(sceneTextId),
+      praiseId: Value(praiseId),
+      praiseText: Value(praiseText),
+      progressPct: Value(progressPct),
+      atUtc: Value(atUtc),
+    );
+  }
+
+  factory JourneyEventRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return JourneyEventRow(
+      journeyId: serializer.fromJson<String>(json['journeyId']),
+      k: serializer.fromJson<int>(json['k']),
+      terrain: serializer.fromJson<String>(json['terrain']),
+      season: serializer.fromJson<String>(json['season']),
+      night: serializer.fromJson<bool>(json['night']),
+      sceneTextId: serializer.fromJson<String>(json['sceneTextId']),
+      praiseId: serializer.fromJson<String>(json['praiseId']),
+      praiseText: serializer.fromJson<String>(json['praiseText']),
+      progressPct: serializer.fromJson<double>(json['progressPct']),
+      atUtc: serializer.fromJson<int>(json['atUtc']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'journeyId': serializer.toJson<String>(journeyId),
+      'k': serializer.toJson<int>(k),
+      'terrain': serializer.toJson<String>(terrain),
+      'season': serializer.toJson<String>(season),
+      'night': serializer.toJson<bool>(night),
+      'sceneTextId': serializer.toJson<String>(sceneTextId),
+      'praiseId': serializer.toJson<String>(praiseId),
+      'praiseText': serializer.toJson<String>(praiseText),
+      'progressPct': serializer.toJson<double>(progressPct),
+      'atUtc': serializer.toJson<int>(atUtc),
+    };
+  }
+
+  JourneyEventRow copyWith({
+    String? journeyId,
+    int? k,
+    String? terrain,
+    String? season,
+    bool? night,
+    String? sceneTextId,
+    String? praiseId,
+    String? praiseText,
+    double? progressPct,
+    int? atUtc,
+  }) => JourneyEventRow(
+    journeyId: journeyId ?? this.journeyId,
+    k: k ?? this.k,
+    terrain: terrain ?? this.terrain,
+    season: season ?? this.season,
+    night: night ?? this.night,
+    sceneTextId: sceneTextId ?? this.sceneTextId,
+    praiseId: praiseId ?? this.praiseId,
+    praiseText: praiseText ?? this.praiseText,
+    progressPct: progressPct ?? this.progressPct,
+    atUtc: atUtc ?? this.atUtc,
+  );
+  JourneyEventRow copyWithCompanion(JourneyEventsCompanion data) {
+    return JourneyEventRow(
+      journeyId: data.journeyId.present ? data.journeyId.value : this.journeyId,
+      k: data.k.present ? data.k.value : this.k,
+      terrain: data.terrain.present ? data.terrain.value : this.terrain,
+      season: data.season.present ? data.season.value : this.season,
+      night: data.night.present ? data.night.value : this.night,
+      sceneTextId: data.sceneTextId.present
+          ? data.sceneTextId.value
+          : this.sceneTextId,
+      praiseId: data.praiseId.present ? data.praiseId.value : this.praiseId,
+      praiseText: data.praiseText.present
+          ? data.praiseText.value
+          : this.praiseText,
+      progressPct: data.progressPct.present
+          ? data.progressPct.value
+          : this.progressPct,
+      atUtc: data.atUtc.present ? data.atUtc.value : this.atUtc,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('JourneyEventRow(')
+          ..write('journeyId: $journeyId, ')
+          ..write('k: $k, ')
+          ..write('terrain: $terrain, ')
+          ..write('season: $season, ')
+          ..write('night: $night, ')
+          ..write('sceneTextId: $sceneTextId, ')
+          ..write('praiseId: $praiseId, ')
+          ..write('praiseText: $praiseText, ')
+          ..write('progressPct: $progressPct, ')
+          ..write('atUtc: $atUtc')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    journeyId,
+    k,
+    terrain,
+    season,
+    night,
+    sceneTextId,
+    praiseId,
+    praiseText,
+    progressPct,
+    atUtc,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is JourneyEventRow &&
+          other.journeyId == this.journeyId &&
+          other.k == this.k &&
+          other.terrain == this.terrain &&
+          other.season == this.season &&
+          other.night == this.night &&
+          other.sceneTextId == this.sceneTextId &&
+          other.praiseId == this.praiseId &&
+          other.praiseText == this.praiseText &&
+          other.progressPct == this.progressPct &&
+          other.atUtc == this.atUtc);
+}
+
+class JourneyEventsCompanion extends UpdateCompanion<JourneyEventRow> {
+  final Value<String> journeyId;
+  final Value<int> k;
+  final Value<String> terrain;
+  final Value<String> season;
+  final Value<bool> night;
+  final Value<String> sceneTextId;
+  final Value<String> praiseId;
+  final Value<String> praiseText;
+  final Value<double> progressPct;
+  final Value<int> atUtc;
+  final Value<int> rowid;
+  const JourneyEventsCompanion({
+    this.journeyId = const Value.absent(),
+    this.k = const Value.absent(),
+    this.terrain = const Value.absent(),
+    this.season = const Value.absent(),
+    this.night = const Value.absent(),
+    this.sceneTextId = const Value.absent(),
+    this.praiseId = const Value.absent(),
+    this.praiseText = const Value.absent(),
+    this.progressPct = const Value.absent(),
+    this.atUtc = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  JourneyEventsCompanion.insert({
+    required String journeyId,
+    required int k,
+    required String terrain,
+    required String season,
+    required bool night,
+    required String sceneTextId,
+    required String praiseId,
+    required String praiseText,
+    this.progressPct = const Value.absent(),
+    required int atUtc,
+    this.rowid = const Value.absent(),
+  }) : journeyId = Value(journeyId),
+       k = Value(k),
+       terrain = Value(terrain),
+       season = Value(season),
+       night = Value(night),
+       sceneTextId = Value(sceneTextId),
+       praiseId = Value(praiseId),
+       praiseText = Value(praiseText),
+       atUtc = Value(atUtc);
+  static Insertable<JourneyEventRow> custom({
+    Expression<String>? journeyId,
+    Expression<int>? k,
+    Expression<String>? terrain,
+    Expression<String>? season,
+    Expression<bool>? night,
+    Expression<String>? sceneTextId,
+    Expression<String>? praiseId,
+    Expression<String>? praiseText,
+    Expression<double>? progressPct,
+    Expression<int>? atUtc,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (journeyId != null) 'journey_id': journeyId,
+      if (k != null) 'k': k,
+      if (terrain != null) 'terrain': terrain,
+      if (season != null) 'season': season,
+      if (night != null) 'night': night,
+      if (sceneTextId != null) 'scene_text_id': sceneTextId,
+      if (praiseId != null) 'praise_id': praiseId,
+      if (praiseText != null) 'praise_text': praiseText,
+      if (progressPct != null) 'progress_pct': progressPct,
+      if (atUtc != null) 'at_utc': atUtc,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  JourneyEventsCompanion copyWith({
+    Value<String>? journeyId,
+    Value<int>? k,
+    Value<String>? terrain,
+    Value<String>? season,
+    Value<bool>? night,
+    Value<String>? sceneTextId,
+    Value<String>? praiseId,
+    Value<String>? praiseText,
+    Value<double>? progressPct,
+    Value<int>? atUtc,
+    Value<int>? rowid,
+  }) {
+    return JourneyEventsCompanion(
+      journeyId: journeyId ?? this.journeyId,
+      k: k ?? this.k,
+      terrain: terrain ?? this.terrain,
+      season: season ?? this.season,
+      night: night ?? this.night,
+      sceneTextId: sceneTextId ?? this.sceneTextId,
+      praiseId: praiseId ?? this.praiseId,
+      praiseText: praiseText ?? this.praiseText,
+      progressPct: progressPct ?? this.progressPct,
+      atUtc: atUtc ?? this.atUtc,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (journeyId.present) {
+      map['journey_id'] = Variable<String>(journeyId.value);
+    }
+    if (k.present) {
+      map['k'] = Variable<int>(k.value);
+    }
+    if (terrain.present) {
+      map['terrain'] = Variable<String>(terrain.value);
+    }
+    if (season.present) {
+      map['season'] = Variable<String>(season.value);
+    }
+    if (night.present) {
+      map['night'] = Variable<bool>(night.value);
+    }
+    if (sceneTextId.present) {
+      map['scene_text_id'] = Variable<String>(sceneTextId.value);
+    }
+    if (praiseId.present) {
+      map['praise_id'] = Variable<String>(praiseId.value);
+    }
+    if (praiseText.present) {
+      map['praise_text'] = Variable<String>(praiseText.value);
+    }
+    if (progressPct.present) {
+      map['progress_pct'] = Variable<double>(progressPct.value);
+    }
+    if (atUtc.present) {
+      map['at_utc'] = Variable<int>(atUtc.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('JourneyEventsCompanion(')
+          ..write('journeyId: $journeyId, ')
+          ..write('k: $k, ')
+          ..write('terrain: $terrain, ')
+          ..write('season: $season, ')
+          ..write('night: $night, ')
+          ..write('sceneTextId: $sceneTextId, ')
+          ..write('praiseId: $praiseId, ')
+          ..write('praiseText: $praiseText, ')
+          ..write('progressPct: $progressPct, ')
+          ..write('atUtc: $atUtc, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $BadgesOwnedTable extends BadgesOwned
+    with TableInfo<$BadgesOwnedTable, BadgeOwnedRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BadgesOwnedTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _badgeIdMeta = const VerificationMeta(
+    'badgeId',
+  );
+  @override
+  late final GeneratedColumn<String> badgeId = GeneratedColumn<String>(
+    'badge_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _atUtcMeta = const VerificationMeta('atUtc');
+  @override
+  late final GeneratedColumn<int> atUtc = GeneratedColumn<int>(
+    'at_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _seenMeta = const VerificationMeta('seen');
+  @override
+  late final GeneratedColumn<bool> seen = GeneratedColumn<bool>(
+    'seen',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("seen" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [badgeId, atUtc, seen];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'badges_owned';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BadgeOwnedRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('badge_id')) {
+      context.handle(
+        _badgeIdMeta,
+        badgeId.isAcceptableOrUnknown(data['badge_id']!, _badgeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_badgeIdMeta);
+    }
+    if (data.containsKey('at_utc')) {
+      context.handle(
+        _atUtcMeta,
+        atUtc.isAcceptableOrUnknown(data['at_utc']!, _atUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_atUtcMeta);
+    }
+    if (data.containsKey('seen')) {
+      context.handle(
+        _seenMeta,
+        seen.isAcceptableOrUnknown(data['seen']!, _seenMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {badgeId};
+  @override
+  BadgeOwnedRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BadgeOwnedRow(
+      badgeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}badge_id'],
+      )!,
+      atUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}at_utc'],
+      )!,
+      seen: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}seen'],
+      )!,
+    );
+  }
+
+  @override
+  $BadgesOwnedTable createAlias(String alias) {
+    return $BadgesOwnedTable(attachedDatabase, alias);
+  }
+}
+
+class BadgeOwnedRow extends DataClass implements Insertable<BadgeOwnedRow> {
+  final String badgeId;
+  final int atUtc;
+  final bool seen;
+  const BadgeOwnedRow({
+    required this.badgeId,
+    required this.atUtc,
+    required this.seen,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['badge_id'] = Variable<String>(badgeId);
+    map['at_utc'] = Variable<int>(atUtc);
+    map['seen'] = Variable<bool>(seen);
+    return map;
+  }
+
+  BadgesOwnedCompanion toCompanion(bool nullToAbsent) {
+    return BadgesOwnedCompanion(
+      badgeId: Value(badgeId),
+      atUtc: Value(atUtc),
+      seen: Value(seen),
+    );
+  }
+
+  factory BadgeOwnedRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BadgeOwnedRow(
+      badgeId: serializer.fromJson<String>(json['badgeId']),
+      atUtc: serializer.fromJson<int>(json['atUtc']),
+      seen: serializer.fromJson<bool>(json['seen']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'badgeId': serializer.toJson<String>(badgeId),
+      'atUtc': serializer.toJson<int>(atUtc),
+      'seen': serializer.toJson<bool>(seen),
+    };
+  }
+
+  BadgeOwnedRow copyWith({String? badgeId, int? atUtc, bool? seen}) =>
+      BadgeOwnedRow(
+        badgeId: badgeId ?? this.badgeId,
+        atUtc: atUtc ?? this.atUtc,
+        seen: seen ?? this.seen,
+      );
+  BadgeOwnedRow copyWithCompanion(BadgesOwnedCompanion data) {
+    return BadgeOwnedRow(
+      badgeId: data.badgeId.present ? data.badgeId.value : this.badgeId,
+      atUtc: data.atUtc.present ? data.atUtc.value : this.atUtc,
+      seen: data.seen.present ? data.seen.value : this.seen,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BadgeOwnedRow(')
+          ..write('badgeId: $badgeId, ')
+          ..write('atUtc: $atUtc, ')
+          ..write('seen: $seen')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(badgeId, atUtc, seen);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BadgeOwnedRow &&
+          other.badgeId == this.badgeId &&
+          other.atUtc == this.atUtc &&
+          other.seen == this.seen);
+}
+
+class BadgesOwnedCompanion extends UpdateCompanion<BadgeOwnedRow> {
+  final Value<String> badgeId;
+  final Value<int> atUtc;
+  final Value<bool> seen;
+  final Value<int> rowid;
+  const BadgesOwnedCompanion({
+    this.badgeId = const Value.absent(),
+    this.atUtc = const Value.absent(),
+    this.seen = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BadgesOwnedCompanion.insert({
+    required String badgeId,
+    required int atUtc,
+    this.seen = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : badgeId = Value(badgeId),
+       atUtc = Value(atUtc);
+  static Insertable<BadgeOwnedRow> custom({
+    Expression<String>? badgeId,
+    Expression<int>? atUtc,
+    Expression<bool>? seen,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (badgeId != null) 'badge_id': badgeId,
+      if (atUtc != null) 'at_utc': atUtc,
+      if (seen != null) 'seen': seen,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BadgesOwnedCompanion copyWith({
+    Value<String>? badgeId,
+    Value<int>? atUtc,
+    Value<bool>? seen,
+    Value<int>? rowid,
+  }) {
+    return BadgesOwnedCompanion(
+      badgeId: badgeId ?? this.badgeId,
+      atUtc: atUtc ?? this.atUtc,
+      seen: seen ?? this.seen,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (badgeId.present) {
+      map['badge_id'] = Variable<String>(badgeId.value);
+    }
+    if (atUtc.present) {
+      map['at_utc'] = Variable<int>(atUtc.value);
+    }
+    if (seen.present) {
+      map['seen'] = Variable<bool>(seen.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BadgesOwnedCompanion(')
+          ..write('badgeId: $badgeId, ')
+          ..write('atUtc: $atUtc, ')
+          ..write('seen: $seen, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -6962,7 +7690,6 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $PaintingsOwnedTable paintingsOwned = $PaintingsOwnedTable(this);
   late final $PropsOwnedTable propsOwned = $PropsOwnedTable(this);
   late final $ProfileTable profile = $ProfileTable(this);
-  late final $WallSlotsTable wallSlots = $WallSlotsTable(this);
   late final $GuestbookTicketsTable guestbookTickets = $GuestbookTicketsTable(
     this,
   );
@@ -6974,6 +7701,8 @@ abstract class _$AppDb extends GeneratedDatabase {
       $NotificationSettingsTable(this);
   late final $AppWalksTable appWalks = $AppWalksTable(this);
   late final $CoinLedgerTable coinLedger = $CoinLedgerTable(this);
+  late final $JourneyEventsTable journeyEvents = $JourneyEventsTable(this);
+  late final $BadgesOwnedTable badgesOwned = $BadgesOwnedTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6988,13 +7717,14 @@ abstract class _$AppDb extends GeneratedDatabase {
     paintingsOwned,
     propsOwned,
     profile,
-    wallSlots,
     guestbookTickets,
     guestbookPosts,
     notificationLog,
     notificationSettings,
     appWalks,
     coinLedger,
+    journeyEvents,
+    badgesOwned,
   ];
 }
 
@@ -7698,6 +8428,7 @@ typedef $$JourneysTableCreateCompanionBuilder = JourneysCompanion Function({
   Value<bool> arrivalShown,
   Value<double?> destLat,
   Value<double?> destLng,
+  Value<double> eventM,
   Value<int> rowid,
 });
 typedef $$JourneysTableUpdateCompanionBuilder = JourneysCompanion Function({
@@ -7719,6 +8450,7 @@ typedef $$JourneysTableUpdateCompanionBuilder = JourneysCompanion Function({
   Value<bool> arrivalShown,
   Value<double?> destLat,
   Value<double?> destLng,
+  Value<double> eventM,
   Value<int> rowid,
 });
 
@@ -7822,6 +8554,11 @@ class $$JourneysTableFilterComposer extends Composer<_$AppDb, $JourneysTable> {
     column: $table.destLng,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<double> get eventM => $composableBuilder(
+    column: $table.eventM,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$JourneysTableOrderingComposer
@@ -7922,6 +8659,11 @@ class $$JourneysTableOrderingComposer
     column: $table.destLng,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get eventM => $composableBuilder(
+    column: $table.eventM,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$JourneysTableAnnotationComposer
@@ -7992,6 +8734,9 @@ class $$JourneysTableAnnotationComposer
 
   GeneratedColumn<double> get destLng =>
       $composableBuilder(column: $table.destLng, builder: (column) => column);
+
+  GeneratedColumn<double> get eventM =>
+      $composableBuilder(column: $table.eventM, builder: (column) => column);
 }
 
 class $$JourneysTableTableManager
@@ -8040,6 +8785,7 @@ class $$JourneysTableTableManager
                 Value<bool> arrivalShown = const Value.absent(),
                 Value<double?> destLat = const Value.absent(),
                 Value<double?> destLng = const Value.absent(),
+                Value<double> eventM = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => JourneysCompanion(
                 id: id,
@@ -8060,6 +8806,7 @@ class $$JourneysTableTableManager
                 arrivalShown: arrivalShown,
                 destLat: destLat,
                 destLng: destLng,
+                eventM: eventM,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8082,6 +8829,7 @@ class $$JourneysTableTableManager
                 Value<bool> arrivalShown = const Value.absent(),
                 Value<double?> destLat = const Value.absent(),
                 Value<double?> destLng = const Value.absent(),
+                Value<double> eventM = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => JourneysCompanion.insert(
                 id: id,
@@ -8102,6 +8850,7 @@ class $$JourneysTableTableManager
                 arrivalShown: arrivalShown,
                 destLat: destLat,
                 destLng: destLng,
+                eventM: eventM,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -9299,138 +10048,6 @@ typedef $$ProfileTableProcessedTableManager =
       $$ProfileTableUpdateCompanionBuilder,
       (ProfileRow, BaseReferences<_$AppDb, $ProfileTable, ProfileRow>),
       ProfileRow,
-      PrefetchHooks Function()
-    >;
-typedef $$WallSlotsTableCreateCompanionBuilder = WallSlotsCompanion Function({
-  Value<int> slot,
-  required String landmarkId,
-});
-typedef $$WallSlotsTableUpdateCompanionBuilder = WallSlotsCompanion Function({
-  Value<int> slot,
-  Value<String> landmarkId,
-});
-
-class $$WallSlotsTableFilterComposer
-    extends Composer<_$AppDb, $WallSlotsTable> {
-  $$WallSlotsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get slot => $composableBuilder(
-    column: $table.slot,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get landmarkId => $composableBuilder(
-    column: $table.landmarkId,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$WallSlotsTableOrderingComposer
-    extends Composer<_$AppDb, $WallSlotsTable> {
-  $$WallSlotsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get slot => $composableBuilder(
-    column: $table.slot,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get landmarkId => $composableBuilder(
-    column: $table.landmarkId,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$WallSlotsTableAnnotationComposer
-    extends Composer<_$AppDb, $WallSlotsTable> {
-  $$WallSlotsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get slot =>
-      $composableBuilder(column: $table.slot, builder: (column) => column);
-
-  GeneratedColumn<String> get landmarkId => $composableBuilder(
-    column: $table.landmarkId,
-    builder: (column) => column,
-  );
-}
-
-class $$WallSlotsTableTableManager
-    extends
-        RootTableManager<
-          _$AppDb,
-          $WallSlotsTable,
-          WallSlotRow,
-          $$WallSlotsTableFilterComposer,
-          $$WallSlotsTableOrderingComposer,
-          $$WallSlotsTableAnnotationComposer,
-          $$WallSlotsTableCreateCompanionBuilder,
-          $$WallSlotsTableUpdateCompanionBuilder,
-          (WallSlotRow, BaseReferences<_$AppDb, $WallSlotsTable, WallSlotRow>),
-          WallSlotRow,
-          PrefetchHooks Function()
-        > {
-  $$WallSlotsTableTableManager(_$AppDb db, $WallSlotsTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$WallSlotsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$WallSlotsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$WallSlotsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> slot = const Value.absent(),
-            Value<String> landmarkId = const Value.absent(),
-          }) => WallSlotsCompanion(slot: slot, landmarkId: landmarkId),
-          createCompanionCallback: ({
-            Value<int> slot = const Value.absent(),
-            required String landmarkId,
-          }) => WallSlotsCompanion.insert(slot: slot, landmarkId: landmarkId),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$WallSlotsTable, WallSlotRow>(table),
-                  BaseReferences<_$AppDb, $WallSlotsTable, WallSlotRow>(
-                    db,
-                    table,
-                    e,
-                  ),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$WallSlotsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDb,
-      $WallSlotsTable,
-      WallSlotRow,
-      $$WallSlotsTableFilterComposer,
-      $$WallSlotsTableOrderingComposer,
-      $$WallSlotsTableAnnotationComposer,
-      $$WallSlotsTableCreateCompanionBuilder,
-      $$WallSlotsTableUpdateCompanionBuilder,
-      (WallSlotRow, BaseReferences<_$AppDb, $WallSlotsTable, WallSlotRow>),
-      WallSlotRow,
       PrefetchHooks Function()
     >;
 typedef $$GuestbookTicketsTableCreateCompanionBuilder =
@@ -10716,6 +11333,487 @@ typedef $$CoinLedgerTableProcessedTableManager =
       CoinLedgerRow,
       PrefetchHooks Function()
     >;
+typedef $$JourneyEventsTableCreateCompanionBuilder =
+    JourneyEventsCompanion Function({
+      required String journeyId,
+      required int k,
+      required String terrain,
+      required String season,
+      required bool night,
+      required String sceneTextId,
+      required String praiseId,
+      required String praiseText,
+      Value<double> progressPct,
+      required int atUtc,
+      Value<int> rowid,
+    });
+typedef $$JourneyEventsTableUpdateCompanionBuilder =
+    JourneyEventsCompanion Function({
+      Value<String> journeyId,
+      Value<int> k,
+      Value<String> terrain,
+      Value<String> season,
+      Value<bool> night,
+      Value<String> sceneTextId,
+      Value<String> praiseId,
+      Value<String> praiseText,
+      Value<double> progressPct,
+      Value<int> atUtc,
+      Value<int> rowid,
+    });
+
+class $$JourneyEventsTableFilterComposer
+    extends Composer<_$AppDb, $JourneyEventsTable> {
+  $$JourneyEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get journeyId => $composableBuilder(
+    column: $table.journeyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get k => $composableBuilder(
+    column: $table.k,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get terrain => $composableBuilder(
+    column: $table.terrain,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get season => $composableBuilder(
+    column: $table.season,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get night => $composableBuilder(
+    column: $table.night,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sceneTextId => $composableBuilder(
+    column: $table.sceneTextId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get praiseId => $composableBuilder(
+    column: $table.praiseId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get praiseText => $composableBuilder(
+    column: $table.praiseText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get progressPct => $composableBuilder(
+    column: $table.progressPct,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get atUtc => $composableBuilder(
+    column: $table.atUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$JourneyEventsTableOrderingComposer
+    extends Composer<_$AppDb, $JourneyEventsTable> {
+  $$JourneyEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get journeyId => $composableBuilder(
+    column: $table.journeyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get k => $composableBuilder(
+    column: $table.k,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get terrain => $composableBuilder(
+    column: $table.terrain,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get season => $composableBuilder(
+    column: $table.season,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get night => $composableBuilder(
+    column: $table.night,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sceneTextId => $composableBuilder(
+    column: $table.sceneTextId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get praiseId => $composableBuilder(
+    column: $table.praiseId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get praiseText => $composableBuilder(
+    column: $table.praiseText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get progressPct => $composableBuilder(
+    column: $table.progressPct,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get atUtc => $composableBuilder(
+    column: $table.atUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$JourneyEventsTableAnnotationComposer
+    extends Composer<_$AppDb, $JourneyEventsTable> {
+  $$JourneyEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get journeyId =>
+      $composableBuilder(column: $table.journeyId, builder: (column) => column);
+
+  GeneratedColumn<int> get k =>
+      $composableBuilder(column: $table.k, builder: (column) => column);
+
+  GeneratedColumn<String> get terrain =>
+      $composableBuilder(column: $table.terrain, builder: (column) => column);
+
+  GeneratedColumn<String> get season =>
+      $composableBuilder(column: $table.season, builder: (column) => column);
+
+  GeneratedColumn<bool> get night =>
+      $composableBuilder(column: $table.night, builder: (column) => column);
+
+  GeneratedColumn<String> get sceneTextId => $composableBuilder(
+    column: $table.sceneTextId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get praiseId =>
+      $composableBuilder(column: $table.praiseId, builder: (column) => column);
+
+  GeneratedColumn<String> get praiseText => $composableBuilder(
+    column: $table.praiseText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get progressPct => $composableBuilder(
+    column: $table.progressPct,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get atUtc =>
+      $composableBuilder(column: $table.atUtc, builder: (column) => column);
+}
+
+class $$JourneyEventsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $JourneyEventsTable,
+          JourneyEventRow,
+          $$JourneyEventsTableFilterComposer,
+          $$JourneyEventsTableOrderingComposer,
+          $$JourneyEventsTableAnnotationComposer,
+          $$JourneyEventsTableCreateCompanionBuilder,
+          $$JourneyEventsTableUpdateCompanionBuilder,
+          (
+            JourneyEventRow,
+            BaseReferences<_$AppDb, $JourneyEventsTable, JourneyEventRow>,
+          ),
+          JourneyEventRow,
+          PrefetchHooks Function()
+        > {
+  $$JourneyEventsTableTableManager(_$AppDb db, $JourneyEventsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$JourneyEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$JourneyEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$JourneyEventsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> journeyId = const Value.absent(),
+                Value<int> k = const Value.absent(),
+                Value<String> terrain = const Value.absent(),
+                Value<String> season = const Value.absent(),
+                Value<bool> night = const Value.absent(),
+                Value<String> sceneTextId = const Value.absent(),
+                Value<String> praiseId = const Value.absent(),
+                Value<String> praiseText = const Value.absent(),
+                Value<double> progressPct = const Value.absent(),
+                Value<int> atUtc = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => JourneyEventsCompanion(
+                journeyId: journeyId,
+                k: k,
+                terrain: terrain,
+                season: season,
+                night: night,
+                sceneTextId: sceneTextId,
+                praiseId: praiseId,
+                praiseText: praiseText,
+                progressPct: progressPct,
+                atUtc: atUtc,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String journeyId,
+                required int k,
+                required String terrain,
+                required String season,
+                required bool night,
+                required String sceneTextId,
+                required String praiseId,
+                required String praiseText,
+                Value<double> progressPct = const Value.absent(),
+                required int atUtc,
+                Value<int> rowid = const Value.absent(),
+              }) => JourneyEventsCompanion.insert(
+                journeyId: journeyId,
+                k: k,
+                terrain: terrain,
+                season: season,
+                night: night,
+                sceneTextId: sceneTextId,
+                praiseId: praiseId,
+                praiseText: praiseText,
+                progressPct: progressPct,
+                atUtc: atUtc,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$JourneyEventsTable, JourneyEventRow>(table),
+                  BaseReferences<_$AppDb, $JourneyEventsTable, JourneyEventRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$JourneyEventsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $JourneyEventsTable,
+      JourneyEventRow,
+      $$JourneyEventsTableFilterComposer,
+      $$JourneyEventsTableOrderingComposer,
+      $$JourneyEventsTableAnnotationComposer,
+      $$JourneyEventsTableCreateCompanionBuilder,
+      $$JourneyEventsTableUpdateCompanionBuilder,
+      (
+        JourneyEventRow,
+        BaseReferences<_$AppDb, $JourneyEventsTable, JourneyEventRow>,
+      ),
+      JourneyEventRow,
+      PrefetchHooks Function()
+    >;
+typedef $$BadgesOwnedTableCreateCompanionBuilder =
+    BadgesOwnedCompanion Function({
+      required String badgeId,
+      required int atUtc,
+      Value<bool> seen,
+      Value<int> rowid,
+    });
+typedef $$BadgesOwnedTableUpdateCompanionBuilder =
+    BadgesOwnedCompanion Function({
+      Value<String> badgeId,
+      Value<int> atUtc,
+      Value<bool> seen,
+      Value<int> rowid,
+    });
+
+class $$BadgesOwnedTableFilterComposer
+    extends Composer<_$AppDb, $BadgesOwnedTable> {
+  $$BadgesOwnedTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get badgeId => $composableBuilder(
+    column: $table.badgeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get atUtc => $composableBuilder(
+    column: $table.atUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get seen => $composableBuilder(
+    column: $table.seen,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BadgesOwnedTableOrderingComposer
+    extends Composer<_$AppDb, $BadgesOwnedTable> {
+  $$BadgesOwnedTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get badgeId => $composableBuilder(
+    column: $table.badgeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get atUtc => $composableBuilder(
+    column: $table.atUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get seen => $composableBuilder(
+    column: $table.seen,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BadgesOwnedTableAnnotationComposer
+    extends Composer<_$AppDb, $BadgesOwnedTable> {
+  $$BadgesOwnedTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get badgeId =>
+      $composableBuilder(column: $table.badgeId, builder: (column) => column);
+
+  GeneratedColumn<int> get atUtc =>
+      $composableBuilder(column: $table.atUtc, builder: (column) => column);
+
+  GeneratedColumn<bool> get seen =>
+      $composableBuilder(column: $table.seen, builder: (column) => column);
+}
+
+class $$BadgesOwnedTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $BadgesOwnedTable,
+          BadgeOwnedRow,
+          $$BadgesOwnedTableFilterComposer,
+          $$BadgesOwnedTableOrderingComposer,
+          $$BadgesOwnedTableAnnotationComposer,
+          $$BadgesOwnedTableCreateCompanionBuilder,
+          $$BadgesOwnedTableUpdateCompanionBuilder,
+          (
+            BadgeOwnedRow,
+            BaseReferences<_$AppDb, $BadgesOwnedTable, BadgeOwnedRow>,
+          ),
+          BadgeOwnedRow,
+          PrefetchHooks Function()
+        > {
+  $$BadgesOwnedTableTableManager(_$AppDb db, $BadgesOwnedTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BadgesOwnedTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BadgesOwnedTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BadgesOwnedTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> badgeId = const Value.absent(),
+                Value<int> atUtc = const Value.absent(),
+                Value<bool> seen = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BadgesOwnedCompanion(
+                badgeId: badgeId,
+                atUtc: atUtc,
+                seen: seen,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String badgeId,
+                required int atUtc,
+                Value<bool> seen = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BadgesOwnedCompanion.insert(
+                badgeId: badgeId,
+                atUtc: atUtc,
+                seen: seen,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$BadgesOwnedTable, BadgeOwnedRow>(table),
+                  BaseReferences<_$AppDb, $BadgesOwnedTable, BadgeOwnedRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BadgesOwnedTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $BadgesOwnedTable,
+      BadgeOwnedRow,
+      $$BadgesOwnedTableFilterComposer,
+      $$BadgesOwnedTableOrderingComposer,
+      $$BadgesOwnedTableAnnotationComposer,
+      $$BadgesOwnedTableCreateCompanionBuilder,
+      $$BadgesOwnedTableUpdateCompanionBuilder,
+      (
+        BadgeOwnedRow,
+        BaseReferences<_$AppDb, $BadgesOwnedTable, BadgeOwnedRow>,
+      ),
+      BadgeOwnedRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -10738,8 +11836,6 @@ class $AppDbManager {
       $$PropsOwnedTableTableManager(_db, _db.propsOwned);
   $$ProfileTableTableManager get profile =>
       $$ProfileTableTableManager(_db, _db.profile);
-  $$WallSlotsTableTableManager get wallSlots =>
-      $$WallSlotsTableTableManager(_db, _db.wallSlots);
   $$GuestbookTicketsTableTableManager get guestbookTickets =>
       $$GuestbookTicketsTableTableManager(_db, _db.guestbookTickets);
   $$GuestbookPostsTableTableManager get guestbookPosts =>
@@ -10752,4 +11848,8 @@ class $AppDbManager {
       $$AppWalksTableTableManager(_db, _db.appWalks);
   $$CoinLedgerTableTableManager get coinLedger =>
       $$CoinLedgerTableTableManager(_db, _db.coinLedger);
+  $$JourneyEventsTableTableManager get journeyEvents =>
+      $$JourneyEventsTableTableManager(_db, _db.journeyEvents);
+  $$BadgesOwnedTableTableManager get badgesOwned =>
+      $$BadgesOwnedTableTableManager(_db, _db.badgesOwned);
 }

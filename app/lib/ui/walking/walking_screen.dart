@@ -11,10 +11,12 @@ import '../../app/sync_service.dart';
 import '../../data/walk_notice.dart';
 import '../../domain/focus_walk.dart';
 import '../../domain/follow.dart';
+import '../../domain/badge.dart' as stamp;
 import '../../domain/gait.dart';
 import '../../domain/journey.dart';
 import '../../domain/live_walk.dart';
 import '../../domain/milestones.dart';
+import '../../domain/road_event.dart' show EventLive;
 import '../../domain/rules.dart';
 import '../../domain/spirit_look.dart';
 import '../../domain/walk_arrival.dart';
@@ -35,6 +37,10 @@ import 'walking_hud.dart';
 /// 마치기를 안 누르고 이 화면이 사라져도(되돌아가기 제스처 등) 그 시각에 finish로 닫는다.
 /// 이번 걷기가 걷기 1번으로 인정되면(isFocusedWalk) 본격 걷기: 걸음 알약에 배수 딱지를 붙이고 토스트를
 /// 한 번 띄우며 상시 알림 끝에도 쓴다. 마칠 때까지 그대로다.
+/// 앱이 켜진 동안(이 화면이 떠 있는 동안) 센서가 센 실제 걸은 거리는 rules.eventFlushSec마다
+/// SyncService.addEventDistance에 넘긴다 (길 위 이벤트: 2km 칸을 넘으면 `2km 이정표` 카드가 몇 초 뜬다).
+/// 숨어 있던 동안 따라잡은 걸음은 넘기지 않고(LiveWalk.foregroundM), 아직 안 넘긴 거리는 앱이 꺼지면 잃는다.
+/// 새 도장을 받으면(SyncService.newBadges) 걸음 알약 아래에 작은 줄이 잠깐 뜬다 (토스트 대신).
 /// 앱이 통째로 끝나서 화면이 정리되지 못한 경우는 다음 실행 때 AutoSync가 마지막으로 살아 있던
 /// 시각에서 닫는다 (appEnded).
 /// 진행이 100%가 되면(11/4 Annie) 걷기를 자동으로 마치고 도착 화면으로 바꾼다. 도착은 늘 health 동기화가
@@ -116,6 +122,17 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   /// 걷는 중 화면이 떠 있다고 알리는 쪽 (dispose에서는 ref를 못 쓰므로 미리 담는다)
   late final WalkingActive _active;
 
+  /// 길 위 이벤트: 지금까지 SyncService에 넘긴 센서 앞쪽 거리(m), 마지막으로 넘긴 시각, 넘기는 중,
+  /// 지금 떠 있는 카드와 새 도장 줄
+  var _eventSentM = 0.0;
+  DateTime? _eventAt;
+  var _eventBusy = false;
+  RoadEventView? _event;
+  Timer? _eventTimer;
+  String? _badgeLine;
+  Timer? _badgeTimer;
+  StreamSubscription<List<stamp.Badge>>? _badgeSub;
+
   /// 도착으로 걷기를 마치는 중 (한 번만) / 마지막으로 도착 확인 동기화를 돌린 시각
   var _ending = false;
   DateTime? _probeAt;
@@ -137,11 +154,17 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
       final s = next.value;
       if (s != null) _onSnapshot(s);
     }, fireImmediately: true);
+    _service.then((svc) {
+      if (mounted) _badgeSub = svc.newBadges.listen(_onBadges);
+    }, onError: (_) {});
     _startRefreshing();
   }
 
   @override
   void dispose() {
+    _badgeSub?.cancel();
+    _eventTimer?.cancel();
+    _badgeTimer?.cancel();
     // 마치기 없이 나가는 경우: 창이 열린 채 남지 않게 지금 시각에 닫는다 (마치기로 나갔으면 이미 닫혔다)
     unawaited(_closeAppWalk(_clock()));
     Future.microtask(() => _setActive(false));
@@ -151,6 +174,68 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _timer?.cancel();
     _ticker.dispose();
     super.dispose();
+  }
+
+  /// 새 도장 한 줄을 걸음 알약 아래에 잠깐 띄운다
+  void _onBadges(List<stamp.Badge> badges) {
+    if (!mounted) return;
+    _badgeTimer?.cancel();
+    setState(() => _badgeLine = stamp.newBadgeToast(badges));
+    _badgeTimer = Timer(HudMetrics.badgeLineFor, () {
+      if (mounted) setState(() => _badgeLine = null);
+    });
+  }
+
+  void _closeEvent() {
+    _eventTimer?.cancel();
+    setState(() => _event = null);
+  }
+
+  /// 센서가 앞에서 센 거리 중 아직 안 넘긴 만큼을 길 위 이벤트 계산에 넘긴다. 마지막으로 넘긴 뒤
+  /// rules.eventFlushSec가 안 지났거나 넘기는 중이면 건너뛴다 ([now]가 걷기를 마친 시각이면 간격은 무시).
+  /// 칸을 넘어 이벤트가 생기면 카드를 띄운다. 실패하면 안 넘긴 것으로 두고 다음에 다시 넘긴다.
+  /// 이번 걷기·오늘·누적 값은 걷는 중 화면 숫자다 (동기화 값 + 센서가 먼저 센 만큼)
+  void _flushEvents(Rules rules, DateTime now, {bool force = false}) {
+    final live = _live?.walk;
+    if (live == null || _eventBusy) return;
+    final sendM = live.foregroundM;
+    final delta = sendM - _eventSentM;
+    if (delta <= 0) return;
+    final last = _eventAt;
+    if (!force && last != null && now.difference(last) < Duration(seconds: rules.eventFlushSec)) {
+      return;
+    }
+    _eventBusy = true;
+    _eventAt = now;
+    final summary = _summaryAt(now);
+    final saved = _record?.summary;
+    final liveRunSteps = live.minutes.where((m) => m.gait == Gait.run).fold(0, (a, m) => a + m.steps);
+    final runSteps = math.max(summary?.runSteps ?? 0, liveRunSteps);
+    final facts = EventLive(
+      sessionKm: (summary?.distanceM ?? 0) / 1000,
+      runKm: runSteps * rules.runStrideM / 1000,
+      pendingSteps: math.max(0, (summary?.steps ?? 0) - (saved?.steps ?? 0)),
+      pendingM: math.max(0.0, (summary?.distanceM ?? 0) - (saved?.distanceM ?? 0)),
+    );
+    unawaited(_sendEvents(delta, sendM, now, facts));
+  }
+
+  Future<void> _sendEvents(double deltaM, double sentM, DateTime now, EventLive facts) async {
+    try {
+      final made = await (await _service).addEventDistance(deltaM, now, facts);
+      _eventSentM = sentM;
+      if (made.isNotEmpty && mounted) {
+        _eventTimer?.cancel();
+        setState(() => _event = made.last);
+        _eventTimer = Timer(HudMetrics.eventCardFor, () {
+          if (mounted) setState(() => _event = null);
+        });
+      }
+    } catch (e) {
+      debugPrint('길 위 이벤트 계산 실패: $e');
+    } finally {
+      _eventBusy = false;
+    }
   }
 
   void _setActive(bool on) {
@@ -370,6 +455,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final summary = _summaryAt(now);
     _pushNotice(summary?.steps ?? 0, summary?.distanceM ?? 0, isRunning: _isRunning(summary));
     _probeArrival(summary, now);
+    _flushEvents(rules, now);
     final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
     var shown = followDistance(
       _shownM,
@@ -416,6 +502,9 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _noticeOn = false;
     _notice.stop();
     final end = ref.read(clockProvider)();
+    // 마지막으로 넘기고 남은 거리까지 마친 시각으로 넘긴다 (걷기 기록의 이정표가 이 걷기 시간대에 들어오게)
+    final rules = ref.read(rulesProvider).value;
+    if (rules != null) _flushEvents(rules, end, force: true);
     unawaited(_closeAppWalk(end));
     return WalkEnd(
       start: _start,
@@ -489,6 +578,10 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             running: running,
             nextMilestone: _nextMilestone(snap),
             focusBadge: _focused ? focusBadgeText(rules) : null,
+            event: _event,
+            eventKm: rules.eventEveryKm,
+            onCloseEvent: _closeEvent,
+            badgeLine: _badgeLine,
             onFinish: _finish,
           ),
         ],

@@ -36,18 +36,23 @@ SliverGridDelegate paintingGridDelegate(BuildContext context) {
   );
 }
 
-/// `그림` / `소품` 탭 두 개. [propsDot]이면 `소품` 라벨 오른쪽 위에 알림 점이 붙는다
+/// `그림` / `소품` / `도장 5 / 20` 탭 셋 (캔버스 Gallery). [propsDot]이면 `소품`, [stampsDot]이면 `도장`
+/// 라벨 오른쪽 위에 알림 점이 붙는다. [stampsLabel]은 도장 탭 글 (받은 수 / 전체)
 class AlbumTabs extends StatelessWidget {
   const AlbumTabs({
     super.key,
     required this.selected,
     required this.onSelect,
     this.propsDot = false,
+    this.stampsDot = false,
+    this.stampsLabel = '도장',
   });
 
   final int selected;
   final ValueChanged<int> onSelect;
   final bool propsDot;
+  final bool stampsDot;
+  final String stampsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -56,11 +61,23 @@ class AlbumTabs extends StatelessWidget {
         Expanded(child: _tab(context, 0, '그림', const ValueKey('tab-paintings'))),
         const SizedBox(width: 8),
         Expanded(child: _tab(context, 1, '소품', const ValueKey('tab-props'), dot: propsDot)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _tab(context, 2, stampsLabel, const ValueKey('tab-stamps'),
+              dot: stampsDot, dotKey: const ValueKey('stamps-tab-dot')),
+        ),
       ],
     );
   }
 
-  Widget _tab(BuildContext context, int index, String label, Key key, {bool dot = false}) {
+  Widget _tab(
+    BuildContext context,
+    int index,
+    String label,
+    Key key, {
+    bool dot = false,
+    Key dotKey = const ValueKey('props-tab-dot'),
+  }) {
     final on = selected == index;
     return Semantics(
       button: true,
@@ -81,15 +98,19 @@ class AlbumTabs extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              Text(
-                label,
-                style: context.display(16, color: on ? Palette.paper : Palette.ink),
+              // 글자를 키워도 세 칸 안에 들어오게 줄인다
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: context.display(16, color: on ? Palette.paper : Palette.ink),
+                ),
               ),
               if (dot)
-                const Positioned(
+                Positioned(
                   top: -4,
                   right: -12,
-                  child: NoticeDot(key: ValueKey('props-tab-dot')),
+                  child: NoticeDot(key: dotKey),
                 ),
             ],
           ),

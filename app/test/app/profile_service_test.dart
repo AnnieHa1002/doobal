@@ -339,8 +339,19 @@ void main() {
             firstArrivedUtc: 1,
             lastArrivedUtc: 1,
           ));
-      await db.into(db.wallSlots)
-          .insert(WallSlotsCompanion.insert(slot: const Value(0), landmarkId: 'kr001'));
+      await db.into(db.journeyEvents).insert(JourneyEventsCompanion.insert(
+            journeyId: 'j1',
+            k: 1,
+            terrain: 'field',
+            season: 'autumn',
+            night: false,
+            sceneTextId: 'S',
+            praiseId: 'R10',
+            praiseText: '글',
+            atUtc: 1,
+          ));
+      await db.into(db.badgesOwned)
+          .insert(BadgesOwnedCompanion.insert(badgeId: 'b_first_walk', atUtc: 1));
       expect(await svc.step(), OnboardingStep.done);
 
       await svc.deleteAllLocal();

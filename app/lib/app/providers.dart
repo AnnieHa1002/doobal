@@ -8,6 +8,7 @@ import '../data/app_settings_opener.dart';
 import '../data/backup_store.dart';
 import '../data/config_loader.dart';
 import '../data/db/app_db.dart';
+import '../data/event_loader.dart';
 import '../data/landmark_loader.dart';
 import '../data/live_steps.dart';
 import '../data/local_notifications.dart';
@@ -24,6 +25,7 @@ import '../data/sigungu_loader.dart';
 import '../data/step_source.dart';
 import '../data/theme_loader.dart';
 import '../data/walk_notice.dart';
+import '../domain/badge.dart';
 import '../domain/camp_theme.dart';
 import '../domain/display_font.dart';
 import '../domain/landmark.dart';
@@ -36,6 +38,7 @@ import '../domain/moderation.dart';
 import '../domain/notification_policy.dart';
 import '../domain/onboarding.dart';
 import '../domain/prop.dart';
+import '../domain/road_event.dart';
 import '../domain/rules.dart';
 import '../domain/session.dart';
 import '../domain/sigungu.dart';
@@ -53,6 +56,12 @@ final landmarksProvider = FutureProvider<List<Landmark>>((ref) => loadLandmarks(
 
 /// 소품 MVP 27개 (props.json)
 final propsProvider = FutureProvider<List<Prop>>((ref) => loadProps());
+
+/// 길 위 이벤트 문구 (events.json)
+final eventCatalogProvider = FutureProvider<EventCatalog>((ref) => loadEventCatalog());
+
+/// 도장 20개와 하늘 구간 (badges.json)
+final badgeCatalogProvider = FutureProvider<BadgeCatalog>((ref) => loadBadgeCatalog());
 
 /// 방명록 걸음 숫자 (milestones.json)
 final milestonesProvider = FutureProvider<List<int>>((ref) => loadMilestones());
@@ -294,6 +303,8 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
   final landmarks = await ref.watch(landmarksProvider.future);
   final props = await ref.watch(propsProvider.future);
   final milestones = await ref.watch(milestonesProvider.future);
+  final eventCatalog = await ref.watch(eventCatalogProvider.future);
+  final badgeCatalog = await ref.watch(badgeCatalogProvider.future);
   // 첫 여정 '내 동네 스케치'의 목적지가 바다에 떨어지지 않게 지도 경계로 땅을 판정한다
   final projection = await ref.watch(mapProjectionProvider.future);
   final regions = await ref.watch(mapRegionsProvider.future);
@@ -305,6 +316,8 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
     landmarks: {for (final l in landmarks) l.id: l},
     props: props,
     milestones: milestones,
+    eventCatalog: eventCatalog,
+    badgeCatalog: badgeCatalog,
     onLand: (p, island) => onIsland(p, island, projection, regions),
     distanceScale: distanceScale,
     notificationService: await ref.watch(notificationServiceProvider.future),
@@ -358,6 +371,13 @@ final ownedPropIdsProvider = FutureProvider.autoDispose<Set<String>>((ref) async
   final svc = await ref.watch(syncServiceProvider.future);
   await ref.watch(snapshotProvider.future);
   return svc.ownedPropIds();
+});
+
+/// 받은 도장 id와 받은 시각 (화집 도장 탭). 동기화·이벤트로 상태가 바뀌면 새로 읽는다
+final ownedBadgesProvider = FutureProvider.autoDispose<Map<String, DateTime>>((ref) async {
+  final svc = await ref.watch(syncServiceProvider.future);
+  await ref.watch(snapshotProvider.future);
+  return svc.ownedBadges();
 });
 
 /// 그림 하나의 방문 기록 (그림 상세)

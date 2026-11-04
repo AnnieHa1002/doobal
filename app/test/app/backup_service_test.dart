@@ -152,6 +152,7 @@ Future<void> _fill(AppDb db) async {
         endLat: const Value(37.2),
         endLng: const Value(127.0),
         endedUtc: const Value(6000),
+        eventM: const Value(4123.5),
       ),
     ]);
     b.insert(
@@ -198,9 +199,35 @@ Future<void> _fill(AppDb db) async {
       PropsOwnedCompanion.insert(propId: 'hat_01', unlockedUtc: 10, seen: const Value(true)),
       PropsOwnedCompanion.insert(propId: 'bag_02', unlockedUtc: 20),
     ]);
-    b.insertAll(db.wallSlots, [
-      WallSlotsCompanion.insert(slot: const Value(0), landmarkId: 'kr001'),
-      WallSlotsCompanion.insert(slot: const Value(2), landmarkId: 'sketch'),
+    b.insertAll(db.journeyEvents, [
+      JourneyEventsCompanion.insert(
+        journeyId: 'j3',
+        k: 1,
+        terrain: 'field',
+        season: 'autumn',
+        night: false,
+        sceneTextId: 'FLD_AUT_DAY_A',
+        praiseId: 'R10',
+        praiseText: '발이 길을 기억하기 시작했어.',
+        progressPct: const Value(0.5),
+        atUtc: 5500,
+      ),
+      JourneyEventsCompanion.insert(
+        journeyId: 'j3',
+        k: 2,
+        terrain: 'coast',
+        season: 'autumn',
+        night: true,
+        sceneTextId: 'CST_AUT_NGT_B',
+        praiseId: 'R14',
+        praiseText: '이번 걷기 4.1km째. 한 걸음씩 쌓이고 있어.',
+        progressPct: const Value(1.4),
+        atUtc: 5900,
+      ),
+    ]);
+    b.insertAll(db.badgesOwned, [
+      BadgesOwnedCompanion.insert(badgeId: 'b_first_walk', atUtc: 2100, seen: const Value(true)),
+      BadgesOwnedCompanion.insert(badgeId: 'b_night', atUtc: 5900),
     ]);
     b.insertAll(db.guestbookTickets, [
       GuestbookTicketsCompanion.insert(
@@ -288,7 +315,8 @@ Future<Map<String, Object?>> _userState(AppDb db) async => {
       'fund': await db.select(db.travelFund).get(),
       'paintings': await db.select(db.paintingsOwned).get(),
       'props': await db.select(db.propsOwned).get(),
-      'wall': await db.select(db.wallSlots).get(),
+      'events': await db.select(db.journeyEvents).get(),
+      'badges': await db.select(db.badgesOwned).get(),
       'tickets': await db.select(db.guestbookTickets).get(),
       'posts': await db.select(db.guestbookPosts).get(),
       'noticeSettings': await db.select(db.notificationSettings).get(),
@@ -342,7 +370,7 @@ void main() {
   });
 
   group('왕복 (export → 빈 DB에 restore)', () {
-    test('넣는 표의 내용이 모두 같다 (첫 그림 소유 1줄·방명록 글·화집 벽·알림 설정 포함)', () async {
+    test('넣는 표의 내용이 모두 같다 (첫 그림 소유 1줄·방명록 글·길 위 이벤트·도장·알림 설정 포함)', () async {
       await _fill(a);
       for (final name in svcA.includedTableNames) {
         expect(await _count(a, name), greaterThan(0), reason: '$name에 시험 행이 있어야 한다');
@@ -364,7 +392,7 @@ void main() {
       final json = _json(await svcA.exportBackup(_now));
       expect(json['format'], 1);
       expect(json['schema'], a.schemaVersion);
-      expect(json['schema'], 12);
+      expect(json['schema'], 13);
       expect(json['createdUtc'], _ms(_now));
       expect(json['syncedUtc'], _ms(_synced));
       expect((json['tables'] as Map<String, dynamic>).keys, svcA.includedTableNames);
@@ -512,6 +540,50 @@ void main() {
       expect((await b.select(b.walkSessions).getSingle()).bonusM, 0);
       expect(await b.select(b.appWalks).get(), isEmpty);
       expect(await b.select(b.coinLedger).get(), isEmpty);
+    });
+
+    test('길 위 이벤트·도장은 백업 문자열에 들어가고 여정의 eventM·도장의 seen도 복원된다', () async {
+      await _fill(a);
+      final tables = _json(await svcA.exportBackup(_now))['tables'] as Map<String, dynamic>;
+      expect(tables.keys, containsAll(['journey_events', 'badges_owned']));
+      expect(tables.keys, isNot(contains('wall_slots')));
+      expect((tables['journey_events'] as Map)['rows'], hasLength(2));
+      expect((tables['journeys'] as Map)['cols'], contains('event_m'));
+
+      await svcB.restoreBackup(await svcA.exportBackup(_now));
+      final j3 = await (b.select(b.journeys)..where((t) => t.id.equals('j3'))).getSingle();
+      expect(j3.eventM, 4123.5);
+      final events = await (b.select(b.journeyEvents)..orderBy([(t) => OrderingTerm(expression: t.k)]))
+          .get();
+      expect([for (final e in events) (e.k, e.terrain, e.night, e.praiseText, e.progressPct)], [
+        (1, 'field', false, '발이 길을 기억하기 시작했어.', 0.5),
+        (2, 'coast', true, '이번 걷기 4.1km째. 한 걸음씩 쌓이고 있어.', 1.4),
+      ]);
+      final badges = {for (final r in await b.select(b.badgesOwned).get()) r.badgeId: r.seen};
+      expect(badges, {'b_first_walk': true, 'b_night': false});
+    });
+
+    test('옛 백업(스키마 12: 화집 벽 표가 있고 이벤트·도장·eventM이 없음)도 깨지지 않고 복원된다', () async {
+      final text = _pack(_backupJson(schema: 12, tables: {
+        'journeys': _table([
+          'id', 'origin_lat', 'origin_lng', 'dest_id', 'start_utc', 'fund_km',
+          'total_effective_km', 'status',
+        ], [
+          ['j9', 37.5, 127.0, 'kr001', 1000, 0.0, 12.5, 'active'],
+        ]),
+        // 지금 DB에 없는 표라 건너뛴다
+        'wall_slots': _table(['slot', 'landmark_id'], [
+          [0, 'kr001'],
+          [2, 'sketch'],
+        ]),
+      }));
+      await _fill(b); // 쓰던 기기의 이벤트·도장은 백업에 없어서 비워진다
+      await svcB.restoreBackup(text);
+
+      final j = await b.select(b.journeys).getSingle();
+      expect((j.id, j.eventM), ('j9', 0));
+      expect(await b.select(b.journeyEvents).get(), isEmpty);
+      expect(await b.select(b.badgesOwned).get(), isEmpty);
     });
 
     test('진행 중인 여정의 걸은 거리에는 앱 걷기 보너스가 붙는다', () async {
@@ -759,7 +831,7 @@ void main() {
     test('이 앱보다 새 스키마면 StateError (DB는 그대로)', () async {
       await _fill(b);
       final before = await _userState(b);
-      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 13))), throwsStateError);
+      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 14))), throwsStateError);
       expect(await _userState(b), before);
     });
 
