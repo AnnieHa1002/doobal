@@ -287,7 +287,8 @@ void main() {
       expect(find.byKey(const ValueKey('arrival-painting')), findsOneWidget);
       final frame = tester.widget<FrameBorder>(find.byType(FrameBorder));
       expect(frame.color, frameColors[Frame.wood]);
-      expect(find.text('화집에 걸기'), findsOneWidget);
+      // 버튼은 명소 도착과 같다: `화집에 걸기`는 없다 (11/4)
+      expect(find.text('화집에 걸기'), findsNothing);
       expect(find.text('다음 목적지'), findsOneWidget);
       await end(tester, e);
     });
@@ -315,7 +316,7 @@ void main() {
       expect(find.byType(ArrivalScreen), findsOneWidget);
       expect(find.byType(FirstPackFace), findsOneWidget);
 
-      await tester.tap(find.byTooltip('뒤로'));
+      await tester.tap(find.byTooltip('닫기'));
       await transition(tester);
       await settle(tester, () => false, tries: 4);
       expect(find.byType(ArrivalScreen), findsNothing);
@@ -324,20 +325,14 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('화집에 걸기: 첫 그림이 벽 첫 칸에 걸린다', (tester) async {
+    testWidgets('화집에 걸기 버튼은 없고, 그림은 벽에 걸리지 않은 채 화집에 있다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.arriveAtSketch);
       await openArrival(tester, e);
       await tester.pump(const Duration(seconds: 2));
 
-      await tester.tap(find.text('화집에 걸기'));
-      await transition(tester);
-      await settle(tester, () => _wall(0).evaluate().isNotEmpty);
-      await settle(tester, () => _packIn(_wall(0)).evaluate().isNotEmpty);
-
-      expect(find.byType(AlbumScreen), findsOneWidget);
-      expect(_packIn(_wall(0)), findsOneWidget);
-      expect((await tester.runAsync(e.svc.wall))!, [sketchId, null, null, null]);
+      expect(find.text('화집에 걸기'), findsNothing);
+      expect((await tester.runAsync(e.svc.wall))!, [null, null, null, null]);
       await end(tester, e);
     });
   });

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/landmark.dart';
+import '../../domain/map_first_view.dart';
 import '../../domain/map_projection.dart';
 import '../../domain/map_regions.dart';
 import '../../domain/sketch.dart';
@@ -33,12 +34,13 @@ const _moveDuration = Duration(milliseconds: 350);
 const _topReserve = 108.0;
 const _bottomReserve = 270.0;
 
-/// 지도: 전국 시도 경계 위에 명소·지나온 길·지금 위치를 보여 주고, 명소를 골라 출발한다.
-/// [walkAfterStart]가 true면(쉼터에서 여정 없이 출발하기로 들어왔을 때) 출발한 뒤 걷는 중으로 간다
+/// 지도 (4-1): 전국 시도 경계 위에 명소·지나온 길·지금 위치를 보여 주고, 명소를 골라 출발한다.
+/// 처음 열면 내 현재 위치 기준으로 확대해서 명소가 3곳 이상 보이게 한다 (domain/map_first_view).
+/// 카드: 주 `출발하기`(어디서 열어도 걷는 중으로, 여정이 없으면 그 명소로 출발해서),
+/// 보조 `목적지 바꾸기`(다른 명소를 골랐을 때, 시트 하나)·`여정 멈추기`(현재 목적지, 시트).
+/// 첫 여정(내 동네 스케치) 중에는 바꾸기·멈추기를 숨긴다. 뒤로는 쉼터
 class MapScreen extends ConsumerStatefulWidget {
-  const MapScreen({super.key, this.walkAfterStart = false});
-
-  final bool walkAfterStart;
+  const MapScreen({super.key});
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -99,11 +101,19 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
 
   /// [rect](캔버스 px)를 위·아래 가린 곳을 뺀 영역 가운데에 맞추는 변환.
   /// [zoom]이 null이면 영역에 꽉 차게(여백 10%) 맞추고, 확대는 1~최대 사이로 자른다
+  /// 지도를 맞추는 가운데 영역: 위 가림 아래 y와 크기 (화면 pt)
+  ({double top, double width, double height}) _area() {
+    final top = _padding.top + _topReserve;
+    return (
+      top: top,
+      width: _view.width - 32,
+      height: math.max(100.0, _view.height - _padding.bottom - _bottomReserve - top),
+    );
+  }
+
   Matrix4 _matrixFor(MapGeometry g, MapRect rect, {double? zoom}) {
     final base = g.baseScale(_view.width);
-    final top = _padding.top + _topReserve;
-    final width = _view.width - 32;
-    final height = math.max(100.0, _view.height - _padding.bottom - _bottomReserve - top);
+    final (:top, :width, :height) = _area();
     final fit = math.min(
           width / (math.max(rect.width, 1) * base),
           height / (math.max(rect.height, 1) * base),
@@ -114,6 +124,24 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     final t = Offset(_view.width / 2, top + height / 2) - c * z;
     // 열 우선: 확대 z 다음에 t만큼 옮긴다
     return Matrix4(z, 0, 0, 0, 0, z, 0, 0, 0, 0, 1, 0, t.dx, t.dy, 0, 1);
+  }
+
+  /// 처음 보기: 지금 위치를 가운데 두고 명소가 3곳 이상 보이게 확대한다. 위치를 모르면 전국
+  Matrix4 _firstMatrix(MapGeometry g, MapData data) {
+    final pos = data.position;
+    if (pos == null) return _matrixFor(g, g.bounds, zoom: 1);
+    final base = g.baseScale(_view.width);
+    final area = _area();
+    final view = mapFirstView(
+      current: g.projection.project(pos),
+      landmarks: [for (final p in g.landmarkPoints.values) MapPoint(p.dx, p.dy)],
+      bounds: g.bounds,
+      viewW: area.width / base,
+      viewH: area.height / base,
+      maxZoom: _maxZoom,
+    );
+    final c = view.center;
+    return _matrixFor(g, MapRect(c.x, c.y, c.x, c.y), zoom: view.zoom);
   }
 
   void _animateTo(Matrix4 end) {
@@ -155,29 +183,43 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     setState(() => _selectedId = id);
   }
 
-  /// 여기로 가기 / 목적지 바꾸기. 바꾸기는 먼저 확인하고, 경비가 있으면 쓸지 묻는다.
-  /// 시트를 밖에서 눌러 닫으면 출발하지 않는다
+  /// 출발하기(여정이 없을 때) / 목적지 바꾸기. 시트 하나(4-2)에서 경비를 정한다.
+  /// 여정이 없고 경비도 없으면 묻지 않고 바로 출발한다. 시트를 밖에서 눌러 닫거나 취소하면 아무 일도 없다
   Future<void> _onGo(Landmark l, Snapshot snap, {required bool change}) async {
     if (_busy) return;
     _busy = true;
     try {
-      if (change) {
-        final ok = await showChangeSheet(context);
-        if (ok != true || !mounted) return;
+      if (!change && snap.fundKm <= 0) {
+        await _start(l.id, true, change: false);
+        return;
       }
-      var useFund = true;
-      if (snap.fundKm > 0) {
-        final add = await showFundSheet(context, snap.fundKm);
-        if (add == null || !mounted) return;
-        useFund = add;
+      JourneyPreview? preview;
+      try {
+        preview = await ref.read(journeyPreviewProvider(l.id).future);
+      } catch (e) {
+        debugPrint('걸을 거리 미리보기 실패: $e');
       }
-      await _start(l.id, useFund);
+      if (!mounted) return;
+      final useFund = await showDestSheet(
+        context,
+        destName: l.name,
+        fundKm: snap.fundKm,
+        walkedKm: change ? (snap.journey?.progress.progressKm ?? 0) : null,
+        totalKm: preview?.totalKm,
+      );
+      if (useFund == null || !mounted) return;
+      await _start(l.id, useFund, change: change);
     } finally {
       _busy = false;
     }
   }
 
-  Future<void> _start(String destId, bool useFund) async {
+  /// 걷는 중으로 간다 (이 지도 자리를 바꾼다. 어디서 열어도 같다)
+  Future<void> _walk() => Navigator.of(context)
+      .pushReplacement(MaterialPageRoute<void>(builder: (_) => const WalkingScreen()));
+
+  /// 여정을 시작한다. 바꾸기였으면 쉼터로 돌아가고, 처음 출발이면 걷는 중으로 간다
+  Future<void> _start(String destId, bool useFund, {required bool change}) async {
     final svc = await ref.read(syncServiceProvider.future);
     try {
       await svc.startJourney(destId, ref.read(clockProvider)(), useFund: useFund);
@@ -188,12 +230,14 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     if (!mounted) return;
     ref.invalidate(mapDataProvider);
     ref.invalidate(snapshotProvider);
-    if (!widget.walkAfterStart) return;
+    if (change) {
+      await Navigator.of(context).maybePop();
+      return;
+    }
     // 걷는 중이 첫 화면부터 새 여정으로 시작하도록 새 상태가 올 때까지 기다린다
     await ref.read(snapshotProvider.future);
     if (!mounted) return;
-    await Navigator.of(context)
-        .pushReplacement(MaterialPageRoute<void>(builder: (_) => const WalkingScreen()));
+    await _walk();
   }
 
   /// 여정 멈추기: 먼저 확인하고, 멈춘 자리에서 다시 출발하게 둔다. 시트를 밖에서 눌러 닫으면 아무 일도 없다
@@ -247,7 +291,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
         _view = box.biggest;
         _padding = MediaQuery.paddingOf(context);
         final tc = _tc ??=
-            TransformationController(_matrixFor(geometry, geometry.bounds, zoom: 1));
+            TransformationController(_firstMatrix(geometry, data));
         return Stack(
           children: [
             Positioned.fill(child: _map(geometry, data, tc)),
@@ -260,16 +304,28 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     );
   }
 
-  /// 확대·이동할 수 있는 지도. 캔버스는 화면 너비에 맞추고, 처음엔 확대 1배
+  /// 확대·이동할 수 있는 지도. 캔버스는 화면 너비에 맞추고, 처음엔 내 위치 기준 첫 보기
   Widget _map(MapGeometry g, MapData data, TransformationController tc) {
     final size = Size(_view.width, _view.width * g.projection.height / g.projection.width);
+    return ListenableBuilder(
+      listenable: tc,
+      builder: (context, _) => _viewer(g, data, tc, size, tc.value.getMaxScaleOnAxis()),
+    );
+  }
+
+  Widget _viewer(MapGeometry g, MapData data, TransformationController tc, Size size, double zoom) {
     return InteractiveViewer(
       transformationController: tc,
       constrained: false,
       minScale: 1,
       maxScale: _maxZoom,
       // 지도를 통째로 밀어내서 잃어버리지 않게 화면 반만큼만 벗어나게 한다
-      boundaryMargin: EdgeInsets.symmetric(horizontal: _view.width / 2, vertical: _view.height / 2),
+      // (margin은 지도 좌표라 확대하면 화면에서는 그만큼 더 커지므로 확대 배율로 나눈다.
+      // 처음부터 확대해서 열기 때문에 배율에 맞춘다)
+      boundaryMargin: EdgeInsets.symmetric(
+        horizontal: _view.width / 2 / zoom,
+        vertical: _view.height / 2 / zoom,
+      ),
       onInteractionStart: (_) => _anim.stop(),
       child: SizedBox(
         width: size.width,
@@ -279,15 +335,12 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
           onTapUp: (d) => _onMapTap(d.localPosition),
           child: RepaintBoundary(
             // 확대 배율이 바뀔 때만 다시 그린다 (MapPainter.shouldRepaint)
-            child: ListenableBuilder(
-              listenable: tc,
-              builder: (context, _) => CustomPaint(
-                painter: MapPainter(
-                  geometry: g,
-                  data: data,
-                  selectedId: _selectedId,
-                  zoom: tc.value.getMaxScaleOnAxis(),
-                ),
+            child: CustomPaint(
+              painter: MapPainter(
+                geometry: g,
+                data: data,
+                selectedId: _selectedId,
+                zoom: zoom,
               ),
             ),
           ),
@@ -357,14 +410,13 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     ];
   }
 
-  /// 고른 명소가 있으면 아래 카드. 현재 목적지는 보조 버튼 `여정 멈추기`,
-  /// 여정이 없으면 `여기로 가기`, 있으면 다른 명소에 `목적지 바꾸기`.
-  /// 첫 여정(내 동네 스케치) 중에는 `목적지 바꾸기`를 흐리게 두고 안내 한 줄을 붙인다
+  /// 고른 명소가 있으면 아래 카드. 주 버튼은 늘 `출발하기`(여정이 있으면 걷는 중으로, 없으면 이 명소로 출발).
+  /// 여정 중이면 보조 버튼: 현재 목적지는 `여정 멈추기`, 다른 명소는 `목적지 바꾸기`.
+  /// 첫 여정(내 동네 스케치) 중에는 보조 버튼을 숨긴다 (바꾸기·멈추기 없음)
   List<Widget> _selectedCard(MapGeometry g, MapData data, Snapshot snap) {
     final id = _selectedId;
     final l = g.byId[id];
     if (id == null || l == null) return const [];
-    final isDest = id == data.destId;
 
     // 현재 목적지는 쉼터와 같은 남은 거리·도착 예정일, 다른 명소는 지금 자리에서 가는 거리
     String? distance;
@@ -380,7 +432,9 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       if (preview != null) distance = _distanceLine(preview.totalKm, preview.etaDays);
     }
 
-    final change = data.destId != null;
+    final hasJourney = data.destId != null;
+    final isFirstJourney = data.destId == sketchId;
+    final canChange = hasJourney && !isFirstJourney;
     return [
       Positioned(
         left: 16,
@@ -394,12 +448,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
               landmark: l,
               frame: data.visited[id],
               distance: distance,
-              buttonLabel: isJourneyDest
-                  ? '여정 멈추기'
-                  : (isDest ? null : (change ? '목적지 바꾸기' : '여기로 가기')),
-              secondary: isJourneyDest,
-              lockedNote: data.destId == sketchId ? sketchLockedNote : null,
-              onPressed: isJourneyDest ? _onStop : () => _onGo(l, snap, change: change),
+              primaryLabel: '출발하기',
+              onPrimary: hasJourney ? _walk : () => _onGo(l, snap, change: false),
+              secondaryLabel: !canChange ? null : (isJourneyDest ? '여정 멈추기' : '목적지 바꾸기'),
+              onSecondary: isJourneyDest ? _onStop : () => _onGo(l, snap, change: true),
             ),
           ),
         ),

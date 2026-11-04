@@ -9,7 +9,7 @@ import '../../domain/guestbook.dart';
 import '../../domain/journey.dart' show Frame;
 import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
-import '../album/album_screen.dart';
+import '../../domain/walk_arrival.dart';
 import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
@@ -17,9 +17,9 @@ import '../common/frame_style.dart';
 import '../common/framed_painting.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
-import '../common/toast.dart';
 import '../guestbook/guestbook_write_screen.dart';
 import '../map/map_screen.dart';
+import '../walk_record/walk_record_screen.dart';
 
 /// 그림이 번지는 시간, 그다음 액자가 나타나는 시간
 const _paintingDuration = Duration(milliseconds: 1500);
@@ -32,42 +32,137 @@ const _frameThickness = 12.0;
 /// 도착: 그림이 종이에 먹이 번지듯 나타나고, 이어서 액자와 이름이 붙고, 방문·거리·날짜·걸음 카드가 나온다.
 /// 내 동네 스케치는 '첫 그림'(첫 여행 짐 꾸러미)이 나무 액자에 낀 채로 번지고(액자 단계·등급 라벨 없음),
 /// 카드에는 제목·이름·거리·날짜·걸음만 나온다.
-/// 버튼은 주 "방명록 쓰기"(이 도착의 기회가 열려 있을 때만 켜진다)와 보조 "화집에 걸기"·"다음 목적지".
-/// 닫은 뒤 본 것으로 적는 건 AutoSync가 한다
-class ArrivalScreen extends ConsumerWidget {
-  const ArrivalScreen({super.key, required this.journeyId});
+/// 버튼은 주 "방명록 쓰기"(이 도착의 기회가 열려 있을 때만 켜진다)와 보조 "다음 목적지".
+/// "화집에 걸기"는 없다: 그림은 화집 일기에 저절로 들어간다 (11/4).
+/// 닫기: 걷다가 도착했으면([walk] 있음) 그 걷기의 걷기 기록으로, 아니면(앱 밖에서 도착해 다음 실행에
+/// 뜬 경우) 그냥 닫아 쉼터로 간다. 시스템 뒤로도 같다. 닫을 때 도착을 본 것으로 적는다
+/// (AutoSync가 띄운 경우는 AutoSync도 같은 것을 적는다)
+class ArrivalScreen extends ConsumerStatefulWidget {
+  const ArrivalScreen({super.key, required this.journeyId, this.walk});
 
   final String journeyId;
 
+  /// 이 도착으로 마친 걷기. 있으면 닫은 뒤 걷기 기록을 보여 준다
+  final WalkEnd? walk;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final view = ref.watch(arrivalViewProvider(journeyId));
+  ConsumerState<ArrivalScreen> createState() => _ArrivalScreenState();
+}
+
+class _ArrivalScreenState extends ConsumerState<ArrivalScreen> {
+  var _leaving = false;
+
+  /// 걷다 도착해서 열렸으면 닫힐 때까지 AutoSync가 도착 화면을 또 띄우지 않게 알린다
+  /// (dispose에서는 ref를 못 쓰므로 미리 담는다)
+  late final WalkingActive _active;
+
+  @override
+  void initState() {
+    super.initState();
+    _active = ref.read(walkingActiveProvider.notifier);
+    if (widget.walk != null) Future.microtask(_enter);
+  }
+
+  void _enter() {
+    try {
+      _active.enter();
+    } catch (_) {
+      // 앱이 통째로 정리되는 중
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.walk != null) {
+      Future.microtask(() {
+        try {
+          _active.leave();
+        } catch (_) {
+          // 앱이 통째로 정리되는 중
+        }
+      });
+    }
+    super.dispose();
+  }
+
+  /// 도착을 본 것으로 적고 상태를 새로 읽는다 (이 화면이 정리되기 전에 끝낸다)
+  Future<void> _markShown() async {
+    try {
+      final svc = await ref.read(syncServiceProvider.future);
+      await svc.markArrivalShown(widget.journeyId);
+    } catch (e) {
+      debugPrint('도착 화면 확인 기록 실패: $e');
+    }
+    if (mounted) ref.invalidate(snapshotProvider);
+  }
+
+  /// 닫기: 걷다 왔으면 걷기 기록으로 바꾸고, 아니면 닫는다
+  Future<void> _close() async {
+    if (_leaving) return;
+    _leaving = true;
+    final walk = widget.walk;
+    if (walk == null) {
+      Navigator.of(context).pop();
+      return;
+    }
+    await _markShown();
+    if (!mounted) return;
+    await Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
+      builder: (_) => WalkRecordScreen(
+        start: walk.start,
+        end: walk.end,
+        ratioBefore: walk.ratioBefore,
+        liveMinutes: walk.liveMinutes,
+      ),
+    ));
+  }
+
+  /// 다음 목적지: 지도로 바꿔 연다 (지도에서 뒤로 가면 쉼터)
+  Future<void> _next() async {
+    if (_leaving) return;
+    _leaving = true;
+    await _markShown();
+    if (!mounted) return;
+    await Navigator.of(context)
+        .pushReplacement(MaterialPageRoute<void>(builder: (_) => const MapScreen()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final view = ref.watch(arrivalViewProvider(widget.journeyId));
     final data = view.value;
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: CornerButton(
-                  icon: Icons.arrow_back,
-                  label: '뒤로',
-                  size: 44,
-                  onPressed: () => Navigator.of(context).maybePop(),
+    return PopScope(
+      // 걷다 왔으면 시스템 뒤로도 걷기 기록으로 간다
+      canPop: widget.walk == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _close();
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: CornerButton(
+                    icon: Icons.close,
+                    label: '닫기',
+                    size: 44,
+                    onPressed: _close,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: data != null
-                    ? _ArrivalBody(key: ValueKey(data.journeyId), view: data)
-                    : view.hasError
-                        ? const Center(child: Text('도착 정보를 불러오지 못했어요'))
-                        : const SizedBox.shrink(),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Expanded(
+                  child: data != null
+                      ? _ArrivalBody(key: ValueKey(data.journeyId), view: data, onNext: _next)
+                      : view.hasError
+                          ? const Center(child: Text('도착 정보를 불러오지 못했어요'))
+                          : const SizedBox.shrink(),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -76,9 +171,10 @@ class ArrivalScreen extends ConsumerWidget {
 }
 
 class _ArrivalBody extends ConsumerStatefulWidget {
-  const _ArrivalBody({super.key, required this.view});
+  const _ArrivalBody({super.key, required this.view, required this.onNext});
 
   final ArrivalView view;
+  final VoidCallback onNext;
 
   @override
   ConsumerState<_ArrivalBody> createState() => _ArrivalBodyState();
@@ -88,7 +184,6 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
   late final AnimationController _controller;
   late final Animation<double> _painting;
   late final Animation<double> _frame;
-  var _busy = false;
 
   @override
   void initState() {
@@ -107,32 +202,9 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
     super.dispose();
   }
 
-  /// 벽의 첫 빈 칸에 걸고 화집을 연다. 벽이 가득 차 있으면 바꿀 칸을 고르는 모드로 연다
-  Future<void> _hang() async {
-    if (_busy) return;
-    _busy = true;
-    try {
-      final id = widget.view.dest.id;
-      final svc = await ref.read(syncServiceProvider.future);
-      final slot = await svc.hangOnWall(id);
-      if (!mounted) return;
-      ref.invalidate(wallProvider);
-      await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => AlbumScreen(hangLandmarkId: slot == null ? id : null),
-      ));
-    } on StateError catch (e) {
-      if (mounted) showToast(context, e.message);
-    } finally {
-      _busy = false;
-    }
-  }
-
   /// 이 도착의 방명록 기회로 쓰기 화면을 연다
   void _write(GuestbookTicket ticket) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => GuestbookWriteScreen(ticketId: ticket.id)));
-
-  void _next() => Navigator.of(context)
-      .pushReplacement(MaterialPageRoute<void>(builder: (_) => const MapScreen()));
 
   @override
   Widget build(BuildContext context) {
@@ -162,9 +234,8 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
         const SizedBox(height: 16),
         GameButton(label: '방명록 쓰기', onPressed: ticket == null ? null : () => _write(ticket)),
         const SizedBox(height: 8),
-        GameButton(label: '화집에 걸기', kind: GameButtonKind.secondary, onPressed: _hang),
-        const SizedBox(height: 8),
-        GameButton(label: '다음 목적지', kind: GameButtonKind.secondary, onPressed: _next),
+        GameButton(
+            label: '다음 목적지', kind: GameButtonKind.secondary, onPressed: widget.onNext),
       ],
     );
   }

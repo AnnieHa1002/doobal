@@ -914,21 +914,32 @@ void main() {
       await transition(tester);
     }
 
-    _scaleCases('확인 시트: 목적지 바꾸기', (tester, fit) async {
+    _scaleCases('목적지 바꾸기 시트 (경비 체크 포함)', (tester, fit) async {
       final e = UiEnv();
       await e.seed(tester);
-      await show(tester, e, fit, showChangeSheet);
+      await show(
+        tester,
+        e,
+        fit,
+        (c) => showDestSheet(c,
+            destName: '아침고요수목원', fundKm: 1234.5, walkedKm: 18.0, totalKm: 26.3),
+      );
       expect(find.text('바꾸기'), findsOneWidget);
       fit.check('목적지 바꾸기');
       await end(tester, e);
     });
 
-    _scaleCases('경비 시트', (tester, fit) async {
+    _scaleCases('처음 출발 시트 (경비 없음)', (tester, fit) async {
       final e = UiEnv();
       await e.seed(tester);
-      await show(tester, e, fit, (c) => showFundSheet(c, 1234.5));
-      expect(find.text('더하기'), findsOneWidget);
-      fit.check('경비 시트');
+      await show(
+        tester,
+        e,
+        fit,
+        (c) => showDestSheet(c, destName: '아침고요수목원', fundKm: 0, totalKm: 26.3),
+      );
+      expect(find.text('출발하기'), findsOneWidget);
+      fit.check('처음 출발');
       await end(tester, e);
     });
 

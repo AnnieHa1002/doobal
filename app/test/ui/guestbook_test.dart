@@ -5,6 +5,7 @@ import 'package:doobal/main.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/palette.dart';
+import 'package:doobal/ui/guestbook/guestbook_read_screen.dart';
 import 'package:doobal/ui/guestbook/guestbook_write_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
@@ -82,11 +83,17 @@ Future<void> _putTicket(
         ));
 
 /// 글을 쓰고 "남기기"를 눌러 쓰기 화면이 닫힐 때까지 기다린다
-Future<void> _writeAndSave(WidgetTester tester, String text) async {
+/// 글을 쓰고 `남기기`를 누른다. 남기면 방명록 읽기(5-2)로 이어지는데, [toRead]가 false(기본)이면
+/// 거기서 뒤로 가서 들어온 곳으로 돌아온다
+Future<void> _writeAndSave(WidgetTester tester, String text, {bool toRead = false}) async {
   await tester.enterText(_input, text);
   await tester.pump();
   await tester.tap(find.text('남기기'));
   await settle(tester, () => find.text('방명록을 남겼어요').evaluate().isNotEmpty, tries: 12);
+  await transition(tester);
+  await settle(tester, () => find.byType(GuestbookReadScreen).evaluate().isNotEmpty, tries: 12);
+  if (toRead) return;
+  await tester.tap(find.byTooltip('뒤로'));
   await transition(tester);
 }
 
@@ -384,15 +391,30 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('남기면 저장하고 토스트를 띄운 뒤 닫는다', (tester) async {
+    testWidgets('남기면 저장하고 토스트를 띄운 뒤 방명록 읽기로 이어지고, 뒤로 가면 들어온 곳', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => _putTicket(e, 'a:j1', TicketKind.arrival, 'kr001'));
       await _openWrite(tester, e, 'a:j1');
-      await _writeAndSave(tester, '  좋았어요  ');
+      await _writeAndSave(tester, '  좋았어요  ', toRead: true);
 
+      // 쓰기 화면은 읽기 화면으로 바뀌었다: 장소 제목, 태그, 내가 방금 쓴 글 한 개
       expect(find.byType(GuestbookWriteScreen), findsNothing);
-      expect(find.text('열기'), findsOneWidget);
+      expect(find.byType(GuestbookReadScreen), findsOneWidget);
       expect(find.text('방명록을 남겼어요'), findsOneWidget);
+      expect(find.byKey(const ValueKey('guestbook-read-title')), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const ValueKey('guestbook-read-title'))).data, '경복궁');
+      expect(find.text('경복궁 도착'), findsOneWidget);
+      expect(find.byKey(const ValueKey('guestbook-read-post')), findsOneWidget);
+      expect(find.text('좋았어요'), findsOneWidget);
+      // 서버 뒤로 미룬 것들은 아직 없다 (다른 5개 보기·하트·신고)
+      expect(find.text('다른 5개 보기'), findsNothing);
+      expect(find.byTooltip('하트'), findsNothing);
+      expect(find.text('신고'), findsNothing);
+
+      await tester.tap(find.byTooltip('뒤로'));
+      await transition(tester);
+      expect(find.byType(GuestbookReadScreen), findsNothing);
+      expect(find.text('열기'), findsOneWidget);
       final post = (await _posts(tester, e)).single;
       expect((post.ticketId, post.scope, post.body, post.status),
           ('a:j1', 'kr001', '좋았어요', PostStatus.pending));
@@ -401,6 +423,19 @@ void main() {
             ..where((t) => t.id.equals('a:j1')))
           .getSingle());
       expect(row!.usedUtc, isNotNull);
+      await end(tester, e);
+    });
+
+    testWidgets('걸음 숫자 글은 읽기 화면 제목이 `100보 지점`이다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _putTicket(e, 'm:100', TicketKind.milestone, 'steps:100'));
+      await _openWrite(tester, e, 'm:100');
+      await _writeAndSave(tester, '백 걸음', toRead: true);
+
+      expect(tester.widget<Text>(find.byKey(const ValueKey('guestbook-read-title'))).data,
+          '100보 지점');
+      expect(find.text('100보'), findsOneWidget);
+      expect(find.text('백 걸음'), findsOneWidget);
       await end(tester, e);
     });
 
@@ -478,21 +513,20 @@ void main() {
   });
 
   group('도착 화면의 방명록 쓰기', () {
-    testWidgets('주 버튼 "방명록 쓰기"가 맨 위, 이어서 화집에 걸기·다음 목적지', (tester) async {
+    testWidgets('주 버튼 "방명록 쓰기"가 맨 위, 이어서 다음 목적지 (화집에 걸기는 없다)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.arriveAtGyeongbok);
       await _openArrival(tester, e, _journeyId);
 
       expect(_enabled(tester, '방명록 쓰기'), isTrue);
       final write = tester.getTopLeft(find.text('방명록 쓰기')).dy;
-      final hang = tester.getTopLeft(find.text('화집에 걸기')).dy;
       final next = tester.getTopLeft(find.text('다음 목적지')).dy;
-      expect(write, lessThan(hang));
-      expect(hang, lessThan(next));
+      expect(find.text('화집에 걸기'), findsNothing);
+      expect(write, lessThan(next));
       // 주 버튼은 테라코타, 나머지는 보조(카드색)
       expect(tester.widget<GameButton>(find.widgetWithText(GameButton, '방명록 쓰기')).kind,
           GameButtonKind.primary);
-      expect(tester.widget<GameButton>(find.widgetWithText(GameButton, '화집에 걸기')).kind,
+      expect(tester.widget<GameButton>(find.widgetWithText(GameButton, '다음 목적지')).kind,
           GameButtonKind.secondary);
       await end(tester, e);
     });
@@ -508,13 +542,17 @@ void main() {
       expect(find.byType(GuestbookWriteScreen), findsOneWidget);
       expect(_tagText(tester), '경복궁 도착');
 
-      await _writeAndSave(tester, '여기가 경복궁');
+      // 남기면 방명록 읽기로 이어지고, 뒤로 가면 도착 화면 (들어온 곳)
+      await _writeAndSave(tester, '여기가 경복궁', toRead: true);
+      expect(find.byType(GuestbookReadScreen), findsOneWidget);
+      await tester.tap(find.byTooltip('뒤로'));
+      await transition(tester);
       expect(find.byType(GuestbookWriteScreen), findsNothing);
+      expect(find.byType(GuestbookReadScreen), findsNothing);
       expect(find.byType(ArrivalScreen), findsOneWidget);
       await settle(tester, () => !_enabled(tester, '방명록 쓰기'));
       expect(_enabled(tester, '방명록 쓰기'), isFalse);
       // 다른 버튼은 그대로 눌린다
-      expect(_enabled(tester, '화집에 걸기'), isTrue);
       expect(_enabled(tester, '다음 목적지'), isTrue);
       expect((await _posts(tester, e)).single.scope, 'kr001');
       await end(tester, e);

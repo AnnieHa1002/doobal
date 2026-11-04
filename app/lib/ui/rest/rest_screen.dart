@@ -178,7 +178,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                                 onPressed: () => _push(
                                   context,
                                   snap.journey == null
-                                      ? const MapScreen(walkAfterStart: true)
+                                      ? const MapScreen()
                                       : const WalkingScreen(),
                                 ),
                               ),
