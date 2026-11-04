@@ -86,7 +86,7 @@ void main() {
       expect(d['channelId'], 'walking');
       expect(d['channelName'], '걷는 중');
       expect(d['channelDescription'], '걷는 동안 걸음을 보여 줘요');
-      expect(d['icon'], 'ic_stat_walk');
+      expect(d['icon'], 'ic_stat_doobal');
       expect(d['importance'], 2); // low
       expect(d['priority'], -1); // low
       expect(d['playSound'], false);

@@ -27,7 +27,6 @@ import '../data/theme_loader.dart';
 import '../data/walk_notice.dart';
 import '../domain/badge.dart';
 import '../domain/camp_theme.dart';
-import '../domain/display_font.dart';
 import '../domain/landmark.dart';
 import '../domain/spirit_look.dart';
 import '../domain/spirit_palette.dart';
@@ -265,21 +264,6 @@ final spiritLookProvider = Provider<SpiritLook>((ref) {
     bodyBaseArgb: palette.body.baseArgb,
   );
 });
-
-/// 설정에서 고른 표시 글꼴 (앱 테마가 듣는다). 읽는 동안은 기본 개구로 그린다
-class DisplayFontChoice extends AsyncNotifier<DisplayFont> {
-  @override
-  Future<DisplayFont> build() => ref.watch(profileServiceProvider).displayFont();
-
-  /// 고르면 저장하고 바로 테마에 알린다
-  Future<void> choose(DisplayFont font) async {
-    await ref.read(profileServiceProvider).saveDisplayFont(font);
-    state = AsyncData(font);
-  }
-}
-
-final displayFontProvider =
-    AsyncNotifierProvider<DisplayFontChoice, DisplayFont>(DisplayFontChoice.new);
 
 /// 최근 14일의 하루 걸음 (나의 정보 막대). 동기화·삭제로 상태가 바뀌면 snapshotProvider와 함께 새로 읽는다
 final recentDaysProvider = FutureProvider.autoDispose<List<DayBar>>((ref) async {

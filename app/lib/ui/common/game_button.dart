@@ -47,7 +47,7 @@ class GameButton extends StatelessWidget {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: context.display(18, color: text),
+            style: context.display(18, color: text, weight: FontWeight.w600),
           ),
         ),
       ),

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 안드로이드 알림 작은 아이콘: 발자국 둘 (Drive ic_stat_doobal_v01.svg, 11/4 Annie 채택).
+     알림 아이콘은 흰색 + 투명 배경이어야 한다 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- 왼발 (아래 왼쪽) -->
+    <group
+        android:pivotX="7.5"
+        android:pivotY="15.5"
+        android:rotation="-12">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M4.6,16.2a2.9,4.1 0,1 0,5.8 0a2.9,4.1 0,1 0,-5.8 0" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M4.25,10.9a1.05,1.05 0,1 0,2.1 0a1.05,1.05 0,1 0,-2.1 0" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M6.3,10.3a1.1,1.1 0,1 0,2.2 0a1.1,1.1 0,1 0,-2.2 0" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M8.5,10.9a1,1 0,1 0,2 0a1,1 0,1 0,-2 0" />
+    </group>
+    <!-- 오른발 (위 오른쪽) -->
+    <group
+        android:pivotX="16.5"
+        android:pivotY="9"
+        android:rotation="12">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M13.6,9.7a2.9,4.1 0,1 0,5.8 0a2.9,4.1 0,1 0,-5.8 0" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M13.25,4.4a1.05,1.05 0,1 0,2.1 0a1.05,1.05 0,1 0,-2.1 0" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M15.3,3.8a1.1,1.1 0,1 0,2.2 0a1.1,1.1 0,1 0,-2.2 0" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M17.5,4.4a1,1 0,1 0,2 0a1,1 0,1 0,-2 0" />
+    </group>
+</vector>

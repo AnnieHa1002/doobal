@@ -73,7 +73,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // 쉼터가 사라지기 전에 걸음·여정 상태를 다시 읽어서 설치 기록(SyncState·TravelFund 한 줄씩,
     // 경비 0)이 새로 생길 수 있다. 처음 설치해서 첫 동기화가 만드는 것과 같은 빈 상태다
     ref.invalidate(onboardingStepProvider);
-    ref.invalidate(displayFontProvider);
     ref.invalidate(snapshotProvider);
     ref.invalidate(mapDataProvider);
     Navigator.of(context).popUntil((r) => r.isFirst);

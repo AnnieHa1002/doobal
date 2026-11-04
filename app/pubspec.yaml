@@ -56,18 +56,11 @@ flutter:
   # 모두 자주 쓰는 글자만 남긴 판이다 (tools/subset_fonts.py). 원본은 고운 글꼴 Drive Assets/05_UI_화면/fonts,
   # 개구·동글 Google Fonts(google/fonts ofl/gaegu·ofl/dongle)
   fonts:
-    - family: Gaegu
+    - family: Pretendard
       fonts:
-        - asset: assets/fonts/Gaegu-Bold.ttf
+        - asset: assets/fonts/Pretendard-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Pretendard-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Pretendard-Bold.ttf
           weight: 700
-    - family: Dongle
-      fonts:
-        - asset: assets/fonts/Dongle-Bold.ttf
-          weight: 700
-    - family: GowunBatang
-      fonts:
-        - asset: assets/fonts/GowunBatang-Bold.ttf
-          weight: 700
-    - family: GowunDodum
-      fonts:
-        - asset: assets/fonts/GowunDodum-Regular.ttf

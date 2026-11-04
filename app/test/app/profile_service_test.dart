@@ -4,7 +4,6 @@ import 'package:doobal/app/profile_service.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/step_source.dart';
-import 'package:doobal/domain/display_font.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart' show Frame;
 import 'package:doobal/domain/look.dart';
@@ -39,28 +38,6 @@ void main() {
   test('프로필이 비어 있으면 행이 없고 단계는 환영', () async {
     expect(await svc.row(), isNull);
     expect(await svc.step(), OnboardingStep.welcome);
-  });
-
-  group('표시 글꼴 (16장 11/3)', () {
-    test('고른 적 없으면 기본 개구', () async {
-      expect(await svc.displayFont(), DisplayFont.gaegu);
-    });
-
-    test('고르면 이름으로 적고 다시 읽으면 그 글꼴, 닉네임 같은 다른 열은 그대로', () async {
-      await svc.saveMe('화가', Look.initial);
-      await svc.saveDisplayFont(DisplayFont.dongle);
-      expect(await svc.displayFont(), DisplayFont.dongle);
-      final r = (await svc.row())!;
-      expect((r.displayFont, r.nickname), ('dongle', '화가'));
-      await svc.saveDisplayFont(DisplayFont.batang);
-      expect(await svc.displayFont(), DisplayFont.batang);
-    });
-
-    test('모르는 이름이 적혀 있으면 기본 개구', () async {
-      await db.into(db.profile).insert(
-          const ProfileCompanion(id: Value(1), displayFont: Value('comic')));
-      expect(await svc.displayFont(), DisplayFont.gaegu);
-    });
   });
 
   group('confirmAge', () {

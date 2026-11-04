@@ -20,7 +20,7 @@ const _labelHeight = 17.0;
 
 /// 이름 줄 높이: 글자 크기를 키우면 한 줄이 같이 커진다 (기본 크기에서는 17pt)
 double paintingLabelHeight(BuildContext context) =>
-    MediaQuery.textScalerOf(context).scale(12 * context.displayFont.scale) * 1.25 + 2;
+    MediaQuery.textScalerOf(context).scale(12) * 1.25 + 2;
 
 /// 그림 칸 3열 격자. 칸 높이는 기본 크기에서 너비 : 높이 = 0.78이고,
 /// 글자 크기를 키우면 이름 줄이 커진 만큼 칸이 길어져서 그림 크기는 그대로다

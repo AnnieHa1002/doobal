@@ -4,12 +4,7 @@ import 'package:flutter/foundation.dart';
 /// 설정 → 오픈소스 라이선스(showLicensePage)에 패키지 라이선스와 함께 나온다.
 /// TODO: OFL 1.1 전문(OFL.txt)도 함께 넣는다
 const fontLicenses = {
-  'Gaegu': 'Copyright 2018 The Gaegu Project Authors',
-  'Dongle': 'Copyright 2021 The Dongle Project Authors (https://github.com/yangheeryu/Dongle)',
-  'Gowun Batang': 'Copyright 2021 The Gowun Batang Project Authors '
-      '(https://github.com/yangheeryu/Gowun-Batang)',
-  'Gowun Dodum': 'Copyright 2021 The Gowun Dodum Project Authors '
-      '(https://github.com/yangheeryu/Gowun-Dodum)',
+  'Pretendard': 'Copyright © 2023 Kil Hyung-jin',
 };
 
 const _ofl = 'This Font Software is licensed under the SIL Open Font License, Version 1.1. '

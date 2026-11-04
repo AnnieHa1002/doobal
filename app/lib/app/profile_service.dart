@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../data/db/app_db.dart';
-import '../domain/display_font.dart';
 import '../domain/look.dart';
 import '../domain/onboarding.dart';
 import '../domain/profile.dart';
@@ -93,15 +92,6 @@ class ProfileService {
           look: Value(jsonEncode(look.toJson())),
         ));
       });
-
-  /// 설정에서 고른 표시 글꼴. 고른 적 없으면 기본 개구
-  Future<DisplayFont> displayFont() async => DisplayFont.fromName((await row())?.displayFont);
-
-  /// 표시 글꼴을 고른다 (다른 열은 그대로)
-  Future<void> saveDisplayFont(DisplayFont font) => _write(ProfileCompanion(
-        id: const Value(1),
-        displayFont: Value(font.name),
-      ));
 
   /// 출발 동네: id, 이름(시·도를 붙인 label), 대표 좌표
   Future<void> saveHome(Sigungu s) => _write(ProfileCompanion(

@@ -45,7 +45,7 @@ void main() {
     expect(d['channelId'], 'notices');
     expect(d['channelName'], '두발 소식');
     expect(d['channelDescription'], '도착·방명록 기회 같은 소식만, 하루 2개까지');
-    expect(d['icon'], 'ic_stat_walk');
+    expect(d['icon'], 'ic_stat_doobal');
     // 걷는 중 상시 알림(조용한 low)과 달리 보통 중요도
     expect(d['importance'], 3);
   });
