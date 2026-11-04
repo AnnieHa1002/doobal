@@ -13,7 +13,7 @@ Annie 1인 개발, MVP 2027년 3월(한국 명소 101곳, iOS + 안드로이드,
   - M1 명세 (걸음·여정 엔진) `1k_CpZQwv3Z1BY_v5y2Kte5RAPMDl1tcFX1De-Z-rADM`
   - M2~M6 명세 `1k4BjYeshIUqhehwn3JTRaVS4feDmnpJTl8zrNGjYoj8`
   - 정적 데이터 스키마 `1Jr9W7utyy1sfR_epIqWr9x5Vb1oD7-By2WeYt9a_k94`
-  - UI 명세 v1 `1HVcK3sqXFsPTDGF353ePuuYIrTPukdoG7eGd_ssneEg`
+  - 화면 기준: 프로토타입 캔버스 https://claude.ai/artifact/5ZZogKRDLU4eT4npM1Qhqn (11/4, 화면마다 메모). UI 명세 v3 `1HVcK3sqXFsPTDGF353ePuuYIrTPukdoG7eGd_ssneEg`는 보관
 - Drive에 접근할 수 없으면 추측하지 말고 Annie에게 해당 부분을 붙여 달라고 한다.
 
 ## 세션 규칙
@@ -29,8 +29,8 @@ Annie 1인 개발, MVP 2027년 3월(한국 명소 101곳, iOS + 안드로이드,
 
 ```
 app/                Flutter 앱 (패키지 doobal, 번들 ID com.annieha.doobal)
-  assets/data/      정적 데이터 JSON: landmarks·props·events·milestones·config·sigungu·notifications·palette·companions·badges
-  assets/data/themes/  쉼터 테마(camp.json: 물건·캐릭터 자리)
+  assets/data/      정적 데이터 JSON: landmarks·props·events·milestones·config·sigungu·notifications·palette·companions·badges·shop·boats·scene·scene_art·moderation
+  assets/data/themes/  쉼터 테마(camp.json: 물건·캐릭터 자리, camp_wide.json: 넓은 쉼터 값, 아직 안 읽음)
   assets/map/       지도 시도 경계 SVG·위경도 투영 JSON (Drive 05_UI_화면 ui_map_*_v01 사본)
   assets/rive/      Rive 시험 파일
 functions/          Firebase Cloud Functions (아직 비어 있음)

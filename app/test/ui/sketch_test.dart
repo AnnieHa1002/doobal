@@ -9,7 +9,6 @@ import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/common/frame_style.dart';
 import 'package:doobal/ui/common/framed_painting.dart';
-import 'package:doobal/ui/common/notice_dot.dart';
 import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/decorate/decorate_screen.dart';
 import 'package:doobal/ui/map/landmark_card.dart';
@@ -393,7 +392,8 @@ void main() {
       expect((framed.frame, framed.landmark), (Frame.wood, null));
       expect(_name(tester, _cell(sketchId), '첫 그림').style?.color, Palette.ink);
       expect(find.byKey(const ValueKey('new-painting-sketch')), findsOneWidget);
-      expect(find.byType(NoticeDot), findsOneWidget);
+      // 걸은 기록이 도장도 줄 수 있어 도장 탭 점은 따로다
+      expect(find.byKey(const ValueKey('new-painting-sketch')), findsOneWidget);
 
       // 도착한 시각(한국 11월 18일 12시)만 남은 그림이다
       final owned = (await tester.runAsync(e.svc.paintings))!.single;
