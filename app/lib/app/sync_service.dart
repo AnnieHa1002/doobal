@@ -25,7 +25,6 @@ import '../domain/session.dart';
 import '../domain/sketch.dart';
 import '../domain/time_kst.dart';
 import '../domain/walk_record.dart';
-import '../domain/wall.dart';
 import 'notification_service.dart';
 
 /// 한 번 가져온 결과. 출처별 걸음은 허용 목록을 정하는 실기기 확인용
@@ -983,44 +982,6 @@ class SyncService {
           (t) => OrderingTerm(expression: t.id),
         ]))
       .get();
-
-  /// 화집 벽: 늘 [wallSlots]칸. 안 건 칸은 null
-  Future<List<String?>> wall() async => wallFromSlots({
-        for (final r in await db.select(db.wallSlots).get()) r.slot: r.landmarkId,
-      });
-
-  /// [slot]에 얻은 그림 [landmarkId]를 건다. 같은 그림이 다른 칸에 있으면 그 칸은 비운다.
-  /// 칸 번호가 범위 밖이면 RangeError, 얻지 않은 그림이면 StateError
-  Future<void> setWall(int slot, String landmarkId) => db.transaction(() async {
-        await _requireOwned(landmarkId);
-        await _saveWall(placeOnWall(await wall(), slot, landmarkId));
-      });
-
-  /// 벽의 첫 빈 칸에 건다 (이미 걸려 있으면 그대로 두고 그 칸). 걸린 칸을 돌려주고,
-  /// 벽이 가득 찼으면 null (아무것도 바꾸지 않는다)
-  Future<int?> hangOnWall(String landmarkId) => db.transaction(() async {
-        await _requireOwned(landmarkId);
-        final current = await wall();
-        final slot = slotToHang(current, landmarkId);
-        if (slot == null) return null;
-        await _saveWall(placeOnWall(current, slot, landmarkId));
-        return slot;
-      });
-
-  Future<void> _requireOwned(String landmarkId) async {
-    final owned = await (db.select(db.paintingsOwned)
-          ..where((t) => t.landmarkId.equals(landmarkId)))
-        .getSingleOrNull();
-    if (owned == null) throw StateError('얻지 않은 그림이에요: $landmarkId');
-  }
-
-  Future<void> _saveWall(List<String?> wall) async {
-    await db.delete(db.wallSlots).go();
-    await db.batch((b) => b.insertAll(db.wallSlots, [
-          for (var i = 0; i < wall.length; i++)
-            if (wall[i] != null) WallSlotsCompanion.insert(slot: Value(i), landmarkId: wall[i]!),
-        ]));
-  }
 
   /// 얻은 그림 전부. 처음 얻은 순서 (같으면 명소 id 순)
   Future<List<OwnedPaintingView>> paintings() async {

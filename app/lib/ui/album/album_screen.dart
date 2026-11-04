@@ -19,21 +19,16 @@ const albumFirstOnlyHint = '걸어서 명소에 닿으면 여기에 걸려요';
 /// 소품 탭에 얻은 소품이 하나도 없을 때의 한 줄. 가안
 const albumNoPropsLine = '아직 모은 소품이 없어요';
 
-/// 화집: 벽에 건 액자 4칸, 그림 탭(얻은 그림만: 첫 그림 + 얻은 명소)과 소품 탭(얻은 소품만).
-/// 그림 탭은 ‘일기 · 전체’ 두 보기이고 기본은 일기다 (UI 명세 10장, 16장 11/2).
-/// [hangLandmarkId]가 있으면 벽이 가득 찬 채 도착해서 연 것이라, 바꿀 액자를 눌러 거는 모드로 시작한다
+/// 화집: 그림 탭(얻은 그림만: 첫 그림 + 얻은 명소)과 소품 탭(얻은 소품만). 위 배경·벽 액자는 없다 (11/4).
+/// 그림 탭은 ‘일기 · 전체’ 두 보기이고 기본은 일기다 (캔버스 6-1, 16장 11/2)
 class AlbumScreen extends ConsumerStatefulWidget {
-  const AlbumScreen({super.key, this.hangLandmarkId});
-
-  final String? hangLandmarkId;
+  const AlbumScreen({super.key});
 
   @override
   ConsumerState<AlbumScreen> createState() => _AlbumScreenState();
 }
 
 class _AlbumScreenState extends ConsumerState<AlbumScreen> {
-  /// 바꿀 칸을 기다리는 그림 (거는 모드). 칸을 누르면 비운다
-  String? _hangId;
   var _tab = 0;
 
   /// 그림 탭 보기: 일기(기본)인가, 전체(3열 격자)인가
@@ -48,29 +43,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   @override
   void initState() {
     super.initState();
-    _hangId = widget.hangLandmarkId;
     _seePaintings();
-  }
-
-  Future<void> _setWall(int slot, String landmarkId) async {
-    final svc = await ref.read(syncServiceProvider.future);
-    await svc.setWall(slot, landmarkId);
-    if (mounted) ref.invalidate(wallProvider);
-  }
-
-  Future<void> _onSlotTap(int slot) async {
-    final id = _hangId;
-    if (id == null) return;
-    await _setWall(slot, id);
-    if (mounted) setState(() => _hangId = null);
-  }
-
-  /// 칸을 길게 누르면 얻은 그림 중에서 골라 건다 (얻은 그림이 없으면 아무 일도 없다)
-  Future<void> _onSlotLongPress(int slot, List<OwnedPaintingView> paintings) async {
-    if (paintings.isEmpty) return;
-    final id = await showPaintingPicker(context, paintings);
-    if (id == null || !mounted) return;
-    await _setWall(slot, id);
   }
 
   void _openTab(int i) {
@@ -98,9 +71,8 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   @override
   Widget build(BuildContext context) {
     final paintings = ref.watch(paintingsProvider).value;
-    final wall = ref.watch(wallProvider).value;
     final landmarks = ref.watch(landmarksProvider).value;
-    final ready = paintings != null && wall != null && landmarks != null;
+    final ready = paintings != null && landmarks != null;
 
     return Scaffold(
       body: SafeArea(
@@ -125,14 +97,14 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
                 ],
               ),
             ),
-            Expanded(child: ready ? _content(paintings, wall, landmarks) : const SizedBox.shrink()),
+            Expanded(child: ready ? _content(paintings, landmarks) : const SizedBox.shrink()),
           ],
         ),
       ),
     );
   }
 
-  Widget _content(List<OwnedPaintingView> paintings, List<String?> wall, List<Landmark> landmarks) {
+  Widget _content(List<OwnedPaintingView> paintings, List<Landmark> landmarks) {
     final owned = {for (final p in paintings) p.landmark.id: p};
     final propsDot = (ref.watch(snapshotProvider).value?.unseenProps ?? 0) > 0;
     const gutter = EdgeInsets.symmetric(horizontal: 16);
@@ -144,22 +116,6 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_hangId != null) ...[
-                  Text(
-                    '바꿀 액자를 누르세요',
-                    textAlign: TextAlign.center,
-                    style: context.display(14, color: Palette.terracotta),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                WallRow(
-                  wall: wall,
-                  owned: owned,
-                  replacing: _hangId != null,
-                  onTap: _onSlotTap,
-                  onLongPress: (slot) => _onSlotLongPress(slot, paintings),
-                ),
-                const SizedBox(height: 16),
                 AlbumTabs(selected: _tab, onSelect: _openTab, propsDot: propsDot),
                 const SizedBox(height: 4),
               ],

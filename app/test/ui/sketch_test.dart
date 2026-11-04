@@ -28,7 +28,6 @@ final _bubble = find.byKey(const ValueKey('first-sketch-bubble'));
 final _dot = find.byKey(const ValueKey('depart-dot'));
 final _card = find.byKey(const ValueKey('arrival-card'));
 Finder _cell(String id) => find.byKey(ValueKey('cell-$id'));
-Finder _wall(int i) => find.byKey(ValueKey('wall-$i'));
 Finder _packIn(Finder owner) => find.descendant(of: owner, matching: find.byType(FirstPackFace));
 
 /// [owner] 안의 첫 그림 액자 (FramedPainting.firstPack)
@@ -49,8 +48,8 @@ Future<void> _pumpRest(WidgetTester tester, UiEnv e) async {
 /// 화집을 열고 그림 탭을 `전체`(격자) 보기로 둔다 (기본은 일기)
 Future<void> _openAlbum(WidgetTester tester, UiEnv e, {double height = 844}) async {
   await openOnTop(tester, e, const AlbumScreen(),
-      height: height, ready: () => _wall(0).evaluate().isNotEmpty);
-  // 그림·벽 값까지 한 박자 더
+      height: height, ready: () => find.byKey(const ValueKey('view-all')).evaluate().isNotEmpty);
+  // 그림 값까지 한 박자 더
   await settle(tester, () => false, tries: 6);
   await tester.tap(find.byKey(const ValueKey('view-all')));
   await settle(tester, () => false, tries: 3);
@@ -325,16 +324,6 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('화집에 걸기 버튼은 없고, 그림은 벽에 걸리지 않은 채 화집에 있다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, e.arriveAtSketch);
-      await openArrival(tester, e);
-      await tester.pump(const Duration(seconds: 2));
-
-      expect(find.text('화집에 걸기'), findsNothing);
-      expect((await tester.runAsync(e.svc.wall))!, [null, null, null, null]);
-      await end(tester, e);
-    });
   });
 
   group('화집', () {
@@ -458,32 +447,6 @@ void main() {
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
       expect(find.byType(PaintingDetailScreen), findsNothing);
-      await end(tester, e);
-    });
-
-    testWidgets('벽 칸을 길게 눌러 시트에서 첫 그림을 고르면 그 칸에 걸린다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, e.arriveAtSketch);
-      await _openAlbum(tester, e);
-      await settle(tester, () => _packIn(_cell(sketchId)).evaluate().isNotEmpty);
-
-      await tester.longPress(_wall(2));
-      await transition(tester);
-      final pick = find.byKey(const ValueKey('pick-sketch'));
-      expect(pick, findsOneWidget);
-      expect(_packIn(pick), findsOneWidget);
-      expect(find.descendant(of: pick, matching: find.text('첫 그림')), findsOneWidget);
-
-      await tester.tap(pick);
-      await transition(tester);
-      await settle(tester, () => _packIn(_wall(2)).evaluate().isNotEmpty);
-      expect(find.byKey(const ValueKey('pick-sketch')), findsNothing);
-      expect(_packIn(_wall(2)), findsOneWidget);
-      // 벽에서도 나무 액자
-      expect(tester.widget<FramedPainting>(_packFrameIn(_wall(2))).frame, Frame.wood);
-      expect((await tester.runAsync(e.svc.wall))!, [null, null, sketchId, null]);
-      // 다른 칸은 그대로 빈 액자
-      expect(_packIn(_wall(0)), findsNothing);
       await end(tester, e);
     });
 

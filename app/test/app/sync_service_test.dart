@@ -1854,101 +1854,6 @@ void main() {
     });
   });
 
-  group('화집 벽', () {
-    final ids = ['kr001', 'kr002', 'kr003', 'kr004', 'kr005', 'kr006'];
-
-    Future<_Env> envWithPaintings() async {
-      final e = await _env();
-      await _seedPaintings(e.db, ids);
-      return e;
-    }
-
-    test('처음엔 4칸이 모두 비어 있다', () async {
-      final e = await _env();
-      expect(await e.svc.wall(), [null, null, null, null]);
-    });
-
-    test('setWall: 칸에 건다. 4칸은 늘 유지된다', () async {
-      final e = await envWithPaintings();
-      await e.svc.setWall(2, 'kr001');
-      expect(await e.svc.wall(), [null, null, 'kr001', null]);
-      await e.svc.setWall(0, 'kr002');
-      expect(await e.svc.wall(), ['kr002', null, 'kr001', null]);
-    });
-
-    test('setWall: 다른 칸에 걸린 그림을 옮기면 원래 칸은 비고, 한 그림은 한 칸에만 있다', () async {
-      final e = await envWithPaintings();
-      await e.svc.setWall(0, 'kr001');
-      await e.svc.setWall(1, 'kr002');
-      await e.svc.setWall(3, 'kr001');
-      expect(await e.svc.wall(), [null, 'kr002', null, 'kr001']);
-      expect((await e.db.select(e.db.wallSlots).get()), hasLength(2));
-    });
-
-    test('setWall: 걸려 있던 자리에 새 그림을 걸면 바뀐다 (이전 그림은 벽에서 내려간다)', () async {
-      final e = await envWithPaintings();
-      await e.svc.setWall(1, 'kr001');
-      await e.svc.setWall(1, 'kr002');
-      expect(await e.svc.wall(), [null, 'kr002', null, null]);
-      await e.svc.setWall(1, 'kr002');
-      expect(await e.svc.wall(), [null, 'kr002', null, null]);
-    });
-
-    test('setWall: 칸 번호가 범위 밖이면 RangeError, 얻지 않은 그림이면 StateError, 둘 다 저장 그대로', () async {
-      final e = await envWithPaintings();
-      await e.svc.setWall(0, 'kr001');
-      await expectLater(e.svc.setWall(4, 'kr002'), throwsRangeError);
-      await expectLater(e.svc.setWall(-1, 'kr002'), throwsRangeError);
-      await expectLater(e.svc.setWall(1, 'kr050'), throwsStateError);
-      expect(await e.svc.wall(), ['kr001', null, null, null]);
-    });
-
-    test('hangOnWall: 첫 빈 칸에 걸고 그 칸을 돌려준다', () async {
-      final e = await envWithPaintings();
-      expect(await e.svc.hangOnWall('kr001'), 0);
-      expect(await e.svc.hangOnWall('kr002'), 1);
-      // 빈 칸이 가운데에 생기면 거기부터 채운다
-      await e.svc.setWall(3, 'kr003');
-      await e.svc.setWall(0, 'kr004');
-      expect(await e.svc.wall(), ['kr004', 'kr002', null, 'kr003']);
-      expect(await e.svc.hangOnWall('kr005'), 2);
-      expect(await e.svc.wall(), ['kr004', 'kr002', 'kr005', 'kr003']);
-    });
-
-    test('hangOnWall: 이미 걸려 있으면 그 칸을 돌려주고 그대로 둔다', () async {
-      final e = await envWithPaintings();
-      await e.svc.setWall(2, 'kr001');
-      expect(await e.svc.hangOnWall('kr001'), 2);
-      expect(await e.svc.wall(), [null, null, 'kr001', null]);
-    });
-
-    test('hangOnWall: 벽이 가득 차면 null이고 아무것도 바꾸지 않는다 (이미 걸린 그림은 그 칸)', () async {
-      final e = await envWithPaintings();
-      for (var i = 0; i < 4; i++) {
-        await e.svc.setWall(i, ids[i]);
-      }
-      expect(await e.svc.hangOnWall('kr005'), isNull);
-      expect(await e.svc.wall(), ['kr001', 'kr002', 'kr003', 'kr004']);
-      expect(await e.svc.hangOnWall('kr003'), 2);
-    });
-
-    test('hangOnWall: 얻지 않은 그림이면 StateError', () async {
-      final e = await envWithPaintings();
-      await expectLater(e.svc.hangOnWall('kr050'), throwsStateError);
-      expect(await e.svc.wall(), [null, null, null, null]);
-    });
-
-    test('벽은 동기화·도착과 상관없이 남는다', () async {
-      final e = await _env();
-      await e.svc.sync(_t0);
-      final dest = _destFor(testHome, Frame.wood);
-      final end = await _trip(e, dest.id, _t0.add(const Duration(hours: 1)));
-      expect(await e.svc.hangOnWall(dest.id), 0);
-      await e.svc.sync(end.add(const Duration(hours: 2)));
-      expect(await e.svc.wall(), [dest.id, null, null, null]);
-    });
-  });
-
   group('paintings·visits·ownedPropIds (화집)', () {
     final t1 = _t0.add(const Duration(hours: 1));
     final hour = const Duration(hours: 1);
@@ -2386,15 +2291,6 @@ void main() {
       final owned = await _propIds(e.db);
       final regionProps = [for (final p in props) if (p.kind == PropUnlockKind.region) p.id];
       expect(regionProps.where(owned.contains), isEmpty);
-    });
-
-    test('첫 그림도 화집 벽에 걸 수 있다', () async {
-      final e = await sketchEnv();
-      await e.svc.sync(_t0);
-      expect(() => e.svc.setWall(0, sketchId), throwsStateError);
-      await walkToSketch(e, t1);
-      expect(await e.svc.hangOnWall(sketchId), 0);
-      expect(await e.svc.wall(), [sketchId, null, null, null]);
     });
 
     /// 모든 표의 내용 (동기화 상태·여행 경비 포함: 막힌 호출이 아무것도 안 바꿨는지 비교한다)

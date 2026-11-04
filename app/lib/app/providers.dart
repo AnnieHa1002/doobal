@@ -339,13 +339,6 @@ final arrivalViewProvider =
   return svc.arrivalView(journeyId);
 });
 
-/// 화집 벽 4칸. 건 뒤에는 invalidate 한다
-final wallProvider = FutureProvider.autoDispose<List<String?>>((ref) async {
-  final svc = await ref.watch(syncServiceProvider.future);
-  await ref.watch(snapshotProvider.future);
-  return svc.wall();
-});
-
 /// 얻은 그림 전부 (화집·그림 상세). 도착해서 상태가 바뀌면 새로 읽는다
 /// 화집 일기 (도착마다 한 항목, 최근이 앞). 동기화·도착으로 상태가 바뀌면 새로 읽는다
 final diaryProvider = FutureProvider.autoDispose<List<DiaryEntry>>((ref) async {

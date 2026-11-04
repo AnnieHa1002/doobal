@@ -364,15 +364,5 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('`화집에 걸기`는 없다: 버튼은 방명록 쓰기와 다음 목적지뿐, 그림은 벽에 걸리지 않는다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => e.insertArrival('j1', 'kr001', _day));
-      await _openArrival(tester, e, 'j1');
-      expect(find.text('화집에 걸기'), findsNothing);
-      expect(find.text('방명록 쓰기'), findsOneWidget);
-      expect(find.text('다음 목적지'), findsOneWidget);
-      expect((await tester.runAsync(e.svc.wall))!, [null, null, null, null]);
-      await end(tester, e);
-    });
   });
 }

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../../app/sync_service.dart';
@@ -10,9 +8,6 @@ import '../common/basic_item_art.dart';
 import '../common/framed_painting.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
-
-/// 벽 한 칸의 크기 비율 (너비 : 높이 = 4 : 5)
-const _wallSlotAspect = 0.8;
 
 /// 그림 칸 격자: 3열, 칸 너비 : (그림 + 이름 줄) 높이 = 0.78, 좌우 여백 16pt·칸 사이 8pt
 const _cellColumns = 3;
@@ -39,168 +34,6 @@ SliverGridDelegate paintingGridDelegate(BuildContext context) {
     crossAxisSpacing: _gridGap,
     mainAxisExtent: cellWidth / _cellAspect + paintingLabelHeight(context) - _labelHeight,
   );
-}
-
-/// 화집 벽: 액자 [wall].length칸을 한 줄로. 건 칸은 색 액자(첫 그림은 나무 액자), 빈 칸은 점선 액자만
-/// (안내 글 없음, 11/3 ‘잠금 표시 없음’·UI 명세 v3 10장). 칸마다 오른쪽 위 모서리에 바꾸기 아이콘(24pt,
-/// 휘어진 화살표 둘)이 있고 누르면 [onLongPress]와 같이 걸 그림을 고른다 (길게 누르기도 그대로).
-/// [replacing]이면 칸마다 테라코타 테두리를 둘러 눌러서 고르게 하고 바꾸기 아이콘은 숨긴다.
-/// 벽 그림(나무 선반·못과 끈) 에셋은 아직 없어서 벽 뒤는 비워 둔다. 나오면 이 줄 뒤에 깐다
-class WallRow extends StatelessWidget {
-  const WallRow({
-    super.key,
-    required this.wall,
-    required this.owned,
-    required this.replacing,
-    required this.onTap,
-    required this.onLongPress,
-  });
-
-  final List<String?> wall;
-  final Map<String, OwnedPaintingView> owned;
-  final bool replacing;
-  final ValueChanged<int> onTap;
-  final ValueChanged<int> onLongPress;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < wall.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          Expanded(child: _slot(i)),
-        ],
-      ],
-    );
-  }
-
-  Widget _slot(int i) {
-    final p = wall[i] == null ? null : owned[wall[i]];
-    final slot = AspectRatio(
-      aspectRatio: _wallSlotAspect,
-      child: GestureDetector(
-        key: ValueKey('wall-$i'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onTap(i),
-        onLongPress: () => onLongPress(i),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: replacing ? Palette.terracotta : Colors.transparent,
-              width: 2.5,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(2),
-            child: p == null
-                ? const _EmptyWallSlot()
-                : p.isFirstPack
-                    ? const FramedPainting.firstPack(thickness: 5)
-                    : FramedPainting(landmark: p.landmark, frame: p.frame, thickness: 5),
-          ),
-        ),
-      ),
-    );
-    if (replacing) return slot;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        slot,
-        Positioned(
-          top: -8,
-          right: -8,
-          child: _SwapButton(key: ValueKey('wall-swap-$i'), onTap: () => onLongPress(i)),
-        ),
-      ],
-    );
-  }
-}
-
-/// 액자 모서리의 바꾸기 아이콘: 24pt 동그라미 안에 휘어진 화살표 둘. 누르는 자리는 40pt
-class _SwapButton extends StatelessWidget {
-  const _SwapButton({super.key, required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: '바꾸기',
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: 40,
-          child: Center(
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: Palette.card,
-                shape: BoxShape.circle,
-                border: Border.all(color: Palette.ink, width: InkLine.pill),
-              ),
-              child: const Icon(Icons.sync, size: 16, color: Palette.ink),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 벽의 빈 칸: 점선 액자만 (안내 글 없음). 부모를 꽉 채운다
-class _EmptyWallSlot extends StatelessWidget {
-  const _EmptyWallSlot();
-
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: DottedFramePainter(), child: SizedBox.expand());
-}
-
-/// 둥근 네모 점선 테두리 (빈 액자 자리). [dash]·[gap]은 점선 한 토막과 틈의 길이
-class DottedFramePainter extends CustomPainter {
-  const DottedFramePainter({
-    this.color = Palette.subInk,
-    this.radius = 6,
-    this.width = 1.5,
-    this.dash = 4,
-    this.gap = 3,
-  });
-
-  final Color color;
-  final double radius;
-  final double width;
-  final double dash;
-  final double gap;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = width
-      ..strokeCap = StrokeCap.round;
-    // 선 굵기의 절반만큼 안쪽으로 그려서 칸 밖으로 번지지 않게 한다
-    final rect = (Offset.zero & size).deflate(width / 2);
-    final path = Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
-    for (final metric in path.computeMetrics()) {
-      for (var d = 0.0; d < metric.length; d += dash + gap) {
-        canvas.drawPath(metric.extractPath(d, math.min(d + dash, metric.length)), paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(DottedFramePainter old) =>
-      old.color != color ||
-      old.radius != radius ||
-      old.width != width ||
-      old.dash != dash ||
-      old.gap != gap;
 }
 
 /// `그림` / `소품` 탭 두 개. [propsDot]이면 `소품` 라벨 오른쪽 위에 알림 점이 붙는다
@@ -493,38 +326,4 @@ class PropRow extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 벽에 걸 그림을 고르는 시트 (얻은 그림 3열). 고르면 그 명소 id, 밖을 눌러 닫으면 null
-Future<String?> showPaintingPicker(BuildContext context, List<OwnedPaintingView> paintings) {
-  return showModalBottomSheet<String>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Palette.card,
-    barrierColor: Palette.ink.withValues(alpha: 0.4),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-      side: BorderSide(color: Palette.ink, width: InkLine.panel),
-    ),
-    builder: (context) => SafeArea(
-      top: false,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
-        child: GridView.builder(
-          shrinkWrap: true,
-          padding: const EdgeInsets.all(16),
-          gridDelegate: paintingGridDelegate(context),
-          itemCount: paintings.length,
-          itemBuilder: (context, i) {
-            final p = paintings[i];
-            return KeyedSubtree(
-              key: ValueKey('pick-${p.landmark.id}'),
-              child: ownedPaintingCell(p,
-                  onTap: () => Navigator.of(context).pop(p.landmark.id)),
-            );
-          },
-        ),
-      ),
-    ),
-  );
 }

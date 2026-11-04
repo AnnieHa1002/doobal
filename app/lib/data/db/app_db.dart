@@ -131,6 +131,7 @@ class PropsOwned extends Table {
 
 /// 화집 벽에 건 그림. 칸(0~3)마다 한 점이고, 안 건 칸은 행이 없다.
 /// 같은 그림이 두 칸에 걸리지 않게 하는 건 SyncService가 한다
+/// 화집 벽 액자 (11/4 없앰, 더 쓰지 않는다). 다음에 스키마를 올릴 때 지운다
 @DataClassName('WallSlotRow')
 class WallSlots extends Table {
   IntColumn get slot => integer()();

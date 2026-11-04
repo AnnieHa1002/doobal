@@ -405,12 +405,12 @@ void main() {
       await openOnTop(tester, e, const AlbumScreen(),
           width: fit.width,
           height: fit.height,
-          ready: () => _key('wall-0').evaluate().isNotEmpty);
+          ready: () => _key('view-all').evaluate().isNotEmpty);
       await settle(tester, () => false, tries: 6);
       if (all) await _tap(tester, _key('view-all'));
     }
 
-    // 새 그림 점이 붙은 그림 몇 점을 얻고 벽에도 건다
+    // 새 그림 점이 붙은 그림 몇 점을 얻는다
     Future<void> seedAlbum(UiEnv e) async {
       await e.ownPaintings({
         'kr001': Frame.gold,
@@ -419,8 +419,6 @@ void main() {
         'kr022': Frame.wood,
         sketchId: Frame.wood,
       }, seen: false);
-      await e.svc.setWall(0, 'kr002');
-      await e.svc.setWall(1, sketchId);
     }
 
     _scaleCases('그림 탭', (tester, fit) async {
@@ -485,17 +483,6 @@ void main() {
       await _tap(tester, _key('tab-props'));
       expect(find.text('아직 모은 소품이 없어요'), findsOneWidget);
       fit.check('소품 탭 (얻은 소품 없음)');
-      await end(tester, e);
-    });
-
-    _scaleCases('걸 그림 고르는 시트', (tester, fit) async {
-      final e = UiEnv();
-      await e.seed(tester, () => seedAlbum(e));
-      await openAlbum(tester, e, fit);
-      await tester.longPress(_key('wall-2'));
-      await transition(tester);
-      expect(_key('pick-kr002'), findsOneWidget);
-      fit.check('걸 그림 고르는 시트');
       await end(tester, e);
     });
 
