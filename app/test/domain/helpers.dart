@@ -5,8 +5,6 @@ import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/camp_theme.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/landmark.dart';
-import 'package:doobal/domain/look.dart';
-import 'package:doobal/domain/look_palette.dart';
 import 'package:doobal/domain/moderation.dart';
 import 'package:doobal/domain/map_projection.dart';
 import 'package:doobal/domain/map_regions.dart';
@@ -14,6 +12,7 @@ import 'package:doobal/domain/notification_policy.dart';
 import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/sigungu.dart';
+import 'package:doobal/domain/spirit_palette.dart';
 
 /// 테스트도 실제 config.json 값으로 돈다 (flutter test는 app/에서 실행)
 final Rules rules = Rules.fromJson(
@@ -64,13 +63,8 @@ final List<Sigungu> sigungu = parseSigungu(
   jsonDecode(File('assets/data/sigungu.json').readAsStringSync()) as Map<String, dynamic>,
 );
 
-/// 실제 palette.json의 머리색 견본
-final List<HairSwatch> hairSwatches = parseHairSwatches(
-  jsonDecode(File('assets/data/palette.json').readAsStringSync()) as Map<String, dynamic>,
-);
-
-/// 실제 palette.json의 머리·피부 규칙 (견본, 기준 밝기, 직접 고르기 범위, 그러데이션 구간)
-final LookPalette lookPalette = LookPalette.fromJson(
+/// 실제 palette.json의 정령 부분 (몸 색 견본, 얼굴 파츠 이름, 소품 색 규칙)
+final SpiritPalette spiritPalette = SpiritPalette.fromJson(
   jsonDecode(File('assets/data/palette.json').readAsStringSync()) as Map<String, dynamic>,
 );
 

@@ -1,6 +1,3 @@
-import '../common/app_text.dart';
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,16 +5,16 @@ import '../../app/providers.dart';
 import '../../domain/look.dart';
 import '../../domain/profile.dart';
 import '../../domain/rules.dart';
-import '../common/figure_painter.dart';
+import '../../domain/spirit_look.dart';
+import '../common/app_text.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
+import '../decorate/decorate_widgets.dart';
+import '../scene/spirit_character.dart';
 import 'start_layout.dart';
 
-/// 머리색 견본을 한 줄에 몇 개씩 놓을지
-const _swatchesPerRow = 5;
-
-/// 시작 ② 나: 닉네임·머리 모양·머리색을 고른다. 얼굴·피부·옷은 기본값이고 꾸미기(M4)에서 바꾼다.
-/// 위 미리보기는 자리표시 그림이다
+/// 시작 ② 나 (캔버스 1-2): 3단계 중 1단계 표시, 제목 `내 정령 만들기`, 정령 미리보기,
+/// 닉네임, 눈 5칸, 몸 색(견본 10 + 직접 고르기). 눈썹·코·입과 소품은 꾸미기에서 바꾼다
 class MeScreen extends ConsumerStatefulWidget {
   const MeScreen({super.key, required this.rules});
 
@@ -49,15 +46,22 @@ class _MeScreenState extends ConsumerState<MeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final swatches = ref.watch(hairSwatchesProvider).value;
-    if (swatches == null) return const Scaffold(body: SizedBox.expand());
+    final palette = ref.watch(spiritPaletteProvider).value;
+    if (palette == null) return const Scaffold(body: SizedBox.expand());
     final rules = widget.rules;
     final check = _check;
+    final eyes = palette.faces['eyes']!;
+    final eye = eyes.firstWhere((p) => p.id == _look.eyes, orElse: () => eyes.first);
 
     return StartLayout(
-      top: _FigurePreview(
-        hair: _look.hair,
-        hairColor: Color(hairArgb(_look.hairColor, swatches)),
+      top: _Top(
+        spirit: spiritLookOf(
+          _look,
+          bodyArgb: palette.body.argbOf(_look.body),
+          bodyBaseArgb: palette.body.baseArgb,
+        ),
+        // 고른 눈과 몸 색 (캔버스: '점+반짝 눈 · 크림')
+        label: '${FacePartRow.shortName(eye.id, eye.name)} 눈 · ${palette.body.nameOf(_look.body)}',
       ),
       children: [
         TextField(
@@ -84,42 +88,39 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 ),
         ),
         const SizedBox(height: 12),
-        const StartLabel('머리 모양'),
+        Text.rich(
+          TextSpan(children: [
+            const TextSpan(text: '눈 '),
+            TextSpan(text: eye.name, style: context.display(14)),
+          ]),
+          style: const TextStyle(fontSize: 14, color: Palette.ink),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
-            for (var i = 1; i <= hairShapeCount; i++) ...[
-              if (i > 1) const SizedBox(width: 8),
+            for (final p in eyes)
               Expanded(
-                child: _HairCell(
-                  number: i,
-                  selected: _look.hair == i,
-                  onTap: () => setState(() => _look = _look.copyWith(hair: i)),
+                child: Padding(
+                  padding: EdgeInsets.only(right: p == eyes.last ? 0 : 6),
+                  child: PartCell(
+                    key: ValueKey('eyes-${p.id}'),
+                    label: p.name,
+                    text: FacePartRow.shortName(p.id, p.name),
+                    selected: _look.eyes == p.id,
+                    onTap: () => setState(() => _look = _look.copyWith(eyes: p.id)),
+                  ),
                 ),
               ),
-            ],
           ],
         ),
         const SizedBox(height: 16),
-        const StartLabel('머리색'),
-        const SizedBox(height: 8),
-        // TODO(M4): 머리색 직접 고르기는 꾸미기에서 붙인다 (여기는 견본만)
-        for (var start = 0; start < swatches.length; start += _swatchesPerRow)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (final s in swatches.skip(start).take(_swatchesPerRow))
-                _SwatchDot(
-                  swatch: s,
-                  selected: _look.hairColor == SwatchHairColor(s.id),
-                  onTap: () => setState(
-                    () => _look = _look.copyWith(hairColor: SwatchHairColor(s.id)),
-                  ),
-                ),
-            ],
-          ),
+        BodyColorSection(
+          palette: palette.body,
+          color: _look.body,
+          onChanged: (c) => setState(() => _look = _look.copyWith(body: c)),
+        ),
         const SizedBox(height: 16),
-        const StartNote('얼굴·피부·옷은 나중에 꾸미기에서 바꿀 수 있어요'),
+        const StartNote('눈썹·코·입과 소품은 나중에 꾸미기에서 바꿀 수 있어요'),
         const SizedBox(height: 16),
         GameButton(label: '이 모습으로', onPressed: check.ok ? _submit : null),
       ],
@@ -127,109 +128,92 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   }
 }
 
-/// 머리 모양 칸 하나 (자리표시: 번호만)
-class _HairCell extends StatelessWidget {
-  const _HairCell({required this.number, required this.selected, required this.onTap});
+/// 위쪽 장면 자리: 3단계 표시, 제목, 정령 미리보기(고른 눈·몸 색, 오른쪽 위에 이름 알약).
+/// 키보드가 올라와 낮아지면 통째로 접힌다
+class _Top extends StatelessWidget {
+  const _Top({required this.spirit, required this.label});
 
-  final int number;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: '머리 모양 $number',
-      excludeSemantics: true,
-      child: GestureDetector(
-        key: ValueKey('hair-$number'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          height: 48,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? Palette.terracotta : Palette.paper,
-            borderRadius: BorderRadius.circular(startRadius),
-            border: Border.all(color: Palette.ink, width: InkLine.panel),
-          ),
-          child: Text(
-            '$number',
-            style: context.display(18, color: selected ? Palette.paper : Palette.ink),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 머리색 견본 동그라미. 이름은 접근성 label, 고른 것은 굵은 테두리와 체크
-class _SwatchDot extends StatelessWidget {
-  const _SwatchDot({required this.swatch, required this.selected, required this.onTap});
-
-  final HairSwatch swatch;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Color(swatch.color);
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: swatch.name,
-      excludeSemantics: true,
-      child: GestureDetector(
-        key: ValueKey('swatch-${swatch.id}'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        // 누르는 자리는 44pt
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Center(
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(color: Palette.ink, width: selected ? 4 : 2),
-              ),
-              child: selected
-                  ? Icon(
-                      Icons.check,
-                      size: 18,
-                      color: color.computeLuminance() > 0.5 ? Palette.ink : Palette.paper,
-                    )
-                  : null,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 위 미리보기 (자리표시): 종이색 바탕에 얼굴 원과 고른 머리 모양·머리색.
-/// 캐릭터 그림(쉼터 캠프에 서서 숨 쉬는 모습)이 나오면 바꾼다. 높이가 모자라면 줄거나 사라진다
-class _FigurePreview extends StatelessWidget {
-  const _FigurePreview({required this.hair, required this.hairColor});
-
-  final int hair;
-  final Color hairColor;
+  final SpiritLook spirit;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, box) {
-      final side = math.min(180.0, math.min(box.maxHeight, box.maxWidth)) - 16;
-      if (side < 40) return const SizedBox.shrink();
-      return Center(
-        child: SizedBox(
-          width: side,
-          height: side,
-          child: CustomPaint(painter: FigurePainter(hair, hairColor)),
+      if (box.maxHeight < 150) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              label: '3단계 중 1단계',
+              excludeSemantics: true,
+              child: Row(
+                key: const ValueKey('steps'),
+                children: [
+                  for (var i = 0; i < 3; i++) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    Container(
+                      width: 28,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: i == 0 ? Palette.terracotta : lineColor,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '내 정령 만들기',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.title(context),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: DecoratedBox(
+                key: const ValueKey('me-preview'),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE9DFC9),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: FractionallySizedBox(
+                          heightFactor: 0.2,
+                          alignment: Alignment.bottomCenter,
+                          child: const ColoredBox(color: Color(0xFFD8CBB0)),
+                        ),
+                      ),
+                      Positioned.fill(child: SpiritStanding(look: spirit)),
+                      Positioned(
+                        right: 10,
+                        top: 10,
+                        child: Container(
+                          key: const ValueKey('picked-label'),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Palette.card,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            label,
+                            style: const TextStyle(fontSize: 12, color: Palette.ink),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       );
     });

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/rules.dart';
 import '../../domain/spirit_look.dart';
 import 'doobal_controller.dart';
 import 'spirit_character.dart';
@@ -14,10 +15,14 @@ class DoobalCharacter extends StatelessWidget {
     this.lookX = 0,
     this.lookY = 0,
     this.spirit = SpiritLook.base,
+    this.tapRules,
   });
   final double speed, lookX, lookY;
   final DoobalPose pose;
   final SpiritLook spirit;
+
+  /// 주면 정령 연타 화남이 켜진다 (쉼터)
+  final Rules? tapRules;
   // 이전 화가 파일은 기존 소품 시험과 복구용으로 남겨 둔다.
   static const asset = 'assets/rive/doobal_custom.riv';
   @override
@@ -28,5 +33,6 @@ class DoobalCharacter extends StatelessWidget {
     lookX: lookX / 5,
     lookY: lookY / 5,
     look: spirit,
+    tapRules: tapRules,
   );
 }

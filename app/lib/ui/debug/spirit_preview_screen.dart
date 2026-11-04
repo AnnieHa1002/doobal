@@ -47,17 +47,17 @@ class _SpiritPreviewScreenState extends State<SpiritPreviewScreen> {
             padding: EdgeInsets.all(8),
             child: Text('머리와 배를 꾹 눌렀다가 놓아 보세요.'),
           ),
-          // Rive v25에 붙은 소품 5종 (앱 데이터에 없는 것도 여기서 입혀 본다)
+          // Rive v25에 붙은 소품 5종 (props v4 id: hand_01·hand_02·cloth_02·cloth_05·pet_05)
           Wrap(
             spacing: 8,
             children: [
               for (final (label, look) in [
                 ('소품 없음', SpiritLook.base),
                 ('큰 붓', SpiritLook.base.copyWith(bag: 1)),
-                ('봇짐', SpiritLook.base.copyWith(bag: 2)),
+                ('봇짐 지팡이', SpiritLook.base.copyWith(bag: 2)),
                 ('여행복', SpiritLook.base.copyWith(outfit: 1)),
-                ('연두 망토', SpiritLook.base.copyWith(outfit: 2)),
-                ('갈매기', SpiritLook.base.copyWith(companion: 1)),
+                ('연두 여행 망토', SpiritLook.base.copyWith(outfit: 2)),
+                ('괭이갈매기', SpiritLook.base.copyWith(companion: 1)),
               ])
                 OutlinedButton(
                   onPressed: () => setState(() {

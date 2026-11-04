@@ -7,7 +7,6 @@ import '../../app/sync_service.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/rules.dart';
 import '../../domain/sketch.dart';
-import '../../domain/spirit_look.dart';
 import '../album/album_screen.dart';
 import '../common/app_text.dart';
 import '../common/corner_button.dart';
@@ -80,7 +79,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     final camp = ref.watch(campThemeProvider).value;
     final snap = ref.watch(snapshotProvider).value;
     final now = ref.watch(minuteClockProvider).value ?? ref.watch(clockProvider)();
-    final me = ref.watch(meProvider).value;
+    final spirit = ref.watch(spiritLookProvider);
     // 테스트용 거리 배수가 켜져 있으면 알려 준다 (켜 둔 채 잊지 않게)
     final scale = kDebugMode ? ref.watch(debugDistanceScaleProvider) : 1.0;
     // 데이터가 올 때까지는 종이색 빈 화면
@@ -106,7 +105,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
               landmarks: landmarks,
               camp: camp,
               sceneSeed: snap.journey?.dest.id ?? 'home',
-              spirit: me == null ? SpiritLook.base : spiritLookOf(me.look),
+              spirit: spirit,
             ),
             for (final o in camp.objects)
               _campObject(

@@ -404,7 +404,7 @@ void main() {
     List<String> shownProps(WidgetTester tester) =>
         [for (final r in tester.widgetList<PropRow>(find.byType(PropRow))) r.prop.id];
 
-    /// 소품 칸 순서(모자·옷·손·가방·신발·어깨 친구)와 props.json 순서로, [have]인 소품만
+    /// 소품 칸 순서(모자·얼굴 소품·옷·신발·손·가방·미니 친구·둥실·효과)와 props.json 순서로, [have]인 소품만
     List<String> expected(bool Function(Prop p) have) => [
           for (final slot in propSlotLabels.keys)
             for (final p in props)
@@ -437,20 +437,21 @@ void main() {
         for (final slot in propSlotLabels.entries)
           if (props.any((p) => p.slot == slot.key && isDefault(p))) slot.value,
       ];
-      expect(labels, propSlotLabels.values.toList());
+      // 기본 소품이 없는 칸(얼굴 소품·손·둥실·효과)은 처음에는 감춰진다
+      expect(labels, ['모자', '옷', '신발', '가방', '미니 친구']);
       final ys = [for (final label in labels) tester.getTopLeft(find.text(label)).dy];
       expect(ys, orderedEquals([...ys]..sort()));
       expect(ys.toSet(), hasLength(labels.length));
       await end(tester, e);
     });
 
-    testWidgets('걸어서 얻은 소품은 그 칸에 props.json 순서로 붙는다 (11km → 지팡이)', (tester) async {
+    testWidgets('걸어서 얻은 소품은 그 칸에 props.json 순서로 붙는다 (11km → 봇짐 지팡이)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => _walk11km(e));
       await openProps(tester, e, ready: _prop('hand_02'));
 
       expect(shownProps(tester), expected((p) => isDefault(p) || p.id == 'hand_02'));
-      expect(find.descendant(of: _prop('hand_02'), matching: find.text('지팡이')), findsOneWidget);
+      expect(find.descendant(of: _prop('hand_02'), matching: find.text('봇짐 지팡이')), findsOneWidget);
       expect(find.descendant(of: _prop('hat_01'), matching: find.text('베레모')), findsOneWidget);
       // 25km에 얻는 모자는 아직 없다
       expect(_prop('hat_02'), findsNothing);
@@ -467,7 +468,7 @@ void main() {
       expect(_prop('pet_05'), findsOneWidget);
       expect(find.text(props.firstWhere((p) => p.id == 'pet_05').name), findsOneWidget);
       expect(find.text('울릉 0/1'), findsNothing);
-      // 다른 어깨 친구는 잠긴 채라 없다
+      // 다른 미니 친구는 잠긴 채라 없다
       expect(_prop('pet_02'), findsNothing);
       await end(tester, e);
     });
@@ -475,7 +476,7 @@ void main() {
     testWidgets('얻은 소품이 없는 칸은 감춘다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
-        // 모자와 어깨 친구 하나씩만 얻은 상태로 둔다
+        // 모자와 미니 친구 하나씩만 얻은 상태로 둔다
         await e.db.delete(e.db.propsOwned).go();
         await e.db.batch((b) => b.insertAll(e.db.propsOwned, [
               PropsOwnedCompanion.insert(
@@ -488,8 +489,8 @@ void main() {
 
       expect(shownProps(tester), ['hat_01', 'pet_01']);
       expect(find.text('모자'), findsOneWidget);
-      expect(find.text('어깨 친구'), findsOneWidget);
-      for (final label in ['옷', '손', '가방', '신발']) {
+      expect(find.text('미니 친구'), findsOneWidget);
+      for (final label in ['얼굴 소품', '옷', '신발', '손', '가방', '둥실', '효과']) {
         expect(find.text(label), findsNothing, reason: label);
       }
       expect(find.byKey(const ValueKey('album-no-props')), findsNothing);

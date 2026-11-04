@@ -1,4 +1,3 @@
-import 'package:doobal/domain/color.dart';
 import 'package:doobal/domain/tint.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,16 +30,10 @@ void main() {
       }
     });
 
-    test('기준 밝기의 회색은 견본색 그대로 (머리 견본 10개, 기준 182)', () {
-      for (final s in lookPalette.hair.swatches) {
-        final out = applyColorMatrix(tintMatrix(s.color, lookPalette.hair.base), _gray(182));
-        expect(out, s.color, reason: s.name);
-      }
-    });
-
-    test('기준 밝기의 회색은 견본색 그대로 (피부 견본 7개, 기준 196)', () {
-      for (final s in lookPalette.skin.swatches) {
-        final out = applyColorMatrix(tintMatrix(s.color, lookPalette.skin.base), _gray(196));
+    test('기준 밝기의 회색은 견본색 그대로 (몸 견본 10개)', () {
+      final base = spiritPalette.body.base;
+      for (final s in spiritPalette.body.swatches) {
+        final out = applyColorMatrix(tintMatrix(s.color, base), _gray(base));
         expect(out, s.color, reason: s.name);
       }
     });
@@ -89,84 +82,40 @@ void main() {
     });
   });
 
-  group('clampLightness', () {
-    int clampHair(int argb) => clampLightness(argb, minPercent: 15, maxPercent: 90);
-    int clampSkin(int argb) => clampLightness(argb, minPercent: 35, maxPercent: 95);
-
-    test('범위 안의 색은 그대로 (불투명으로)', () {
-      expect(clampHair(0xFF4F6F9E), 0xFF4F6F9E);
-      expect(clampHair(0x004F6F9E), 0xFF4F6F9E);
-    });
-
-    test('견본은 모두 제 범위 안이라 그대로 (머리 15~90, 피부 35~95)', () {
-      for (final s in lookPalette.hair.swatches) {
-        expect(clampHair(s.color), s.color, reason: s.name);
-      }
-      for (final s in lookPalette.skin.swatches) {
-        expect(clampSkin(s.color), s.color, reason: s.name);
+  group('bodyTintMatrix (정령 몸 색 곱하기)', () {
+    test('20개: 대각선은 견본 채널 ÷ 기준색 채널, 알파는 그대로, 더하는 값은 0', () {
+      final m = bodyTintMatrix(0xFFC9775A, 0xFFFFF5E2);
+      expect(m, hasLength(20));
+      expect([m[0], m[6], m[12], m[18]], [0xC9 / 0xFF, 0x77 / 0xF5, 0x5A / 0xE2, 1]);
+      for (var i = 0; i < 20; i++) {
+        if (i == 0 || i == 6 || i == 12 || i == 18) continue;
+        expect(m[i], 0, reason: '$i');
       }
     });
 
-    test('너무 어두우면 min으로, 너무 밝으면 max로 (색조·채도는 그대로)', () {
-      final dark = hslOfArgb(clampHair(0xFF000000));
-      expect(dark.l, closeTo(0.15, 0.004));
-      final bright = hslOfArgb(clampHair(0xFFFFFFFF));
-      expect(bright.l, closeTo(0.90, 0.004));
-
-      // 색이 있는 색: 색조·채도를 지킨다
-      const src = 0xFF3A0A0A; // 어두운 빨강
-      final before = hslOfArgb(src);
-      final after = hslOfArgb(clampHair(src));
-      expect(before.l, lessThan(0.15));
-      expect(after.l, closeTo(0.15, 0.004));
-      expect(after.h, closeTo(before.h, 1.5));
-      expect(after.s, closeTo(before.s, 0.02));
-    });
-
-    test('피부는 35~95%: 어두운 갈색은 35%로, 거의 흰색은 95%로', () {
-      expect(hslOfArgb(clampSkin(0xFF301810)).l, closeTo(0.35, 0.004));
-      expect(hslOfArgb(clampSkin(0xFFFFFFFF)).l, closeTo(0.95, 0.004));
-      expect(hslOfArgb(clampSkin(0xFFFFFFFF)).l, greaterThan(0.9));
-    });
-
-    test('경계값 자체는 안 건드린다 (0.15·0.90 정확히)', () {
-      final atMin = argbOfHsl(30, 0.5, 0.15);
-      final atMax = argbOfHsl(30, 0.5, 0.90);
-      expect(hslOfArgb(clampHair(atMin)).l, closeTo(0.15, 0.003));
-      expect(hslOfArgb(clampHair(atMax)).l, closeTo(0.90, 0.003));
-    });
-
-    test('결과는 늘 [min, max] 안 (반올림 오차 0.4% 안)', () {
-      for (var i = 0; i < 256; i += 5) {
-        final out = clampSkin(_gray(i));
-        final l = hslOfArgb(out).l;
-        expect(l, inInclusiveRange(0.35 - 0.004, 0.95 + 0.004), reason: 'gray $i');
+    test('기준색의 픽셀은 견본색 그대로 (몸 견본 10개 × 기준색 #FFF5E2·회색 200)', () {
+      for (final base in [spiritPalette.body.baseArgb, _gray(200)]) {
+        for (final s in spiritPalette.body.swatches) {
+          expect(applyColorMatrix(bodyTintMatrix(s.color, base), base), s.color,
+              reason: '${s.name} / ${base.toRadixString(16)}');
+        }
       }
     });
-  });
 
-  group('그러데이션', () {
-    test('stop은 [0, rootUntil, tipFrom, 1]', () {
-      expect(gradientStops(0.3, 0.85), [0, 0.3, 0.85, 1]);
+    test('채널별로 곱한다: 각 채널 x 견본 채널 / 기준색 채널', () {
+      const swatch = 0xFF8C6446; // (140, 100, 70)
+      final out = applyColorMatrix(
+          bodyTintMatrix(swatch, _gray(200)), 0xFF64C832); // (100, 200, 50)
+      expect([_r(out), _g(out), _b(out)], [70, 100, 18]);
     });
 
-    test('palette.json의 구간은 30%·85%', () {
-      expect(lookPalette.hair.rootUntil, 0.3);
-      expect(lookPalette.hair.tipFrom, 0.85);
-      expect(gradientStops(lookPalette.hair.rootUntil, lookPalette.hair.tipFrom),
-          [0, 0.3, 0.85, 1]);
-    });
-
-    test('tipMixAt: 30%까지 뿌리색, 85%부터 끝색, 그 사이는 직선', () {
-      double mix(double t) => tipMixAt(t, rootUntil: 0.3, tipFrom: 0.85);
-      expect(mix(0), 0);
-      expect(mix(0.3), 0);
-      expect(mix(0.575), closeTo(0.5, 1e-12));
-      expect(mix(0.85), 1);
-      expect(mix(1), 1);
-      // 범위 밖은 자른다
-      expect(mix(-1), 0);
-      expect(mix(2), 1);
+    test('기준색보다 밝은 입력은 255에서 잘리고, 알파는 그대로', () {
+      final m = bodyTintMatrix(0xFFF3E4C4, _gray(200));
+      final bright = applyColorMatrix(m, _gray(255));
+      // 크림의 R·G는 기준보다 커서 잘리고, B(196)는 기준(200)보다 작아 250이다
+      expect([_r(bright), _g(bright), _b(bright)], [255, 255, 250]);
+      expect(applyColorMatrix(m, 0x80C8C8C8) >> 24, 0x80);
+      expect(applyColorMatrix(m, _gray(0)), 0xFF000000);
     });
   });
 }

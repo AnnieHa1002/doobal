@@ -97,8 +97,7 @@ class _Env {
         campThemeProvider.overrideWith((ref) => campTheme),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),
-        hairSwatchesProvider.overrideWith((ref) => hairSwatches),
-        lookPaletteProvider.overrideWith((ref) => lookPalette),
+        spiritPaletteProvider.overrideWith((ref) => spiritPalette),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
         liveStepsProvider.overrideWithValue(live),
@@ -251,13 +250,13 @@ void main() {
       await e.seed(tester, dest: 'kr001');
       await tester.runAsync(() => (e.db.update(e.db.profile)).write(ProfileCompanion(
             look: Value(jsonEncode(Look.initial
-                .copyWith(eyes: 4, mouth: 5)
+                .copyWith(eyes: 'cat', mouth: 'smirk')
                 .withSlot('pet', 'pet_05')
                 .toJson())),
           )));
       await _pumpApp(tester, e);
-      // 처음 쓰는 소품 큰 붓(hand_01)이 기본으로 들려 있어 bag 1이다
-      const worn = SpiritLook(eye: 3, mouth: 4, bag: 1, companion: 1);
+      // 기본 가방(큰 붓)과 크림 몸 색(palette.json body 견본 1)을 같이 입는다
+      const worn = SpiritLook(eye: 4, mouth: 5, bag: 1, companion: 1, bodyArgb: 0xFFF3E4C4);
       await _settle(tester, () => tester.widget<SceneView>(find.byType(SceneView)).spirit == worn);
       expect(tester.widget<SceneView>(find.byType(SceneView)).spirit, worn);
 

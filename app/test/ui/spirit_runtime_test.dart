@@ -9,6 +9,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rive/rive.dart' as rive;
 
+import '../domain/helpers.dart' show rules;
+
 Future<(rive.File, SpiritController)> load() async {
   await rive.RiveNative.init();
   final file = (await rive.File.asset(
@@ -149,6 +151,70 @@ void main() {
     expect(c.instance.number('lookX')!.value, 0);
     expect(c.instance.number('lookY')!.value, 1);
   });
+  /// [gapMs] 간격으로 정령 머리를 [count]번 눌렀다 놓는다 (시계는 [now]를 따라간다)
+  void tapHead(SpiritController c, List<DateTime> now, int count, int gapMs) {
+    for (var i = 0; i < count; i++) {
+      c.press(SpiritPress.head);
+      tick(c, 3);
+      c.release();
+      tick(c, 3);
+      now[0] = now[0].add(Duration(milliseconds: gapMs));
+    }
+  }
+
+  test('연타 화남: 3초 안에 5번이면 화남(5)이 2초 가고 기본으로 돌아온다 (config tapReaction)', () async {
+    final (file, c) = await load();
+    addTearDown(() {
+      c.dispose();
+      file.dispose();
+    });
+    final now = [DateTime.utc(2026, 11, 18, 9)];
+    c.clock = () => now[0];
+    c.tapRules = rules;
+
+    // 네 번까지는 행복(머리 누르기 표정)이고 화나지 않는다
+    tapHead(c, now, 4, 300);
+    tick(c, 60);
+    expect(c.expression, isNot(5));
+    // 다섯 번째에 화남
+    c.press(SpiritPress.head);
+    tick(c, 3);
+    expect(c.expression, 5);
+    c.release();
+    tick(c, 60); // 1초 뒤에도 화남
+    expect(c.expression, 5);
+    tick(c, 80); // 2초(config holdSec)를 넘기면 기본 표정
+    expect(c.expression, 0);
+  });
+
+  test('연타 화남: 3초를 넘긴 5번이나 규칙이 없으면 화나지 않는다', () async {
+    final (file, c) = await load();
+    addTearDown(() {
+      c.dispose();
+      file.dispose();
+    });
+    final now = [DateTime.utc(2026, 11, 18, 9)];
+    c.clock = () => now[0];
+    c.tapRules = rules;
+    var angry = false;
+    for (var i = 0; i < 5; i++) {
+      c.press(SpiritPress.head);
+      tick(c, 3);
+      angry = angry || c.expression == 5;
+      c.release();
+      tick(c, 3);
+      now[0] = now[0].add(const Duration(milliseconds: 900));
+    }
+    expect(angry, isFalse, reason: '3.6초에 걸친 5번은 행복');
+
+    // 규칙이 없으면(걷는 중·나의 정보 등) 빠르게 눌러도 화내지 않는다
+    c.tapRules = null;
+    tapHead(c, now, 6, 100);
+    c.press(SpiritPress.head);
+    tick(c, 3);
+    expect(c.expression, isNot(5));
+  });
+
   testWidgets('실제 Flutter 터치로 머리·배를 구분하고 취소 후 복원한다', (tester) async {
     tester.view.physicalSize = const Size(600, 600);
     tester.view.devicePixelRatio = 1;

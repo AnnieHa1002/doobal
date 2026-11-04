@@ -247,6 +247,8 @@
  "body": {
   "base": 200,
   "baseApprox": true,
+  "baseHex": "#FFF5E2",
+  "baseHexNote": "11/4 개발: Rive 정령 v25 몸통은 회색 200이 아니라 평면색 #FFF5E2 (렌더해서 잰 값). 곱하기 필터는 이 색을 기준으로 채널별로 나눈다. 회색조 몸 그림이 납품되면 baseHex를 없애고 base를 쓴다",
   "default": 1,
   "swatches": [
    {

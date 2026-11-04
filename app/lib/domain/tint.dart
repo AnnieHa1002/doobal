@@ -1,7 +1,4 @@
-import 'color.dart';
-
-// 모습에 색 입히기 (M4 명세, palette.json formula).
-// 머리카락 앞·뒤와 눈썹은 머리색, 얼굴형·귀·몸 맨살은 피부색을 입힌다. 눈·코·입·옷·소품은 그대로
+// 그림에 색 입히기 (palette.json formula). 정령 몸 색과 회색조 소품(베레모) 색에 쓴다
 
 /// 휘도 L = 0.299R + 0.587G + 0.114B 의 계수 (합이 1이라 회색 g는 L = g)
 const _lumaR = 0.299;
@@ -10,7 +7,7 @@ const _lumaB = 0.114;
 
 /// 회색조 그림에 [swatchArgb]를 입히는 `ColorFilter.matrix` 값 20개 (4×5, 한 줄에 R G B A 계수와 더하는 값).
 /// 출력 RGB = 견본 RGB × L ÷ [base], 알파는 그대로. 기준 밝기([base])의 회색은 견본색 그대로 나온다
-/// (머리 182, 피부 196). 밝은 쪽은 255에서 잘린다
+/// (소품마다 palette.json tintProps의 base). 밝은 쪽은 255에서 잘린다
 List<double> tintMatrix(int swatchArgb, num base) {
   assert(base > 0, '기준 밝기는 0보다 커야 한다');
   List<double> row(int channel) {
@@ -41,20 +38,21 @@ int applyColorMatrix(List<double> matrix, int argb) {
   return out(3) << 24 | out(0) << 16 | out(1) << 8 | out(2);
 }
 
-/// [argb]의 HSL 밝기를 [minPercent]~[maxPercent]%로 자른다 (직접 고르기의 밝기 제한).
-/// 색조·채도는 그대로이고, 범위 안이면 같은 색을 돌려준다 (결과는 불투명)
-int clampLightness(int argb, {required int minPercent, required int maxPercent}) {
-  final c = hslOfArgb(argb);
-  final l = c.l.clamp(minPercent / 100, maxPercent / 100);
-  if (l == c.l) return 0xFF000000 | (argb & 0xFFFFFF);
-  return argbOfHsl(c.h, c.s, l);
+/// 정령 그림 전체에 몸 색을 입히는 `ColorFilter.matrix` 값 20개: 채널별 곱하기
+/// (출력 R = R × 견본 R ÷ 기준색 R, G·B도 같게, 알파는 그대로). 기준색([baseArgb])의 픽셀은 견본색 그대로 나온다
+/// (지금 Rive 몸통은 평면색 #FFF5E2, 회색조 그림이 오면 회색). 기준색보다 밝은 쪽은 255에서 잘린다.
+/// 임시 방법이다: 얼굴·소품에도 같이 입혀진다 (Rive에 몸 색 입력이 생기면 바꾼다)
+List<double> bodyTintMatrix(int swatchArgb, int baseArgb) {
+  double k(int shift) {
+    final base = (baseArgb >> shift) & 0xFF;
+    assert(base > 0, '기준색의 채널은 0보다 커야 한다');
+    return ((swatchArgb >> shift) & 0xFF) / base;
+  }
+
+  return [
+    k(16), 0, 0, 0, 0,
+    0, k(8), 0, 0, 0,
+    0, 0, k(0), 0, 0,
+    0, 0, 0, 1, 0,
+  ];
 }
-
-/// 그러데이션의 세로 stop (머리카락 위 0 → 아래 1): 뿌리색이 [rootUntil]까지, 끝색이 [tipFrom]부터.
-/// 끝색 겹 ShaderMask의 알파가 [0, 0, 1, 1]로 변하는 자리이기도 하다
-List<double> gradientStops(double rootUntil, double tipFrom) => [0, rootUntil, tipFrom, 1];
-
-/// 세로 위치 [t](0 머리카락 위 ~ 1 아래)에 끝색이 섞인 정도: 0 = 뿌리색, 1 = 끝색.
-/// [rootUntil]까지 0, [tipFrom]부터 1, 그 사이는 직선으로 올라간다
-double tipMixAt(double t, {required double rootUntil, required double tipFrom}) =>
-    ((t - rootUntil) / (tipFrom - rootUntil)).clamp(0.0, 1.0);

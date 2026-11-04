@@ -16,7 +16,6 @@ import '../../domain/journey.dart';
 import '../../domain/live_walk.dart';
 import '../../domain/milestones.dart';
 import '../../domain/rules.dart';
-import '../../domain/spirit_look.dart';
 import '../../domain/walk_arrival.dart';
 import '../../domain/walk_record.dart';
 import '../arrival/arrival_screen.dart';
@@ -461,7 +460,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     }
     final summary = _summaryAt(_now);
     final running = _isRunning(summary);
-    final me = ref.watch(meProvider).value;
+    final spirit = ref.watch(spiritLookProvider);
 
     return Scaffold(
       body: Stack(
@@ -477,7 +476,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             running: running,
             moving: summary != null && summary.lastSteps > 0,
             sceneSeed: snap.journey?.dest.id ?? 'home',
-            spirit: me == null ? SpiritLook.base : spiritLookOf(me.look),
+            spirit: spirit,
           ),
           WalkingHud(
             rules: rules,
