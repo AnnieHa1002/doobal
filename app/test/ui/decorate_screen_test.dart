@@ -5,6 +5,7 @@ import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/color.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/prop.dart';
+import 'package:doobal/domain/spirit_look.dart';
 import 'package:doobal/ui/common/app_theme.dart';
 import 'package:doobal/ui/common/figure_painter.dart';
 import 'package:doobal/ui/common/game_button.dart';
@@ -195,6 +196,31 @@ void main() {
       await tester.tap(_key('preview'));
       await tester.pump();
       expect(_enabled(tester, '저장'), isFalse);
+      await end(tester, e);
+    });
+
+    testWidgets('고른 얼굴과 Rive에 붙은 소품이 저장 전에도 미리보기 정령에 입혀진다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _ownProps(e.db, ['cloth_02', 'pet_05', 'hat_02']));
+      await _open(tester, e);
+      SpiritLook worn() => tester.widget<SpiritCharacter>(find.byType(SpiritCharacter)).look;
+
+      expect(worn(), SpiritLook.base);
+      await _tap(tester, _key('eyes-5'));
+      expect(worn().eye, 4);
+      await _tap(tester, _key('nose-1'));
+      expect(worn().nose, 3, reason: '코 없음은 Rive 값 3');
+      await _goTab(tester, 'cloth');
+      await _tap(tester, _key('prop-cloth_02'));
+      expect(worn().outfit, 1);
+      await _goTab(tester, 'pet');
+      await _tap(tester, _key('prop-pet_05'));
+      expect(worn().companion, 1);
+      // 리깅 전 소품은 골라도 정령 값이 바뀌지 않는다
+      final before = worn();
+      await _goTab(tester, 'hat');
+      await _tap(tester, _key('prop-hat_02'));
+      expect(worn(), before);
       await end(tester, e);
     });
 
@@ -543,22 +569,24 @@ void main() {
   });
 
   group('얼굴 탭', () {
-    testWidgets('눈 3 · 코 3 · 눈썹 3을 줄별로 고른다 (정령에 귀는 없다)', (tester) async {
+    testWidgets('눈 5 · 눈썹 5 · 코 7 · 입 6을 줄별로 고른다 (정령에 귀는 없다)', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
       await _goTab(tester, 'face');
 
-      for (final t in ['눈', '코', '눈썹']) {
+      for (final t in ['눈', '눈썹', '코', '입']) {
         expect(find.text(t), findsOneWidget, reason: t);
       }
       expect(find.text('귀'), findsNothing);
-      for (var i = 1; i <= 3; i++) {
-        for (final k in ['eyes', 'nose', 'brows']) {
+      for (final (k, n) in [('eyes', 5), ('brows', 5), ('nose', 7), ('mouth', 6)]) {
+        for (var i = 1; i <= n; i++) {
           expect(_key('$k-$i'), findsOneWidget, reason: '$k-$i');
         }
       }
-      for (final k in ['eyes-4', 'nose-4', 'brows-4', 'ears-1']) {
+      // 코 7칸은 6칸 줄을 넘어 다음 줄로 간다
+      expect(tester.getTopLeft(_key('nose-7')).dy, greaterThan(tester.getTopLeft(_key('nose-6')).dy));
+      for (final k in ['eyes-6', 'nose-8', 'brows-6', 'mouth-7', 'ears-1']) {
         expect(_key(k), findsNothing, reason: k);
       }
       expect(_enabled(tester, '저장'), isFalse);
@@ -574,11 +602,12 @@ void main() {
       await _tap(tester, _key('eyes-3'));
       await _tap(tester, _key('nose-2'));
       await _tap(tester, _key('brows-3'));
+      await _tap(tester, _key('mouth-4'));
       expect(_enabled(tester, '저장'), isTrue);
       await _save(tester);
 
       final look = await _stored(tester, e);
-      expect((look.eyes, look.nose, look.brows), (3, 2, 3));
+      expect((look.eyes, look.nose, look.brows, look.mouth), (3, 2, 3, 4));
       // 숨긴 귀는 그대로
       expect(look.ears, Look.initial.ears);
       expect(_enabled(tester, '저장'), isFalse);
@@ -859,7 +888,7 @@ void main() {
       expect(_enabled(tester, '저장'), isFalse);
       expect(_enabled(tester, '되돌리기'), isFalse);
       await _goTab(tester, 'face');
-      expect(_chosen(tester, 'brows-1'), isTrue);
+      expect(_chosen(tester, 'brows-2'), isTrue);
       // DB는 그대로 (저장한 적 없다)
       final row = await tester.runAsync(() => e.db.select(e.db.profile).getSingle());
       expect(Look.fromJson(jsonDecode(row!.look!) as Map<String, dynamic>), Look.initial);

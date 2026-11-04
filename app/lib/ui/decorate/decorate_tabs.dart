@@ -271,8 +271,9 @@ class FaceTab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         row('눈', 'eyes', eyeShapeCount, look.eyes, (n) => look.copyWith(eyes: n)),
-        row('코', 'nose', noseShapeCount, look.nose, (n) => look.copyWith(nose: n)),
         row('눈썹', 'brows', browShapeCount, look.brows, (n) => look.copyWith(brows: n)),
+        row('코', 'nose', noseShapeCount, look.nose, (n) => look.copyWith(nose: n)),
+        row('입', 'mouth', mouthShapeCount, look.mouth, (n) => look.copyWith(mouth: n)),
       ],
     );
   }

@@ -169,14 +169,18 @@ void main() {
       await e.db.into(e.db.profile).insertOnConflictUpdate(ProfileCompanion(
             id: const Value(1),
             nickname: const Value('나그네'),
-            look: const Value('{"hair":4,"hairColor":{"kind":"swatch","i":3}}'),
+            look: const Value('{"hair":4,"hairColor":{"kind":"swatch","i":3},"eyes":3,"mouth":6}'),
           ));
     });
     await _open(tester, e);
 
     expect(find.text('나그네'), findsOneWidget);
     final portrait = find.byKey(const ValueKey('portrait'));
-    expect(find.descendant(of: portrait, matching: find.byType(SpiritCharacter)), findsOneWidget);
+    final spirit = find.descendant(of: portrait, matching: find.byType(SpiritCharacter));
+    expect(spirit, findsOneWidget);
+    // 고른 얼굴을 입는다
+    final look = tester.widget<SpiritCharacter>(spirit).look;
+    expect((look.eye, look.mouth), (2, 5));
     // 예전 사람 그림(머리·피부)은 없다
     expect(find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FigurePainter),
         findsNothing);

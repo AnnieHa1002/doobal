@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../domain/look.dart';
 import '../../domain/prop.dart';
+import '../../domain/spirit_look.dart';
 import '../common/app_text.dart';
 import '../common/confirm_sheet.dart';
 import '../common/format.dart';
@@ -142,7 +143,7 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
         Expanded(
           child: Column(
             children: [
-              const Expanded(child: SpiritPreview()),
+              Expanded(child: SpiritPreview(look: spiritLookOf(look))),
               EquippedRow(look: look, props: props),
             ],
           ),

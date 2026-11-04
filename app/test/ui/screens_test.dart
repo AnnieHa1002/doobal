@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:doobal/app/auto_sync.dart';
 import 'package:doobal/app/providers.dart';
@@ -9,7 +10,9 @@ import 'package:doobal/data/step_source.dart';
 import 'package:doobal/data/walk_notice.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
+import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/route.dart';
+import 'package:doobal/domain/spirit_look.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/common/format.dart';
@@ -18,7 +21,8 @@ import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/scene/scene_view.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:doobal/ui/walking/walking_hud.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:doobal/ui/walking/walking_screen.dart';
+import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -239,6 +243,29 @@ void main() {
       expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
       expect(find.text('출발 동네를 골라 주세요'), findsNothing);
       expect(find.byType(SceneView), findsOneWidget);
+      await _end(tester, e);
+    });
+
+    testWidgets('쉼터의 정령은 저장된 얼굴과 소품을 입고, 걷는 중으로 가도 그대로다', (tester) async {
+      final e = _Env();
+      await e.seed(tester, dest: 'kr001');
+      await tester.runAsync(() => (e.db.update(e.db.profile)).write(ProfileCompanion(
+            look: Value(jsonEncode(Look.initial
+                .copyWith(eyes: 4, mouth: 5)
+                .withSlot('pet', 'pet_05')
+                .toJson())),
+          )));
+      await _pumpApp(tester, e);
+      const worn = SpiritLook(eye: 3, mouth: 4, companion: 1);
+      await _settle(tester, () => tester.widget<SceneView>(find.byType(SceneView)).spirit == worn);
+      expect(tester.widget<SceneView>(find.byType(SceneView)).spirit, worn);
+
+      await tester.tap(find.text('출발하기'));
+      await _transition(tester);
+      await _wait(tester);
+      final walking = find.descendant(
+          of: find.byType(WalkingScreen), matching: find.byType(SceneView));
+      expect(tester.widget<SceneView>(walking).spirit, worn);
       await _end(tester, e);
     });
 

@@ -3,11 +3,19 @@ import 'color.dart';
 /// 머리 모양 칸 수 (머리 1~6). 그림이 나오면 그 종류 수와 맞춘다
 const hairShapeCount = 6;
 
-/// 얼굴 칸 수: 눈 3 · 코 3 · 눈썹 3 · 귀 2 (UI 명세 12장). 그림이 나오면 그 종류 수와 맞춘다
-const eyeShapeCount = 3;
-const noseShapeCount = 3;
-const browShapeCount = 3;
+/// 얼굴 칸 수 (정령 얼굴 v24, UI 명세 12장): 눈 5 · 눈썹 5(없음 포함) · 코 7(없음 포함) · 입 6.
+/// 귀는 정령에 없어 화면에서 뺐고, 저장값만 남아 있다
+const eyeShapeCount = 5;
+const browShapeCount = 5;
+const noseShapeCount = 7;
+const mouthShapeCount = 6;
 const earShapeCount = 2;
+
+/// 기본 얼굴 번호: 점+반짝 눈 · 시바 눈썹 · /// 코 · ω 입 (기준 문서 7장)
+const defaultEyes = 1;
+const defaultBrows = 2;
+const defaultNose = 7;
+const defaultMouth = 2;
 
 /// 소품 칸 여섯 (M4 명세의 순서). props.json의 slot 이름과 같다
 const lookSlots = ['hat', 'hand', 'pet', 'bag', 'shoe', 'cloth'];
@@ -154,25 +162,28 @@ class CustomSkinColor extends SkinColor {
 }
 
 /// 캐릭터의 모습 (Profile.look, M4 명세):
-/// `{hair, hairColor, skin, eyes, nose, brows, ears, slots{hat, hand, pet, bag, shoe, cloth}}`.
-/// 옛 JSON(`{hair, hairColor}`만 있는 것)은 빠진 키를 기본값으로 읽는다
+/// `{hair, hairColor, skin, eyes, nose, brows, mouth, ears, slots{hat, hand, pet, bag, shoe, cloth}}`.
+/// 옛 JSON(`{hair, hairColor}`만 있는 것)은 빠진 키를 기본값으로 읽는다.
+/// 얼굴 번호의 순서는 UI 명세 12장이고, 정령 값으로는 domain/spirit_look.dart가 바꾼다
 class Look {
   const Look({
     required this.hair,
     required this.hairColor,
     this.skin = const SwatchSkinColor(1),
-    this.eyes = 1,
-    this.nose = 1,
-    this.brows = 1,
+    this.eyes = defaultEyes,
+    this.nose = defaultNose,
+    this.brows = defaultBrows,
+    this.mouth = defaultMouth,
     this.ears = 1,
     this.slots = defaultSlots,
   })  : assert(hair >= 1 && hair <= hairShapeCount),
         assert(eyes >= 1 && eyes <= eyeShapeCount),
         assert(nose >= 1 && nose <= noseShapeCount),
         assert(brows >= 1 && brows <= browShapeCount),
+        assert(mouth >= 1 && mouth <= mouthShapeCount),
         assert(ears >= 1 && ears <= earShapeCount);
 
-  /// 첫 실행의 기본 모습: 머리 1, 머리색 견본 1, 피부 견본 1, 얼굴 1, 칸마다 기본 소품
+  /// 첫 실행의 기본 모습: 머리 1, 머리색 견본 1, 피부 견본 1, 기본 얼굴, 칸마다 기본 소품
   static const initial = Look(hair: 1, hairColor: SwatchHairColor(1));
 
   /// 머리 모양 번호 (1~[hairShapeCount])
@@ -180,10 +191,11 @@ class Look {
   final HairColor hairColor;
   final SkinColor skin;
 
-  /// 눈·코·눈썹 번호 (1~3), 귀 번호 (1~2)
+  /// 얼굴 번호 (1부터, 칸 수는 위 상수). 귀는 저장값만 남아 있다
   final int eyes;
   final int nose;
   final int brows;
+  final int mouth;
   final int ears;
 
   /// 칸 이름([lookSlots]) → 끼운 소품 id. 비운 칸은 null. 여섯 칸을 모두 가진다
@@ -196,6 +208,7 @@ class Look {
     int? eyes,
     int? nose,
     int? brows,
+    int? mouth,
     int? ears,
   }) =>
       Look(
@@ -205,6 +218,7 @@ class Look {
         eyes: eyes ?? this.eyes,
         nose: nose ?? this.nose,
         brows: brows ?? this.brows,
+        mouth: mouth ?? this.mouth,
         ears: ears ?? this.ears,
         slots: slots,
       );
@@ -223,6 +237,7 @@ class Look {
       eyes: eyes,
       nose: nose,
       brows: brows,
+      mouth: mouth,
       ears: ears,
       slots: Map.unmodifiable({
         for (final s in lookSlots) s: s == slot ? propId : slots[s],
@@ -237,25 +252,29 @@ class Look {
         'eyes': eyes,
         'nose': nose,
         'brows': brows,
+        'mouth': mouth,
         'ears': ears,
         'slots': {for (final s in lookSlots) s: slots[s]},
       };
 
-  /// 옛 JSON처럼 빠진 키(skin·eyes·nose·brows·ears·slots, slots 안의 칸)는 기본값으로 읽는다.
+  /// 옛 JSON처럼 빠진 키(skin·eyes·nose·brows·mouth·ears·slots, slots 안의 칸)는 기본값으로 읽는다.
+  /// 입이 없는 JSON은 사람 얼굴 때 저장한 것이라 얼굴 번호를 버리고 기본 얼굴로 시작한다 (11/4 정령).
   /// 있는데 틀린 값(범위 밖 번호, 모르는 종류, 빈 옷 칸 …)은 FormatException
   factory Look.fromJson(Map<String, dynamic> j) {
     final hair = _int(j['hair']);
     if (hair < 1 || hair > hairShapeCount) throw FormatException('머리 모양 범위 밖: $hair');
+    final spiritFace = j.containsKey('mouth');
     return Look(
       hair: hair,
       hairColor: HairColor.fromJson(_map(j['hairColor'], '머리색')),
       skin: j['skin'] == null
           ? const SwatchSkinColor(1)
           : SkinColor.fromJson(_map(j['skin'], '피부색')),
-      eyes: _shape(j, 'eyes', eyeShapeCount),
-      nose: _shape(j, 'nose', noseShapeCount),
-      brows: _shape(j, 'brows', browShapeCount),
-      ears: _shape(j, 'ears', earShapeCount),
+      eyes: spiritFace ? _shape(j, 'eyes', eyeShapeCount, defaultEyes) : defaultEyes,
+      nose: spiritFace ? _shape(j, 'nose', noseShapeCount, defaultNose) : defaultNose,
+      brows: spiritFace ? _shape(j, 'brows', browShapeCount, defaultBrows) : defaultBrows,
+      mouth: spiritFace ? _shape(j, 'mouth', mouthShapeCount, defaultMouth) : defaultMouth,
+      ears: _shape(j, 'ears', earShapeCount, 1),
       slots: _slotsOf(j['slots']),
     );
   }
@@ -269,6 +288,7 @@ class Look {
       other.eyes == eyes &&
       other.nose == nose &&
       other.brows == brows &&
+      other.mouth == mouth &&
       other.ears == ears &&
       lookSlots.every((s) => other.slots[s] == slots[s]);
 
@@ -280,19 +300,20 @@ class Look {
         eyes,
         nose,
         brows,
+        mouth,
         ears,
         Object.hashAll([for (final s in lookSlots) slots[s]]),
       );
 
   @override
   String toString() => 'Look(hair: $hair, hairColor: $hairColor, skin: $skin, eyes: $eyes, '
-      'nose: $nose, brows: $brows, ears: $ears, slots: $slots)';
+      'nose: $nose, brows: $brows, mouth: $mouth, ears: $ears, slots: $slots)';
 }
 
-/// 얼굴 번호 하나. 없으면 1, 있는데 [count] 밖이면 FormatException
-int _shape(Map<String, dynamic> j, String key, int count) {
+/// 얼굴 번호 하나. 없으면 [fallback], 있는데 [count] 밖이면 FormatException
+int _shape(Map<String, dynamic> j, String key, int count, int fallback) {
   final v = j[key];
-  if (v == null) return 1;
+  if (v == null) return fallback;
   final n = _int(v);
   if (n < 1 || n > count) throw FormatException('$key 범위 밖: $n');
   return n;

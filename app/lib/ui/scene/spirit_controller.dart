@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:rive/rive.dart' as rive;
 
+import '../../domain/spirit_look.dart';
+
 enum SpiritMotion {
   idle(0),
   walk(1),
@@ -49,6 +51,18 @@ final class SpiritController extends rive.RiveWidgetController {
   bool get capeEnabled => instance.boolean('cape')!.value;
   void setCape(bool enabled) {
     instance.boolean('cape')!.value = enabled;
+    scheduleRepaint();
+  }
+
+  /// 고른 얼굴과 Rive에 붙은 소품을 입힌다. 옷은 [setCape]가 켜져 있어도 outfit이 0이 아니면 outfit이 먼저다
+  void wear(SpiritLook look) {
+    instance.number('eyeStyle')!.value = look.eye.toDouble();
+    instance.number('browStyle')!.value = look.brow.toDouble();
+    instance.number('noseStyle')!.value = look.nose.toDouble();
+    instance.number('mouthStyle')!.value = look.mouth.toDouble();
+    instance.number('bagStyle')!.value = look.bag.toDouble();
+    instance.number('outfitStyle')!.value = look.outfit.toDouble();
+    instance.number('companionStyle')!.value = look.companion.toDouble();
     scheduleRepaint();
   }
 

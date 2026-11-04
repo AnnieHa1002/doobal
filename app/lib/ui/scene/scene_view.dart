@@ -5,6 +5,7 @@ import '../../domain/geo.dart';
 import '../../domain/landmark.dart';
 import '../../domain/rules.dart';
 import '../../domain/scene.dart';
+import '../../domain/spirit_look.dart';
 import '../../domain/time_tint.dart';
 import 'doobal_character.dart';
 import 'scene_painter.dart';
@@ -30,6 +31,7 @@ class SceneView extends StatelessWidget {
     this.moving = true,
     this.seated = true,
     this.sceneSeed = 'default',
+    this.spirit = SpiritLook.base,
   });
 
   final SceneMode mode;
@@ -56,6 +58,9 @@ class SceneView extends StatelessWidget {
 
   /// 같은 여정·구간의 군락이 다시 방문해도 바뀌지 않는다.
   final String sceneSeed;
+
+  /// 정령이 입은 얼굴·소품
+  final SpiritLook spirit;
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +146,7 @@ class SceneView extends StatelessWidget {
                       BlendMode.modulate,
                     ),
                     child: RepaintBoundary(
-                      child: DoobalCharacter(speed: speed, pose: pose),
+                      child: DoobalCharacter(speed: speed, pose: pose, spirit: spirit),
                     ),
                   ),
                 ),

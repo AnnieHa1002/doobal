@@ -17,7 +17,8 @@ void main() {
       expect(Look.initial.hairColor, const SwatchHairColor(1));
       expect(Look.initial.skin, const SwatchSkinColor(1));
       final l = Look.initial;
-      expect([l.eyes, l.nose, l.brows, l.ears], [1, 1, 1, 1]);
+      // 기본 얼굴: 점+반짝 눈 · /// 코 · 시바 눈썹 · ω 입
+      expect([l.eyes, l.nose, l.brows, l.mouth, l.ears], [1, 7, 2, 2, 1]);
       expect(Look.initial.slots, defaultSlots);
     });
 
@@ -41,8 +42,9 @@ void main() {
         'hairColor': {'kind': 'swatch', 'i': 7},
         'skin': {'kind': 'swatch', 'i': 1},
         'eyes': 1,
-        'nose': 1,
-        'brows': 1,
+        'nose': 7,
+        'brows': 2,
+        'mouth': 2,
         'ears': 1,
         'slots': {
           'hat': 'hat_01',
@@ -116,6 +118,7 @@ void main() {
       eyes: 3,
       nose: 2,
       brows: 3,
+      mouth: 4,
       ears: 2,
       slots: {
         'hat': 'hat_02',
@@ -130,7 +133,7 @@ void main() {
     test('JSON 왕복: 모든 칸을 바꾼 모습 (비운 칸은 null로 남는다)', () {
       final json = full.toJson();
       expect(json['skin'], {'kind': 'custom', 'hex': '#C08060'});
-      expect([json['eyes'], json['nose'], json['brows'], json['ears']], [3, 2, 3, 2]);
+      expect([json['eyes'], json['nose'], json['brows'], json['mouth'], json['ears']], [3, 2, 3, 4, 2]);
       expect((json['slots'] as Map)['hand'], isNull);
       expect((json['slots'] as Map).containsKey('hand'), isTrue);
       expect(_roundTrip(full), full);
@@ -150,12 +153,12 @@ void main() {
       });
       expect(look, const Look(hair: 4, hairColor: SwatchHairColor(3)));
       expect(look.skin, const SwatchSkinColor(1));
-      expect([look.eyes, look.nose, look.brows, look.ears], [1, 1, 1, 1]);
+      expect([look.eyes, look.nose, look.brows, look.mouth, look.ears], [1, 7, 2, 2, 1]);
       expect(look.slots, defaultSlots);
       // 다시 적으면 새 모양(모든 키)이 된다
       expect(_roundTrip(look), look);
       expect(look.toJson().keys,
-          ['hair', 'hairColor', 'skin', 'eyes', 'nose', 'brows', 'ears', 'slots']);
+          ['hair', 'hairColor', 'skin', 'eyes', 'nose', 'brows', 'mouth', 'ears', 'slots']);
     });
 
     test('일부만 있는 JSON도 빠진 키만 기본값', () {
@@ -163,10 +166,12 @@ void main() {
         'hair': 2,
         'hairColor': {'kind': 'swatch', 'i': 1},
         'eyes': 3,
+        'mouth': 5,
         'slots': {'hat': 'hat_02'},
       });
       expect(look.eyes, 3);
-      expect(look.nose, 1);
+      expect(look.mouth, 5);
+      expect(look.nose, defaultNose);
       expect(look.slots['hat'], 'hat_02');
       // slots 안에서 빠진 칸은 그 칸의 기본 소품
       expect(look.slots['hand'], 'hand_01');
@@ -194,20 +199,46 @@ void main() {
       expect((look.toJson()['slots'] as Map).keys, lookSlots);
     });
 
-    test('범위 밖이면 FormatException: 눈·코·눈썹 1~3, 귀 1~2', () {
+    test('입이 없는 JSON은 사람 얼굴 때 것이라 얼굴 번호를 버리고 기본 얼굴로 시작한다', () {
+      final look = Look.fromJson({
+        'hair': 2,
+        'hairColor': {'kind': 'swatch', 'i': 1},
+        'eyes': 3,
+        'nose': 2,
+        'brows': 3,
+        'ears': 2,
+      });
+      expect([look.eyes, look.nose, look.brows, look.mouth], [1, 7, 2, 2]);
+      // 다른 값은 그대로
+      expect((look.hair, look.ears), (2, 2));
+      // 다시 적으면 입이 생겨 고른 값이 그대로 읽힌다
+      final picked = look.copyWith(eyes: 4);
+      expect(_roundTrip(picked).eyes, 4);
+    });
+
+    test('범위 밖이면 FormatException: 눈 1~5, 코 1~7, 눈썹 1~5, 입 1~6, 귀 1~2', () {
       Map<String, dynamic> json(String key, Object? v) => {
             'hair': 1,
             'hairColor': {'kind': 'swatch', 'i': 1},
+            'mouth': 1,
             key: v,
           };
-      for (final (key, max) in [('eyes', 3), ('nose', 3), ('brows', 3), ('ears', 2)]) {
+      for (final (key, max) in [
+        ('eyes', 5),
+        ('nose', 7),
+        ('brows', 5),
+        ('mouth', 6),
+        ('ears', 2),
+      ]) {
         expect(Look.fromJson(json(key, max)).toJson()[key], max, reason: key);
         expect(Look.fromJson(json(key, 1)).toJson()[key], 1, reason: key);
         expect(() => Look.fromJson(json(key, 0)), throwsFormatException, reason: key);
         expect(() => Look.fromJson(json(key, max + 1)), throwsFormatException, reason: key);
         expect(() => Look.fromJson(json(key, '1')), throwsFormatException, reason: key);
       }
-      expect([eyeShapeCount, noseShapeCount, browShapeCount, earShapeCount], [3, 3, 3, 2]);
+      expect(
+          [eyeShapeCount, noseShapeCount, browShapeCount, mouthShapeCount, earShapeCount],
+          [5, 7, 5, 6, 2]);
     });
 
     test('틀린 피부색·slots 값은 FormatException', () {
@@ -254,6 +285,7 @@ void main() {
       expect(full == _roundTrip(full), isTrue);
       expect(full.hashCode, _roundTrip(full).hashCode);
       expect(full == full.copyWith(nose: 3), isFalse);
+      expect(full == full.copyWith(mouth: 1), isFalse);
       expect(full == full.copyWith(skin: const SwatchSkinColor(1)), isFalse);
       expect(full == full.withSlot('hand', 'hand_02'), isFalse);
       expect(full == full.withSlot('pet', 'pet_02'), isFalse);

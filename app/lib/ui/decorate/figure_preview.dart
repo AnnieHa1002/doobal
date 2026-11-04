@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../domain/look.dart';
 import '../../domain/prop.dart';
+import '../../domain/spirit_look.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 import '../scene/spirit_character.dart';
 import 'decorate_widgets.dart';
 
 /// 꾸미기 위 미리보기: 쉼터와 같은 정령을 정면으로 풀밭 위에 세운다. 머리·배를 누르면 정령이 반응한다.
-/// 고른 얼굴·소품은 아직 정령에 입히지 못한다 (11/4 임시: 정령 그림에 얼굴 갈래·소품 층이 없다).
-/// TODO(M4): Rive v24(얼굴 갈래)와 소품 층이 오면 고른 모습을 입힌다
+/// 고르는 대로 얼굴이 바뀌고, Rive에 붙은 소품(domain/spirit_look.dart)도 입는다
 class SpiritPreview extends StatelessWidget {
-  const SpiritPreview({super.key});
+  const SpiritPreview({super.key, required this.look});
+
+  final SpiritLook look;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +38,7 @@ class SpiritPreview extends StatelessWidget {
                   child: ColoredBox(color: Palette.moss.withValues(alpha: 0.25)),
                 ),
               ),
-              const Positioned.fill(child: SpiritStanding()),
+              Positioned.fill(child: SpiritStanding(look: look)),
             ],
           ),
         ),

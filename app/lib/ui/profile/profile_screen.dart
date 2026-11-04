@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/profile_service.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/spirit_look.dart';
 import '../../domain/time_kst.dart';
 import '../../domain/walk_history.dart';
 import '../common/app_text.dart';
@@ -157,8 +158,8 @@ class _ProfileCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Palette.ink, width: InkLine.panel),
             ),
-            // 쉼터·꾸미기와 같은 정령 (얼굴·소품은 정령 꾸미기가 오면 입힌다)
-            child: const SpiritStanding(share: 0.72, footAt: 0.92),
+            // 쉼터·꾸미기와 같은 정령
+            child: SpiritStanding(look: spiritLookOf(me.look), share: 0.72, footAt: 0.92),
           ),
           const SizedBox(width: 16),
           Expanded(

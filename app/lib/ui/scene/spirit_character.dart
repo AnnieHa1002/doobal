@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart' as rive;
 
+import '../../domain/spirit_look.dart';
 import 'spirit_controller.dart';
 
 /// 정령 캔버스 600×600, 기본 머리 위 y150, 발바닥 y440.
@@ -13,11 +14,15 @@ class SpiritCharacter extends StatefulWidget {
     this.capeEnabled = false,
     this.lookX = 0,
     this.lookY = 0,
+    this.look = SpiritLook.base,
     this.onReady,
   });
   static const asset = 'assets/rive/doobal_spirit.riv';
   final double speed, lookX, lookY;
   final bool sitting, boat, capeEnabled;
+
+  /// 고른 얼굴과 입은 소품
+  final SpiritLook look;
   final ValueChanged<SpiritController>? onReady;
   @override
   State<SpiritCharacter> createState() => _SpiritCharacterState();
@@ -56,6 +61,7 @@ class _SpiritCharacterState extends State<SpiritCharacter>
       );
       controller.setCape(widget.capeEnabled);
       controller.setLook(widget.lookX, widget.lookY);
+      controller.wear(widget.look);
       setState(() {
         _file = file;
         _controller = controller;
@@ -86,6 +92,7 @@ class _SpiritCharacterState extends State<SpiritCharacter>
     if (widget.lookX != oldWidget.lookX || widget.lookY != oldWidget.lookY) {
       _controller?.setLook(widget.lookX, widget.lookY);
     }
+    if (widget.look != oldWidget.look) _controller?.wear(widget.look);
   }
 
   @override
@@ -120,8 +127,14 @@ class _SpiritCharacterState extends State<SpiritCharacter>
 /// 머리 위 y150~발바닥 y440을 키로 보고, 키는 짧은 변의 [share], 발바닥은 위에서 [footAt] 높이다.
 /// 상자 밖으로 나간 캔버스 가장자리는 잘린다
 class SpiritStanding extends StatelessWidget {
-  const SpiritStanding({super.key, this.share = 0.6, this.footAt = 0.88});
+  const SpiritStanding({
+    super.key,
+    this.look = SpiritLook.base,
+    this.share = 0.6,
+    this.footAt = 0.88,
+  });
 
+  final SpiritLook look;
   final double share, footAt;
 
   @override
@@ -138,7 +151,7 @@ class SpiritStanding extends StatelessWidget {
               top: box.maxHeight * footAt - 440 * scale,
               width: 600 * scale,
               height: 600 * scale,
-              child: const SpiritCharacter(),
+              child: SpiritCharacter(look: look),
             ),
         ],
       );

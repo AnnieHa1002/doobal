@@ -149,6 +149,7 @@ void main() {
             eyes: 2,
             nose: 3,
             brows: 2,
+            mouth: 5,
             ears: 2,
           )
           .withSlot('hat', 'hat_02')

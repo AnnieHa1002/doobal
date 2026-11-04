@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:doobal/domain/spirit_look.dart';
 import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:doobal/ui/scene/spirit_controller.dart';
 import 'package:flutter/material.dart';
@@ -24,8 +25,30 @@ void tick(SpiritController c, int frames) {
   }
 }
 
+double vm(SpiritController c, String name) => c.instance.number(name)!.value;
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('v25 파일의 기본값은 SpiritLook.base와 같고, wear가 얼굴·소품 입력을 모두 바꾼다', () async {
+    final (file, c) = await load();
+    addTearDown(file.dispose);
+    addTearDown(c.dispose);
+    const base = SpiritLook.base;
+    expect(
+      [vm(c, 'eyeStyle'), vm(c, 'browStyle'), vm(c, 'noseStyle'), vm(c, 'mouthStyle')],
+      [base.eye, base.brow, base.nose, base.mouth],
+    );
+    expect([vm(c, 'bagStyle'), vm(c, 'outfitStyle'), vm(c, 'companionStyle')], [0, 0, 0]);
+
+    c.wear(const SpiritLook(eye: 4, brow: 0, nose: 3, mouth: 5, bag: 2, outfit: 1, companion: 1));
+    tick(c, 3);
+    expect(
+      [vm(c, 'eyeStyle'), vm(c, 'browStyle'), vm(c, 'noseStyle'), vm(c, 'mouthStyle')],
+      [4, 0, 3, 5],
+    );
+    expect([vm(c, 'bagStyle'), vm(c, 'outfitStyle'), vm(c, 'companionStyle')], [2, 1, 1]);
+  });
+
   test('새 정령 파일과 10개 동작 및 독립 머리·배 제어를 읽는다', () async {
     final (file, c) = await load();
     addTearDown(() {

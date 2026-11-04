@@ -154,20 +154,28 @@ class NumberRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    // 칸이 [columns]보다 많으면 다음 줄로 넘어간다
+    return Column(
       children: [
-        for (var i = 1; i <= columns; i++) ...[
-          if (i > 1) const SizedBox(width: 8),
-          Expanded(
-            child: i <= count
-                ? _NumberCell(
-                    key: ValueKey('$keyPrefix-$i'),
-                    number: i,
-                    label: '$label $i',
-                    selected: selected == i,
-                    onTap: () => onPick(i),
-                  )
-                : const SizedBox.shrink(),
+        for (var start = 1; start <= count; start += columns) ...[
+          if (start > 1) const SizedBox(height: 8),
+          Row(
+            children: [
+              for (var i = start; i < start + columns; i++) ...[
+                if (i > start) const SizedBox(width: 8),
+                Expanded(
+                  child: i <= count
+                      ? _NumberCell(
+                          key: ValueKey('$keyPrefix-$i'),
+                          number: i,
+                          label: '$label $i',
+                          selected: selected == i,
+                          onTap: () => onPick(i),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
           ),
         ],
       ],
