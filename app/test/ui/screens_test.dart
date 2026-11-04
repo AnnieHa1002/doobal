@@ -188,11 +188,10 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('출발 동네를 안 골랐으면 고르라는 카드만 나오고, 임시 화면에서 고르면 쉼터가 된다', (tester) async {
+    testWidgets('출발 동네가 없으면 쉼터는 빈 화면이다 (시작 관문이 먼저 고르게 한다)', (tester) async {
       final e = _Env();
       await e.seed(tester, home: false);
       _phone(tester);
-      // 시작 관문은 출발 동네가 없으면 ③ 단계를 띄우니, 쉼터의 임시 카드는 관문 없이 직접 띄운다
       await tester.pumpWidget(ProviderScope(
         overrides: e.overrides,
         child: MaterialApp(
@@ -200,37 +199,9 @@ void main() {
           home: const AutoSync(child: RestScreen()),
         ),
       ));
-      await _settle(tester, () => find.text('출발 동네를 골라 주세요').evaluate().isNotEmpty);
-
-      expect(find.text('출발 동네를 골라 주세요'), findsOneWidget);
-      expect(find.text('고르기'), findsOneWidget);
-      // 장면·상태 알약·출발하기·모서리 물건은 없고, 설정 버튼은 남는다
-      expect(find.textContaining('쉬는 중'), findsNothing);
-      expect(find.text('출발하기'), findsNothing);
+      await _wait(tester);
       expect(find.byType(SceneView), findsNothing);
-      expect(find.byIcon(Icons.settings), findsOneWidget);
-
-      await tester.tap(find.text('고르기'));
-      await _transition(tester);
-      expect(find.text('출발 동네 (임시)'), findsOneWidget);
-      expect(find.text('출발 동네 없음'), findsOneWidget);
-
-      // 대전 유성구를 고른다
-      await tester.tap(find.text('출발 동네'), warnIfMissed: false);
-      await _transition(tester);
-      await tester.tap(find.text('대전광역시 유성구').last);
-      await _transition(tester);
-      await tester.tap(find.text('출발 동네로 정하기'));
-      await _settle(tester, () => find.text('출발 동네 유성구').evaluate().isNotEmpty);
-      expect(find.text('출발 동네 유성구'), findsOneWidget);
-      await tester.pageBack();
-      await _transition(tester);
-      await _settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
-
-      expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
-      expect(find.text('출발 동네를 골라 주세요'), findsNothing);
-      final snap = (await tester.runAsync(() => e.svc.snapshot(e.now)))!;
-      expect(snap.position, _byId['kr003']!.latLng);
+      expect(find.text('출발하기'), findsNothing);
       await _end(tester, e);
     });
 
@@ -240,7 +211,6 @@ void main() {
       await _pumpApp(tester, e);
 
       expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
-      expect(find.text('출발 동네를 골라 주세요'), findsNothing);
       expect(find.byType(SceneView), findsOneWidget);
       await _end(tester, e);
     });

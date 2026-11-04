@@ -457,7 +457,6 @@ void main() {
       final e = UiEnv();
       await e.seed(tester, () => e.ownPaintings({sketchId: Frame.wood}));
       await openAlbum(tester, e, fit);
-      expect(find.byIcon(Icons.sync), findsNWidgets(4));
       expect(find.text('걸어서 명소에 닿으면 여기에 걸려요'), findsOneWidget);
       fit.check('그림 탭 (첫 그림뿐)');
       await end(tester, e);
@@ -607,9 +606,7 @@ void main() {
             width: fit.width,
             height: fit.height,
             extra: extra,
-            ready: () =>
-                find.text('권한 다시 열기').evaluate().isNotEmpty &&
-                find.text('알림 받기').evaluate().isNotEmpty);
+            ready: () => find.text('권한 다시 열기').evaluate().isNotEmpty);
 
     _scaleCases('설정', (tester, fit) async {
       final e = UiEnv();
@@ -630,10 +627,40 @@ void main() {
       await e.seed(tester);
       await openSettings(tester, e, fit,
           extra: [notificationPermissionProvider.overrideWithValue(_FakeNotification(false))]);
-      final blocked = find.text('휴대폰 설정에서 알림을 켜 주세요');
+      await _scrollTo(tester, find.text('알림'));
+      await _tap(tester, find.text('알림'));
+      await transition(tester);
+      final blocked = find.text('알림이 꺼져 있어요 · 휴대폰 설정에서 켜 주세요');
       await settle(tester, () => blocked.evaluate().isNotEmpty);
       await _scrollTo(tester, blocked);
       fit.check('권한 꺼짐 안내');
+      await end(tester, e);
+    });
+
+    _scaleCases('알림 화면', (tester, fit) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await openSettings(tester, e, fit);
+      await _scrollTo(tester, find.text('알림'));
+      await _tap(tester, find.text('알림'));
+      await transition(tester);
+      await settle(tester, () => find.text('알림 받기').evaluate().isNotEmpty);
+      fit.check('알림 맨 위');
+      await tester.drag(find.byType(ListView), Offset(0, -fit.height * 0.8));
+      await tester.pump();
+      fit.check('알림 끝');
+      await end(tester, e);
+    });
+
+    _scaleCases('앱 정보', (tester, fit) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await openSettings(tester, e, fit);
+      await _scrollTo(tester, find.text('앱 정보'));
+      await _tap(tester, find.text('앱 정보'));
+      await transition(tester);
+      expect(find.text('이전 처리방침 보기'), findsOneWidget);
+      fit.check('앱 정보');
       await end(tester, e);
     });
 

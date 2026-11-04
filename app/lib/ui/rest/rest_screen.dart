@@ -11,7 +11,6 @@ import '../album/album_screen.dart';
 import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
-import '../common/game_button.dart';
 import '../common/name_tag.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
@@ -86,9 +85,9 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     if (rules == null || landmarks == null || camp == null || snap == null) {
       return const Scaffold(body: SizedBox.expand());
     }
-    // 출발 동네를 아직 안 골랐으면 장면 대신 고르라는 카드만 (위치가 있어야 장면을 그린다)
+    // 시작 관문이 출발 동네를 먼저 고르게 하므로 위치는 늘 있다 (없으면 빈 화면)
     final position = snap.position;
-    if (position == null) return _pickHome(context);
+    if (position == null) return const Scaffold(body: SizedBox.expand());
     final firstSketch = _firstSketchBubble(snap, rules);
 
     return Scaffold(
@@ -199,55 +198,6 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
           ],
         );
       }),
-    );
-  }
-
-  /// 출발 동네를 고르라는 화면 (종이색 바탕 + 카드). 고르기는 시·군·구 목록이 생길 때까지 임시 화면
-  Widget _pickHome(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Center(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 24),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Palette.card,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Palette.ink, width: InkLine.panel),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '출발 동네를 골라 주세요',
-                      textAlign: TextAlign.center,
-                      style: context.display(20),
-                    ),
-                    const SizedBox(height: 20),
-                    GameButton(
-                      label: '고르기',
-                      onPressed: () => _push(context, const DebugScreen(title: '출발 동네 (임시)')),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: CornerButton(
-                  icon: Icons.settings,
-                  label: '설정',
-                  onPressed: () => _push(context, const SettingsScreen()),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
