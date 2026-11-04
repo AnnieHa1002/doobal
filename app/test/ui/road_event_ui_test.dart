@@ -159,7 +159,7 @@ void main() {
       final e = await openWalking(tester);
       await earnFirstWalk(tester, e, walking: true);
       await settle(tester, () => _badgeLine().evaluate().isNotEmpty);
-      expect(find.descendant(of: _badgeLine(), matching: find.text('새 도장을 받았어요 · 첫 걸음')),
+      expect(find.descendant(of: _badgeLine(), matching: find.text('도장을 받았어요 · 첫 걸음')),
           findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
 
@@ -176,10 +176,10 @@ void main() {
       await earnFirstWalk(tester, e, walking: false);
       await settle(tester, () => find.byType(SnackBar).evaluate().isNotEmpty);
       // 같은 동기화의 `그동안 n km 걸었어요` 토스트 뒤에 이어서 뜬다
-      for (var i = 0; i < 4 && find.text('새 도장을 받았어요 · 첫 걸음').evaluate().isEmpty; i++) {
+      for (var i = 0; i < 4 && find.text('도장을 받았어요 · 첫 걸음').evaluate().isEmpty; i++) {
         await tester.pump(const Duration(seconds: 3));
       }
-      expect(find.text('새 도장을 받았어요 · 첫 걸음'), findsOneWidget);
+      expect(find.text('도장을 받았어요 · 첫 걸음'), findsOneWidget);
 
       final container = ProviderScope.containerOf(tester.element(find.byType(DoobalApp)));
       final snap = await tester.runAsync(() => container.read(snapshotProvider.future));
@@ -225,11 +225,10 @@ void main() {
       expect(find.text('11월 18일'), findsOneWidget);
       expect(find.text('밤 산책'), findsOneWidget);
       expect(find.text('11월 19일'), findsOneWidget);
-      // 못 받은 도장은 이름도 조건도 진행도도 자물쇠도 없다
-      for (final b in badgeCatalog.badges.where((b) => b.id != 'b_first_walk' && b.id != 'b_night')) {
-        expect(find.text(b.name), findsNothing, reason: b.id);
-        expect(find.text(b.desc), findsNothing, reason: b.id);
-      }
+      // 못 받은 도장은 이름과 조건 글만 있고 진행도·자물쇠는 없다 (캔버스 6-1)
+      final locked = badgeCatalog.badges.firstWhere((b) => b.id == 'b_walk_5km');
+      expect(find.text(locked.name), findsOneWidget);
+      expect(find.text(locked.desc), findsOneWidget);
       expect(find.byIcon(Icons.lock), findsNothing);
       expect(find.byIcon(Icons.lock_outline), findsNothing);
 

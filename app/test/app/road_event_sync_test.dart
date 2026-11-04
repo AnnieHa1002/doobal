@@ -457,7 +457,7 @@ void main() {
       final r = await e.svc.sync(_t1);
       expect(r.newBadges, isEmpty);
       expect(await e.badges(), isEmpty);
-      expect(newBadgeToast(badgeCatalog.badges.take(2).toList()), '새 도장을 받았어요 · 첫 걸음 외 1개');
+      expect(newBadgeToast(badgeCatalog.badges.take(2).toList()), '도장을 받았어요 · 첫 걸음 외 1개');
     });
   });
 }

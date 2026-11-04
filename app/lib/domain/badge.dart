@@ -227,6 +227,6 @@ List<BadgeSection> badgeSections(List<Badge> badges) {
   return [for (final e in sections.entries) BadgeSection(e.key, e.value)];
 }
 
-/// 새 도장 토스트 한 줄 (가안): `새 도장을 받았어요 · 첫 걸음`, 여럿이면 `… · 첫 걸음 외 1개`
-String newBadgeToast(List<Badge> badges) => '새 도장을 받았어요 · ${badges.first.name}'
+/// 새 도장 토스트 한 줄 (가안): `도장을 받았어요 · 첫 걸음`, 여럿이면 `… · 첫 걸음 외 1개`
+String newBadgeToast(List<Badge> badges) => '도장을 받았어요 · ${badges.first.name}'
     '${badges.length > 1 ? ' 외 ${badges.length - 1}개' : ''}';

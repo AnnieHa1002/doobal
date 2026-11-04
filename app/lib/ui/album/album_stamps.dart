@@ -6,13 +6,9 @@ import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 
-/// 화집 도장 탭 (캔버스 Gallery): 묶음마다 카드 하나, 안에 4열 도장 칸.
-/// 받은 도장은 진하게(테라코타 고리 + 이름 + 받은 날), 못 받은 도장은 흐린 빈 고리 하나뿐이다:
-/// 이름·진행도·자물쇠 없음 (11/3 '잠금 표시 없음' 원칙).
-/// 캔버스는 못 받은 도장에도 이름과 조건을 적었는데, 작업 지시(이름 없이)를 따라 뺐다.
-/// 다시 넣으려면 [albumShowLockedStampNames]만 true로 바꾼다.
-/// 도장 아이콘 그림(ui_stamp_*)이 리포에 들어오기 전까지는 Material 아이콘 자리표시를 쓴다
-const albumShowLockedStampNames = false;
+/// 화집 도장 탭 (캔버스 Gallery): 묶음마다 카드 하나, 안에 4열 도장 칸. 받은 도장은 진하게(테라코타 고리 +
+/// 이름 + 받은 날), 못 받은 도장은 흐린 고리에 이름과 조건 글. 진행도·자물쇠는 없다.
+/// 도장 아이콘 그림(ui_stamp_*)이 리포에 들어오기 전까지는 Material 아이콘 자리표시
 
 const _stampColumns = 4;
 const _ringSize = 52.0;
@@ -127,10 +123,9 @@ class _StampCell extends StatelessWidget {
       child: Icon(stampIcon(badge),
           size: 24, color: got ? Palette.terracotta : Palette.ink.withValues(alpha: 0.18)),
     );
-    final showName = got || albumShowLockedStampNames;
     return Semantics(
       button: got,
-      label: got ? '${badge.name} 도장' : '아직 못 받은 도장',
+      label: got ? '${badge.name} 도장' : '${badge.name} 도장, 아직 못 받음. ${badge.desc}',
       excludeSemantics: true,
       child: GestureDetector(
         key: ValueKey('stamp-${badge.id}'),
@@ -141,15 +136,13 @@ class _StampCell extends StatelessWidget {
           child: Column(
             children: [
               got ? Transform.rotate(angle: -8 * 3.1415926 / 180, child: ring) : ring,
-              if (showName) ...[
-                const SizedBox(height: 3),
-                Text(badge.name,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 11, height: 1.25, color: Palette.ink)),
-                Text(got ? formatMonthDay(kstDate(at!)) : badge.desc,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 10, height: 1.2, color: Palette.subInk)),
-              ],
+              const SizedBox(height: 3),
+              Text(badge.name,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 11, height: 1.25, color: Palette.ink)),
+              Text(got ? formatMonthDay(kstDate(at!)) : badge.desc,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 11, height: 1.2, color: Palette.subInk)),
             ],
           ),
         ),
