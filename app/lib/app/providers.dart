@@ -179,6 +179,20 @@ class AppForeground extends Notifier<bool> {
 
 final appForegroundProvider = NotifierProvider<AppForeground, bool>(AppForeground.new);
 
+/// 걷는 중 화면(과 걷다 도착해서 열린 도착 화면)이 몇 개 떠 있는가. 0보다 큰 동안 도착은 그 화면들이
+/// 직접 다룬다 (걷기를 마치고 도착 화면으로 바꾸고, 닫으면 걷기 기록). AutoSync는 그동안 도착 화면을
+/// 따로 띄우지 않고 다 닫힌 뒤에 새로 읽어 다시 본다. 걷는 중 → 도착으로 바뀔 때 잠깐 겹쳐서 개수로 센다
+class WalkingActive extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void enter() => state = state + 1;
+
+  void leave() => state = state > 0 ? state - 1 : 0;
+}
+
+final walkingActiveProvider = NotifierProvider<WalkingActive, int>(WalkingActive.new);
+
 /// 알림 판단(어떤 알림을 보내거나 예약할지)과 알림 기록·켜고 끄기
 final notificationServiceProvider = FutureProvider<NotificationService>((ref) async {
   return NotificationService(

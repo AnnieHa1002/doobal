@@ -28,9 +28,10 @@ const _toastMinKm = 0.1;
 /// '다시 부르기' 알림(N5)을 취소하고, 백그라운드로 갈 때는 다시 예약한다.
 /// 자동 백업도 여기서 시도한다 (계정을 연결한 사용자만, 10분 안 반복은 건너뛴다): 날짜가 바뀐 뒤 첫
 /// 동기화, 도착을 알았을 때, 백그라운드로 갈 때.
-/// 도착했는데 도착 화면을 아직 안 봤으면(앱을 켜기 전에 도착했거나, 걷는 중 화면이 새로 읽다가
-/// 도착을 알게 됐을 때) 열려 있는 화면 위에 도착 화면을 띄운다. 이 위젯이 home이라
-/// 어느 화면 위에서든 같은 Navigator에 올릴 수 있다.
+/// 도착했는데 도착 화면을 아직 안 봤으면(앱을 켜기 전에 도착했을 때) 열려 있는 화면 위에
+/// 도착 화면을 띄운다. 걷는 중 화면이 떠 있을 때는 그 화면이 걷기를 마치고 도착 화면으로 바꾸므로
+/// (walkingActiveProvider) 여기서는 띄우지 않고, 걷는 중 화면이 닫힌 뒤에 남아 있으면 띄운다.
+/// 이 위젯이 home이라 어느 화면 위에서든 같은 Navigator에 올릴 수 있다.
 /// 앱 걷기(본격 걷기 보너스의 창)를 위해 앱이 살아 있는 동안 config sync.aliveSaveSec마다와
 /// 백그라운드로 갈 때 '살아 있던 시각'을 적는다. 앱을 켠 직후에는 앞 실행에서 끝나지 않은 앱 걷기를
 /// 그 시각에서 닫고(동기화보다 먼저) 동기화한다. 닫은 창이 있으면(걷는 중에 앱이 끝났다) 첫 동기화 뒤에
@@ -74,6 +75,11 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     );
     ref.listenManual(snapshotProvider, (_, next) => _checkArrival(next.value),
         fireImmediately: true);
+    // 걷는 중 화면이 닫혔는데 아직 안 본 도착이 남아 있으면 그때 띄운다
+    // (닫으며 invalidate 한 새 상태를 기다려서 읽는다)
+    ref.listenManual(walkingActiveProvider, (_, active) {
+      if (active == 0) ref.read(snapshotProvider.future).then(_checkArrival, onError: (_) {});
+    });
     ref.listenManual(syncServiceProvider, (_, next) {
       final svc = next.value;
       if (svc == null) return;
@@ -223,7 +229,8 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
 
   void _checkArrival(Snapshot? snap) {
     final id = snap?.pendingArrival?.journeyId;
-    if (id == null || !_arrivalsShown.add(id)) return;
+    // 걷는 중 화면이 떠 있으면 그 화면이 걷기를 마치고 도착 화면으로 바꾼다 (11/4)
+    if (id == null || ref.read(walkingActiveProvider) > 0 || !_arrivalsShown.add(id)) return;
     // 도착을 알았다: 새 그림이 들어간 상태를 백업한다 (도착 화면이 닫히길 기다리지 않는다)
     _backup((runner, now) => runner.run(BackupReason.arrived, now));
     // 그리는 중에 화면을 올리지 않도록 이번 그리기가 끝난 뒤에

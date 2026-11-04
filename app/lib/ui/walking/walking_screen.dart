@@ -17,7 +17,9 @@ import '../../domain/live_walk.dart';
 import '../../domain/milestones.dart';
 import '../../domain/rules.dart';
 import '../../domain/spirit_look.dart';
+import '../../domain/walk_arrival.dart';
 import '../../domain/walk_record.dart';
+import '../arrival/arrival_screen.dart';
 import '../common/toast.dart';
 import '../scene/scene_view.dart';
 import '../walk_record/walk_record_screen.dart';
@@ -34,7 +36,11 @@ import 'walking_hud.dart';
 /// 이번 걷기가 걷기 1번으로 인정되면(isFocusedWalk) 본격 걷기: 걸음 알약에 배수 딱지를 붙이고 토스트를
 /// 한 번 띄우며 상시 알림 끝에도 쓴다. 마칠 때까지 그대로다.
 /// 앱이 통째로 끝나서 화면이 정리되지 못한 경우는 다음 실행 때 AutoSync가 마지막으로 살아 있던
-/// 시각에서 닫는다 (appEnded)
+/// 시각에서 닫는다 (appEnded).
+/// 진행이 100%가 되면(11/4 Annie) 걷기를 자동으로 마치고 도착 화면으로 바꾼다. 도착은 늘 health 동기화가
+/// 정한다: 센서 미리보기가 남은 거리를 넘으면 동기화를 바로 돌려 보고, 도착이 확정되면(pendingArrival)
+/// 넘어간다. 도착 화면을 닫으면 그 걷기의 걷기 기록이 이어진다. 걷는 중 화면이 떠 있는 동안은
+/// walkingActiveProvider로 AutoSync가 도착 화면을 따로 띄우지 않게 한다
 class WalkingScreen extends ConsumerStatefulWidget {
   const WalkingScreen({super.key});
 
@@ -44,6 +50,10 @@ class WalkingScreen extends ConsumerStatefulWidget {
 
 /// 몰려 온 걸음을 화면 숫자가 따라잡는 시간(초)
 const _stepCatchUpSec = 3.0;
+
+/// 센서 미리보기가 100%를 넘은 동안 도착 확인 동기화를 돌리는 최소 간격(초).
+/// config로 옮길 값 (평소 주기 walkingRefreshSec 30초보다 짧게)
+const _arrivalProbeSec = 5;
 
 class _WalkingScreenState extends ConsumerState<WalkingScreen>
     with SingleTickerProviderStateMixin {
@@ -103,12 +113,22 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   late final Future<int?> _appWalk;
   var _appWalkClosed = false;
 
+  /// 걷는 중 화면이 떠 있다고 알리는 쪽 (dispose에서는 ref를 못 쓰므로 미리 담는다)
+  late final WalkingActive _active;
+
+  /// 도착으로 걷기를 마치는 중 (한 번만) / 마지막으로 도착 확인 동기화를 돌린 시각
+  var _ending = false;
+  DateTime? _probeAt;
+
   @override
   void initState() {
     super.initState();
     final clock = _clock = ref.read(clockProvider);
     _service = ref.read(syncServiceProvider.future);
     _notice = ref.read(walkNoticeProvider);
+    _active = ref.read(walkingActiveProvider.notifier);
+    // 위젯을 짓는 중에는 provider를 못 바꾼다
+    Future.microtask(() => _setActive(true));
     _start = _now = clock();
     _appWalk = _openAppWalk(_start);
     _ratioBefore = ref.read(snapshotProvider).value?.journey?.progress.ratio;
@@ -124,12 +144,21 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   void dispose() {
     // 마치기 없이 나가는 경우: 창이 열린 채 남지 않게 지금 시각에 닫는다 (마치기로 나갔으면 이미 닫혔다)
     unawaited(_closeAppWalk(_clock()));
+    Future.microtask(() => _setActive(false));
     _noticeOn = false;
     _notice.stop();
     _live?.dispose();
     _timer?.cancel();
     _ticker.dispose();
     super.dispose();
+  }
+
+  void _setActive(bool on) {
+    try {
+      on ? _active.enter() : _active.leave();
+    } catch (_) {
+      // 앱이 통째로 정리되는 중이면 알릴 곳이 없다
+    }
   }
 
   /// 앱 걷기 창을 연다. 실패하면 null (이번 걷기는 보너스 없이 센다)
@@ -300,8 +329,18 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     }
   }
 
+  /// 도착이 확정됐으면(동기화가 정한다) 걷기를 마치고 도착 화면으로 바꾼다.
   /// 배 구간에 들어설 때마다 한 번만 토스트
   void _onSnapshot(Snapshot s) {
+    final arrival = s.pendingArrival;
+    if (arrival != null && !_ending) {
+      _ending = true;
+      // 화면을 짓는 중일 수 있어서 이번 프레임이 끝난 뒤에 넘어간다
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _finishByArrival(arrival.journeyId);
+      });
+      return;
+    }
     final entered = s.onSea && !_wasOnSea;
     _wasOnSea = s.onSea;
     if (!entered) return;
@@ -330,6 +369,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _checkFocus(rules);
     final summary = _summaryAt(now);
     _pushNotice(summary?.steps ?? 0, summary?.distanceM ?? 0, isRunning: _isRunning(summary));
+    _probeArrival(summary, now);
     final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
     var shown = followDistance(
       _shownM,
@@ -357,20 +397,55 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     });
   }
 
-  void _finish() {
+  /// 센서 미리보기가 남은 거리를 넘으면 동기화를 바로 돌려 도착이 확정됐는지 본다.
+  /// 진행 기준은 언제나 health 동기화 값이라 여기서 도착을 정하지는 않는다 (M1)
+  void _probeArrival(WalkSummary? summary, DateTime now) {
+    if (_ending || _refreshing || summary == null) return;
+    final j = ref.read(snapshotProvider).value?.journey;
+    if (j == null) return;
+    final extraM = summary.distanceM - (_record?.summary.distanceM ?? 0);
+    if (!previewReachesDest(remainingKm: j.progress.remainingKm, extraM: extraM)) return;
+    if (!arrivalProbeDue(_probeAt, now, _arrivalProbeSec)) return;
+    _probeAt = now;
+    _refresh();
+  }
+
+  /// 걷기를 마친다: 알림을 끄고 앱 걷기 창을 마친 시각에 닫는다 (걷기 기록 화면의 계산은 DB 쓰기
+  /// 순서상 닫힌 뒤에 읽는다). 이번 걷기의 값을 돌려준다
+  WalkEnd _endWalk() {
     _noticeOn = false;
     _notice.stop();
     final end = ref.read(clockProvider)();
-    // 창은 걷기를 마친 시각에 닫는다. 걷기 기록 화면의 계산은 DB 쓰기 순서상 닫힌 뒤에 읽는다
     unawaited(_closeAppWalk(end));
+    return WalkEnd(
+      start: _start,
+      end: end,
+      ratioBefore: _ratioBefore,
+      liveMinutes: _live?.walk.minutes ?? const [],
+    );
+  }
+
+  void _finish() {
+    if (_ending) return;
+    _ending = true;
+    final walk = _endWalk();
     // 이 화면을 걷기 기록으로 바꾼다. 마지막 동기화와 기록 계산은 걷기 기록 화면이 한다
     Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
       builder: (_) => WalkRecordScreen(
-        start: _start,
-        end: end,
-        ratioBefore: _ratioBefore,
-        liveMinutes: _live?.walk.minutes ?? const [],
+        start: walk.start,
+        end: walk.end,
+        ratioBefore: walk.ratioBefore,
+        liveMinutes: walk.liveMinutes,
       ),
+    ));
+  }
+
+  /// 진행 100%: 걷기를 자동으로 마치고 도착 화면으로 바꾼다 (보통 '걷기 마치기'와 같은 경로).
+  /// 도착 화면을 닫으면 이 걷기의 걷기 기록으로 간다
+  void _finishByArrival(String journeyId) {
+    final walk = _endWalk();
+    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
+      builder: (_) => ArrivalScreen(journeyId: journeyId, walk: walk),
     ));
   }
 

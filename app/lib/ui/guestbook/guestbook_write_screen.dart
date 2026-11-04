@@ -11,12 +11,14 @@ import '../common/format.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
+import 'guestbook_read_screen.dart';
 import 'guestbook_tag.dart';
 
 /// 방명록 쓰기 (UI 명세 9장). 위에 태그, 걸음 숫자 기회면 남은 걸음, 처음 쓸 때만 동의 한 줄,
 /// 입력 칸(글자 수 상한은 config guestbook.maxChars)과 글자 수, 주 버튼 "남기기".
 /// 쓰는 중에 금칙어에 걸리면 입력 칸 아래에 테라코타 글자로 안내하고 "남기기"를 끈다 (어떤 단어인지는
 /// 알리지 않는다). 글이 유효할 때만 버튼이 켜지고, 누르면 이 기기에 저장하고 닫는다.
+/// 남기면 방명록 읽기(5-2)로 이어진다 (이 화면을 바꿔서, 읽기에서 뒤로 가면 들어온 곳).
 /// 서버로 보내는 건 M5에서 한다 (서버도 한 번 더 검사한다)
 class GuestbookWriteScreen extends ConsumerStatefulWidget {
   const GuestbookWriteScreen({super.key, required this.ticketId});
@@ -40,15 +42,17 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
     super.dispose();
   }
 
-  /// 저장하고 토스트를 띄운 뒤 닫는다. 그새 기회가 끝났으면(StateError) 그 사유를 토스트로 알리고 닫는다.
+  /// 저장하고 방명록 읽기로 바꾼다. 그새 기회가 끝났으면(StateError) 그 사유를 토스트로 알리고 닫는다.
   /// 어느 쪽이든 쉼터 표지판·도착 화면 버튼·노트의 내 방명록이 새로 읽는다
   Future<void> _save(GuestbookTicket ticket) async {
     if (_busy) return;
     setState(() => _busy = true);
     var message = '방명록을 남겼어요';
+    var saved = false;
     try {
       final svc = await ref.read(syncServiceProvider.future);
       await svc.writeGuestbook(ticket.id, _controller.text, ref.read(clockProvider)());
+      saved = true;
     } on StateError catch (e) {
       message = e.message;
     }
@@ -57,7 +61,13 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
     ref.invalidate(guestbookTicketProvider);
     ref.invalidate(myPostsProvider);
     showToast(context, message);
-    Navigator.of(context).pop();
+    if (!saved) {
+      Navigator.of(context).pop();
+      return;
+    }
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => GuestbookReadScreen(ticketId: ticket.id)),
+    );
   }
 
   @override

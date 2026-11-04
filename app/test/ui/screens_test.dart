@@ -256,7 +256,8 @@ void main() {
                 .toJson())),
           )));
       await _pumpApp(tester, e);
-      const worn = SpiritLook(eye: 3, mouth: 4, companion: 1);
+      // 처음 쓰는 소품 큰 붓(hand_01)이 기본으로 들려 있어 bag 1이다
+      const worn = SpiritLook(eye: 3, mouth: 4, bag: 1, companion: 1);
       await _settle(tester, () => tester.widget<SceneView>(find.byType(SceneView)).spirit == worn);
       expect(tester.widget<SceneView>(find.byType(SceneView)).spirit, worn);
 
@@ -352,9 +353,18 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('result-kr003')));
       await _transition(tester);
-      await tester.tap(find.text('여기로 가기'));
-      await _settle(tester, () => find.text('여기로 가기').evaluate().isEmpty);
-      await _tapIcon(tester, Icons.arrow_back);
+      // 여정이 없으면 `출발하기`가 그 명소로 출발하고 걷는 중으로 간다 (지도 자리를 대신한다)
+      await tester.tap(find.text('출발하기'));
+      await _settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      await _transition(tester);
+      await _wait(tester);
+      expect(find.byType(MapScreen), findsNothing);
+      // 걷기를 마치면 걷기 기록, `쉼터로`로 쉼터에 돌아온다
+      await tester.tap(find.text('걷기 마치기'));
+      await _transition(tester);
+      await _settle(tester, () => find.text('쉼터로').evaluate().isNotEmpty, tries: 80);
+      await tester.tap(find.text('쉼터로'));
+      await _transition(tester);
       await _settle(tester, () => find.textContaining('목적지까지').evaluate().isNotEmpty);
 
       expect(find.text('쉬는 중 · 목적지까지 ${formatKm(_totalKm('kr003'))}'), findsOneWidget);

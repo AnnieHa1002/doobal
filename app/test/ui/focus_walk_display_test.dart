@@ -29,6 +29,9 @@ Rules _rulesWith(void Function(Map<String, dynamic> config) edit) {
 /// 럭 단가가 정해진 규칙 (1km당 10럭)
 final _coinRules = _rulesWith((j) => (j['coins'] as Map)['perKm'] = 10);
 
+/// 럭 단가가 없는(null) 규칙. config v8부터 실제 값은 10이라, 럭 줄·토스트 럭 이야기가 없는 경우를 본다
+final _noCoinRules = _rulesWith((j) => (j['coins'] as Map)['perKm'] = null);
+
 int _ms(DateTime t) => t.millisecondsSinceEpoch;
 
 DateTime _t(int minutesAfterT1) => t1.add(Duration(minutes: minutesAfterT1));
@@ -99,7 +102,7 @@ void main() {
   group('걷는 중: 걸음 알약 딱지·토스트·알림 (건강 기록으로 걷기 1번)', () {
     testWidgets('걷기 1번이 되기 전에는 딱지·토스트가 없고, 10분·1,000보가 되면 ×1.3과 토스트가 한 번 뜬다',
         (tester) async {
-      final e = UiEnv();
+      final e = UiEnv(appRules: _noCoinRules);
       await openWalking(tester, e);
       expect(_pillBadge, findsNothing);
 
@@ -117,7 +120,7 @@ void main() {
       expect(_pillBadge, findsOneWidget);
       expect(find.descendant(of: _pillBadge, matching: find.text('×1.3')), findsOneWidget);
       expect(toastSeen, isTrue);
-      // 럭 단가가 아직 없어서(config coins.perKm null) 토스트에 럭 이야기가 없다
+      // 럭 단가가 없으면(coins.perKm null) 토스트에 럭 이야기가 없다
       expect(find.textContaining('럭'), findsNothing);
 
       // 토스트는 2.5초 뒤 사라지고, 딱지는 마칠 때까지 남으며, 같은 걷기에서 다시 뜨지 않는다
@@ -150,7 +153,7 @@ void main() {
 
   group('걷는 중: 걸음 알약 딱지·토스트·알림 (기기 센서 분으로 걷기 1번)', () {
     testWidgets('센서가 센 10분 × 100보가 차는 순간 ×1.3과 토스트, 9분째까지는 없다', (tester) async {
-      final e = UiEnv();
+      final e = UiEnv(appRules: _noCoinRules);
       await openWalking(tester, e);
       e.live.push(0); // 기준값
 
@@ -231,7 +234,7 @@ void main() {
     }
 
     testWidgets('본격 걷기: 실제 0.8km / 여행 1.1km (본격 걷기 ×1.3), 럭 단가가 없으면 럭 줄이 없다', (tester) async {
-      final e = UiEnv();
+      final e = UiEnv(appRules: _noCoinRules);
       await e.seed(tester, () => seedRecord(e, focused: true));
       await openRecord(tester, e);
 
@@ -243,7 +246,7 @@ void main() {
     });
 
     testWidgets('본격 걷기가 아니면 실제 줄만 둔다 (여행 거리는 실제와 같아서)', (tester) async {
-      final e = UiEnv();
+      final e = UiEnv(appRules: _noCoinRules);
       await e.seed(tester, () => seedRecord(e, focused: false));
       await openRecord(tester, e);
 

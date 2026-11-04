@@ -1,5 +1,6 @@
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/guestbook.dart';
+import 'package:doobal/ui/guestbook/guestbook_read_screen.dart';
 import 'package:doobal/ui/guestbook/guestbook_write_screen.dart';
 import 'package:doobal/ui/note/note_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
@@ -182,9 +183,14 @@ void main() {
       await tester.tap(find.text('남기기'));
       await settle(tester, () => find.text('방명록을 남겼어요').evaluate().isNotEmpty, tries: 12);
       await transition(tester);
+      // 남기면 방명록 읽기로 이어지고, 뒤로 가면 노트 (들어온 곳)
+      await settle(tester, () => find.byType(GuestbookReadScreen).evaluate().isNotEmpty);
+      await tester.tap(find.byTooltip('뒤로'));
+      await transition(tester);
       await settle(tester, () => find.text('새로 남긴 글').evaluate().isNotEmpty);
 
       expect(find.byType(GuestbookWriteScreen), findsNothing);
+      expect(find.byType(GuestbookReadScreen), findsNothing);
       expect(find.text('새로 남긴 글'), findsOneWidget);
       expect(find.text('예전 글'), findsOneWidget);
       expect(_y(tester, find.text('새로 남긴 글')), lessThan(_y(tester, find.text('예전 글'))));
