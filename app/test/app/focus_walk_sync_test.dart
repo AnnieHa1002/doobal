@@ -82,7 +82,10 @@ class _Env {
         'paintings': await db.select(db.paintingsOwned).get(),
         'props': await db.select(db.propsOwned).get(),
         'appWalks': await db.select(db.appWalks).get(),
-        'coins': await db.select(db.coinLedger).get(),
+        // 장부 행은 다시 쓰면 번호가 바뀌니 내용만 본다
+        'coins': [
+          for (final c in await db.select(db.coinLedger).get()) (c.day, c.kind, c.amount, c.refId),
+        ],
         'fundKm': (await db.select(db.travelFund).getSingle()).km,
       };
 
@@ -252,7 +255,7 @@ void main() {
       expect(day.shopM, 0);
       expect(day.travelM, closeTo(1092, 1e-9));
       expect(day.walkTravelM, closeTo(1092, 1e-9));
-      expect(day.coins, 0);
+      expect(day.coins, 16);
       final session = await e.db.select(e.db.walkSessions).getSingle();
       expect(session.qualified, isTrue);
       expect(session.distanceM, closeTo(840, 1e-9));
@@ -263,8 +266,8 @@ void main() {
       expect(snap.todayDistanceM, closeTo(840, 1e-9));
       expect(snap.totalKm, closeTo(0.84, 1e-9));
       expect(snap.walkTravelKm, closeTo(1.092, 1e-9));
-      // 럭 단가가 없어서(null) 장부는 비어 있다
-      expect(await e.db.select(e.db.coinLedger).get(), isEmpty);
+      // 실제 0.84km가 모두 보너스 분이라 8.4 × 2배 = 16럭 (config perKm 10)
+      expect((await e.db.select(e.db.coinLedger).getSingle()).amount, 16);
     });
 
     test('33: 창이 없으면 같은 걸음도 보너스 0 · 앱 걷기 이동 거리 0, 진행은 실제 0.84km', () async {
@@ -596,8 +599,8 @@ void main() {
       expect(await e.db.select(e.db.coinLedger).get(), isEmpty);
     });
 
-    test('럭 단가가 null(config 기본)이면 걸어도 럭 0, 장부 행 없음', () async {
-      final e = await _env();
+    test('럭 단가가 null이면 걸어도 럭 0, 장부 행 없음', () async {
+      final e = await _env(appRules: _rulesWith((j) => (j['coins'] as Map)['perKm'] = null));
       await _focusWalk(e, from: _at(0), minutes: 15, spm: 200, syncAt: _at(60), to: _at(15));
       expect((await e.day()).coins, 0);
       expect(await e.db.select(e.db.coinLedger).get(), isEmpty);

@@ -101,9 +101,9 @@ void main() {
     });
 
 
-    test('후경 250m × 0.05 → 512 (가로 1764), 1000m → 2048 - 1764 = 284', () {
+    test('후경 250m × 0.05 → 512 (가로 4800), 2500m → 5120 - 4800 = 320', () {
       expect(offset(SceneLayerId.backdrop, 250), closeTo(512, 1e-6));
-      expect(offset(SceneLayerId.backdrop, 1000), closeTo(284, 1e-6));
+      expect(offset(SceneLayerId.backdrop, 2500), closeTo(320, 1e-6));
     });
 
     test('거리 0 → 0, 음수 거리도 0 이상', () {

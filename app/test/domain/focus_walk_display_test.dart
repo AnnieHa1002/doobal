@@ -64,9 +64,9 @@ void main() {
       expect(focusBadgeText(_rulesWith((j) => (j['bonus'] as Map)['travelMultiplier'] = 2)), '×2');
     });
 
-    test('토스트: 럭 단가가 없으면(config 지금 값) 여행 거리 이야기만', () {
-      expect(rules.coinsPerKm, isNull);
-      expect(focusToastText(rules), '본격 걷기! 여행 거리 1.3배');
+    test('토스트: 럭 단가가 없으면 여행 거리 이야기만', () {
+      expect(focusToastText(_rulesWith((j) => (j['coins'] as Map)['perKm'] = null)),
+          '본격 걷기! 여행 거리 1.3배');
     });
 
     test('토스트: 럭 단가가 있으면 · 럭 2배(config coinMultiplier)가 붙는다', () {
@@ -165,8 +165,9 @@ void main() {
   group('walkCoins: 이번 걷기의 럭', () {
     final r10 = _rulesWith((j) => (j['coins'] as Map)['perKm'] = 10);
 
-    test('럭 단가가 없으면(config 지금 값) 0', () {
-      expect(walkCoins(actualM: 5000, bonusActualM: 2000, rules: rules), 0);
+    test('럭 단가가 없으면 0', () {
+      final noRate = _rulesWith((j) => (j['coins'] as Map)['perKm'] = null);
+      expect(walkCoins(actualM: 5000, bonusActualM: 2000, rules: noRate), 0);
     });
 
     test('보너스 밖 실제 km + 보너스 분의 실제 km × 2, × 단가, 내림', () {

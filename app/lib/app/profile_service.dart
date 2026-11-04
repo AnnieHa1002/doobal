@@ -84,7 +84,7 @@ class ProfileService {
         final owned = {for (final r in await db.select(db.propsOwned).get()) r.propId};
         for (final slot in lookSlots) {
           final id = look.slots[slot];
-          if (id != null && id != defaultSlots[slot] && !owned.contains(id)) {
+          if (id != null && !initialPropIds.contains(id) && !owned.contains(id)) {
             throw StateError('가지지 않은 소품이에요: $id');
           }
         }

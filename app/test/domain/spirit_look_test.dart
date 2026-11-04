@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('spiritLookOf', () {
-    test('첫 모습은 Rive 기본 얼굴이고 소품은 없다 (기본 소품은 아직 리깅 전)', () {
-      expect(spiritLookOf(Look.initial), SpiritLook.base);
+    test('첫 모습은 Rive 기본 얼굴에 기본 가방 큰 붓', () {
+      expect(spiritLookOf(Look.initial), SpiritLook.base.copyWith(bag: 1));
       expect(
           (SpiritLook.base.eye, SpiritLook.base.brow, SpiritLook.base.nose, SpiritLook.base.mouth),
           (0, 1, 6, 1));
@@ -29,14 +29,12 @@ void main() {
       SpiritLook wear(String slot, String id) =>
           spiritLookOf(Look.initial.withSlot(slot, id));
       expect(wear('cloth', 'cloth_02').outfit, 1);
-      expect(wear('cloth', 'travel_vest').outfit, 1);
-      expect(wear('cloth', 'travel_cape').outfit, 2);
+      expect(wear('cloth', 'cloth_05').outfit, 2);
       expect(wear('cloth', 'cloth_03').outfit, 0);
-      expect(wear('bag', 'brush_bag').bag, 1);
-      expect(wear('bag', 'walking_stick_pack').bag, 2);
+      expect(wear('bag', 'hand_01').bag, 1);
+      expect(wear('bag', 'hand_02').bag, 2);
       expect(wear('bag', 'bag_02').bag, 0);
       expect(wear('pet', 'pet_05').companion, 1);
-      expect(wear('pet', 'gull_friend').companion, 1);
       expect(wear('pet', 'pet_02').companion, 0);
     });
 

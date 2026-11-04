@@ -17,23 +17,27 @@ const defaultBrows = 2;
 const defaultNose = 7;
 const defaultMouth = 2;
 
-/// 소품 칸 여섯 (M4 명세의 순서). props.json의 slot 이름과 같다
-const lookSlots = ['hat', 'hand', 'pet', 'bag', 'shoe', 'cloth'];
+/// 소품 칸 아홉 (props.json v4 slots). 얼굴 소품·손·둥실·효과는 처음에 비어 있다
+const lookSlots = ['hat', 'face', 'cloth', 'shoe', 'hand', 'bag', 'pet', 'float', 'effect'];
 
 /// 비울 수 없는 칸: 옷은 늘 무언가를 입는다
 const alwaysWornSlot = 'cloth';
 
-/// 칸마다 처음 끼는 소품: props.json에서 unlock.kind가 default인 소품 (칸마다 하나).
-/// 처음부터 가진 소품이라 새 프로필과 옛 JSON(slots가 없는 것)이 이 값으로 시작한다.
-/// props.json이 바뀌면 같이 바꾼다 (look_test가 맞는지 본다)
+/// 칸마다 처음 끼는 소품: 새 프로필과 옛 JSON(slots가 없는 것)이 이 값으로 시작한다. 가방은 큰 붓이다
 const defaultSlots = <String, String?>{
   'hat': 'hat_01',
-  'hand': 'hand_01',
-  'pet': 'pet_01',
-  'bag': 'bag_01',
-  'shoe': 'shoe_01',
+  'face': null,
   'cloth': 'cloth_01',
+  'shoe': 'shoe_01',
+  'hand': null,
+  'bag': 'hand_01',
+  'pet': 'pet_01',
+  'float': null,
+  'effect': null,
 };
+
+/// 처음부터 가진 소품: props.json에서 unlock.kind가 default인 것 (look_test가 맞는지 본다)
+const initialPropIds = {'hat_01', 'cloth_01', 'shoe_01', 'hand_01', 'bag_01', 'pet_01'};
 
 /// 머리색 (M4 명세): 견본 번호 | 직접 고른 색 | 뿌리·끝 그러데이션.
 /// JSON은 {kind: swatch, i} | {kind: custom, hex} | {kind: gradient, root, tip}
@@ -198,7 +202,7 @@ class Look {
   final int mouth;
   final int ears;
 
-  /// 칸 이름([lookSlots]) → 끼운 소품 id. 비운 칸은 null. 여섯 칸을 모두 가진다
+  /// 칸 이름([lookSlots]) → 끼운 소품 id. 비운 칸은 null. 아홉 칸을 모두 가진다
   final Map<String, String?> slots;
 
   Look copyWith({

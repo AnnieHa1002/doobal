@@ -52,8 +52,12 @@ void main() {
         });
       }
 
-      Map<String, dynamic> hair(Map<String, dynamic> j) => j['hair'] as Map<String, dynamic>;
-      Map<String, dynamic> skin(Map<String, dynamic> j) => j['skin'] as Map<String, dynamic>;
+      Map<String, dynamic> legacy(Map<String, dynamic> j) => j['legacy'] as Map<String, dynamic>;
+      Map<String, dynamic> hair(Map<String, dynamic> j) => legacy(j)['hair'] as Map<String, dynamic>
+        ..putIfAbsent('custom', () => <String, dynamic>{'lightMin': 15, 'lightMax': 90})
+        ..putIfAbsent('gradient', () => <String, dynamic>{'rootUntil': 0.3, 'tipFrom': 0.85});
+      Map<String, dynamic> skin(Map<String, dynamic> j) => legacy(j)['skin'] as Map<String, dynamic>
+        ..putIfAbsent('custom', () => <String, dynamic>{'lightMin': 35, 'lightMax': 95});
 
       bad('머리 밝기 범위가 거꾸로', (j) => hair(j)['custom'] = {'lightMin': 90, 'lightMax': 15});
       bad('피부 밝기가 100을 넘음', (j) => skin(j)['custom'] = {'lightMin': 35, 'lightMax': 101});

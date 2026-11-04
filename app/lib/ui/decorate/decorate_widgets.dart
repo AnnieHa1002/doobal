@@ -7,7 +7,7 @@ const _cellRadius = 12.0;
 
 /// 소품 탭과 끼운 소품 줄의 칸 순서 (UI 명세 12장: 옷 · 모자 · 손 · 가방 · 신발 · 어깨 친구).
 /// 화집 소품 탭 순서(propSlotLabels)와 다르다
-const decorateSlotOrder = ['cloth', 'hat', 'hand', 'bag', 'shoe', 'pet'];
+const decorateSlotOrder = ['hat', 'face', 'cloth', 'shoe', 'hand', 'bag', 'pet', 'float', 'effect'];
 
 /// 칸별 아이콘 (자리표시). 소품 아이콘 그림(item_*_icon)이 나오면 그 그림으로 바꾼다
 const slotIcons = {
@@ -17,6 +17,9 @@ const slotIcons = {
   'bag': Icons.backpack,
   'shoe': Icons.directions_walk,
   'pet': Icons.pets,
+  'face': Icons.face,
+  'float': Icons.cloud,
+  'effect': Icons.auto_awesome,
 };
 
 /// 견본 한 칸: 번호, 접근성 이름, 불투명 ARGB 색

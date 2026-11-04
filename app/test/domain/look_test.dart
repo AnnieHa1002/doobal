@@ -22,17 +22,17 @@ void main() {
       expect(Look.initial.slots, defaultSlots);
     });
 
-    test('기본 슬롯은 props.json에서 unlock.kind가 default인 소품 (칸마다 하나)', () {
-      final defaults = {
+    test('기본 소품은 props.json에서 unlock.kind가 default인 것, 처음 끼는 소품은 그중에서', () {
+      expect(initialPropIds, {
         for (final p in props)
-          if (p.kind == PropUnlockKind.initial) p.slot: p.id,
-      };
-      // 칸마다 기본 소품이 정확히 하나
-      expect(props.where((p) => p.kind == PropUnlockKind.initial), hasLength(lookSlots.length));
-      expect(defaults.keys.toSet(), lookSlots.toSet());
-      expect(defaultSlots, defaults);
+          if (p.kind == PropUnlockKind.initial) p.id,
+      });
+      for (final id in defaultSlots.values.nonNulls) {
+        expect(initialPropIds, contains(id));
+      }
       // 소품 칸 이름은 props.json의 slot과 같다
       expect(props.map((p) => p.slot).toSet(), lookSlots.toSet());
+      expect(defaultSlots.keys.toSet(), lookSlots.toSet());
     });
 
     test('JSON 왕복: 견본', () {
@@ -48,11 +48,14 @@ void main() {
         'ears': 1,
         'slots': {
           'hat': 'hat_01',
-          'hand': 'hand_01',
-          'pet': 'pet_01',
-          'bag': 'bag_01',
-          'shoe': 'shoe_01',
+          'face': null,
           'cloth': 'cloth_01',
+          'shoe': 'shoe_01',
+          'hand': null,
+          'bag': 'hand_01',
+          'pet': 'pet_01',
+          'float': null,
+          'effect': null,
         },
       });
       expect(_roundTrip(look), look);
@@ -174,7 +177,7 @@ void main() {
       expect(look.nose, defaultNose);
       expect(look.slots['hat'], 'hat_02');
       // slots 안에서 빠진 칸은 그 칸의 기본 소품
-      expect(look.slots['hand'], 'hand_01');
+      expect(look.slots['bag'], 'hand_01');
       expect(look.slots['cloth'], 'cloth_01');
     });
 
@@ -262,7 +265,7 @@ void main() {
     test('withSlot: 그 칸만 바꾸고, 비우기는 옷만 막는다', () {
       final a = Look.initial.withSlot('hat', 'hat_02');
       expect(a.slots['hat'], 'hat_02');
-      expect(a.slots['hand'], 'hand_01');
+      expect(a.slots['bag'], 'hand_01');
       // 원래 모습은 그대로 (기본 슬롯 상수도 안 바뀐다)
       expect(Look.initial.slots['hat'], 'hat_01');
       expect(defaultSlots['hat'], 'hat_01');

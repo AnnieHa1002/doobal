@@ -96,12 +96,15 @@ String? revisitLine(int visitNo, Frame? prev, Frame now, double? prevBestKm) =>
           : '액자는 그대로예요 (지난번 ${prevBestKm.round()}km)',
     };
 
-/// 소품 칸 이름. 소품 탭에 나오는 순서 그대로다 (모자·옷·손·가방·신발·어깨 친구)
+/// 소품 칸 이름. 소품 탭에 나오는 순서 그대로다
 const propSlotLabels = {
   'hat': '모자',
+  'face': '얼굴 소품',
   'cloth': '옷',
+  'shoe': '신발',
   'hand': '손',
   'bag': '가방',
-  'shoe': '신발',
-  'pet': '어깨 친구',
+  'pet': '미니 친구',
+  'float': '둥실',
+  'effect': '효과',
 };

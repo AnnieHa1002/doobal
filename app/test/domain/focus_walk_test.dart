@@ -45,10 +45,12 @@ List<MinuteTravel> _split(
 
 void main() {
   group('규칙 (config bonus·coins)', () {
-    test('config.json 값 그대로: 1.3배·럭 2배·럭 단가 미정(null)·30초마다 저장', () {
+    test('config.json 값 그대로: 1.3배·럭 2배·1km당 10럭·하루 상한 400·첫 선물 100·30초마다 저장', () {
       expect(rules.bonusTravelMultiplier, 1.3);
       expect(rules.bonusCoinMultiplier, 2.0);
-      expect(rules.coinsPerKm, isNull);
+      expect(rules.coinsPerKm, 10);
+      expect(rules.coinsDailyCap, 400);
+      expect(rules.coinsWelcomeGift, 100);
       expect(rules.aliveSaveSec, 30);
     });
 
@@ -355,9 +357,14 @@ void main() {
           40);
     });
 
-    test('럭 단가가 null이면(기획 미정) 늘 0', () {
+    test('하루 상한을 넘으면 상한까지만 (config coins.dailyCap 400)', () {
+      expect(dailyCoins(const TravelTotals(actualM: 50000), r10), 400);
+      expect(dailyCoins(const TravelTotals(actualM: 39999), r10), 399);
+    });
+
+    test('럭 단가가 null이면 늘 0', () {
       final t = sumTravel(_split(_walk(15, 200), [AppWalkWindow(_at(0), _at(15))]));
-      expect(dailyCoins(t, rules), 0);
+      expect(dailyCoins(t, _rulesWith((j) => (j['coins'] as Map)['perKm'] = null)), 0);
     });
 
     test('보너스가 없는 날은 실제 km × 단가를 버림', () {
