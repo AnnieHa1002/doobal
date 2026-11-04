@@ -84,9 +84,9 @@ class PaintingFace extends StatelessWidget {
                         (box.maxWidth * MediaQuery.devicePixelRatioOf(context))
                             .ceil()
                             .clamp(1, 1536),
-                    semanticLabel: landmark.id == 'kr088'
-                        ? '${landmark.name}, 2025년 산불 이전 모습을 재구성한 그림'
-                        : landmark.name,
+                    semanticLabel: landmark.note == null
+                        ? landmark.name
+                        : '${landmark.name}, ${landmark.note}',
                     errorBuilder: (context, error, stackTrace) => const Center(
                       child: Icon(
                         Icons.landscape_outlined,

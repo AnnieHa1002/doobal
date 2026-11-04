@@ -13,6 +13,7 @@ import '../data/live_steps.dart';
 import '../data/local_notifications.dart';
 import '../data/map_loader.dart';
 import '../data/milestone_loader.dart';
+import '../data/moderation_loader.dart';
 import '../data/notice_loader.dart';
 import '../data/notification_permission.dart';
 import '../data/notifier.dart';
@@ -131,9 +132,15 @@ final stepFixOpensSettingsProvider = Provider<bool>((ref) => Platform.isIOS);
 final paintingSharerProvider =
     Provider<PaintingSharer>((ref) => const SharePlusPaintingSharer());
 
-/// 방명록 금칙어 중 혐오·성적 표현 목록. 첫 실행에는 앱에 넣은 시작 목록을 쓴다.
-/// TODO(M5): Firestore config/moderation에서 받은 목록으로 바꾼다
-final extraBlockedWordsProvider = Provider<List<String>>((ref) => starterWords);
+/// 방명록 금칙어 규칙 (assets/data/moderation.json).
+/// TODO(M5): Firestore config/moderation에서 받은 문서로 바꾼다
+final moderationProvider = FutureProvider<Moderation>((ref) => loadModeration());
+
+/// 금칙어 검사에서 빼는 이름: 명소와 시·군·구 (오탐 방지). 읽는 동안에는 비어 있다
+final moderationNamesProvider = Provider<List<String>>((ref) => [
+      ...?ref.watch(landmarksProvider).value?.map((l) => l.name),
+      ...?ref.watch(sigunguProvider).value?.map((s) => s.name),
+    ]);
 
 /// 앱이 같이 쓰는 flutter_local_notifications 플러그인 하나 (알림 권한, 걷는 중 상시 알림).
 /// 처음 쓸 때 한 번 초기화한다

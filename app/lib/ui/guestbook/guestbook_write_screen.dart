@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/guestbook.dart';
-import '../../domain/moderation.dart';
 import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
@@ -111,14 +110,10 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
   }
 
   Widget _form(GuestbookTicket ticket, int maxChars, {required bool showConsent}) {
-    // 명소 이름은 검사에서 뺀다 (오탐 방지). 목록을 읽는 동안에는 이름 없이 검사한다
-    final allowed =
-        ref.watch(landmarksProvider).value?.map((l) => l.name).toList() ?? const <String>[];
-    final blocked = isBlocked(
-      _controller.text,
-      extraWords: ref.watch(extraBlockedWordsProvider),
-      allowedNames: allowed,
-    );
+    // 규칙을 읽는 동안에는 막지 않는다 (서버가 다시 검사한다, M5)
+    final moderation = ref.watch(moderationProvider).value;
+    final names = ref.watch(moderationNamesProvider);
+    final blocked = moderation?.isBlocked(_controller.text, names: names) ?? false;
     final valid = cleanPost(_controller.text, maxChars) != null && !blocked;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -169,10 +164,10 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
                   children: [
                     Expanded(
                       child: blocked
-                          ? const Padding(
+                          ? Padding(
                               padding: EdgeInsets.only(left: 4),
                               child: Text(
-                                blockedMessage,
+                                moderation!.message,
                                 key: ValueKey('guestbook-blocked'),
                                 style: TextStyle(fontSize: 13, color: Palette.terracotta),
                               ),

@@ -107,6 +107,7 @@ class UiEnv {
         sigunguProvider.overrideWith((ref) => sigungu),
         hairSwatchesProvider.overrideWith((ref) => hairSwatches),
         lookPaletteProvider.overrideWith((ref) => lookPalette),
+        moderationProvider.overrideWith((ref) => moderation),
         dbProvider.overrideWithValue(db),
         stepSourceProvider.overrideWithValue(source),
         liveStepsProvider.overrideWithValue(live),

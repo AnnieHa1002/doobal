@@ -171,12 +171,12 @@ class _PaintingDetailScreenState extends ConsumerState<PaintingDetailScreen> {
           textAlign: TextAlign.center,
           style: context.display(22),
         ),
-        if (l.id == 'kr088') ...[
+        if (l.note case final note?) ...[
           const SizedBox(height: 8),
-          const Text(
-            '2025년 산불 이전 모습을 재구성한 그림이에요.',
+          Text(
+            note,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: Palette.subInk),
+            style: const TextStyle(fontSize: 13, color: Palette.subInk),
           ),
         ],
         const SizedBox(height: 4),

@@ -7,6 +7,7 @@ import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/look_palette.dart';
+import 'package:doobal/domain/moderation.dart';
 import 'package:doobal/domain/map_projection.dart';
 import 'package:doobal/domain/map_regions.dart';
 import 'package:doobal/domain/notification_policy.dart';
@@ -71,6 +72,11 @@ final List<HairSwatch> hairSwatches = parseHairSwatches(
 /// 실제 palette.json의 머리·피부 규칙 (견본, 기준 밝기, 직접 고르기 범위, 그러데이션 구간)
 final LookPalette lookPalette = LookPalette.fromJson(
   jsonDecode(File('assets/data/palette.json').readAsStringSync()) as Map<String, dynamic>,
+);
+
+/// 실제 moderation.json의 금칙어 규칙
+final Moderation moderation = Moderation.fromJson(
+  jsonDecode(File('assets/data/moderation.json').readAsStringSync()) as Map<String, dynamic>,
 );
 
 /// 실제 notifications.json의 알림 종류별 우선순위와 문구

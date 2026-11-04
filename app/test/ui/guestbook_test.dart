@@ -1,4 +1,3 @@
-import 'package:doobal/app/providers.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/guestbook.dart';
 import 'package:doobal/domain/landmark.dart';
@@ -349,12 +348,12 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('명소 이름은 검사에서 빠지고(허용 목록), 추가 목록의 낱말은 공백을 끼워도 걸린다', (tester) async {
-      // 패키지가 욕설로 보는 낱말("시발점")을 이름으로 가진 명소를 하나 더 둔다
+    testWidgets('명소 이름은 검사에서 빠지고(허용 목록), 띄어 쓴 금칙어는 공백을 끼워도 걸린다', (tester) async {
+      // 금칙어 규칙에 걸리는 낱말("시바")을 이름으로 가진 명소를 하나 더 둔다
       final first = landmarks.first;
       final trap = Landmark(
         id: 'kr900',
-        name: '시발점',
+        name: '시바우물',
         sido: first.sido,
         sigungu: first.sigungu,
         region: first.region,
@@ -367,19 +366,18 @@ void main() {
       );
       final e = UiEnv(appLandmarks: [...landmarks, trap]);
       await e.seed(tester, () => _putTicket(e, 'a:j1', TicketKind.arrival, 'kr001'));
-      await _openWrite(tester, e, 'a:j1',
-          extra: [extraBlockedWordsProvider.overrideWithValue(const ['나쁜말'])]);
+      await _openWrite(tester, e, 'a:j1');
 
-      await tester.enterText(_input, '시발점에서 출발해요');
+      await tester.enterText(_input, '시바우물에서 출발해요');
       await tester.pump();
       expect(_blocked, findsNothing);
       expect(_enabled(tester, '남기기'), isTrue);
 
-      await tester.enterText(_input, '시발점에서 시발');
+      await tester.enterText(_input, '시바우물에서 시발');
       await tester.pump();
       expect(_blocked, findsOneWidget);
 
-      await tester.enterText(_input, '그건 나 쁜-말이야');
+      await tester.enterText(_input, '그건 씨 .발이야');
       await tester.pump();
       expect(_blocked, findsOneWidget);
       expect(_enabled(tester, '남기기'), isFalse);

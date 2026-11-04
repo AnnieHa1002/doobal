@@ -14,6 +14,7 @@ class Landmark {
     required this.latLng,
     required this.island,
     required this.painting,
+    this.note,
   });
 
   final String id;
@@ -34,6 +35,9 @@ class Landmark {
   final Island island;
   final String painting;
 
+  /// 그림 설명 한 줄 (kr088 고운사 '산불 이전 모습'). 대부분 없다
+  final String? note;
+
   factory Landmark.fromJson(Map<String, dynamic> j) => Landmark(
         id: j['id'] as String,
         name: j['name'] as String,
@@ -46,6 +50,7 @@ class Landmark {
         latLng: LatLng((j['lat'] as num).toDouble(), (j['lng'] as num).toDouble()),
         island: Island.values.byName(j['island'] as String),
         painting: j['painting'] as String,
+        note: j['note'] as String?,
       );
 }
 

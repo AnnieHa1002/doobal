@@ -1153,7 +1153,7 @@ class SyncService {
   /// 기회가 없다 · 이미 썼다 · 닫혔다 · 글이 비었거나 길다.
   /// 걸음 숫자 기회는 동기화가 닫기 전이라도 열린 뒤 [now]까지 저장된 걸음이 창을 채웠으면
   /// 닫힌 것으로 본다 (이때는 닫힘 시각만 적어 둔다).
-  /// TODO(M5): 올리기 전에 금칙어를 검사한다 (config/moderation, korean_profanity_filter)
+  /// TODO(M5): 올리기 전에 금칙어를 검사한다 (config/moderation)
   Future<void> writeGuestbook(String ticketId, String text, DateTime now) async {
     final error = await db.transaction<String?>(() async {
       final row = await _ticketRow(ticketId);
