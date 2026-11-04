@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'format_int.dart';
+import 'sun.dart';
 
 // 길 위 이벤트 (M4 명세, events.json v3): 앱이 켜진 동안 걸은 2km마다 이정표 카드 2줄.
 // ① 기록 칭찬 ② 풍경 한 줄. 버튼·판정은 없고, 한 번 만든 줄은 다시 계산하지 않는다
@@ -105,6 +106,23 @@ const _conds = {
   'isNight',
   'totalKmGte',
 };
+
+/// 걷는 중 화면이 넘기는 이번 걷기의 실시간 값. 동기화 값에 더해 '오늘'·누적을 맞추는 데 쓴다
+class EventLive {
+  const EventLive({this.sessionKm = 0, this.runKm = 0, this.pendingSteps = 0, this.pendingM = 0});
+
+  /// 이번 걷기(걷는 중 화면에 들어온 뒤부터)의 거리(km)와 그중 달린 거리(km)
+  final double sessionKm;
+  final double runKm;
+
+  /// 센서는 셌는데 아직 동기화로 안 들어온 걸음과 거리(m)
+  final int pendingSteps;
+  final double pendingM;
+}
+
+/// [utc] 시각이 밤인가: 그 지점의 일출 전이거나 일몰 뒤
+bool isNightAt(DateTime utc, SunTimes sun) =>
+    utc.isBefore(sun.sunrise) || !utc.isBefore(sun.sunset);
 
 /// 이벤트가 생긴 순간의 기록. 칭찬 조건과 문구 빈칸이 읽는다.
 /// '이번'은 걷는 중 화면에 들어온 뒤부터, '오늘'·평균·누적은 동기화 값 + 아직 안 들어온 센서 값

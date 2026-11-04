@@ -116,6 +116,7 @@
  },
  "events": {
   "everyKm": 2,
+  "flushSec": 5,
   "propChance": 0.0,
   "propChanceAfterLaunch": 0.1,
   "distanceBasis": "actualForeground"

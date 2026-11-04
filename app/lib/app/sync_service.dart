@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import '../data/db/app_db.dart';
 import '../data/step_source.dart';
 import '../domain/arrival.dart';
+import '../domain/badge.dart';
 import '../domain/bucket.dart';
 import '../domain/eta.dart';
 import '../domain/focus_walk.dart';
@@ -18,11 +19,13 @@ import '../domain/laps.dart';
 import '../domain/notification_policy.dart';
 import '../domain/prop.dart';
 import '../domain/restore_floor.dart';
+import '../domain/road_event.dart';
 import '../domain/route.dart';
 import '../domain/rules.dart';
-import '../domain/scene.dart' show nearestLandmark;
+import '../domain/scene.dart' show nearestLandmark, seasonOf;
 import '../domain/session.dart';
 import '../domain/sketch.dart';
+import '../domain/sun.dart';
 import '../domain/time_kst.dart';
 import '../domain/walk_record.dart';
 import 'notification_service.dart';
@@ -36,6 +39,7 @@ class SyncReport {
     this.advancedKm = 0,
     this.notices = const [],
     this.newProps = const [],
+    this.newBadges = const [],
   });
 
   final int records;
@@ -55,6 +59,36 @@ class SyncReport {
 
   /// 이번 동기화에서 새로 얻어 토스트로 알릴 소품 (거리·걸음, [announcesProp]). props.json 순서
   final List<Prop> newProps;
+
+  /// 이번 동기화에서 새로 받은 도장 (badges.json 순서). 토스트·배낭 점으로 알린다
+  final List<Badge> newBadges;
+}
+
+/// 길 위 이벤트 한 줄을 화면에서 보는 값: 칭찬 한 줄과 풍경 한 줄 (2km 이정표 카드)
+class RoadEventView {
+  const RoadEventView({
+    required this.journeyId,
+    required this.k,
+    required this.terrain,
+    required this.season,
+    required this.night,
+    required this.praiseText,
+    required this.sceneText,
+    required this.at,
+  });
+
+  final String journeyId;
+
+  /// 여정 안에서 몇 번째 칸인가 (1부터)
+  final int k;
+  final String terrain;
+  final String season;
+  final bool night;
+
+  /// 빈칸을 채운 칭찬 문구 (만들 때 적어 둔 값)
+  final String praiseText;
+  final String sceneText;
+  final DateTime at;
 }
 
 /// 걷기 마치기 직후 걷기 기록 화면의 내용
@@ -354,6 +388,7 @@ class Snapshot {
     required this.pendingArrival,
     required this.unseenProps,
     required this.unseenPaintings,
+    this.unseenBadges = 0,
     required this.paintingsCount,
     required this.totalKm,
     required this.guestbookTicket,
@@ -390,6 +425,9 @@ class Snapshot {
 
   /// 배낭에 새 그림 표시를 띄울 개수 (처음 얻고 화집에서 아직 안 본 그림)
   final int unseenPaintings;
+
+  /// 배낭에 새 도장 표시를 띄울 개수 (받고 화집 도장 탭에서 아직 안 본 도장)
+  final int unseenBadges;
 
   /// 얻은 그림 수
   final int paintingsCount;
@@ -460,6 +498,8 @@ class SyncService {
     this.onLand = _anywhere,
     this.distanceScale = 1.0,
     this.notificationService,
+    this.eventCatalog,
+    this.badgeCatalog,
   }) : assert(distanceScale > 0);
 
   final AppDb db;
@@ -488,6 +528,18 @@ class SyncService {
   /// 동기화가 끝나면 새로 생긴 일을 넘겨 알림을 판단하는 곳. 없으면 알림 판단을 하지 않는다
   final NotificationService? notificationService;
 
+  /// 길 위 이벤트 문구 (events.json). 없으면 이벤트를 만들지 않는다
+  final EventCatalog? eventCatalog;
+
+  /// 도장 목록과 하늘 구간 (badges.json). 없으면 도장을 주지 않는다
+  final BadgeCatalog? badgeCatalog;
+
+  final _newBadges = StreamController<List<Badge>>.broadcast();
+
+  /// 어느 화면에서 동기화했든 새로 받은 도장이 있으면 흘려보낸다 ([SyncReport.newBadges], 이벤트로 받은 것도).
+  /// AutoSync가 듣고 토스트를 띄우고, 걷는 중 화면은 걸음 알약 아래 작은 줄로 보인다
+  Stream<List<Badge>> get newBadges => _newBadges.stream;
+
   final _newProps = StreamController<List<Prop>>.broadcast();
 
   /// 어느 화면에서 동기화했든 새로 얻은 소품([SyncReport.newProps])이 있으면 흘려보낸다.
@@ -514,6 +566,7 @@ class SyncService {
     var advancedKm = 0.0;
     final candidates = <NoticeCandidate>[];
     var newProps = <Prop>[];
+    var newBadges = <Badge>[];
     await db.transaction(() async {
       final activeBefore = await _activeJourney();
       final progressBefore = await _progressOf(activeBefore, to);
@@ -528,6 +581,7 @@ class SyncService {
       await _recomputeDays(kstDayKey(from), kstDayKey(to), state.restoreFloorDay, to);
       await _advanceJourney(to);
       newProps = await _unlockProps(to);
+      newBadges = await _awardBadges(to);
       final newMilestones = await _updateGuestbookTickets(to);
       await (db.update(db.syncState)..where((t) => t.id.equals(1)))
           .write(SyncStateCompanion(lastFetchedUtc: Value(to.millisecondsSinceEpoch)));
@@ -564,7 +618,9 @@ class SyncService {
     });
     await notificationService?.afterSync(candidates, to);
     if (newProps.isNotEmpty) _newProps.add(newProps);
-    return _report(raw, kept, advancedKm: advancedKm, notices: candidates, newProps: newProps);
+    if (newBadges.isNotEmpty) _newBadges.add(newBadges);
+    return _report(raw, kept,
+        advancedKm: advancedKm, notices: candidates, newProps: newProps, newBadges: newBadges);
   }
 
   /// 저장하지 않고 출처만 본다 (허용 목록을 정할 때)
@@ -796,6 +852,307 @@ class SyncService {
         if (earned.contains(p.id) && !owned.contains(p.id) && announcesProp(p)) p,
     ];
   }
+
+  // 길 위 이벤트와 도장 (M4)
+
+  /// 앱이 켜져 있는 동안 센서 걸음 × 보폭으로 센 실제 걸은 거리 [deltaM](m)를 진행 중인 여정의
+  /// `eventM`에 더하고, 2km 칸(config events.everyKm)을 새로 넘었으면 그 자리에서 이벤트 줄을 만든다.
+  /// 새로 만든 줄을 칸 순서대로 돌려준다 (칸을 못 넘었거나 여정이 없으면 빈 목록).
+  /// - 진행 거리와는 따로 센다. 경비로 더한 거리·배 환산·앱 밖에서 걸은 걸음·화면이 꺼진 동안 따라잡은
+  ///   센서 걸음은 부르는 쪽이 넣지 않는다 (LiveWalk.foregroundM). 이 메서드는 동기화를 하지 않는다.
+  /// - 줄은 (여정, k)당 하나다. 한 번 만들면 다시 계산하지 않고, 같은 칸을 다시 넘어도 늘지 않는다.
+  /// - 첫 여정 '내 동네 스케치'에는 만들지 않는다 (거리를 더하지도 않는다).
+  /// - 문구는 시드 hash(설치 번호, 여정, k)로 고르고 같은 묶음에서 직전 문구는 뺀다 ([pickRoadEvent]).
+  /// - 풍경은 지금 지점에서 가장 가까운 명소의 지형, 한국 날짜의 계절, 지금 시각과 그 지점의 일출·일몰.
+  ///   진행률·남은 거리·지점은 마지막 동기화 값이다 (걷는 중 화면의 진행 줄과 같다).
+  ///   '이번'은 [live]의 걷는 중 화면 값, '오늘'·누적은 동기화 값 + 아직 안 들어온 센서 값([EventLive.pendingSteps]·pendingM).
+  /// - 줄을 만들었으면 같은 자리에서 도장도 판정한다 (지형 이벤트 도장). 새 도장은 [newBadges]로 알린다.
+  /// - 앱이 꺼지면 아직 안 넘긴 거리는 잃는다 (앱 밖에서 걸은 거리는 이벤트가 없다, 명세)
+  Future<List<RoadEventView>> addEventDistance(
+    double deltaM,
+    DateTime now, [
+    EventLive live = const EventLive(),
+  ]) async {
+    final catalog = eventCatalog;
+    if (catalog == null || !(deltaM > 0)) return const [];
+    var badges = <Badge>[];
+    final made = await db.transaction(() async {
+      final active = await _activeJourney();
+      if (active == null || active.destId == sketchId) return <RoadEventView>[];
+      final eventM = active.eventM + deltaM;
+      await (db.update(db.journeys)..where((t) => t.id.equals(active.id)))
+          .write(JourneysCompanion(eventM: Value(eventM)));
+      var last = await (db.select(db.journeyEvents)
+            ..where((t) => t.journeyId.equals(active.id))
+            ..orderBy([(t) => OrderingTerm.desc(t.k)])
+            ..limit(1))
+          .getSingleOrNull();
+      final slots =
+          newEventSlots(eventM: eventM, everyKm: rules.eventEveryKm, doneK: last?.k ?? 0);
+      if (slots.isEmpty) return <RoadEventView>[];
+      // TODO(M4 동행): 첫 실제 여정(스케치 다음 여정)의 k=1은 동행 첫 만남이 대신한다. 동행이 생기면
+      // 그 칸은 이벤트 대신 만남으로 보낸다. 지금은 다른 칸과 같은 이벤트로 둔다
+
+      final state = await _ensureState(now);
+      final today = kstDayKey(now);
+      final days = await db.select(db.daySummaries).get();
+      final dayRow = days.where((d) => d.day == today).firstOrNull;
+      final here = await _whereNow(active, now);
+      final prog = here.progress!;
+      final position = here.position!;
+      final dest = _destOf(active);
+      final terrain = nearestLandmark(position, _landmarkList, rules.earthRadiusKm).terrain;
+      final season = seasonOf(today, rules).name;
+      final night = isNightAt(now.toUtc(), sunTimes(position, today, rules.sunZenithDeg));
+
+      final eta = _etaOf(prog.remainingKm, days, today, state);
+      final etaWithout = _etaOf(prog.remainingKm + live.sessionKm, days, today, state);
+      final todayKm = ((dayRow?.distanceM ?? 0) + live.pendingM) / 1000;
+      final total = here.journey!.route.totalEffectiveKm;
+      final installId = (await _profileRow())?.installId ?? '';
+      final journeyKey = eventSeed(active.id);
+
+      // 첫 칸의 '지난 이벤트 때 진행률'은 이 여정을 시작할 때의 진행률 (경비로 이미 간 만큼)
+      var lastPct = total <= 0 ? 100.0 : (active.fundKm / total * 100).clamp(0.0, 100.0);
+      if (last != null) lastPct = last.progressPct;
+      final views = <RoadEventView>[];
+      for (final k in slots) {
+        final pct = prog.ratio * 100;
+        final pick = pickRoadEvent(
+          catalog: catalog,
+          installId: installId,
+          journeyId: journeyKey,
+          k: k,
+          terrain: terrain,
+          season: season,
+          night: night,
+          lastSceneTextId: last?.sceneTextId,
+          lastPraiseId: last?.praiseId,
+          facts: PraiseFacts(
+            dest: dest.name,
+            remainingKm: prog.remainingKm,
+            progressPct: pct,
+            lastProgressPct: lastPct,
+            etaGainDays: math.max(0, etaWithout.difference(eta).inDays),
+            todayOverAvgKm: _overAvgKm(days, today, state, todayKm),
+            runKm: live.runKm,
+            todaySteps: (dayRow?.steps ?? 0) + live.pendingSteps,
+            sessionKm: live.sessionKm,
+            totalKm: days.fold(0.0, (sum, d) => sum + d.distanceM) / 1000 + live.pendingM / 1000,
+            night: night,
+          ),
+        );
+        final at = now.toUtc().millisecondsSinceEpoch;
+        final row = JourneyEventRow(
+          journeyId: active.id,
+          k: k,
+          terrain: terrain,
+          season: season,
+          night: night,
+          sceneTextId: pick.sceneTextId,
+          praiseId: pick.praiseId,
+          praiseText: pick.praiseText,
+          progressPct: pct,
+          atUtc: at,
+        );
+        // 같은 칸이 이미 있으면(겹쳐 불렀을 때) 만들지 않는다 (한 번 만든 줄은 다시 계산하지 않는다)
+        final inserted = await db
+            .into(db.journeyEvents)
+            .insert(row, mode: InsertMode.insertOrIgnore);
+        if (inserted == 0) continue;
+        last = row;
+        lastPct = pct;
+        views.add(RoadEventView(
+          journeyId: active.id,
+          k: k,
+          terrain: terrain,
+          season: season,
+          night: night,
+          praiseText: pick.praiseText,
+          sceneText: pick.sceneText,
+          at: _utc(at),
+        ));
+      }
+      if (views.isNotEmpty) badges = await _awardBadges(now);
+      return views;
+    });
+    if (badges.isNotEmpty) _newBadges.add(badges);
+    return made;
+  }
+
+  /// 최근 하루 평균(첫 기록일부터 어제까지 최대 etaWindowDays일, 실제 거리)보다 오늘 [todayKm]가 얼마나 많은가.
+  /// 기록이 아직 하루도 안 쌓였거나 평균이 0이면 0 (칭찬 R04가 근거 없이 뜨지 않게)
+  double _overAvgKm(List<DaySummaryRow> days, String today, SyncStateRow state, double todayKm) {
+    final completed = dayFromKey(today).difference(dayFromKey(state.firstRecordDay)).inDays;
+    final n = completed.clamp(0, rules.etaWindowDays).toInt();
+    if (n == 0) return 0;
+    final byDay = {for (final d in days) d.day: d.distanceM / 1000};
+    var sum = 0.0;
+    for (var i = 1; i <= n; i++) {
+      sum += byDay[addDays(today, -i)] ?? 0;
+    }
+    return sum <= 0 ? 0 : todayKm - sum / n;
+  }
+
+  /// 그 걷기 시간대 [fromUtc, toUtc]에 만든 이벤트 줄을 시간 순서로 (걷기 기록 다시 보기).
+  /// 풍경 문구는 events.json에서 id로 찾고, 찾지 못한 줄(문구가 바뀐 옛 데이터)은 뺀다
+  Future<List<RoadEventView>> eventsBetween(DateTime fromUtc, DateTime toUtc) async {
+    final catalog = eventCatalog;
+    if (catalog == null) return const [];
+    final rows = await (db.select(db.journeyEvents)
+          ..where((t) =>
+              t.atUtc.isBiggerOrEqualValue(fromUtc.toUtc().millisecondsSinceEpoch) &
+              t.atUtc.isSmallerOrEqualValue(toUtc.toUtc().millisecondsSinceEpoch))
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.atUtc),
+            (t) => OrderingTerm(expression: t.k),
+          ]))
+        .get();
+    final views = <RoadEventView>[];
+    for (final r in rows) {
+      final scene = catalog.scenes
+          .where((s) => s.terrain == r.terrain && s.season == r.season && s.night == r.night)
+          .firstOrNull;
+      final sceneText = scene?.texts[r.sceneTextId];
+      if (sceneText == null) continue;
+      views.add(RoadEventView(
+        journeyId: r.journeyId,
+        k: r.k,
+        terrain: r.terrain,
+        season: r.season,
+        night: r.night,
+        praiseText: r.praiseText,
+        sceneText: sceneText,
+        at: _utc(r.atUtc),
+      ));
+    }
+    return views;
+  }
+
+  /// 받은 도장 id → 받은 시각 (화집 도장 탭)
+  Future<Map<String, DateTime>> ownedBadges() async =>
+      {for (final r in await db.select(db.badgesOwned).get()) r.badgeId: _utc(r.atUtc)};
+
+  /// 배낭의 새 도장 표시를 지운다
+  Future<void> markBadgesSeen() => (db.update(db.badgesOwned)..where((t) => t.seen.equals(false)))
+      .write(const BadgesOwnedCompanion(seen: Value(true)));
+
+  /// 새로 받은 도장을 더한다 (한 번 받은 도장은 없어지지 않는다, 같은 기록으로 다시 돌려도 늘지 않는다).
+  /// 조건은 로컬 DB만으로 판정한다. 새로 받은 도장을 badges.json 순서로 돌려준다
+  Future<List<Badge>> _awardBadges(DateTime now) async {
+    final catalog = badgeCatalog;
+    if (catalog == null) return const [];
+    final owned = {for (final r in await db.select(db.badgesOwned).get()) r.badgeId};
+    final pending = [
+      for (final b in catalog.badges)
+        if (!owned.contains(b.id)) b,
+    ];
+    if (pending.isEmpty) return const [];
+    final facts = await _badgeFacts(catalog, pending, now);
+    final fresh = [
+      for (final b in pending)
+        if (badgeMet(b.cond, facts)) b,
+    ];
+    final at = now.toUtc().millisecondsSinceEpoch;
+    await db.batch((b) => b.insertAll(db.badgesOwned, [
+          for (final badge in fresh)
+            BadgesOwnedCompanion.insert(badgeId: badge.id, atUtc: at),
+        ]));
+    return fresh;
+  }
+
+  /// 도장 조건이 읽는 기록. 거리는 실제 + 본격 걷기 보너스(상점 효과 제외),
+  /// 걷기 1번 횟수·시간대·계절은 인정된 걷기 1번(counted)으로 센다.
+  /// 시간대는 걷기 1번을 한 지점을 몰라서 출발 동네 좌표로 근사한다 (출발 동네가 없으면 세지 않는다).
+  /// 동행은 아직 없어서 companionsMet·finaleCount는 0이다. 안 받은 도장([pending])이 읽는 값만 계산한다
+  Future<BadgeFacts> _badgeFacts(BadgeCatalog catalog, List<Badge> pending, DateTime now) async {
+    bool needs(String kind) => pending.any((b) => b.cond['kind'] == kind);
+
+    final days = await db.select(db.daySummaries).get();
+    final sessions = await db.select(db.walkSessions).get();
+    final counted = [for (final s in sessions) if (s.counted) s];
+
+    var bestSessionKm = 0.0;
+    for (final s in sessions) {
+      if (s.qualified) bestSessionKm = math.max(bestSessionKm, (s.distanceM + s.bonusM) / 1000);
+    }
+
+    // 하루 걸음: 최고 기록, count가 붙은 조건이면 그 기준을 넘긴 날 수
+    final dayStepsCounts = <int, int>{};
+    for (final b in pending) {
+      if (b.cond['kind'] != 'dayStepsGte' || b.cond['count'] == null) continue;
+      final steps = (b.cond['steps'] as num).toInt();
+      dayStepsCounts[steps] = days.where((d) => d.steps >= steps).length;
+    }
+
+    final walksInPhase = <String, int>{};
+    final home = needs('walkInPhase') ? await this.home() : null;
+    if (home != null) {
+      for (final s in counted) {
+        final phase =
+            walkPhase(_utc(s.startUtc), home.latLng, catalog.phases, rules.sunZenithDeg);
+        if (phase != null) walksInPhase[phase] = (walksInPhase[phase] ?? 0) + 1;
+      }
+    }
+
+    final terrainEvents = <String, int>{};
+    if (needs('terrainEvents')) {
+      for (final e in await db.select(db.journeyEvents).get()) {
+        terrainEvents[e.terrain] = (terrainEvents[e.terrain] ?? 0) + 1;
+      }
+    }
+
+    var arrivalCount = 0;
+    var seaCrossed = false;
+    var bestJourneyKm = 0.0;
+    final checkSea = needs('seaCrossed');
+    for (final r in await db.select(db.journeys).get()) {
+      final sketch = r.destId == sketchId;
+      switch (r.status) {
+        case JourneyStatus.arrived:
+          if (!sketch) arrivalCount++;
+          bestJourneyKm = math.max(bestJourneyKm, r.totalEffectiveKm);
+          if (checkSea && !sketch) seaCrossed |= _hasSea(_toJourney(r).route);
+        case JourneyStatus.stopped:
+          // 멈춘 지점까지의 경로 (끝이 안 적힌 옛 기록은 건너뛴다)
+          if (r.endLat == null || r.endLng == null) break;
+          final route = buildRoute(LatLng(r.originLat, r.originLng),
+              LatLng(r.endLat!, r.endLng!), rules);
+          bestJourneyKm = math.max(bestJourneyKm, route.totalEffectiveKm);
+          if (checkSea) seaCrossed |= _hasSea(route);
+        case JourneyStatus.active:
+          final here = await _whereNow(r, now);
+          final prog = here.progress!;
+          bestJourneyKm = math.max(bestJourneyKm, prog.progressKm);
+          if (checkSea) {
+            // 지금 지점이 놓인 다리까지 중에 배 구간이 있으면 건넌(건너는) 것이다
+            final leg = positionAt(here.journey!.route, prog.progressKm).legIndex;
+            seaCrossed |= here.journey!.route.legs.take(leg + 1).any((l) => l.kind == LegKind.sea);
+          }
+      }
+    }
+
+    return BadgeFacts(
+      sessionsCount: counted.length,
+      bestSessionKm: bestSessionKm,
+      dayStepsBest: days.fold(0, (best, d) => math.max(best, d.steps)),
+      dayStepsCounts: dayStepsCounts,
+      walksInPhase: walksInPhase,
+      terrainEvents: terrainEvents,
+      seasonsWalked: {
+        for (final s in counted) seasonOf(kstDayKey(_utc(s.startUtc)), rules).name,
+      },
+      arrivalCount: arrivalCount,
+      seaCrossed: seaCrossed,
+      frames: {
+        for (final p in await db.select(db.paintingsOwned).get())
+          if (p.landmarkId != sketchId) p.frame.name,
+      },
+      bestJourneyKm: bestJourneyKm,
+    );
+  }
+
+  bool _hasSea(TravelRoute route) => route.legs.any((l) => l.kind == LegKind.sea);
 
   /// 도착한 여정의 방명록 기회를 연다. 열린 시각은 도착을 감지한 시각이다. 이미 있으면 그대로
   Future<void> _openArrivalTicket(String journeyId, String scope, int at) =>
@@ -1384,6 +1741,8 @@ class SyncService {
           .length,
       unseenPaintings:
           (await (db.select(db.paintingsOwned)..where((t) => t.seen.equals(false))).get()).length,
+      unseenBadges:
+          (await (db.select(db.badgesOwned)..where((t) => t.seen.equals(false))).get()).length,
       paintingsCount: (await db.select(db.paintingsOwned).get()).length,
       totalKm: days.fold(0.0, (sum, d) => sum + d.distanceM) / 1000,
       guestbookTicket: (await openTickets(now)).firstOrNull,
@@ -1841,13 +2200,14 @@ class SyncService {
     double advancedKm = 0,
     List<NoticeCandidate> notices = const [],
     List<Prop> newProps = const [],
+    List<Badge> newBadges = const [],
   }) {
     final bySource = <String, int>{};
     for (final r in raw) {
       bySource[r.sourceId] = (bySource[r.sourceId] ?? 0) + r.steps;
     }
     return SyncReport(raw.length, raw.length - kept.length, bySource,
-        advancedKm: advancedKm, notices: notices, newProps: newProps);
+        advancedKm: advancedKm, notices: notices, newProps: newProps, newBadges: newBadges);
   }
 }
 

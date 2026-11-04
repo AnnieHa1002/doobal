@@ -26,6 +26,7 @@ class LiveWalk {
   int? _last;
   var _steps = 0;
   var _distanceM = 0.0;
+  var _foregroundM = 0.0;
   var _gait = Gait.walk;
   DateTime? _lastStepAt;
   final _gains = <_Gain>[];
@@ -45,6 +46,10 @@ class LiveWalk {
 
   /// 늘어난 걸음 × 그때의 보폭을 쌓은 거리(m)
   double get distanceM => _distanceM;
+
+  /// [distanceM] 중 앱이 앞에 있는 동안 센 걸음의 거리(m). 숨어 있던 동안 따라잡은 걸음은 뺀다
+  /// (길 위 이벤트의 칸 기준, 앱 밖에서 걸은 거리는 이벤트가 없다)
+  double get foregroundM => _foregroundM;
 
   /// 센 걸음을 분(UTC epoch 분)·걷기/뛰기별로 쌓은 목록, 분 순서(같은 분이면 걷기가 먼저).
   /// 증가분의 보폭을 정한 걷기/뛰기로 나눠 담아서, 한 분 안에서 걷기/뛰기가 바뀌면 그 분이 두 번 나온다
@@ -93,7 +98,9 @@ class LiveWalk {
     _gait = judgeGait(stepsPerMin(at), _gait, rules);
     _buckets.update((epochMinute(at), _gait), (n) => n + gain, ifAbsent: () => gain);
     _steps += gain;
-    _distanceM += gain * strideM(_gait, rules);
+    final m = gain * strideM(_gait, rules);
+    _distanceM += m;
+    _foregroundM += m;
   }
 
   /// 숨어 있는 동안 [LiveWalk]에 먹이지 않고 센서 값 [total]만 본 때의 걸음 수 (알림에 쓰는 미리보기):

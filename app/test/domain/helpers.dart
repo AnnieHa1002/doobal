@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:doobal/domain/badge.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/camp_theme.dart';
 import 'package:doobal/domain/geo.dart';
@@ -10,6 +11,7 @@ import 'package:doobal/domain/map_projection.dart';
 import 'package:doobal/domain/map_regions.dart';
 import 'package:doobal/domain/notification_policy.dart';
 import 'package:doobal/domain/prop.dart';
+import 'package:doobal/domain/road_event.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/sigungu.dart';
 import 'package:doobal/domain/spirit_palette.dart';
@@ -42,6 +44,16 @@ final List<Prop> props = parseProps(
 final List<int> milestones = ((jsonDecode(File('assets/data/milestones.json').readAsStringSync())
         as Map<String, dynamic>)['stepMilestones'] as List)
     .cast<int>();
+
+/// 실제 events.json (길 위 이벤트 풍경·칭찬 문구)
+final EventCatalog eventCatalog = EventCatalog.fromJson(
+  jsonDecode(File('assets/data/events.json').readAsStringSync()) as Map<String, dynamic>,
+);
+
+/// 실제 badges.json (도장 20개와 하늘 구간)
+final BadgeCatalog badgeCatalog = BadgeCatalog.fromJson(
+  jsonDecode(File('assets/data/badges.json').readAsStringSync()) as Map<String, dynamic>,
+);
 
 /// 실제 themes/camp.json
 final CampTheme campTheme = CampTheme.fromJson(

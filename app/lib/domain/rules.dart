@@ -160,6 +160,8 @@ class Rules {
     required this.notificationInactiveDeferHour,
     required this.guestbookMaxChars,
     required this.guestbookWindowSteps,
+    required this.eventEveryKm,
+    required this.eventFlushSec,
     required this.backupMinIntervalMin,
     required this.backupMaxChars,
     required this.allowedSourcesIos,
@@ -303,6 +305,12 @@ class Rules {
   final int guestbookMaxChars;
   final int guestbookWindowSteps;
 
+  /// 길 위 이벤트가 한 칸 열리는 앱이 켜진 동안의 거리(km) (config events.everyKm)
+  final double eventEveryKm;
+
+  /// 걷는 중 화면이 센서로 센 거리를 이벤트 계산에 넘기는 간격(초) (config events.flushSec)
+  final int eventFlushSec;
+
   /// 자동 백업은 마지막 백업 뒤 이 시간(분) 안에는 다시 하지 않는다 (config backup.minIntervalMin).
   /// 백업 문자열(base64)의 글자 수 상한은 서버 문서 한도(1MiB)에서 필드 이름 같은 여유를 뺀 값이다
   /// (config backup.maxChars)
@@ -344,6 +352,7 @@ class Rules {
     final notifications = j['notifications'] as Map<String, dynamic>;
     final guestbook = j['guestbook'] as Map<String, dynamic>;
     final backup = j['backup'] as Map<String, dynamic>;
+    final events = j['events'] as Map<String, dynamic>;
     final sources = j['allowedSources'] as Map<String, dynamic>;
     final tap = (j['character'] as Map<String, dynamic>)['tapReaction'] as Map<String, dynamic>;
     final tapAngry = tap['angry'] as Map<String, dynamic>;
@@ -496,6 +505,8 @@ class Rules {
       notificationInactiveDeferHour: notifications['inactiveDeferHour'] as int,
       guestbookMaxChars: guestbook['maxChars'] as int,
       guestbookWindowSteps: guestbook['milestoneWindowSteps'] as int,
+      eventEveryKm: _d(events['everyKm']),
+      eventFlushSec: events['flushSec'] as int,
       backupMinIntervalMin: backup['minIntervalMin'] as int,
       backupMaxChars: backup['maxChars'] as int,
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),

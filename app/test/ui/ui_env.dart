@@ -67,6 +67,8 @@ class UiEnv {
       landmarks: byId,
       props: props,
       milestones: milestones,
+      eventCatalog: eventCatalog,
+      badgeCatalog: badgeCatalog,
     );
   }
 
@@ -97,6 +99,8 @@ class UiEnv {
         landmarksProvider.overrideWith((ref) => appLandmarks),
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
+        eventCatalogProvider.overrideWith((ref) => eventCatalog),
+        badgeCatalogProvider.overrideWith((ref) => badgeCatalog),
         noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
         systemNotifierProvider.overrideWithValue(notifier),
         appSettingsOpenerProvider.overrideWithValue(appSettings),

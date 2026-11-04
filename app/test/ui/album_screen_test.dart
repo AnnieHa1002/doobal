@@ -68,6 +68,8 @@ Future<void> _walk11km(UiEnv e) async {
   e.now = t1.add(const Duration(hours: 5));
   await e.svc.sync(e.now);
   await e.svc.finishAppWalk(id, t1.add(const Duration(minutes: 160)));
+  // 이 걷기로 도장도 받지만 소품 점만 보는 시험이라 도장은 본 것으로 둔다
+  await e.svc.markBadgesSeen();
 }
 
 void main() {

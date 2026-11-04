@@ -30,6 +30,10 @@ class WalkingHud extends StatefulWidget {
     required this.nextMilestone,
     required this.onFinish,
     this.focusBadge,
+    this.event,
+    this.eventKm = 2,
+    this.onCloseEvent,
+    this.badgeLine,
   });
 
   final Rules rules;
@@ -51,6 +55,14 @@ class WalkingHud extends StatefulWidget {
   /// 본격 걷기 중일 때 걸음 알약에 붙는 배수 글(`×1.3`). 아니면 null
   final String? focusBadge;
 
+  /// 지금 보여 줄 길 위 이벤트 카드(2km 이정표)와 그 칸의 크기(km, config events.everyKm). 없으면 null
+  final RoadEventView? event;
+  final double eventKm;
+  final VoidCallback? onCloseEvent;
+
+  /// 걸음 알약 아래 작은 줄: 새 도장 문구. 없으면 null
+  final String? badgeLine;
+
   @override
   State<WalkingHud> createState() => _WalkingHudState();
 }
@@ -71,6 +83,10 @@ abstract final class HudMetrics {
   static const finishHeight = 44.0;
   static const bottomGap = 16.0;
   static const collapseAfter = Duration(seconds: 8);
+
+  /// 이정표 카드가 떠 있는 시간과 새 도장 줄이 떠 있는 시간 (몇 초 뒤 사라진다)
+  static var eventCardFor = const Duration(seconds: 7);
+  static var badgeLineFor = const Duration(seconds: 4);
 }
 
 class _WalkingHudState extends State<WalkingHud> {
@@ -121,6 +137,11 @@ class _WalkingHudState extends State<WalkingHud> {
                 badge: widget.focusBadge,
                 onTap: _toggle,
               ),
+              if (widget.badgeLine != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: _BadgeLine(widget.badgeLine!),
+                ),
               AnimatedSize(
                 duration: const Duration(milliseconds: 150),
                 alignment: Alignment.topLeft,
@@ -131,6 +152,15 @@ class _WalkingHudState extends State<WalkingHud> {
                       )
                     : const SizedBox(width: double.infinity),
               ),
+              if (widget.event != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: MilestoneCard(
+                    event: widget.event!,
+                    everyKm: widget.eventKm,
+                    onClose: widget.onCloseEvent,
+                  ),
+                ),
             ],
           ),
         ),
@@ -374,6 +404,98 @@ class FinishPill extends StatelessWidget {
             '걷기 마치기',
             style: context.display(15),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 새 도장을 받았을 때 걸음 알약 아래에 잠깐 뜨는 작은 줄 (캔버스 Walk의 도장 줄).
+/// 카드색 92% + 잉크 1.4 선, 앞에 테라코타 체크 원
+class _BadgeLine extends StatelessWidget {
+  const _BadgeLine(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        key: const Key('walk-badge-line'),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Palette.card.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Palette.ink, width: InkLine.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle_outline, size: 20, color: Palette.terracotta),
+            const SizedBox(width: 8),
+            Flexible(child: Text(text, style: const TextStyle(fontSize: 13, color: Palette.ink))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 길 위 이벤트 카드 `2km 이정표` (UI 명세, 캔버스 Walk): 위 줄 기록 칭찬, 아래 줄 풍경 한 줄.
+/// 버튼·판정 없음. 몇 초 뒤 걷는 중 화면이 치우고, 위 접기 버튼으로 바로 접을 수도 있다.
+/// 칸 크기는 config라 제목의 km는 [everyKm]에서 읽는다
+class MilestoneCard extends StatelessWidget {
+  const MilestoneCard({super.key, required this.event, required this.everyKm, this.onClose});
+
+  final RoadEventView event;
+  final double everyKm;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final km = everyKm == everyKm.roundToDouble() ? '${everyKm.round()}' : '$everyKm';
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        key: const Key('walk-event-card'),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: Palette.card,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Palette.ink, width: InkLine.panel),
+          boxShadow: const [BoxShadow(color: Palette.shadow, offset: Offset(0, InkLine.shadow))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.flag_outlined, size: 22, color: Palette.ink),
+                const SizedBox(width: 8),
+                Expanded(child: Text('${km}km 이정표', style: context.display(17))),
+                GestureDetector(
+                  key: const Key('walk-event-close'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onClose,
+                  child: const SizedBox(
+                    width: 44,
+                    height: 24,
+                    child: Icon(Icons.keyboard_arrow_up, size: 22, color: Palette.subInk),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(event.praiseText,
+                key: const Key('walk-event-praise'),
+                style: const TextStyle(fontSize: 15, height: 1.45, color: Palette.ink)),
+            const SizedBox(height: 8),
+            Text(event.sceneText,
+                key: const Key('walk-event-scene'),
+                style: const TextStyle(fontSize: 14, height: 1.45, color: Palette.subInk)),
+          ],
         ),
       ),
     );

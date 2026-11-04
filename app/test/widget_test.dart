@@ -25,6 +25,8 @@ void main() {
         landmarksProvider.overrideWith((ref) => landmarks),
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
+        eventCatalogProvider.overrideWith((ref) => eventCatalog),
+        badgeCatalogProvider.overrideWith((ref) => badgeCatalog),
         noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
         campThemeProvider.overrideWith((ref) => campTheme),
         // 동기화 서비스가 지도 경계로 땅을 판정해서 지도도 필요하다
@@ -81,6 +83,8 @@ void main() {
         landmarksProvider.overrideWith((ref) => landmarks),
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
+        eventCatalogProvider.overrideWith((ref) => eventCatalog),
+        badgeCatalogProvider.overrideWith((ref) => badgeCatalog),
         noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
         campThemeProvider.overrideWith((ref) => campTheme),
         // 동기화 서비스가 지도 경계로 땅을 판정해서 지도도 필요하다
@@ -136,6 +140,8 @@ void main() {
         landmarksProvider.overrideWith((ref) => landmarks),
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
+        eventCatalogProvider.overrideWith((ref) => eventCatalog),
+        badgeCatalogProvider.overrideWith((ref) => badgeCatalog),
         noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
         campThemeProvider.overrideWith((ref) => campTheme),
         mapProjectionProvider.overrideWith((ref) => mapProjection),

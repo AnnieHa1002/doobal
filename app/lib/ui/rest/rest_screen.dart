@@ -51,8 +51,9 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     super.dispose();
   }
 
-  /// 아직 안 본 소품이나 그림이 있는가 (배낭의 알림 점)
-  bool _hasNew(Snapshot snap) => snap.unseenProps > 0 || snap.unseenPaintings > 0;
+  /// 아직 안 본 소품·그림·도장이 있는가 (배낭의 알림 점)
+  bool _hasNew(Snapshot snap) =>
+      snap.unseenProps > 0 || snap.unseenPaintings > 0 || snap.unseenBadges > 0;
 
   /// 흔들 수 있는 물건과 그 중 알림 점이 있는 물건 (화면에 서 있는 것만)
   ({List<String> all, Set<String> notice}) _wigglePool() {
