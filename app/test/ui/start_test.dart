@@ -446,20 +446,18 @@ void main() {
       await _arrive(tester, HomePickScreen);
     }
 
-    testWidgets('처음에는 이정표 "출발 동네", 시·도 칩 16개, 안내, 꺼진 버튼', (tester) async {
+    testWidgets('처음에는 이정표 "출발 동네 고르기", 시·도 칩 16개, 첫 시·도의 칸, 안내, 꺼진 버튼', (tester) async {
       final e = UiEnv();
       await openHome(tester, e);
 
       expect(sidos, hasLength(16));
-      for (final s in sidos) {
-        expect(find.text(s), findsOneWidget, reason: '칩 $s');
-      }
-      expect(find.text('출발 동네'), findsOneWidget);
+      expect(find.text('출발 동네 고르기'), findsOneWidget);
+      expect(find.text('어디서 출발할까요?'), findsOneWidget);
       expect(find.text('동네 이름으로 찾기'), findsOneWidget);
-      expect(find.text('지금 사는 곳이 아니어도 괜찮아요. 위치 정보는 쓰지 않아요'), findsOneWidget);
-      expect(_enabled(tester, '여기서 출발'), isFalse);
-      // 시·도를 안 골랐으니 목록은 없다
-      expect(find.byKey(const ValueKey('sigungu-11110')), findsNothing);
+      expect(find.text('위치 정보는 쓰지 않아요.'), findsOneWidget);
+      expect(_enabled(tester, '동네를 골라 주세요'), isFalse);
+      // 첫 시·도가 처음부터 골라져 있다
+      expect(find.byKey(const ValueKey('sigungu-11110')), findsOneWidget);
       await end(tester, e);
     });
 
@@ -476,15 +474,12 @@ void main() {
       expect(find.text('수원시'), findsNothing);
 
       // 다른 칩을 누르면 그 시·도로 바뀐다
+      await tester.ensureVisible(find.text('경기'));
+      await tester.pump();
       await tester.tap(find.text('경기'));
       await tester.pump();
       expect(find.text('수원시'), findsOneWidget);
       expect(find.text('종로구'), findsNothing);
-
-      // 같은 칩을 다시 누르면 목록이 닫힌다
-      await tester.tap(find.text('경기'));
-      await tester.pump();
-      expect(find.text('수원시'), findsNothing);
       await end(tester, e);
     });
 
@@ -499,16 +494,13 @@ void main() {
       await tester.pump();
 
       // 이정표: 시·도를 붙인 이름
-      expect(find.text('서울 중구'), findsOneWidget);
-      expect(find.text('출발 동네'), findsNothing);
+      expect(find.text('서울 중구에서 출발'), findsOneWidget);
+      expect(find.text('출발 동네 고르기'), findsNothing);
       expect(_enabled(tester, '여기서 출발'), isTrue);
-      // 고른 줄: 체크와 굵은 글자
+      // 고른 칸: 굵은 글자
       final row = find.byKey(ValueKey('sigungu-${jung.id}'));
-      expect(find.descendant(of: row, matching: find.byIcon(Icons.check)), findsOneWidget);
       final name = tester.widget<Text>(find.descendant(of: row, matching: find.text('중구')));
       expect(name.style!.fontWeight, FontWeight.w700);
-      final other = find.byKey(const ValueKey('sigungu-11110'));
-      expect(find.descendant(of: other, matching: find.byIcon(Icons.check)), findsNothing);
       await end(tester, e);
     });
 
@@ -522,12 +514,11 @@ void main() {
       expect(find.text('서울'), findsNothing);
       expect(find.text('경기'), findsNothing);
       expect(find.text('경기 수원시'), findsOneWidget);
-      expect(_enabled(tester, '여기서 출발'), isFalse);
+      expect(_enabled(tester, '동네를 골라 주세요'), isFalse);
 
       await tester.tap(find.text('경기 수원시'));
       await tester.pump();
-      // 이정표와 목록 줄 두 곳
-      expect(find.text('경기 수원시'), findsNWidgets(2));
+      expect(find.text('경기 수원시에서 출발'), findsOneWidget);
       expect(_enabled(tester, '여기서 출발'), isTrue);
 
       await _tapButton(tester, '여기서 출발');
@@ -589,11 +580,13 @@ void main() {
       final e = UiEnv();
       await openHome(tester, e);
 
+      await tester.ensureVisible(find.text('세종'));
+      await tester.pump();
       await tester.tap(find.text('세종'));
       await tester.pump();
       await tester.tap(find.text('세종시'));
       await tester.pump();
-      expect(find.text('세종'), findsNWidgets(2));
+      expect(find.text('세종에서 출발'), findsOneWidget);
       expect(_enabled(tester, '여기서 출발'), isTrue);
       await end(tester, e);
     });
@@ -602,7 +595,7 @@ void main() {
       final e = UiEnv();
       await openHome(tester, e);
 
-      await tester.tap(_button('여기서 출발'));
+      await tester.tap(_button('동네를 골라 주세요'));
       await tester.pump(const Duration(milliseconds: 100));
       expect((await _profile(tester, e)).homeLat, isNull);
       expect(find.byType(HomePickScreen), findsOneWidget);

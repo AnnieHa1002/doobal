@@ -8,10 +8,13 @@ import '../common/game_button.dart';
 import '../common/palette.dart';
 import 'start_layout.dart';
 
-/// 시·군·구 목록이 이 높이를 넘으면 목록 안에서 스크롤한다 (한 줄 44pt)
-const _listMaxHeight = 176.0;
+/// 시·군·구 칸이 이 높이를 넘으면 칸 묶음 안에서 스크롤한다 (한 줄 44pt + 간격 6)
+const _listMaxHeight = 200.0;
 
-/// 시작 ③ 출발 동네: 시·도 칩이나 이름 검색으로 시·군·구 하나를 고른다.
+/// 시·군·구 칸은 한 줄에 셋
+const _townColumns = 3;
+
+/// 시작 ③ 출발 동네 (캔버스 1-3): 시·도 칩이나 이름 검색으로 시·군·구 하나를 고른다.
 /// 앱 안 데이터(sigungu.json)라 오프라인으로 된다. 고른 시·군·구의 대표 좌표가 첫 출발지다.
 /// 위 이정표는 자리표시 카드이고 쉼터 캠프 그림이 나오면 바꾼다
 class HomePickScreen extends ConsumerStatefulWidget {
@@ -23,6 +26,8 @@ class HomePickScreen extends ConsumerStatefulWidget {
 
 class _HomePickScreenState extends ConsumerState<HomePickScreen> {
   final _query = TextEditingController();
+
+  /// 고른 시·도. null이면 첫 시·도
   String? _sido;
   Sigungu? _picked;
 
@@ -50,16 +55,19 @@ class _HomePickScreenState extends ConsumerState<HomePickScreen> {
     final items = ref.watch(sigunguProvider).value;
     if (items == null) return const Scaffold(body: SizedBox.expand());
     final searching = _query.text.trim().isNotEmpty;
+    final sidos = sidoList(items);
+    final sido = _sido ?? sidos.first;
     // 검색 중이면 전국에서 찾고, 아니면 고른 시·도의 시·군·구
-    final shown = searching
-        ? searchSigungu(items, _query.text)
-        : _sido == null
-            ? const <Sigungu>[]
-            : inSido(items, _sido!);
+    final shown = searching ? searchSigungu(items, _query.text) : inSido(items, sido);
+    final picked = _picked;
 
     return StartLayout(
-      top: _Signpost(_picked?.label ?? '출발 동네'),
+      top: _Signpost(picked == null ? '출발 동네 고르기' : '${picked.label}에서 출발'),
       children: [
+        Text('어디서 출발할까요?', style: context.display(22)),
+        const SizedBox(height: 4),
+        const StartNote('위치 정보는 쓰지 않아요.'),
+        const SizedBox(height: 12),
         TextField(
           controller: _query,
           textInputAction: TextInputAction.search,
@@ -72,17 +80,20 @@ class _HomePickScreenState extends ConsumerState<HomePickScreen> {
         ),
         if (!searching) ...[
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              for (final sido in sidoList(items))
-                _SidoChip(
-                  label: sido,
-                  selected: _sido == sido,
-                  onTap: () => setState(() => _sido = _sido == sido ? null : sido),
-                ),
-            ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final s in sidos) ...[
+                  if (s != sidos.first) const SizedBox(width: 6),
+                  _SidoChip(
+                    label: s,
+                    selected: sido == s,
+                    onTap: () => setState(() => _sido = s),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
         if (searching && shown.isEmpty) ...[
@@ -93,36 +104,35 @@ class _HomePickScreenState extends ConsumerState<HomePickScreen> {
           const SizedBox(height: 12),
           ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: _listMaxHeight),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Palette.paper,
-                borderRadius: BorderRadius.circular(startRadius),
-                border: Border.all(color: Palette.ink, width: InkLine.panel),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(startRadius - 2),
-                child: ListView(
-                  shrinkWrap: true,
-                  padding: EdgeInsets.zero,
+            child: SingleChildScrollView(
+              child: LayoutBuilder(builder: (context, box) {
+                final width = (box.maxWidth - 6 * (_townColumns - 1)) / _townColumns;
+                return Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
                     for (final s in shown)
-                      _SigunguRow(
-                        // 검색은 전국이라 시·도를 붙여 보여 준다
-                        text: searching ? s.label : s.name,
-                        selected: _picked?.id == s.id,
-                        onTap: () => _pick(s),
-                        key: ValueKey('sigungu-${s.id}'),
+                      SizedBox(
+                        width: width,
+                        child: _TownCell(
+                          // 검색은 전국이라 시·도를 붙여 보여 준다
+                          text: searching ? s.label : s.name,
+                          selected: picked?.id == s.id,
+                          onTap: () => _pick(s),
+                          key: ValueKey('sigungu-${s.id}'),
+                        ),
                       ),
                   ],
-                ),
-              ),
+                );
+              }),
             ),
           ),
         ],
-        const SizedBox(height: 12),
-        const StartNote('지금 사는 곳이 아니어도 괜찮아요. 위치 정보는 쓰지 않아요'),
         const SizedBox(height: 16),
-        GameButton(label: '여기서 출발', onPressed: _picked == null ? null : _submit),
+        GameButton(
+          label: picked == null ? '동네를 골라 주세요' : '여기서 출발',
+          onPressed: picked == null ? null : _submit,
+        ),
       ],
     );
   }
@@ -200,9 +210,9 @@ class _SidoChip extends StatelessWidget {
   }
 }
 
-/// 목록 한 줄. 고른 줄은 테라코타 바탕·굵은 글자·체크로 강조한다
-class _SigunguRow extends StatelessWidget {
-  const _SigunguRow({
+/// 시·군·구 칸 하나. 고른 칸은 테라코타 테두리와 굵은 글자로 강조한다
+class _TownCell extends StatelessWidget {
+  const _TownCell({
     super.key,
     required this.text,
     required this.selected,
@@ -215,26 +225,33 @@ class _SigunguRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        // 44pt가 최소 높이다. 글자 크기를 키워 이름이 줄바꿈되면 줄이 같이 커진다
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        alignment: Alignment.centerLeft,
-        color: selected ? Palette.terracotta.withValues(alpha: 0.18) : null,
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                text,
-                // 고른 줄만 표시 글꼴 굵은 글자
-                style: selected ? context.display(15) : AppText.body,
-              ),
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: text,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          // 44pt가 최소 높이다. 글자 크기를 키워 이름이 줄바꿈되면 칸도 같이 늘어난다
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? Palette.terracotta.withValues(alpha: 0.18) : Palette.paper,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? Palette.terracotta : Palette.ink,
+              width: selected ? InkLine.focus : InkLine.pill,
             ),
-            if (selected) const Icon(Icons.check, size: 20, color: Palette.terracotta),
-          ],
+          ),
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            // 고른 칸만 표시 글꼴 굵은 글자
+            style: selected ? context.display(15) : AppText.body,
+          ),
         ),
       ),
     );

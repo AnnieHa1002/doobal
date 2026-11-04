@@ -29,7 +29,6 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
   String? _message;
   SyncReport? _report;
   String? _destId;
-  String? _homeId;
   var _busy = false;
 
   Future<void> _run(String label, Future<String> Function() job) async {
@@ -63,15 +62,6 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
     final r = await svc.inspect(now.subtract(Duration(hours: svc.rules.refetchHours)), now);
     setState(() => _report = r);
     return '기록 ${r.records}개 (버림 ${r.dropped})';
-  }
-
-  /// 임시: 시·군·구 목록(약 250곳과 대표 좌표)이 생기기 전까지는 명소가 있는 시·군·구만 고른다.
-  /// 출발 동네 = 그 명소의 좌표, 이름 = 시·군·구
-  Future<String> _setHome() async {
-    final svc = await ref.read(syncServiceProvider.future);
-    final l = svc.landmarks[_homeId!]!;
-    await svc.setHome(l.sigungu, l.latLng);
-    return '${l.sido} ${l.sigungu}';
   }
 
   Future<String> _start() async {
@@ -127,29 +117,6 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
             ],
             const Divider(height: 32),
           ],
-          // 임시 출발 동네 고르기 (위 _setHome 참고)
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  hint: const Text('출발 동네'),
-                  value: _homeId,
-                  items: [
-                    for (final l in landmarks)
-                      DropdownMenuItem(value: l.id, child: Text('${l.sido} ${l.sigungu}')),
-                  ],
-                  onChanged: (v) => setState(() => _homeId = v),
-                ),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton(
-                onPressed: _busy || _homeId == null ? null : () => _run('출발 동네', _setHome),
-                child: const Text('출발 동네로 정하기'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
           Wrap(
             spacing: 8,
             runSpacing: 8,
