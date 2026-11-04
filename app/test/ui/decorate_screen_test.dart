@@ -543,23 +543,22 @@ void main() {
   });
 
   group('얼굴 탭', () {
-    testWidgets('눈 3 · 코 3 · 눈썹 3 · 귀 2를 줄별로 고른다', (tester) async {
+    testWidgets('눈 3 · 코 3 · 눈썹 3을 줄별로 고른다 (정령에 귀는 없다)', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
       await _goTab(tester, 'face');
 
-      for (final t in ['눈', '코', '눈썹', '귀']) {
+      for (final t in ['눈', '코', '눈썹']) {
         expect(find.text(t), findsOneWidget, reason: t);
       }
+      expect(find.text('귀'), findsNothing);
       for (var i = 1; i <= 3; i++) {
         for (final k in ['eyes', 'nose', 'brows']) {
           expect(_key('$k-$i'), findsOneWidget, reason: '$k-$i');
         }
       }
-      expect(_key('ears-1'), findsOneWidget);
-      expect(_key('ears-2'), findsOneWidget);
-      for (final k in ['eyes-4', 'nose-4', 'brows-4', 'ears-3']) {
+      for (final k in ['eyes-4', 'nose-4', 'brows-4', 'ears-1']) {
         expect(_key(k), findsNothing, reason: k);
       }
       expect(_enabled(tester, '저장'), isFalse);
@@ -575,12 +574,13 @@ void main() {
       await _tap(tester, _key('eyes-3'));
       await _tap(tester, _key('nose-2'));
       await _tap(tester, _key('brows-3'));
-      await _tap(tester, _key('ears-2'));
       expect(_enabled(tester, '저장'), isTrue);
       await _save(tester);
 
       final look = await _stored(tester, e);
-      expect((look.eyes, look.nose, look.brows, look.ears), (3, 2, 3, 2));
+      expect((look.eyes, look.nose, look.brows), (3, 2, 3));
+      // 숨긴 귀는 그대로
+      expect(look.ears, Look.initial.ears);
       expect(_enabled(tester, '저장'), isFalse);
       await end(tester, e);
     });

@@ -273,7 +273,6 @@ class FaceTab extends StatelessWidget {
         row('눈', 'eyes', eyeShapeCount, look.eyes, (n) => look.copyWith(eyes: n)),
         row('코', 'nose', noseShapeCount, look.nose, (n) => look.copyWith(nose: n)),
         row('눈썹', 'brows', browShapeCount, look.brows, (n) => look.copyWith(brows: n)),
-        row('귀', 'ears', earShapeCount, look.ears, (n) => look.copyWith(ears: n)),
       ],
     );
   }
