@@ -35,6 +35,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final snap = ref.watch(snapshotProvider).value;
     final me = ref.watch(meProvider).value;
+    final spirit = ref.watch(spiritLookProvider);
     final bars = ref.watch(recentDaysProvider).value;
     final ready = snap != null && me != null && bars != null;
 
@@ -44,7 +45,7 @@ class ProfileScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const ScreenHeader('나의 정보'),
-            Expanded(child: ready ? _content(context, snap, me, bars) : const SizedBox()),
+            Expanded(child: ready ? _content(context, snap, me, spirit, bars) : const SizedBox()),
           ],
         ),
       ),
@@ -55,6 +56,7 @@ class ProfileScreen extends ConsumerWidget {
     BuildContext context,
     Snapshot snap,
     Me me,
+    SpiritLook spirit,
     List<DayBar> bars,
   ) {
     return SingleChildScrollView(
@@ -64,6 +66,7 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           _ProfileCard(
             me: me,
+            spirit: spirit,
             onDecorate: () => Navigator.of(context)
                 .push(MaterialPageRoute<void>(builder: (_) => const DecorateScreen())),
           ),
@@ -138,9 +141,10 @@ class ProfileScreen extends ConsumerWidget {
 
 /// 위: 캐릭터 초상, 닉네임, 보조 버튼 `꾸미기`
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.me, required this.onDecorate});
+  const _ProfileCard({required this.me, required this.spirit, required this.onDecorate});
 
   final Me me;
+  final SpiritLook spirit;
   final VoidCallback onDecorate;
 
   @override
@@ -159,7 +163,7 @@ class _ProfileCard extends StatelessWidget {
               border: Border.all(color: Palette.ink, width: InkLine.panel),
             ),
             // 쉼터·꾸미기와 같은 정령
-            child: SpiritStanding(look: spiritLookOf(me.look), share: 0.72, footAt: 0.92),
+            child: SpiritStanding(look: spirit, share: 0.72, footAt: 0.92),
           ),
           const SizedBox(width: 16),
           Expanded(

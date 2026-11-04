@@ -108,7 +108,7 @@ void main() {
   group('saveMe', () {
     test('닉네임과 모습(JSON)을 적고 다음 단계는 출발 동네', () async {
       await svc.confirmAge(_at);
-      const look = Look(hair: 4, hairColor: SwatchHairColor(7));
+      const look = Look(eyes: 'cat', body: SwatchBodyColor(7));
       await svc.saveMe('나그네', look);
       final r = (await svc.row())!;
       expect(r.nickname, '나그네');
@@ -120,10 +120,11 @@ void main() {
 
     test('다시 적으면 바뀐다', () async {
       await svc.saveMe('하나', Look.initial);
-      await svc.saveMe('둘', const Look(hair: 2, hairColor: CustomHairColor('#102030')));
+      await svc.saveMe('둘', const Look(body: CustomBodyColor('#102030')));
       final r = (await svc.row())!;
       expect(r.nickname, '둘');
-      expect((jsonDecode(r.look!) as Map<String, dynamic>)['hair'], 2);
+      expect((jsonDecode(r.look!) as Map<String, dynamic>)['body'],
+          {'kind': 'custom', 'hex': '#102030'});
     });
   });
 
@@ -143,18 +144,16 @@ void main() {
       await own(['hat_02', 'bag_02']);
       final look = Look.initial
           .copyWith(
-            hair: 5,
-            hairColor: const GradientHairColor('#2B2522', '#E39AB0'),
-            skin: const CustomSkinColor('#C08060'),
-            eyes: 2,
-            nose: 3,
-            brows: 2,
-            mouth: 5,
-            ears: 2,
+            eyes: 'bean',
+            nose: 'wide',
+            brows: 'thin',
+            mouth: 'tongue',
+            body: const CustomBodyColor('#C08060'),
           )
           .withSlot('hat', 'hat_02')
           .withSlot('bag', 'bag_02')
-          .withSlot('hand', null);
+          .withSlot('hand', null)
+          .withTint('hat_02', const SwatchBodyColor(4));
       await svc.saveLook(look);
       expect(await stored(), look);
       final r = (await svc.row())!;
@@ -164,8 +163,8 @@ void main() {
     });
 
     test('프로필 행이 아직 없어도 적는다', () async {
-      await svc.saveLook(Look.initial.copyWith(hair: 3));
-      expect((await stored()).hair, 3);
+      await svc.saveLook(Look.initial.copyWith(eyes: 'sleepy'));
+      expect((await stored()).eyes, 'sleepy');
     });
 
     test('다시 저장하면 바뀐다', () async {
@@ -205,11 +204,7 @@ void main() {
     });
 
     test('옷은 비울 수 없다 (거절)', () async {
-      final noCloth = Look(
-        hair: 1,
-        hairColor: const SwatchHairColor(1),
-        slots: {...defaultSlots, 'cloth': null},
-      );
+      final noCloth = Look(slots: {...defaultSlots, 'cloth': null});
       await expectLater(svc.saveLook(noCloth), throwsStateError);
       expect(await svc.row(), isNull);
     });
@@ -284,23 +279,34 @@ void main() {
 
   group('me', () {
     test('저장한 닉네임과 모습을 돌려준다', () async {
-      const look = Look(hair: 3, hairColor: SwatchHairColor(5));
+      const look = Look(mouth: 'flat', body: SwatchBodyColor(5));
       await svc.saveMe('나그네', look);
       final me = await svc.me();
       expect(me.nickname, '나그네');
       expect(me.look, look);
     });
 
-    test('이미 저장된 옛 모습({hair, hairColor}만)은 나머지를 기본값으로 읽는다', () async {
+    test('폰에 저장된 옛 사람형 모습은 기본 얼굴·크림으로 읽고 소품 칸은 살린다', () async {
+      await db.into(db.profile).insert(ProfileCompanion.insert(
+            id: const Value(1),
+            nickname: const Value('옛 화가'),
+            look: const Value('{"hair":4,"hairColor":{"kind":"swatch","i":3},"eyes":3,'
+                '"slots":{"hat":"hat_02","hand":null}}'),
+          ));
+      final me = await svc.me();
+      expect(me.nickname, '옛 화가');
+      expect(me.look, Look.initial.withSlot('hat', 'hat_02'));
+      expect(me.look.body, const SwatchBodyColor(1));
+      expect(me.look.slots['hand'], isNull);
+    });
+
+    test('옛 {hair, hairColor}만 있는 모습도 기본 모습으로 읽는다', () async {
       await db.into(db.profile).insert(ProfileCompanion.insert(
             id: const Value(1),
             nickname: const Value('옛 화가'),
             look: const Value('{"hair":4,"hairColor":{"kind":"swatch","i":3}}'),
           ));
-      final me = await svc.me();
-      expect(me.look, const Look(hair: 4, hairColor: SwatchHairColor(3)));
-      expect(me.look.skin, const SwatchSkinColor(1));
-      expect(me.look.slots, defaultSlots);
+      expect((await svc.me()).look, Look.initial);
     });
 
     test('아직 없거나 모습이 깨졌으면 기본값', () async {

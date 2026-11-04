@@ -267,6 +267,8 @@ void main() {
       await tester.enterText(find.byType(TextField), '가나다라마바사아자차');
       await tester.pump();
       fit.check('닉네임 10자');
+      await _tap(tester, _key('body-custom'));
+      fit.check('몸 색 직접 고르기가 열림');
       await end(tester, e);
     });
 
@@ -860,7 +862,7 @@ void main() {
       await openOnTop(tester, e, const DecorateScreen(),
           width: fit.width,
           height: fit.height,
-          ready: () => _key('tab-face').evaluate().isNotEmpty);
+          ready: () => _key('tab-me').evaluate().isNotEmpty);
       await settle(tester, () => false, tries: 6);
     }
 
@@ -869,7 +871,7 @@ void main() {
               for (final id in ids) PropsOwnedCompanion.insert(propId: id, unlockedUtc: 1),
             ]));
 
-    const tabs = ['face', 'cloth', 'hat', 'hand', 'bag', 'shoe', 'pet'];
+    const tabs = ['me', 'hat', 'face', 'cloth', 'shoe', 'hand', 'bag', 'pet', 'float', 'effect'];
 
     _scaleCases('모든 탭', (tester, fit) async {
       final e = UiEnv();
@@ -879,6 +881,29 @@ void main() {
         await _tap(tester, _key('tab-$t'));
         fit.check('탭 $t');
       }
+      await end(tester, e);
+    });
+
+    _scaleCases('내 모습 (직접 고르기 열림)', (tester, fit) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await openDecorate(tester, e, fit);
+      await _tap(tester, _key('tab-me'));
+      await _tap(tester, _key('eyes-cat'));
+      fit.check('눈을 고름');
+      await _tap(tester, _key('body-custom'));
+      fit.check('몸 색 직접 고르기가 열림');
+      await end(tester, e);
+    });
+
+    _scaleCases('소품 색 줄 (모자: 베레모)', (tester, fit) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await openDecorate(tester, e, fit);
+      await _tap(tester, _key('tab-hat'));
+      expect(_key('tint-default'), findsOneWidget);
+      await _tap(tester, _key('tint-swatch-4'));
+      fit.check('베레모 색을 고름');
       await end(tester, e);
     });
 
@@ -898,7 +923,8 @@ void main() {
       final e = UiEnv();
       await e.seed(tester);
       await openDecorate(tester, e, fit);
-      await _tap(tester, _key('eyes-3'));
+      await _tap(tester, _key('tab-me'));
+      await _tap(tester, _key('eyes-cat'));
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
       expect(find.text('저장하지 않고 나갈까요?'), findsOneWidget);

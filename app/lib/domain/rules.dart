@@ -77,6 +77,23 @@ class SkyArc {
   final double glowRadiusPx;
 }
 
+/// 정령을 누르는 반응 (config character.tapReaction): 창([angryWindowSec]) 안에 [angryTaps]번이면 화남
+/// ([angryHoldSec] 동안), 그보다 적으면 행복
+class TapReaction {
+  const TapReaction({
+    required this.happyMaxTaps,
+    required this.angryWindowSec,
+    required this.angryTaps,
+    required this.angryHoldSec,
+  });
+
+  /// 행복 반응으로 세는 연타 수 (참고값: 화남 조건 전까지는 모두 행복)
+  final int happyMaxTaps;
+  final double angryWindowSec;
+  final int angryTaps;
+  final double angryHoldSec;
+}
+
 /// config.json의 규칙 숫자. 엔진은 숫자를 코드에 두지 않고 여기서 읽는다
 class Rules {
   const Rules({
@@ -147,6 +164,7 @@ class Rules {
     required this.backupMaxChars,
     required this.allowedSourcesIos,
     required this.allowedSourcesAndroid,
+    required this.tapReaction,
   });
 
   final int walkMaxSpm;
@@ -295,6 +313,9 @@ class Rules {
   final List<String> allowedSourcesIos;
   final List<String> allowedSourcesAndroid;
 
+  /// 쉼터·꾸미기에서 정령을 누르는 반응 (config character.tapReaction)
+  final TapReaction tapReaction;
+
   /// 기록이 없을 때의 하루 거리 = 기본 걸음 × 걷기 보폭
   double get defaultDailyKm => etaDefaultDailySteps * walkStrideM / 1000;
 
@@ -324,6 +345,17 @@ class Rules {
     final guestbook = j['guestbook'] as Map<String, dynamic>;
     final backup = j['backup'] as Map<String, dynamic>;
     final sources = j['allowedSources'] as Map<String, dynamic>;
+    final tap = (j['character'] as Map<String, dynamic>)['tapReaction'] as Map<String, dynamic>;
+    final tapAngry = tap['angry'] as Map<String, dynamic>;
+    final tapReaction = TapReaction(
+      happyMaxTaps: tap['happyMaxTaps'] as int,
+      angryWindowSec: _d(tapAngry['windowSec']),
+      angryTaps: tapAngry['taps'] as int,
+      angryHoldSec: _d(tapAngry['holdSec']),
+    );
+    if (tapReaction.angryTaps < 2 || tapReaction.angryWindowSec <= 0) {
+      throw const FormatException('character.tapReaction.angry는 2번 이상, 창 0초 초과여야 한다');
+    }
 
     LatLng latLng(dynamic v) => LatLng(_d(v['lat']), _d(v['lng']));
     Bounds bounds(dynamic v) =>
@@ -468,6 +500,7 @@ class Rules {
       backupMaxChars: backup['maxChars'] as int,
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),
       allowedSourcesAndroid: (sources['android'] as List).cast<String>(),
+      tapReaction: tapReaction,
     );
   }
 }

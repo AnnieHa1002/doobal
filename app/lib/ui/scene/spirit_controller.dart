@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:rive/rive.dart' as rive;
 
+import '../../domain/rules.dart';
 import '../../domain/spirit_look.dart';
+import '../../domain/tap_mood.dart';
 
 enum SpiritMotion {
   idle(0),
@@ -42,6 +44,12 @@ final class SpiritController extends rive.RiveWidgetController {
   int _chosenExpression = 0;
   bool _action = false, _wasPressed = false;
   double _resumeIn = 0;
+
+  /// 연타 화남 (쉼터·꾸미기): 규칙을 주면 켜진다. 누른 시각은 [clock]으로 잰다 (테스트가 바꾼다)
+  Rules? tapRules;
+  DateTime Function() clock = DateTime.now;
+  final _taps = <DateTime>[];
+  double _angryLeft = 0;
   SpiritMotion get motion =>
       SpiritMotion.values[_motion.value.round().clamp(0, 9)];
   bool get headPressed => _head.value;
@@ -159,6 +167,7 @@ final class SpiritController extends rive.RiveWidgetController {
     super.advance(dt);
     if (headPressed && bellyPressed) _belly.value = false;
     final pressed = headPressed || bellyPressed;
+    if (pressed && !_wasPressed) _countTap();
     if (pressed && !_wasPressed) {
       _action = false;
       _resumeIn = 0;
@@ -178,7 +187,31 @@ final class SpiritController extends rive.RiveWidgetController {
       _action = false;
       _restore();
     }
+    if (_angryLeft > 0) {
+      _angryLeft = math.max(0, _angryLeft - dt);
+      // 화남이 끝나면 지금 상태의 표정으로 돌아간다
+      _expression.value = _angryLeft > 0
+          ? 5
+          : pressed
+          ? (headPressed ? 1 : 3)
+          : _chosenExpression.toDouble();
+    }
     return true;
+  }
+
+  /// 누를 때마다 부른다: 창 안에 규칙의 횟수만큼 눌렸으면 화남을 켠다 (화면 글 없음)
+  void _countTap() {
+    final rules = tapRules;
+    if (rules == null) return;
+    final now = clock();
+    _taps.add(now);
+    final windowMs = (rules.tapReaction.angryWindowSec * 1000).round();
+    _taps.removeWhere((t) => now.difference(t).inMilliseconds > windowMs);
+    if (tapMood(_taps, now, rules) == TapMood.angry) {
+      _taps.clear();
+      _angryLeft = rules.tapReaction.angryHoldSec;
+      _expression.value = 5;
+    }
   }
 
   @override

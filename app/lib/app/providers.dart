@@ -27,8 +27,8 @@ import '../data/walk_notice.dart';
 import '../domain/camp_theme.dart';
 import '../domain/display_font.dart';
 import '../domain/landmark.dart';
-import '../domain/look.dart';
-import '../domain/look_palette.dart';
+import '../domain/spirit_look.dart';
+import '../domain/spirit_palette.dart';
 import '../domain/map_land.dart';
 import '../domain/map_projection.dart';
 import '../domain/map_regions.dart';
@@ -69,11 +69,8 @@ final mapRegionsProvider = FutureProvider<List<MapRegion>>((ref) => loadMapRegio
 /// 시·군·구 (sigungu.json). 출발 동네 고르기
 final sigunguProvider = FutureProvider<List<Sigungu>>((ref) => loadSigungu());
 
-/// 머리색 견본 (palette.json hair.swatches)
-final hairSwatchesProvider = FutureProvider<List<HairSwatch>>((ref) => loadHairSwatches());
-
-/// 머리·피부 색 규칙 (palette.json hair·skin). 꾸미기와 나의 정보 초상이 읽는다
-final lookPaletteProvider = FutureProvider<LookPalette>((ref) => loadLookPalette());
+/// 정령 팔레트 (palette.json body·customParts·tintProps): 몸 색 견본, 얼굴 파츠 이름, 소품 색 규칙
+final spiritPaletteProvider = FutureProvider<SpiritPalette>((ref) => loadSpiritPalette());
 
 /// 지금 시각(UTC). 화면과 서비스는 DateTime.now()를 직접 부르지 않고 이걸 쓴다. 테스트에서 바꾼다
 final clockProvider = Provider<DateTime Function()>((ref) => () => DateTime.now().toUtc());
@@ -233,6 +230,18 @@ final statsServiceProvider = Provider<StatsService>((ref) => StatsService(ref.wa
 
 /// 나의 정보의 닉네임·모습. 화면을 열 때마다 다시 읽는다
 final meProvider = FutureProvider.autoDispose<Me>((ref) => ref.watch(profileServiceProvider).me());
+
+/// 쉼터·걷는 중·꾸미기·나의 정보·시작 화면이 같이 쓰는 내 정령 (me + 팔레트). 아직 못 읽었으면 기본 정령
+final spiritLookProvider = Provider<SpiritLook>((ref) {
+  final me = ref.watch(meProvider).value;
+  final palette = ref.watch(spiritPaletteProvider).value;
+  if (me == null || palette == null) return SpiritLook.base;
+  return spiritLookOf(
+    me.look,
+    bodyArgb: palette.body.argbOf(me.look.body),
+    bodyBaseArgb: palette.body.baseArgb,
+  );
+});
 
 /// 설정에서 고른 표시 글꼴 (앱 테마가 듣는다). 읽는 동안은 기본 개구로 그린다
 class DisplayFontChoice extends AsyncNotifier<DisplayFont> {

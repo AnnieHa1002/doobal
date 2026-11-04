@@ -13,11 +13,13 @@ import 'package:doobal/domain/onboarding.dart';
 import 'package:doobal/domain/sigungu.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/domain/sky.dart';
+import 'package:doobal/domain/spirit_look.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/scene/sky_painter.dart';
+import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:doobal/ui/start/home_pick_screen.dart';
 import 'package:doobal/ui/start/me_screen.dart';
 import 'package:doobal/ui/start/permission_screen.dart';
@@ -318,22 +320,48 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('머리 모양 6칸과 머리색 견본 10개, 안내 한 줄 (직접 고르기 칸은 아직 없다)', (tester) async {
+    testWidgets('3단계 표시, 제목, 눈 5칸과 몸 색 견본 10개 + 직접 고르기, 안내 한 줄', (tester) async {
       final e = UiEnv();
       await openMe(tester, e);
 
-      for (var i = 1; i <= 6; i++) {
-        expect(find.byKey(ValueKey('hair-$i')), findsOneWidget);
-        expect(find.descendant(of: find.byKey(ValueKey('hair-$i')), matching: find.text('$i')),
-            findsOneWidget);
+      expect(find.byKey(const ValueKey('steps')), findsOneWidget);
+      expect(find.text('내 정령 만들기'), findsOneWidget);
+      final eyes = spiritPalette.faces['eyes']!;
+      expect(eyes, hasLength(5));
+      for (final p in eyes) {
+        expect(find.byKey(ValueKey('eyes-${p.id}')), findsOneWidget, reason: p.id);
       }
-      expect(find.byKey(const ValueKey('hair-7')), findsNothing);
-      for (final s in hairSwatches) {
-        expect(find.byKey(ValueKey('swatch-${s.id}')), findsOneWidget);
+      expect(find.byKey(const ValueKey('eyes-bean')), findsOneWidget);
+      for (final sw in spiritPalette.body.swatches) {
+        expect(find.byKey(ValueKey('body-swatch-${sw.id}')), findsOneWidget);
       }
-      expect(hairSwatches, hasLength(10));
-      expect(find.text('얼굴·피부·옷은 나중에 꾸미기에서 바꿀 수 있어요'), findsOneWidget);
-      expect(find.textContaining('직접'), findsNothing);
+      expect(spiritPalette.body.swatches, hasLength(10));
+      expect(find.byKey(const ValueKey('body-custom')), findsOneWidget);
+      expect(find.text('눈썹·코·입과 소품은 나중에 꾸미기에서 바꿀 수 있어요'), findsOneWidget);
+      // 예전 사람 그림의 머리 모양·머리색 칸은 없다
+      expect(find.text('머리 모양'), findsNothing);
+      expect(find.text('머리색'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('미리보기는 정령이고 고른 눈·몸 색을 입으며, 이름 알약도 따라 바뀐다', (tester) async {
+      final e = UiEnv();
+      await openMe(tester, e);
+
+      Finder spirit() =>
+          find.descendant(of: find.byKey(const ValueKey('me-preview')), matching: find.byType(SpiritCharacter));
+      expect(spirit(), findsOneWidget);
+      expect(tester.widget<SpiritCharacter>(spirit()).look,
+          // 첫 모습: 기본 가방(큰 붓)을 메고 크림 몸
+          SpiritLook.base.copyWith(bag: 1, bodyArgb: 0xFFF3E4C4));
+      expect(find.text('점+반짝 눈 · 크림'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('eyes-cat')));
+      await tester.tap(find.byKey(const ValueKey('body-swatch-9')));
+      await tester.pump();
+      final look = tester.widget<SpiritCharacter>(spirit()).look;
+      expect((look.eye, look.bodyArgb, look.bodyBaseArgb), (4, 0xFFC9775A, 0xFFFFF5E2));
+      expect(find.text('고양이 눈 · 테라코타'), findsOneWidget);
       await end(tester, e);
     });
 
@@ -342,16 +370,17 @@ void main() {
       final e = UiEnv();
       await openMe(tester, e);
 
-      for (final s in hairSwatches) {
-        expect(find.bySemanticsLabel(s.name), findsOneWidget, reason: s.name);
+      for (final sw in spiritPalette.body.swatches) {
+        expect(find.bySemanticsLabel(sw.name), findsOneWidget, reason: sw.name);
       }
+      expect(find.bySemanticsLabel('직접 고르기'), findsOneWidget);
       Finder check(int id) => find.descendant(
-          of: find.byKey(ValueKey('swatch-$id')), matching: find.byIcon(Icons.check));
-      // 처음에는 견본 1
+          of: find.byKey(ValueKey('body-swatch-$id')), matching: find.byIcon(Icons.check));
+      // 처음에는 견본 1 (크림)
       expect(check(1), findsOneWidget);
       expect(check(7), findsNothing);
 
-      await tester.tap(find.byKey(const ValueKey('swatch-7')));
+      await tester.tap(find.byKey(const ValueKey('body-swatch-7')));
       await tester.pump();
       expect(check(7), findsOneWidget);
       expect(check(1), findsNothing);
@@ -359,20 +388,24 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('고른 머리 모양은 미리보기와 선택 표시에 반영된다', (tester) async {
+    testWidgets('+를 누르면 색상환·밝기 막대(제한 없음, 채도 막대 없음)가 열리고 몸 색이 직접 고른 색이 된다',
+        (tester) async {
       final e = UiEnv();
       await openMe(tester, e);
 
-      Color fill(int i) => (tester
-              .widget<Container>(find.descendant(
-                  of: find.byKey(ValueKey('hair-$i')), matching: find.byType(Container)))
-              .decoration! as BoxDecoration)
-          .color!;
-      expect(fill(1), Palette.terracotta);
-      await tester.tap(find.byKey(const ValueKey('hair-4')));
-      await tester.pump();
-      expect(fill(4), Palette.terracotta);
-      expect(fill(1), Palette.paper);
+      expect(find.byKey(const ValueKey('picker')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('body-custom')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('picker')), findsOneWidget);
+      expect(find.byKey(const ValueKey('hue-ring')), findsOneWidget);
+      expect(find.byKey(const ValueKey('light-bar')), findsOneWidget);
+      expect(find.textContaining('채도'), findsNothing);
+      expect(find.text('몸 색 직접 고르기'), findsOneWidget);
+
+      // 견본을 다시 누르면 막대가 닫힌다
+      await tester.tap(find.byKey(const ValueKey('body-swatch-3')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('picker')), findsNothing);
       await end(tester, e);
     });
 
@@ -381,8 +414,8 @@ void main() {
       await openMe(tester, e);
 
       await tester.enterText(find.byType(TextField), ' 화가 ');
-      await tester.tap(find.byKey(const ValueKey('hair-4')));
-      await tester.tap(find.byKey(const ValueKey('swatch-7')));
+      await tester.tap(find.byKey(const ValueKey('eyes-sleepy')));
+      await tester.tap(find.byKey(const ValueKey('body-swatch-7')));
       await tester.pump();
       await _tapButton(tester, '이 모습으로');
       await _arrive(tester, HomePickScreen);
@@ -390,13 +423,13 @@ void main() {
       final r = await _profile(tester, e);
       expect(r.nickname, '화가');
       expect(Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>),
-          const Look(hair: 4, hairColor: SwatchHairColor(7)));
+          const Look(eyes: 'sleepy', body: SwatchBodyColor(7)));
       // 앞 단계 기록은 그대로
       expect((r.ageConfirmedAt, r.installId), (t0.millisecondsSinceEpoch, '1' * 32));
       await end(tester, e);
     });
 
-    testWidgets('아무것도 안 고르면 기본 모습(머리 1, 견본 1)이 저장된다', (tester) async {
+    testWidgets('아무것도 안 고르면 기본 모습(기본 얼굴, 크림)이 저장된다', (tester) async {
       final e = UiEnv();
       await openMe(tester, e);
 
@@ -1060,8 +1093,8 @@ void main() {
       noAsking();
 
       await tester.enterText(find.byType(TextField), '나그네');
-      await tester.tap(find.byKey(const ValueKey('hair-3')));
-      await tester.tap(find.byKey(const ValueKey('swatch-5')));
+      await tester.tap(find.byKey(const ValueKey('eyes-bean')));
+      await tester.tap(find.byKey(const ValueKey('body-swatch-5')));
       await tester.pump();
       await _tapButton(tester, '이 모습으로');
       await _arrive(tester, HomePickScreen);
@@ -1093,7 +1126,7 @@ void main() {
       expect(r.installId, matches(RegExp(r'^[0-9a-f]{32}$')));
       expect(r.nickname, '나그네');
       expect(Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>),
-          const Look(hair: 3, hairColor: SwatchHairColor(5)));
+          const Look(eyes: 'bean', body: SwatchBodyColor(5)));
       expect((r.homeId, r.homeName, r.homeLat, r.homeLng),
           (suwon.id, '경기 수원시', suwon.lat, suwon.lng));
       expect(r.onboardedAt, e.now.millisecondsSinceEpoch);

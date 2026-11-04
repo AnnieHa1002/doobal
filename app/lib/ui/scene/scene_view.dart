@@ -146,7 +146,13 @@ class SceneView extends StatelessWidget {
                       BlendMode.modulate,
                     ),
                     child: RepaintBoundary(
-                      child: DoobalCharacter(speed: speed, pose: pose, spirit: spirit),
+                      child: DoobalCharacter(
+                        speed: speed,
+                        pose: pose,
+                        spirit: spirit,
+                        // 쉼터에서만 정령을 연타하면 화낸다
+                        tapRules: rest ? rules : null,
+                      ),
                     ),
                   ),
                 ),

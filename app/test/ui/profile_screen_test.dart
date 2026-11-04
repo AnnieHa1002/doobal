@@ -1,6 +1,5 @@
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/journey.dart';
-import 'package:doobal/ui/common/figure_painter.dart';
 import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/decorate/decorate_screen.dart';
 import 'package:doobal/ui/profile/profile_screen.dart';
@@ -169,7 +168,7 @@ void main() {
       await e.db.into(e.db.profile).insertOnConflictUpdate(ProfileCompanion(
             id: const Value(1),
             nickname: const Value('나그네'),
-            look: const Value('{"hair":4,"hairColor":{"kind":"swatch","i":3},"eyes":3,"mouth":6}'),
+            look: const Value('{"eyes":"fierce","mouth":"tongue","body":{"kind":"swatch","i":9}}'),
           ));
     });
     await _open(tester, e);
@@ -180,10 +179,28 @@ void main() {
     expect(spirit, findsOneWidget);
     // 고른 얼굴을 입는다
     final look = tester.widget<SpiritCharacter>(spirit).look;
-    expect((look.eye, look.mouth), (2, 5));
-    // 예전 사람 그림(머리·피부)은 없다
-    expect(find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FigurePainter),
-        findsNothing);
+    expect((look.eye, look.mouth), (3, 4));
+    // 고른 몸 색(테라코타)과 기준 밝기도 쉼터와 같은 값으로 입는다
+    expect((look.bodyArgb, look.bodyBaseArgb), (0xFFC9775A, 0xFFFFF5E2));
+    await end(tester, e);
+  });
+
+  testWidgets('폰에 저장돼 있던 옛 사람형 모습은 기본 정령(기본 얼굴·크림)으로 보인다', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () async {
+      await e.db.into(e.db.profile).insertOnConflictUpdate(ProfileCompanion(
+            id: const Value(1),
+            nickname: const Value('옛 화가'),
+            look: const Value('{"hair":4,"hairColor":{"kind":"swatch","i":3},"eyes":3,"mouth":6}'),
+          ));
+    });
+    await _open(tester, e);
+
+    final spirit = find.descendant(
+        of: find.byKey(const ValueKey('portrait')), matching: find.byType(SpiritCharacter));
+    final look = tester.widget<SpiritCharacter>(spirit).look;
+    expect((look.eye, look.brow, look.nose, look.mouth), (0, 1, 6, 1));
+    expect(look.bodyArgb, 0xFFF3E4C4);
     await end(tester, e);
   });
 
@@ -211,10 +228,10 @@ void main() {
 
     await tester.tap(find.text('꾸미기'));
     await transition(tester);
-    await settle(tester, () => find.byKey(const ValueKey('tab-face')).evaluate().isNotEmpty);
+    await settle(tester, () => find.byKey(const ValueKey('tab-me')).evaluate().isNotEmpty);
     expect(find.text('꾸미기'), findsOneWidget);
     expect(find.byType(DecorateScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('tab-face')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tab-me')), findsOneWidget);
     expect(find.text('준비 중'), findsNothing);
     expect(find.text('나의 정보'), findsNothing);
 

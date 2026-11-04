@@ -1,4 +1,5 @@
 import 'package:doobal/domain/journey.dart';
+import 'package:doobal/domain/look.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -107,8 +108,13 @@ void main() {
     });
   });
 
-  test('propSlotLabels: 소품 탭 순서 모자·옷·손·가방·신발·어깨 친구', () {
-    expect(propSlotLabels.keys, ['hat', 'cloth', 'hand', 'bag', 'shoe', 'pet']);
-    expect(propSlotLabels.values, ['모자', '옷', '손', '가방', '신발', '어깨 친구']);
+  test('propSlotLabels: 소품 탭 순서 모자·얼굴 소품·옷·신발·손·가방·미니 친구·둥실·효과', () {
+    expect(propSlotLabels.keys, lookSlots);
+    expect(propSlotLabels.keys,
+        ['hat', 'face', 'cloth', 'shoe', 'hand', 'bag', 'pet', 'float', 'effect']);
+    expect(propSlotLabels.values,
+        ['모자', '얼굴 소품', '옷', '신발', '손', '가방', '미니 친구', '둥실', '효과']);
+    // 예전 이름은 화면 어디에도 없다
+    expect(propSlotLabels.values, isNot(contains('어깨 친구')));
   });
 }

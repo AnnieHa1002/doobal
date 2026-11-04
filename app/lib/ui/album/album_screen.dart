@@ -244,7 +244,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     ];
   }
 
-  /// 소품 탭: 얻은 소품만 칸별로 (모자·옷·손·가방·신발·어깨 친구). 얻은 소품이 없는 칸은 감추고,
+  /// 소품 탭: 얻은 소품만 칸별로 (모자·얼굴 소품·옷·신발·손·가방·미니 친구·둥실·효과). 얻은 소품이 없는 칸은 감추고,
   /// 하나도 없으면 한 줄 안내. 얻는 방법은 꾸미기의 잠긴 칸에서 본다
   Widget _propSliver() {
     final props = ref.watch(propsProvider).value;
