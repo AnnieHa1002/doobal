@@ -19,7 +19,6 @@ dependencies:
   rive: ^0.14.11
   app_settings: ^9.0.1
   share_plus: ^13.3.1
-  korean_profanity_filter: ^1.0.0
   pedometer: ^4.2.0
   flutter_local_notifications: ^22.3.3
   # 알림 예약(zonedSchedule)이 받는 시각 타입(TZDateTime). flutter_local_notifications가 이미 쓰는 판이라
