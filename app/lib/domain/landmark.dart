@@ -49,7 +49,8 @@ class Landmark {
         types: (j['types'] as List).cast<String>(),
         latLng: LatLng((j['lat'] as num).toDouble(), (j['lng'] as num).toDouble()),
         island: Island.values.byName(j['island'] as String),
-        painting: j['painting'] as String,
+        // MVP 그림은 채택한 첫 그림 한 장 (landmarks.json v3 firstPainting)
+        painting: (j['firstPainting'] ?? j['painting']) as String,
         note: j['note'] as String?,
       );
 }

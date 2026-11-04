@@ -4,7 +4,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-/// 안드로이드 알림 작은 아이콘 (res/drawable/ic_stat_walk). 알림 채널을 만들 때도 이 이름으로 쓴다
+/// 안드로이드 알림 작은 아이콘 (res/drawable/ic_stat_doobal). 알림 채널을 만들 때도 이 이름으로 쓴다
 const walkNoticeIcon = 'ic_stat_doobal';
 
 /// flutter_local_notifications 플러그인 하나를 앱이 같이 쓴다 (알림 권한, 걷는 중 상시 알림, 알림 5종).
