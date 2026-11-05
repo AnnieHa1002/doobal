@@ -16,12 +16,15 @@ export '../../domain/scene_plan.dart' show sceneArtHash;
 
 /// 승인된 v10·v11의 파일/배치 목록. 옛 중간 들판 config와 분리한다.
 class SceneArt {
-  SceneArt(this.data, this.images, {this.boat, this.wideCamp, this.plan});
+  SceneArt(this.data, this.images, {this.boat, this.wideCamp, this.plan, this.grass});
   final Map<String, dynamic> data;
   final Map<String, ui.Image> images;
 
   /// 조각 고르기·배치 (scene.json)
   final ScenePlan? plan;
+
+  /// 회색조 풀에 입힐 값 (palette.json grass). 없으면 칠하지 않는다
+  final GrassPalette? grass;
 
   /// 그림 파일 이름 → assets 키 (scene.json은 파일 이름으로 적는다)
   late final Map<String, String> _keyOfFile = {
@@ -68,8 +71,10 @@ class SceneArt {
       await bundle.loadString('assets/data/scene_art.json'),
     ) as Map<String, dynamic>;
     final assets = data['assets'] as Map<String, dynamic>;
-    final plan = ScenePlan.fromJson(
-      jsonDecode(await bundle.loadString('assets/data/scene.json')) as Map<String, dynamic>,
+    final scene = jsonDecode(await bundle.loadString('assets/data/scene.json')) as Map<String, dynamic>;
+    final plan = ScenePlan.fromJson(scene);
+    final grass = GrassPalette.fromJson(
+      (jsonDecode(await bundle.loadString('assets/data/palette.json')) as Map)['grass'] as Map<String, dynamic>,
     );
     final region = (data['far'] as Map).containsKey(look.backdrop)
         ? look.backdrop
@@ -108,9 +113,12 @@ class SceneArt {
     } else {
       keys.addAll([
         'bg_path_v11_clean.png',
-        'bg_lower_bank_${look.season.name}_v11_clean.png',
         'bg_front_${look.season.name}_v11_clean.png',
-        'bg_back_meadow_${look.season.name}_v10_preview.png',
+        // 땅·들판은 회색조 풀 + 계절색. 회색조 파일이 없으면 계절별 완성 그림을 쓴다
+        ...SceneArt.grassLayers(data, 'bg_lower_bank', look.season.name, 'v11_clean') ??
+            ['bg_lower_bank_${look.season.name}_v11_clean.png'],
+        ...SceneArt.grassLayers(data, 'bg_back_meadow', look.season.name, 'v10_clean') ??
+            ['bg_back_meadow_${look.season.name}_v10_preview.png'],
       ]);
       // 이 지역·계절에 설 수 있는 조각만 읽는다
       final byFile = <String, String>{
@@ -133,10 +141,11 @@ class SceneArt {
         }
         if (boatImages == null) keys.add('prop_boat_01_v11_clean.png');
       }
+      final farFiles = await _farFiles(bundle, scene, region, look.season, farParts);
       // 순차 디코딩으로 로드 순간의 메모리 급증을 제한한다.
       for (final key in keys) {
         final spec = assets[key] as Map<String, dynamic>;
-        final bytes = await bundle.load(spec['file'] as String);
+        final bytes = farFiles[key] ?? await bundle.load(spec['file'] as String);
         final width = (spec['canvas'][0] as num).toDouble();
         final target = math
             .min(
@@ -158,7 +167,7 @@ class SceneArt {
           codec.dispose();
         }
       }
-      return SceneArt(data, images, boat: boatImages, wideCamp: wide, plan: plan);
+      return SceneArt(data, images, boat: boatImages, wideCamp: wide, plan: plan, grass: grass);
     } catch (_) {
       for (final image in images.values) {
         image.dispose();
@@ -167,6 +176,45 @@ class SceneArt {
       wide?.dispose();
       rethrow;
     }
+  }
+
+  /// [prefix]_base·[prefix]_grass 두 장이 그림 목록에 있으면 그 키, 없으면 null.
+  /// 있으면 그리는 쪽은 바탕 위에 풀만 계절색으로 입힌다
+  static List<String>? grassLayers(Map<String, dynamic> data, String prefix, String season, String tail) {
+    final base = '${prefix}_base_$tail.png';
+    final grass = '${prefix}_grass_$tail.png';
+    final assets = data['assets'] as Map<String, dynamic>;
+    return assets.containsKey(base) && assets.containsKey(grass) ? [base, grass] : null;
+  }
+
+  /// 이 지역 후경을 대신할 파일: 겨울이면 겨울판(scene.json winterTiles), 이음새 수정본이 채택됐으면 그것.
+  /// 키 → 파일 내용. 세 장이 다 있어야 쓰고, 없으면 빈 맵이라 기본판을 그대로 읽는다.
+  /// 새 그림은 그림 폴더에 넣는다. WebP를 먼저 찾는다
+  static Future<Map<String, ByteData>> _farFiles(
+    AssetBundle bundle,
+    Map<String, dynamic> scene,
+    String region,
+    Season season,
+    List<String> parts,
+  ) async {
+    final backdrop = (scene['backdrops'] as Map)[region] as Map?;
+    if (backdrop == null) return const {};
+    final seam = backdrop['seamFixTiles'] as Map?;
+    final List? files = season == Season.winter && backdrop['winterTiles'] != null
+        ? backdrop['winterTiles'] as List
+        : seam != null && seam['adopted'] == true
+        ? seam['files'] as List
+        : null;
+    if (files == null || files.length != parts.length) return const {};
+    final found = <String, ByteData>{};
+    for (var i = 0; i < parts.length; i++) {
+      final name = files[i] as String;
+      final bytes = await _assetOrNull(bundle, '${WideCampImages.dir}/${name.replaceAll('.png', '.webp')}') ??
+          await _assetOrNull(bundle, '${WideCampImages.dir}/$name');
+      if (bytes == null) return const {};
+      found[parts[i]] = bytes;
+    }
+    return found;
   }
 
   /// 고른 배의 뒤판·앞판·창 불빛을 읽는다. 뒤판이나 앞판 파일이 아직 없으면 null
@@ -227,6 +275,24 @@ class SceneArt {
     boat?.dispose();
     wideCamp?.dispose();
   }
+}
+
+/// 회색조 풀에 입힐 값 (palette.json grass): 계절 견본색과 기준 밝기
+class GrassPalette {
+  const GrassPalette(this.base, this.seasons);
+
+  final double base;
+
+  /// 계절 이름 → 불투명 ARGB
+  final Map<String, int> seasons;
+
+  factory GrassPalette.fromJson(Map<String, dynamic> j) => GrassPalette(
+        (j['base'] as num).toDouble(),
+        {
+          for (final e in (j['seasons'] as Map<String, dynamic>).entries)
+            e.key: 0xFF000000 | int.parse((e.value as String).substring(1), radix: 16),
+        },
+      );
 }
 
 /// 넓은 캠프 그림 4장 (scene.json rest.files). 파일 이름과 세로 자리는 scene.json이 정하고,

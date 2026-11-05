@@ -7,12 +7,17 @@ import '../../domain/boat.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/rules.dart';
 import '../../domain/scene.dart';
+import '../../domain/scene_color.dart';
 import '../../domain/scene_plan.dart';
 import '../../domain/sky.dart';
 import '../../domain/time_tint.dart';
+import '../../domain/tint.dart';
 import 'scene_art.dart';
 import 'scene_painter.dart';
 import 'sky_painter.dart';
+
+/// 뒷줄 안개 색
+const _hazeColor = 0xffd6e0d6;
 
 /// 조각이 화면 왼쪽 밖으로 나가도 걸쳐 있을 수 있는 폭 (그림 px). 가장 넓은 조각보다 크다
 const _maxPieceWidth = 2400.0;
@@ -47,6 +52,10 @@ class SceneArtPainter extends CustomPainter {
   late Canvas _canvas;
   late SceneArtLayout _layout;
   late Size _size;
+
+  /// 지금 시간대 보정 (낮은 null)
+  List<double>? _time;
+  SeasonTint? _season;
   double get _k => _layout.scale;
   double get _groundScale => _layout.size.width > _layout.size.height ? .78 : 1;
   Map get _assets => art.data['assets'] as Map;
@@ -58,40 +67,39 @@ class SceneArtPainter extends CustomPainter {
     _layout = SceneArtLayout(art, layoutSize ?? size, mode, onSea, camp);
     canvas.save();
     canvas.clipRect(Offset.zero & size);
+    final factor = tintFactorAt(look.mix, rules, character: false);
+    _time = factor == 0xffffffff ? null : factorMatrix(factor);
+    _season = rules.seasonTint[look.season.name];
     switch (pass) {
       case ScenePass.restFar:
         _sky();
-        _tinted(_far);
+        _far();
       case ScenePass.restBack:
-        _tinted(_campBack);
+        _campBack();
       case ScenePass.restFront:
-        _tinted(_campFront);
+        _campFront();
       case ScenePass.restFire:
-        _tinted(_campFire);
+        _campFire();
       case ScenePass.foreground:
-        _tinted(() {
-          if (_layout.sea) {
-            _boatFront();
-            _water();
-          } else if (!_layout.rest) {
-            _tile(
-              'bg_front_${look.season.name}_v11_clean.png',
-              _layout.n('frontY'),
-              rules.layers[SceneLayerId.foreground]!.speed,
-            );
-          }
-        });
+        if (_layout.sea) {
+          _boatFront();
+          _water();
+        } else if (!_layout.rest) {
+          _tile(
+            'bg_front_${look.season.name}_v11_clean.png',
+            _layout.n('frontY'),
+            rules.layers[SceneLayerId.foreground]!.speed,
+          );
+        }
       case ScenePass.background || ScenePass.all:
         _sky();
-        _tinted(() {
-          _far();
-          if (_layout.sea) {
-            _boat();
-          } else if (!_layout.rest) {
-            _land();
-          }
-        });
-        if (_layout.sea) _boatLight();
+        _far();
+        if (_layout.sea) {
+          _boat();
+          _boatLight();
+        } else if (!_layout.rest) {
+          _land();
+        }
     }
     canvas.restore();
   }
@@ -102,19 +110,32 @@ class SceneArtPainter extends CustomPainter {
             rules.groundPxPerM *
             speed;
 
-  void _tinted(VoidCallback draw) {
-    final factor = tintFactorAt(look.mix, rules, character: false);
-    if (factor == 0xffffffff) {
-      draw();
-      return;
-    }
-    _canvas.saveLayer(
-      Offset.zero & _size,
-      Paint()
-        ..colorFilter = ColorFilter.mode(Color(factor), BlendMode.modulate),
+  /// 입힐 색 행렬을 칠에 담는다. 입힐 것이 없으면 그대로.
+  /// saveLayer 없이 그림마다 입힌다 (곱하기는 그림별로 입혀도 묶어 입힌 것과 결과가 같다)
+  Paint _tinted(List<double>? matrix, [Paint? paint]) {
+    final out = paint ?? Paint();
+    if (matrix != null) out.colorFilter = ColorFilter.matrix(matrix);
+    return out;
+  }
+
+  /// 시간대 보정만 입히는 칠 (길·앞풀·캠프)
+  Paint _timePaint() => _tinted(_time);
+
+  /// 계절 보정 → 시간대 보정 (후경·군락·들판)
+  Paint _layerPaint(SceneLayerId layer) =>
+      _tinted(chainAll([seasonTintMatrix(_season, layer), _time]));
+
+  /// 회색조 풀: 풀 계절색 → (있으면) 계절 보정 → 시간대 보정을 한 행렬로
+  Paint _grassPaint({SceneLayerId? layer}) {
+    final grass = art.grass;
+    final swatch = grass?.seasons[look.season.name];
+    return _tinted(
+      chainAll([
+        if (grass != null && swatch != null) tintMatrix(swatch, grass.base),
+        if (layer != null) seasonTintMatrix(_season, layer),
+        _time,
+      ]),
     );
-    draw();
-    _canvas.restore();
   }
 
   void _draw(String key, Rect target, {bool crop = false, Paint? paint}) {
@@ -140,12 +161,13 @@ class SceneArtPainter extends CustomPainter {
     );
   }
 
-  void _tile(String key, double y, double speed) {
+  void _tile(String key, double y, double speed, {Paint? paint}) {
     final spec = _assets[key] as Map;
     final w = (spec['canvas'][0] as num) * _k * _groundScale;
     final h = (spec['canvas'][1] as num) * _k * _groundScale;
+    final tinted = paint ?? _timePaint();
     for (var x = -(_scroll(speed) * _k * _groundScale % w); x < _size.width; x += w) {
-      _draw(key, Rect.fromLTWH(x, _layout.y(y), w + .1, h));
+      _draw(key, Rect.fromLTWH(x, _layout.y(y), w + .1, h), paint: tinted);
     }
   }
 
@@ -157,6 +179,8 @@ class SceneArtPainter extends CustomPainter {
     final width = _layout.n('farWidth') * _k;
     final height = _layout.n(_layout.sea ? 'seaFarHeight' : 'farHeight') * _k;
     final offset = _scroll(rules.layers[SceneLayerId.backdrop]!.speed) * _k % width;
+    // 겨울은 겨울판으로 바꾸므로 후경에 계절 보정이 없다 (config seasonTint.winter.layers)
+    final paint = _layerPaint(SceneLayerId.backdrop);
     for (var x = -offset; x < _size.width; x += width) {
       for (var i = 0; i < keys.length; i++) {
         _draw(
@@ -167,6 +191,7 @@ class SceneArtPainter extends CustomPainter {
             width / 3 + .1,
             height,
           ),
+          paint: paint,
         );
       }
     }
@@ -190,7 +215,15 @@ class SceneArtPainter extends CustomPainter {
       )) {
         final key = art.assetKeyOf(p.piece.file);
         if (key == null) continue;
-        _sprite(key, (p.x - offset) * _k, p.height, spec.feetY, haze: spec.haze, tall: p.piece.tall);
+        _sprite(
+          key,
+          (p.x - offset) * _k,
+          p.height,
+          spec.feetY,
+          row: row,
+          haze: spec.haze,
+          tall: p.piece.tall,
+        );
       }
     }
   }
@@ -200,6 +233,7 @@ class SceneArtPainter extends CustomPainter {
     double x,
     double height,
     double feet, {
+    required SceneRow row,
     double haze = 0,
     bool tall = false,
   }) {
@@ -221,42 +255,45 @@ class SceneArtPainter extends CustomPainter {
             fade: plan.tallFadePx * _k * _groundScale,
           )
         : 1.0;
-    _draw(id, rect, crop: true, paint: Paint()..color = Colors.white.withValues(alpha: opacity));
-    if (haze > 0) {
-      // 같은 PNG의 알파로만 안개색을 입혀 투명 여백에 벽이 생기지 않게 한다.
-      _canvas.saveLayer(
-        rect,
-        Paint()..color = Colors.white.withValues(alpha: haze * opacity),
-      );
-      _draw(
-        id,
-        rect,
-        crop: true,
-        paint: Paint()
-          ..colorFilter = const ColorFilter.mode(
-            Color(0xffd6e0d6),
-            BlendMode.srcIn,
-          ),
-      );
-      _canvas.restore();
-    }
+    final paint = _tinted(
+      chainAll([
+        if (row == SceneRow.grove) seasonTintMatrix(_season, SceneLayerId.grove),
+        // 안개는 그림의 알파 안에서만 색을 섞는다
+        if (haze > 0) hazeMatrix(_hazeColor, haze),
+        _time,
+      ]),
+    );
+    if (opacity < 1) paint.color = Colors.white.withValues(alpha: opacity);
+    _draw(id, rect, crop: true, paint: paint);
   }
 
   void _land() {
     _row(SceneRow.grove);
     _row(SceneRow.back);
     _row(SceneRow.front);
-    _tile(
-      'bg_back_meadow_${look.season.name}_v10_preview.png',
-      _layout.n('meadowY'),
-      rules.layers[SceneLayerId.meadow]!.speed,
-    );
-    _tile('bg_path_v11_clean.png', _layout.n('groundY'), rules.layers[SceneLayerId.ground]!.speed);
-    _tile(
-      'bg_lower_bank_${look.season.name}_v11_clean.png',
-      _layout.n('groundY'),
-      rules.layers[SceneLayerId.ground]!.speed,
-    );
+    final season = look.season.name;
+    final meadowSpeed = rules.layers[SceneLayerId.meadow]!.speed;
+    final groundSpeed = rules.layers[SceneLayerId.ground]!.speed;
+    final meadow = SceneArt.grassLayers(art.data, 'bg_back_meadow', season, 'v10_clean');
+    if (meadow != null) {
+      _tile(meadow[0], _layout.n('meadowY'), meadowSpeed, paint: _layerPaint(SceneLayerId.meadow));
+      _tile(meadow[1], _layout.n('meadowY'), meadowSpeed, paint: _grassPaint(layer: SceneLayerId.meadow));
+    } else {
+      _tile(
+        'bg_back_meadow_${season}_v10_preview.png',
+        _layout.n('meadowY'),
+        meadowSpeed,
+        paint: _layerPaint(SceneLayerId.meadow),
+      );
+    }
+    _tile('bg_path_v11_clean.png', _layout.n('groundY'), groundSpeed);
+    final bank = SceneArt.grassLayers(art.data, 'bg_lower_bank', season, 'v11_clean');
+    if (bank != null) {
+      _tile(bank[0], _layout.n('groundY'), groundSpeed);
+      _tile(bank[1], _layout.n('groundY'), groundSpeed, paint: _grassPaint());
+    } else {
+      _tile('bg_lower_bank_${season}_v11_clean.png', _layout.n('groundY'), groundSpeed);
+    }
   }
 
   void _boat() {
@@ -277,6 +314,7 @@ class SceneArtPainter extends CustomPainter {
         3072 * scale,
         1536 * scale,
       ),
+      paint: _timePaint(),
     );
   }
 
@@ -285,7 +323,7 @@ class SceneArtPainter extends CustomPainter {
     final layers = art.boat;
     final night = layers?.night;
     if (layers == null || night == null || !boatLightOn(look.phase)) return;
-    _boatLayer(night, layers);
+    _boatLayer(night, layers, tint: false);
   }
 
   void _boatFront() {
@@ -293,7 +331,7 @@ class SceneArtPainter extends CustomPainter {
   }
 
   /// 배 판 한 장. 어느 판이든 같은 자리·같은 흔들림으로 그린다
-  void _boatLayer(ui.Image image, BoatImages layers) {
+  void _boatLayer(ui.Image image, BoatImages layers, {bool tint = true}) {
     final foot = _layout.foot;
     final at = placeBoat(
       layers.art,
@@ -305,7 +343,7 @@ class SceneArtPainter extends CustomPainter {
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
       Rect.fromLTWH(at.left, at.top, at.width, at.height),
-      Paint()..filterQuality = FilterQuality.medium,
+      (tint ? _timePaint() : Paint())..filterQuality = FilterQuality.medium,
     );
   }
 
@@ -315,7 +353,7 @@ class SceneArtPainter extends CustomPainter {
   /// 캠프 뒤판: 넓은 그림이 있으면 그것, 없으면 v11을 왼쪽에 두고 나머지는 빈 땅
   void _campBack() {
     if (art.wideCamp case final wide?) {
-      _wide(wide.back, wide.backY, wide);
+      _wide(wide.back, wide.backY, wide, paint: _timePaint());
       _wide(wide.backGrass, wide.backY, wide, paint: _grassPaint());
       return;
     }
@@ -329,7 +367,7 @@ class SceneArtPainter extends CustomPainter {
     final top = _layout.y((config['backY'] as num).toDouble());
     final from = ((config['fill'] as Map)['stretchFromY'] as num).toDouble();
     for (final (key, paint) in [
-      ('bg_rest_camp_back_v11_clean.png', Paint()),
+      ('bg_rest_camp_back_v11_clean.png', _timePaint()),
       ('bg_rest_camp_back_grass_v11_clean.png', _grassPaint()),
     ]) {
       final image = art.images[key];
@@ -357,12 +395,12 @@ class SceneArtPainter extends CustomPainter {
 
   void _campFront() {
     if (art.wideCamp case final wide?) {
-      _wide(wide.front, wide.frontY, wide);
+      _wide(wide.front, wide.frontY, wide, paint: _timePaint());
       _wide(wide.frontGrass, wide.frontY, wide, paint: _grassPaint());
       return;
     }
     final rect = _v11Rect(((art.data['camp'] as Map)['frontY'] as num).toDouble());
-    _draw('bg_rest_camp_front_v11_clean.png', rect);
+    _draw('bg_rest_camp_front_v11_clean.png', rect, paint: _timePaint());
     _draw('bg_rest_camp_front_grass_v11_clean.png', rect, paint: _grassPaint());
   }
 
@@ -381,6 +419,7 @@ class SceneArtPainter extends CustomPainter {
         fire.box.w * restK,
         fire.box.h * restK,
       ),
+      paint: _timePaint(),
     );
   }
 
@@ -424,7 +463,7 @@ class SceneArtPainter extends CustomPainter {
       image,
       Rect.fromLTWH(s[0] * imageScale, s[1] * imageScale, s[2] * imageScale, s[3] * imageScale),
       Rect.fromLTRB(seam, math.min(top0, top1), width, bottom),
-      Paint()..filterQuality = FilterQuality.medium,
+      _timePaint()..filterQuality = FilterQuality.medium,
     );
     _canvas.restore();
     // 좌우로 뒤집기 (풀까지)
@@ -445,24 +484,6 @@ class SceneArtPainter extends CustomPainter {
       Rect.fromLTWH(0, _layout.y(artY), w, w * image.height / image.width),
       (paint ?? Paint())..filterQuality = FilterQuality.medium,
     );
-  }
-
-  /// 회색조 풀에 계절색을 입히는 칠
-  Paint _grassPaint() {
-    const palettes = {
-      Season.spring: Color(0xffb5c98a),
-      Season.summer: Color(0xff6f8f4e),
-      Season.autumn: Color(0xffc79a5b),
-      Season.winter: Color(0xffd8d6cc),
-    };
-    final c = palettes[look.season]!;
-    return Paint()
-      ..colorFilter = ColorFilter.matrix([
-        c.r * 255 / 150, 0, 0, 0, 0,
-        0, c.g * 255 / 150, 0, 0, 0,
-        0, 0, c.b * 255 / 150, 0, 0,
-        0, 0, 0, 1, 0,
-      ]);
   }
 
   void _sky() {
@@ -522,29 +543,23 @@ class SceneArtPainter extends CustomPainter {
         Rect.fromCenter(center: Offset(cx, cy), width: width, height: width),
       );
     }
-    _tinted(() {
-      final width = (s['cloudWidth'] as num) * _k;
-      final period = 3400 * _k;
-      final offset = (_scroll(rules.layers[SceneLayerId.sky]!.speed) + (elapsed * (s['cloudSpeed'] as num))) * _k;
-      for (var i = 0; i < 2; i++) {
-        final x = ((i * 1700 * _k - offset) % period) - width;
-        final key = 'sky_cloud_0${i + 1}_v11_clean.png';
-        final spec = _assets[key] as Map;
-        final h =
-            width * (spec['canvas'][1] as num) / (spec['canvas'][0] as num);
-        for (final xx in [x, x + period]) {
-          _draw(
-            key,
-            Rect.fromLTWH(
-              xx,
-              _layout.y((s['cloudY'] as num).toDouble() + i * 180),
-              width,
-              h,
-            ),
-          );
-        }
+    final width = (s['cloudWidth'] as num) * _k;
+    final period = 3400 * _k;
+    final offset = (_scroll(rules.layers[SceneLayerId.sky]!.speed) + (elapsed * (s['cloudSpeed'] as num))) * _k;
+    final cloudPaint = _timePaint();
+    for (var i = 0; i < 2; i++) {
+      final x = ((i * 1700 * _k - offset) % period) - width;
+      final key = 'sky_cloud_0${i + 1}_v11_clean.png';
+      final spec = _assets[key] as Map;
+      final h = width * (spec['canvas'][1] as num) / (spec['canvas'][0] as num);
+      for (final xx in [x, x + period]) {
+        _draw(
+          key,
+          Rect.fromLTWH(xx, _layout.y((s['cloudY'] as num).toDouble() + i * 180), width, h),
+          paint: cloudPaint,
+        );
       }
-    });
+    }
     _passer(s);
   }
 

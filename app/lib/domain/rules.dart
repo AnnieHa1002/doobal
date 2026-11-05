@@ -42,6 +42,25 @@ class RestRules {
 /// 장면 레이어 이름 (config scene.layers, 6역할 + 하늘). 그리는 순서는 painter가 정한다
 enum SceneLayerId { sky, backdrop, grove, roadside, meadow, ground, foreground }
 
+/// 계절 보정 (config scene.seasonTint). [layers]에만 입힌다
+class SeasonTint {
+  const SeasonTint({
+    required this.layers,
+    required this.multiply,
+    required this.strength,
+    this.saturation = 0,
+    this.brightness = 0,
+  });
+
+  final Set<SceneLayerId> layers;
+
+  /// 곱하기 색 (불투명 ARGB)과 세기
+  final int multiply;
+  final double strength;
+  final double saturation;
+  final double brightness;
+}
+
 /// 레이어 하나의 규격 (config scene.layers). 좌표는 기준 화면(1170×2532) px.
 /// sky는 그린 하늘이라 speed만 있고, 땅 이미지(ground)에는 띠가 없다
 class SceneLayer {
@@ -165,6 +184,7 @@ class Rules {
     required this.characterCanvasHeightPx,
     required this.characterHeightLandscapePx,
     required this.rest,
+    required this.seasonTint,
     required this.layers,
     required this.seaHiddenLayers,
     required this.sunZenithDeg,
@@ -328,6 +348,9 @@ class Rules {
 
   /// 쉼터 밀기·확대 (config rest)
   final RestRules rest;
+
+  /// 계절 이름 → 계절 보정 (봄·여름은 없음)
+  final Map<String, SeasonTint> seasonTint;
 
   /// 레이어별 규격. 모든 SceneLayerId가 들어 있다
   final Map<SceneLayerId, SceneLayer> layers;
@@ -562,6 +585,17 @@ class Rules {
         farParallax: _d(restDrag['farParallax']),
         snapSec: _d(restDrag['snapSec']),
       ),
+      seasonTint: {
+        for (final e in (scene['seasonTint'] as Map<String, dynamic>).entries)
+          if (e.value is Map)
+            e.key: SeasonTint(
+              layers: {for (final n in (e.value as Map)['layers'] as List) layerId(n as String)},
+              multiply: _hex((e.value as Map)['multiply'] as String),
+              strength: _d((e.value as Map)['strength']),
+              saturation: _dn((e.value as Map)['saturation']) ?? 0,
+              brightness: _dn((e.value as Map)['brightness']) ?? 0,
+            ),
+      },
       layers: layers,
       seaHiddenLayers: {for (final n in scene['seaHiddenLayers'] as List) layerId(n as String)},
       sunZenithDeg: _d(scene['sunZenithDeg']),
