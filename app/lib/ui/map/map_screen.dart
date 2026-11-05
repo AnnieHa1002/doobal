@@ -9,6 +9,7 @@ import '../../domain/landmark.dart';
 import '../../domain/map_first_view.dart';
 import '../../domain/map_projection.dart';
 import '../../domain/map_regions.dart';
+import '../../domain/rules.dart';
 import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
 import '../common/corner_button.dart';
@@ -126,8 +127,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     return Matrix4(z, 0, 0, 0, 0, z, 0, 0, 0, 0, 1, 0, t.dx, t.dy, 0, 1);
   }
 
-  /// 처음 보기: 지금 위치를 가운데 두고 명소가 3곳 이상 보이게 확대한다. 위치를 모르면 전국
-  Matrix4 _firstMatrix(MapGeometry g, MapData data) {
+  /// 처음 보기: 지금 위치를 가운데 두고 명소가 몇 곳 이상(config map.firstView) 보이게 확대한다. 위치를 모르면 전국
+  Matrix4 _firstMatrix(MapGeometry g, MapData data, Rules rules) {
     final pos = data.position;
     if (pos == null) return _matrixFor(g, g.bounds, zoom: 1);
     final base = g.baseScale(_view.width);
@@ -139,6 +140,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       viewW: area.width / base,
       viewH: area.height / base,
       maxZoom: _maxZoom,
+      minCount: rules.mapFirstViewMinLandmarks,
+      margin: rules.mapFirstViewMargin,
     );
     final c = view.center;
     return _matrixFor(g, MapRect(c.x, c.y, c.x, c.y), zoom: view.zoom);
@@ -270,12 +273,14 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     final landmarks = ref.watch(landmarksProvider).value;
     final data = ref.watch(mapDataProvider).value;
     final snap = ref.watch(snapshotProvider).value;
+    final rules = ref.watch(rulesProvider).value;
     // 데이터가 올 때까지는 종이색 빈 화면
     if (projection == null ||
         regions == null ||
         landmarks == null ||
         data == null ||
-        snap == null) {
+        snap == null ||
+        rules == null) {
       return const Scaffold(backgroundColor: Palette.paper, body: SizedBox.expand());
     }
     final geometry = _geometryOf(projection, regions, landmarks);
@@ -291,7 +296,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
         _view = box.biggest;
         _padding = MediaQuery.paddingOf(context);
         final tc = _tc ??=
-            TransformationController(_firstMatrix(geometry, data));
+            TransformationController(_firstMatrix(geometry, data, rules));
         return Stack(
           children: [
             Positioned.fill(child: _map(geometry, data, tc)),
