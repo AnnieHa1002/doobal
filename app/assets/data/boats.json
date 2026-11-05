@@ -256,13 +256,33 @@
     "method": "materialIds",
     "dir": "recolor/premium_01/",
     "files": {
-     "materialIds": "material_ids.png (회색 값 0 고정·1 hull·2 upper·3 accent, 보간 없이 읽음)",
-     "perZone": "구역별 mask·shading",
-     "rearFront": "앞·뒤 shading, 앞·뒤 fixed",
+     "materialIds": "material_ids.png",
+     "masks": {
+      "hull": "hull_mask.png",
+      "upper": "upper_mask.png",
+      "accent": "accent_mask.png"
+     },
+     "shading": {
+      "rear": {
+       "hull": "rear_hull_shading.png",
+       "upper": "rear_upper_shading.png",
+       "accent": "rear_accent_shading.png"
+      },
+      "front": {
+       "hull": "front_hull_shading.png",
+       "upper": "front_upper_shading.png",
+       "accent": "front_accent_shading.png"
+      }
+     },
+     "fixed": {
+      "rear": "rear_fixed.png",
+      "front": "front_fixed.png"
+     },
      "meta": "materials.json"
     },
-    "fileNamesPending": "zip(10MB 넘음) 안 실제 파일 이름은 리포에 넣을 때 확인",
-    "review": "미술 승인 전 검토본, 극단적 색 경계 확대 검수 남음"
+    "review": "미술 승인 전 검토본, 극단적 색 경계 확대 검수 남음",
+    "neutralMidpoint": 192,
+    "source": "Drive Assets/상점배3척_색변경_v01_검토본_20261106 (zip 4개를 한 곳에 풀면 premium_boat_colors_v01/), clean 앞·뒤판은 기존 승인 원화와 바이트 같음"
    }
   },
   {
@@ -304,13 +324,33 @@
     "method": "materialIds",
     "dir": "recolor/premium_02/",
     "files": {
-     "materialIds": "material_ids.png (회색 값 0 고정·1 hull·2 upper·3 accent, 보간 없이 읽음)",
-     "perZone": "구역별 mask·shading",
-     "rearFront": "앞·뒤 shading, 앞·뒤 fixed",
+     "materialIds": "material_ids.png",
+     "masks": {
+      "hull": "hull_mask.png",
+      "upper": "upper_mask.png",
+      "accent": "accent_mask.png"
+     },
+     "shading": {
+      "rear": {
+       "hull": "rear_hull_shading.png",
+       "upper": "rear_upper_shading.png",
+       "accent": "rear_accent_shading.png"
+      },
+      "front": {
+       "hull": "front_hull_shading.png",
+       "upper": "front_upper_shading.png",
+       "accent": "front_accent_shading.png"
+      }
+     },
+     "fixed": {
+      "rear": "rear_fixed.png",
+      "front": "front_fixed.png"
+     },
      "meta": "materials.json"
     },
-    "fileNamesPending": "zip(10MB 넘음) 안 실제 파일 이름은 리포에 넣을 때 확인",
-    "review": "미술 승인 전 검토본, 극단적 색 경계 확대 검수 남음"
+    "review": "미술 승인 전 검토본, 극단적 색 경계 확대 검수 남음",
+    "neutralMidpoint": 192,
+    "source": "Drive Assets/상점배3척_색변경_v01_검토본_20261106 (zip 4개를 한 곳에 풀면 premium_boat_colors_v01/), clean 앞·뒤판은 기존 승인 원화와 바이트 같음"
    }
   },
   {
@@ -352,13 +392,33 @@
     "method": "materialIds",
     "dir": "recolor/premium_03/",
     "files": {
-     "materialIds": "material_ids.png (회색 값 0 고정·1 hull·2 upper·3 accent, 보간 없이 읽음)",
-     "perZone": "구역별 mask·shading",
-     "rearFront": "앞·뒤 shading, 앞·뒤 fixed",
+     "materialIds": "material_ids.png",
+     "masks": {
+      "hull": "hull_mask.png",
+      "upper": "upper_mask.png",
+      "accent": "accent_mask.png"
+     },
+     "shading": {
+      "rear": {
+       "hull": "rear_hull_shading.png",
+       "upper": "rear_upper_shading.png",
+       "accent": "rear_accent_shading.png"
+      },
+      "front": {
+       "hull": "front_hull_shading.png",
+       "upper": "front_upper_shading.png",
+       "accent": "front_accent_shading.png"
+      }
+     },
+     "fixed": {
+      "rear": "rear_fixed.png",
+      "front": "front_fixed.png"
+     },
      "meta": "materials.json"
     },
-    "fileNamesPending": "zip(10MB 넘음) 안 실제 파일 이름은 리포에 넣을 때 확인",
-    "review": "미술 승인 전 검토본, 극단적 색 경계 확대 검수 남음"
+    "review": "미술 승인 전 검토본, 극단적 색 경계 확대 검수 남음",
+    "neutralMidpoint": 192,
+    "source": "Drive Assets/상점배3척_색변경_v01_검토본_20261106 (zip 4개를 한 곳에 풀면 premium_boat_colors_v01/), clean 앞·뒤판은 기존 승인 원화와 바이트 같음"
    }
   }
  ],
@@ -379,7 +439,7 @@
   },
   "fixed": "나무·금속·창틀·외곽선은 고정 층",
   "formula": {
-   "materialIds": "premium 3척: 구역 픽셀 rgb = min(255, 고른 색 × shadingGray ÷ 192), 알파 그대로, 그 위에 fixed 층. 고른 색이 없으면 원본 픽셀 그대로(평균색 쓰지 않음)",
+   "materialIds": "premium 3척: 앞·뒤판 각각 fixed 층 + 구역 shading 층마다 rgb = min(255, 고른 색 × shadingGray ÷ 192), 알파 그대로. 고른 색이 없으면 clean 원본 그림 그대로(평균색 쓰지 않음)",
    "meanLuminance": "theme 3척(Codex recolor v01): rgb = clamp(중립 × 고른 색 ÷ 구역 meanLuminance), defaults는 구역 대표색"
   },
   "swatches": "palette body.swatches 10 + 직접 고르기",

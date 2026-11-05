@@ -42,7 +42,11 @@
    "status": "mvp",
    "material": {
     "catalogId": "beret",
-    "hex": "#A4502F"
+    "hex": "#A4502F",
+    "neutralReference": 192,
+    "source": "beret_grayscale_v07 (Assets/베레모_회색조_배9척_검증_v02_20261104 zip)",
+    "blend": "weighted",
+    "layout": "beret_grayscale_v07/layout_v07.json"
    }
   },
   {
@@ -628,7 +632,11 @@
    "variantOf": "hat_01",
    "material": {
     "catalogId": "beret",
-    "hex": "#BCD9E8"
+    "hex": "#BCD9E8",
+    "neutralReference": 192,
+    "source": "beret_grayscale_v07 (Assets/베레모_회색조_배9척_검증_v02_20261104 zip)",
+    "blend": "weighted",
+    "layout": "beret_grayscale_v07/layout_v07.json"
    }
   },
   {
@@ -645,7 +653,11 @@
    "variantOf": "hat_01",
    "material": {
     "catalogId": "beret",
-    "hex": "#7F8DB3"
+    "hex": "#7F8DB3",
+    "neutralReference": 192,
+    "source": "beret_grayscale_v07 (Assets/베레모_회색조_배9척_검증_v02_20261104 zip)",
+    "blend": "weighted",
+    "layout": "beret_grayscale_v07/layout_v07.json"
    }
   },
   {
@@ -662,7 +674,11 @@
    "variantOf": "hat_01",
    "material": {
     "catalogId": "beret",
-    "hex": "#9FAE7E"
+    "hex": "#9FAE7E",
+    "neutralReference": 192,
+    "source": "beret_grayscale_v07 (Assets/베레모_회색조_배9척_검증_v02_20261104 zip)",
+    "blend": "weighted",
+    "layout": "beret_grayscale_v07/layout_v07.json"
    }
   },
   {

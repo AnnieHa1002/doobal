@@ -53,6 +53,9 @@ MATERIAL = {
     'cloth_02': ('travel_vest', '#B5A576'),
     'shoe_01': ('brown_shoes', '#B18B67'),
 }
+# 소품별로 따로 납품된 회색조(11/4 Codex 베레모 회색조 v07): 기준 밝기 192, 갈색 선은 가중치 혼합으로 지킴(식은 layout_v07.json)
+MATERIAL_SOURCE = {'hat_01': {'neutralReference': 192, 'source': 'beret_grayscale_v07 (Assets/베레모_회색조_배9척_검증_v02_20261104 zip)',
+                              'blend': 'weighted', 'layout': 'beret_grayscale_v07/layout_v07.json'}}
 # 색 소품: {기본 id: [(색 이름, hex), ...]} — 가안 7종 × 3색, 각 100 럭(기준 문서 11장). 색은 디자인 기획이 고른다.
 # 비어 있으면 색 소품을 만들지 않는다(앱은 상점·꾸미기에 안 보임).
 SW = {'크림': '#F3E4C4', '살구': '#F5C9A3', '분홍': '#EFC0BE', '라벤더': '#D3C6E6', '하늘': '#BCD9E8',
@@ -107,6 +110,8 @@ def p(id, slot, name, kind, status='mvp', **k):
     o = {'id': id, 'slot': slot, 'name': name, 'unlock': {'kind': kind, **k}, 'status': status}
     if id in MATERIAL:
         o['material'] = {'catalogId': MATERIAL[id][0], 'hex': MATERIAL[id][1]}
+        if id in MATERIAL_SOURCE:
+            o['material'].update(MATERIAL_SOURCE[id])
     return o
 
 
@@ -196,7 +201,7 @@ def build_props():
             props.append({'id': f'{bid}_c{n}', 'slot': base[bid]['slot'], 'name': f"{word} {VARIANT_STEM.get(bid, base[bid]['name'])}", 'color': cname,
                           'unlock': {'kind': 'shop', 'price': COLOR_VARIANT_PRICE, 'requires': bid},
                           'status': 'mvp', 'variantOf': bid,
-                          'material': {'catalogId': MATERIAL[bid][0], 'hex': hexv}})
+                          'material': {'catalogId': MATERIAL[bid][0], 'hex': hexv, **MATERIAL_SOURCE.get(bid, {})}})
     ids = [x['id'] for x in props]
     assert len(ids) == len(set(ids)), 'id 중복'
     assert all(len(x['name'].split()) <= 2 for x in props if x['status'] == 'mvp' and 'variantOf' not in x), '이름은 두 낱말 이내(14장)'
