@@ -22,12 +22,12 @@ Set<String> _regionIds(String region) => {
 
 void main() {
   group('props.json 읽기', () {
-    test('전체 55개 중 mvp 42개만 읽는다 (pending·later는 뺀다)', () {
+    test('전체 76개 중 mvp 63개만 읽는다 (pending·later는 뺀다)', () {
       final json =
           jsonDecode(File('assets/data/props.json').readAsStringSync()) as Map<String, dynamic>;
-      expect((json['props'] as List), hasLength(55));
-      expect(props, hasLength(42));
-      expect(props.map((p) => p.id).toSet(), hasLength(42));
+      expect((json['props'] as List), hasLength(76));
+      expect(props, hasLength(63));
+      expect(props.map((p) => p.id).toSet(), hasLength(63));
     });
 
     test('해금 조건 개수: 기본 6 · 거리 10 · 권역 7 · 걸음 1 · 동료 3', () {
@@ -36,24 +36,24 @@ void main() {
       expect(_idsOf(PropUnlockKind.region), hasLength(7));
       expect(_idsOf(PropUnlockKind.steps), hasLength(1));
       expect(_idsOf(PropUnlockKind.companion), hasLength(3));
-      expect(_idsOf(PropUnlockKind.shop), hasLength(15));
+      expect(_idsOf(PropUnlockKind.shop), hasLength(36));
     });
 
-    test('동행 소품 3개: 퐁이 달 핀 · 휴 꾹꾹이 장갑 · 심 박사 동그란 안경 (companions.json id)', () {
+    test('동행 소품 3개: 퐁이 달 핀 · 휴 꾹꾹이 장갑 · 심 박사 안경 (companions.json id)', () {
       final companion = props.where((p) => p.kind == PropUnlockKind.companion).toList();
       expect({for (final p in companion) p.id: p.name},
-          {'hat_10': '작은 달', 'hat_11': '동그란 안경', 'hand_09': '꾹꾹이 장갑'});
+          {'hat_10': '달', 'hat_11': '안경', 'hand_09': '꾹꾹이 장갑'});
       expect({for (final p in companion) p.id: p.companion},
           {'hat_10': 'bright', 'hat_11': 'doctor', 'hand_09': 'rest'});
     });
 
-    test('MVP 슬롯 개수: 모자 4·얼굴 3·옷 5·신발 5·손 5·가방 5·미니 친구 5·둥실 5·효과 5', () {
+    test('MVP 슬롯 개수: 색 소품 21개 포함 모자 16·옷 11·신발 8, 나머지는 그대로', () {
       final slots = <String, int>{};
       for (final p in props) {
         slots.update(p.slot, (n) => n + 1, ifAbsent: () => 1);
       }
       expect(slots,
-          {'hat': 4, 'face': 3, 'cloth': 5, 'shoe': 5, 'hand': 5, 'bag': 5, 'pet': 5, 'float': 5, 'effect': 5});
+          {'hat': 16, 'face': 3, 'cloth': 11, 'shoe': 8, 'hand': 5, 'bag': 5, 'pet': 5, 'float': 5, 'effect': 5});
     });
 
     test('동료 id가 들어 있으면 읽는다', () {
@@ -131,7 +131,7 @@ void main() {
       expect(all.intersection(_idsOf(PropUnlockKind.companion)), isEmpty);
     });
 
-    test('거리·권역·걸음 전부 채우면 24개 (MVP 42개 - 동료 3개 - 상점 15개)', () {
+    test('거리·권역·걸음 전부 채우면 24개 (MVP 63개 - 동료 3개 - 상점 36개)', () {
       final regions = landmarks.map((l) => l.region).toSet();
       final all = _earned(km: 1000, steps: 1000000, regions: regions);
       expect(all, hasLength(24));
@@ -207,8 +207,8 @@ void main() {
 
     test('새 소품 토스트: 하나면 이름, 여럿이면 첫 이름 외 n개', () {
       Prop p(String id) => props.firstWhere((x) => x.id == id);
-      expect(newPropToast([p('hand_02')]), '새 소품을 얻었어요 · 봇짐 지팡이');
-      expect(newPropToast([p('hand_02'), p('hat_02')]), '새 소품을 얻었어요 · 봇짐 지팡이 외 1개');
+      expect(newPropToast([p('hand_02')]), '새 소품을 얻었어요 · 봇짐');
+      expect(newPropToast([p('hand_02'), p('hat_02')]), '새 소품을 얻었어요 · 봇짐 외 1개');
     });
 
     test('토스트로 알리는 소품: 거리·걸음만 (권역은 도착 화면, 기본은 처음부터 가짐)', () {

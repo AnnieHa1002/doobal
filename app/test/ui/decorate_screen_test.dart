@@ -89,6 +89,9 @@ Future<void> _save(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
+/// 색마다 따로 된 상점 소품 (id `<기본>_c<n>`). 칸 배치를 보는 시험은 기본 소품만 쓴다
+bool _isColorVariant(Prop p) => RegExp(r'_c\d+$').hasMatch(p.id);
+
 Future<void> _ownProps(AppDb db, List<String> ids) => db.batch((b) => b.insertAll(db.propsOwned, [
       for (final id in ids) PropsOwnedCompanion.insert(propId: id, unlockedUtc: 1),
     ]));
@@ -126,7 +129,7 @@ void main() {
 
       expect(find.text('꾸미기'), findsOneWidget);
       expect(find.byTooltip('뒤로'), findsOneWidget);
-      // 처음부터 가진 소품 6개 (베레모·앞치마 작업복·갈색 신발·큰 붓·화구 가방·종이새)
+      // 처음부터 가진 소품 6개 (베레모·앞치마·갈색 신발·큰 붓·화구 가방·종이새)
       expect(find.text('가진 소품 6개'), findsOneWidget);
       expect(find.text('내 모습'), findsOneWidget);
       expect(find.text('소품'), findsOneWidget);
@@ -183,17 +186,17 @@ void main() {
       await e.seed(tester, () => _ownProps(e.db, ['hat_02']));
       await _open(tester, e);
 
-      expect(_summary(tester), '베레모 · 앞치마 작업복 · 갈색 신발 · 큰 붓 · 종이새');
+      expect(_summary(tester), '베레모 · 앞치마 · 갈색 신발 · 큰 붓 · 종이새');
       await _tap(tester, _key('prop-hat_02'));
-      expect(_summary(tester), startsWith('깃털 꽂은 여행 모자 · 앞치마 작업복'));
+      expect(_summary(tester), startsWith('여행 모자 · 앞치마'));
       await _tap(tester, _key('prop-none'));
-      expect(_summary(tester), startsWith('앞치마 작업복 · 갈색 신발'));
+      expect(_summary(tester), startsWith('앞치마 · 갈색 신발'));
       // 다 비울 수는 없지만(옷) 나머지를 비우면 옷만 남는다
       for (final slot in ['shoe', 'bag', 'pet']) {
         await _goTab(tester, slot);
         await _tap(tester, _key('prop-none'));
       }
-      expect(_summary(tester), '앞치마 작업복');
+      expect(_summary(tester), '앞치마');
       await end(tester, e);
     });
 
@@ -281,7 +284,7 @@ void main() {
       });
       await _open(tester, e);
 
-      expect(_summary(tester), startsWith('깃털 꽂은 여행 모자 · 앞치마 작업복'));
+      expect(_summary(tester), startsWith('여행 모자 · 앞치마'));
       await _goTab(tester, 'me');
       expect(_chosen(tester, 'eyes-dot'), isTrue);
       expect(_swatchCheck('body-swatch-1'), findsOneWidget);
@@ -558,13 +561,13 @@ void main() {
           tester,
           () => _ownProps(e.db, [
                 for (final p in props)
-                  if (p.kind != PropUnlockKind.initial) p.id,
+                  if (p.kind != PropUnlockKind.initial && !_isColorVariant(p)) p.id,
               ]));
       await _open(tester, e);
 
       // 모자: 없음 + MVP 모자 4개 = 5칸 (3열 두 줄)
       await _goTab(tester, 'hat');
-      final hats = [for (final p in props) if (p.slot == 'hat') p.id];
+      final hats = [for (final p in props) if (p.slot == 'hat' && !_isColorVariant(p)) p.id];
       expect(hats, hasLength(4));
       expect(find.byType(ShelfCell), findsNWidgets(5));
       expect(_key('prop-none'), findsOneWidget);
@@ -587,7 +590,7 @@ void main() {
       for (final (slot, count) in [('hand', 5), ('bag', 5), ('shoe', 5), ('pet', 5), ('face', 3), ('float', 5), ('effect', 5)]) {
         await _goTab(tester, slot);
         expect(find.byType(ShelfCell), findsNWidgets(count + 1), reason: slot);
-        expect(props.where((p) => p.slot == slot), hasLength(count));
+        expect(props.where((p) => p.slot == slot && !_isColorVariant(p)), hasLength(count));
       }
       await end(tester, e);
     });
@@ -635,7 +638,7 @@ void main() {
       expect(_state('hat_01', '입는 중'), findsOneWidget);
 
       await _tap(tester, _key('prop-hat_02'));
-      expect(_summary(tester), startsWith('깃털 꽂은 여행 모자'));
+      expect(_summary(tester), startsWith('여행 모자'));
       expect(_enabled(tester, '저장'), isTrue);
 
       await _save(tester);
@@ -672,11 +675,11 @@ void main() {
 
       await _goTab(tester, 'face');
       expect(_key('empty-slot'), findsNothing);
-      expect(find.byType(ShelfCell), findsNWidgets(2)); // 없음 + 동그란 안경
+      expect(find.byType(ShelfCell), findsNWidgets(2)); // 없음 + 안경
       expect(_state('hat_11', '가짐'), findsOneWidget);
       await _tap(tester, _key('prop-hat_11'));
       expect(_state('hat_11', '입는 중'), findsOneWidget);
-      expect(_summary(tester), contains('동그란 안경'));
+      expect(_summary(tester), contains('안경'));
 
       await _goTab(tester, 'float');
       expect(_state('hat_10', '가짐'), findsOneWidget);
