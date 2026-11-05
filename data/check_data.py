@@ -105,6 +105,9 @@ for p in props.values():
             err(f"props {p['id']}: color '{c}'가 palette body 견본에 없음")
         elif p['material']['hex'].upper() != swatch_hex[c]:
             err(f"props {p['id']}: hex {p['material']['hex']} ≠ 견본 {c} {swatch_hex[c]}")
+for p in mvp.values():
+    if p['slot'] == 'hand' and p.get('fit') not in ('wristOverlay', 'replaceArms'):
+        err(f"props {p['id']}: 손 소품인데 fit(wristOverlay·replaceArms) 없음")
 names = [p['name'] for p in mvp.values()]
 for n in {n for n in names if names.count(n) > 1}:
     err(f"props: 같은 이름이 여럿 '{n}'")

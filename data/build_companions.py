@@ -10,11 +10,14 @@
 - face는 시작값(문구로 추정): '와!'·'호호!'·'헤헤'로 시작·끝나면 laugh, '어이쿠'면 surprised, 4·5장에서 '…'로 시작하면 calm(눈 감음), 나머지 smile.
   표정 그림 4종(smile·laugh·surprised·closed)과 이름이 다르면 디자인이 나온 뒤 FACE_MAP만 고친다.
 - (v2, 11/6) 그림(art)은 story_layers.json의 장면 id(m01_prologue·m01_finale…): 정령 없는 뒤판 + 앱이 지금 입은 정령 뒷면을 얹음(16장 11/4).
+- (v3, 11/6) speciesName(종 화면 이름), hideLayerWhen 'finaleRead' = 8장을 읽은 뒤 층을 숨김(16장 11/6 안경).
 - 검사: 동행 3명, 장 9개씩, 그림 0·8장만(합계 6), 장마다 대사 6~10줄(지문 제외, 넘으면 경고만).
 """
 import json
 import re
 import sys
+
+SPECIES_NAME = {'duck': '오리', 'cat': '고양이', 'ginseng': '산삼'}  # 길 위 만남 이름 아래 종 이름(v3)
 
 COMPANIONS = [
     # (id, 문구 파일의 제목 키워드, 이름, 종, 지형, pace, 완결 소품, 완결 뒤 숨길 층, 그림 id)
@@ -123,12 +126,13 @@ def main(src, out):
         arts = [x['no'] for x in chapters if x['art']]
         assert arts == [0, 8], f'{c[0]}: 그림 장 {arts}'
         assert chapters[0].get('choice') and chapters[8].get('prop') == c[6], c[0]
-        result.append({'id': c[0], 'name': c[2], 'species': c[3], 'terrain': c[4], 'pace': c[5],
+        result.append({'id': c[0], 'name': c[2], 'species': c[3], 'speciesName': SPECIES_NAME[c[3]], 'terrain': c[4], 'pace': c[5],
                        'finaleProp': c[6], 'hideLayerOnFinale': c[7],
+                       'hideLayerWhen': 'finaleRead' if c[7] else None,
                        'faces': sorted(set(FACE_MAP.values())), 'chapters': chapters})
     assert len(result) == 3 and sum(len([x for x in r['chapters'] if x['art']]) for r in result) == 6
     with open(out, 'w', encoding='utf-8') as f:
-        json.dump({'version': 2, 'storyLayersFile': 'story_layers.json', 'companions': result}, f, ensure_ascii=False, indent=1)
+        json.dump({'version': 3, 'storyLayersFile': 'story_layers.json', 'companions': result}, f, ensure_ascii=False, indent=1)
         f.write('\n')
     for w in warns:
         print('경고:', w)
