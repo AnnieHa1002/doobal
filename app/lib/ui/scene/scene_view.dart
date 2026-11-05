@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 import '../../domain/boat.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/geo.dart';
 import '../../domain/landmark.dart';
+import '../../domain/rest_camera.dart';
 import '../../domain/rules.dart';
 import '../../domain/scene.dart';
 import '../../domain/spirit_look.dart';
@@ -34,6 +36,10 @@ class SceneView extends StatelessWidget {
     this.sceneSeed = 'default',
     this.spirit = SpiritLook.base,
     this.boat,
+    this.camera,
+    this.sceneBehind = const [],
+    this.sceneBeside = const [],
+    this.sceneAbove = const [],
   });
 
   final SceneMode mode;
@@ -67,6 +73,15 @@ class SceneView extends StatelessWidget {
   /// 배 구간에 그릴 배. 없으면 옛 배 한 장
   final BoatArt? boat;
 
+  /// 쉼터 밀기·확대. 없으면 처음 화면에 고정이다 (camp가 있을 때만 쓴다)
+  final ValueListenable<RestCamera>? camera;
+
+  /// 쉼터 장면에 얹는 것 (camp가 있을 때만, Positioned). 좌표는 확대·밀기 전 기기 pt이고 장면과 함께 움직인다.
+  /// [sceneBehind]는 정령 뒤(물건), [sceneBeside]는 정령과 앞판 사이(동행), [sceneAbove]는 맨 위(누름 상자)
+  final List<Widget> sceneBehind;
+  final List<Widget> sceneBeside;
+  final List<Widget> sceneAbove;
+
   @override
   Widget build(BuildContext context) {
     final look = sceneLook(nowUtc, position, onSea, landmarks, rules);
@@ -91,87 +106,246 @@ class SceneView extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, box) {
         final size = box.biggest;
+        final stage = rest && camp != null
+            ? RestGeometry(camp!, rules.rest, size.width, size.height)
+            : null;
         return SceneArtHost(
           look: look,
           mode: mode,
           size: size,
           onSea: onSea,
           boat: boat,
-          builder: (context, art, elapsed) {
-            final artLayout = art == null
-                ? null
-                : SceneArtLayout(art, size, mode, onSea, camp);
-            CustomPainter layer(ScenePass pass) => art == null
-                ? painter(pass)
-                : SceneArtPainter(
-                    art: art,
-                    look: look,
-                    mode: mode,
-                    distanceM: distanceM,
-                    rules: rules,
-                    onSea: onSea,
-                    pass: pass,
-                    elapsed: elapsed,
-                    camp: camp,
-                    seed: sceneSeed,
-                  );
-            final k = size.height / rules.screenHeightPx;
-            final baseFoot =
-                artLayout?.foot ??
-                (rest && camp != null
-                    ? Offset(
-                        camp!.character.x * size.width,
-                        camp!.character.footY * size.height,
-                      )
-                    : Offset(size.width / 2, rules.pathY * k));
-            // 앞으로 뻗은 앉은 발이 모닥불에 겹치지 않도록 뒤·왼쪽에 앉힌다.
-            final foot = rest && seated && !onSea
-                ? baseFoot + Offset(-size.width * .10, -size.height * .075)
-                : baseFoot + Offset(0, artLayout?.boatSwayY(elapsed) ?? 0);
-            // 정령의 머리 위 y150~발바닥 y440을 실제 캐릭터 키로 맞춘다.
-            // 키는 config다: 가로 화면은 기준 1170px, 세로는 기준 화면 높이에 대한 값.
-            final figureHeight =
-                artLayout?.figureHeight ??
-                (size.width > size.height
-                    ? rules.characterHeightLandscapePx * size.height / 1170
-                    : rules.characterHeightPx * k);
-            final scale = figureHeight / (440 - 150);
-            return Stack(
-              children: [
-                Positioned.fill(
-                  child: CustomPaint(painter: layer(ScenePass.background)),
-                ),
-                Positioned(
-                  left: foot.dx - 300 * scale,
-                  top: foot.dy - 440 * scale,
-                  width: 600 * scale,
-                  height: 600 * scale,
-                  child: ColorFiltered(
-                    colorFilter: ColorFilter.mode(
-                      Color(tint),
-                      BlendMode.modulate,
-                    ),
-                    child: RepaintBoundary(
-                      child: DoobalCharacter(
-                        speed: speed,
-                        pose: pose,
-                        spirit: spirit,
-                        // 쉼터에서만 정령을 연타하면 화낸다
-                        tapRules: rest ? rules : null,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(painter: layer(ScenePass.foreground)),
-                  ),
-                ),
-              ],
+          camp: camp,
+          restFarWidth: stage?.farWidth,
+          builder: (context, art, clock) {
+            if (stage != null) {
+              return _restStage(stage, art, clock, look, pose, speed, tint, painter);
+            }
+            return ValueListenableBuilder<double>(
+              valueListenable: clock,
+              builder: (context, elapsed, _) =>
+                  _walkStage(size, art, elapsed, look, pose, speed, tint, painter),
             );
           },
         );
       },
     );
   }
+
+  /// 걷는 중 장면: 땅·배 판 → 정령 → 앞풀. 거리와 시계에 따라 다시 그린다
+  Widget _walkStage(
+    Size size,
+    SceneArt? art,
+    double elapsed,
+    SceneLook look,
+    DoobalPose pose,
+    double speed,
+    int tint,
+    ScenePainter Function(ScenePass) painter,
+  ) {
+    final artLayout = art == null
+        ? null
+        : SceneArtLayout(art, size, mode, onSea, camp);
+    CustomPainter layer(ScenePass pass) => art == null
+        ? painter(pass)
+        : SceneArtPainter(
+            art: art,
+            look: look,
+            mode: mode,
+            distanceM: distanceM,
+            rules: rules,
+            onSea: onSea,
+            pass: pass,
+            elapsed: elapsed,
+            camp: camp,
+            seed: sceneSeed,
+          );
+    final k = size.height / rules.screenHeightPx;
+    final baseFoot = artLayout?.foot ?? Offset(size.width / 2, rules.pathY * k);
+    final foot = baseFoot + Offset(0, artLayout?.boatSwayY(elapsed) ?? 0);
+    // 정령의 머리 위 y150~발바닥 y440을 실제 캐릭터 키로 맞춘다.
+    // 키는 config다: 가로 화면은 기준 1170px, 세로는 기준 화면 높이에 대한 값.
+    final figureHeight =
+        artLayout?.figureHeight ??
+        (size.width > size.height
+            ? rules.characterHeightLandscapePx * size.height / 1170
+            : rules.characterHeightPx * k);
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: CustomPaint(painter: layer(ScenePass.background)),
+        ),
+        _character(foot, figureHeight, speed, pose, tint),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(painter: layer(ScenePass.foreground)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 정령 (발 [foot], 키 [figureHeight]). 정령의 머리 위 y150~발바닥 y440을 키로 본다
+  Widget _character(Offset foot, double figureHeight, double speed, DoobalPose pose, int tint) {
+    final scale = figureHeight / (440 - 150);
+    return Positioned(
+      left: foot.dx - 300 * scale,
+      top: foot.dy - 440 * scale,
+      width: 600 * scale,
+      height: 600 * scale,
+      child: _Tinted(
+        tint: tint,
+        child: RepaintBoundary(
+          child: DoobalCharacter(
+            speed: speed,
+            pose: pose,
+            spirit: spirit,
+            // 쉼터에서만 정령을 연타하면 화낸다
+            tapRules: mode == SceneMode.rest ? rules : null,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 쉼터 장면: 하늘·후경 한 층(천천히)과 캠프·물건·정령 한 층. 두 층을 옮기고 키우기만 하므로
+  /// 밀거나 확대할 때 다시 그리지 않는다. 시간에 따라 다시 그리는 것은 구름과 불꽃뿐이다
+  Widget _restStage(
+    RestGeometry stage,
+    SceneArt? art,
+    ValueListenable<double> clock,
+    SceneLook look,
+    DoobalPose pose,
+    double speed,
+    int tint,
+    ScenePainter Function(ScenePass) fallback,
+  ) {
+    final near = Size(stage.sceneWidth, stage.height);
+    final far = Size(stage.farWidth, stage.height);
+    final screen = Size(stage.width, stage.height);
+    CustomPainter layer(ScenePass pass, [double elapsed = 0]) => SceneArtPainter(
+      art: art!,
+      look: look,
+      mode: mode,
+      distanceM: distanceM,
+      rules: rules,
+      onSea: onSea,
+      pass: pass,
+      elapsed: elapsed,
+      camp: camp,
+      seed: sceneSeed,
+      layoutSize: screen,
+    );
+    final layout = art == null ? null : SceneArtLayout(art, screen, mode, onSea, camp);
+    final foot = layout?.foot ??
+        Offset(stage.sx(camp!.character.footX), stage.sy(camp!.character.footY));
+    final figureHeight = camp!.character.heightPt * stage.k;
+    // 시계를 들으며 움직이는 층 하나
+    Widget ticking(ScenePass pass, Size size) => RepaintBoundary(
+      child: ValueListenableBuilder<double>(
+        valueListenable: clock,
+        builder: (_, elapsed, _) => CustomPaint(size: size, painter: layer(pass, elapsed)),
+      ),
+    );
+    Widget placed(Size size, Matrix4 Function(RestCamera) matrix, Widget child) => Positioned(
+      left: 0,
+      top: 0,
+      width: size.width,
+      height: size.height,
+      child: camera == null
+          ? child
+          : AnimatedBuilder(
+              animation: camera!,
+              child: child,
+              builder: (_, child) =>
+                  Transform(transform: matrix(stage.clamp(camera!.value)), child: child),
+            ),
+    );
+    return ClipRect(
+      child: Stack(
+        children: [
+          placed(
+            far,
+            (c) => _matrix(stage.farX(c), stage.liftY(c), c.zoom),
+            art == null
+                ? RepaintBoundary(
+                    child: CustomPaint(size: far, painter: fallback(ScenePass.background)),
+                  )
+                : SizedBox.fromSize(
+                    size: far,
+                    child: Stack(
+                      children: [
+                        RepaintBoundary(
+                          child: CustomPaint(size: far, painter: layer(ScenePass.restSky)),
+                        ),
+                        ticking(ScenePass.restClouds, far),
+                        RepaintBoundary(
+                          child: CustomPaint(size: far, painter: layer(ScenePass.restFar)),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+          placed(
+            near,
+            (c) => _matrix(c.x, stage.liftY(c), c.zoom),
+            SizedBox.fromSize(
+              size: near,
+              child: Stack(
+                children: [
+                  if (art != null)
+                    Positioned.fill(
+                      child: RepaintBoundary(
+                        child: CustomPaint(painter: layer(ScenePass.restBack)),
+                      ),
+                    ),
+                  ...sceneBehind,
+                  _character(foot, figureHeight, speed, pose, tint),
+                  ...sceneBeside,
+                  if (art != null) ...[
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: RepaintBoundary(
+                          child: CustomPaint(painter: layer(ScenePass.restFront)),
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: IgnorePointer(child: ticking(ScenePass.restFire, near)),
+                    ),
+                  ] else
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: CustomPaint(painter: fallback(ScenePass.foreground)),
+                      ),
+                    ),
+                  ...sceneAbove,
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+/// 시간대 색을 곱한다. 낮(흰색)에는 층을 만들지 않는다
+class _Tinted extends StatelessWidget {
+  const _Tinted({required this.tint, required this.child});
+
+  final int tint;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => tint == 0xFFFFFFFF
+      ? child
+      : ColorFiltered(
+          colorFilter: ColorFilter.mode(Color(tint), BlendMode.modulate),
+          child: child,
+        );
+}
+
+/// 배율 [zoom]으로 키운 뒤 ([x], [y])만큼 옮기는 행렬
+Matrix4 _matrix(double x, double y, double zoom) =>
+    Matrix4.diagonal3Values(zoom, zoom, 1)..setTranslationRaw(x, y, 0);

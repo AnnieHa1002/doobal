@@ -186,7 +186,8 @@ void main() {
       expect(find.text('배낭'), findsOneWidget);
       expect(find.text('노트'), findsOneWidget);
 
-      await _tapIcon(tester, Icons.directions_walk);
+      await tester.tap(find.text('출발하기'));
+      await _transition(tester);
       expect(find.byType(MapScreen), findsOneWidget);
       expect(find.text('명소 이름 검색'), findsOneWidget);
       expect(find.text('걷기 마치기'), findsNothing);

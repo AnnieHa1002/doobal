@@ -171,6 +171,26 @@ if abs(ch['screenHeightPx']['portrait'] / ch['heightPx'] - ch['scale']['portrait
 if config['coins'].get('welcomeGift', 0) < cv.get('price', 0):
     warn("첫 선물로 색 소품 하나를 못 삼(럭_상점 v2.4 설계 의도와 다름)")
 
+# 장면 조각·캠프 물건이 그림 목록(scene_art.json)에 있고 상자가 같은가
+scene_doc = load('scene.json')
+art_assets = {v['file'].split('/')[-1]: v for v in load('scene_art.json')['assets'].values()}
+for group in ('grove', 'roadside'):
+    for piece in scene_doc['pieces'][group]:
+        if piece['file'] not in art_assets:
+            err(f"장면 조각 {piece['id']}: 그림 {piece['file']}이 scene_art.json에 없음")
+camp_doc = load('themes/camp_wide.json')
+for obj in camp_doc['objects']:
+    art = obj.get('art')
+    if not art:
+        continue
+    spec = art_assets.get(art['file'].split('/')[-1])
+    if spec is None:
+        err(f"쉼터 물건 {obj['id']}: 그림 {art['file']}이 scene_art.json에 없음")
+    elif spec['bbox'] != art['bbox']:
+        err(f"쉼터 물건 {obj['id']}: bbox가 scene_art.json과 다름")
+if camp_doc['drag']['farParallax'] != config['rest']['drag']['farParallax']:
+    err("farParallax: camp_wide.json ≠ config")
+
 for w in warns:
     print('경고:', w)
 for e in errors:

@@ -1239,110 +1239,6 @@
       "bg_far_sea_wide_part3_v10_clean.png"
     ]
   },
-  "tags": {
-    "capital": [
-      "도시",
-      "언덕",
-      "숲"
-    ],
-    "gangwon": [
-      "산",
-      "숲"
-    ],
-    "chungcheong": [
-      "물가",
-      "평야",
-      "언덕"
-    ],
-    "jeolla": [
-      "평야",
-      "물가",
-      "언덕"
-    ],
-    "gyeongsang": [
-      "산",
-      "숲",
-      "언덕"
-    ],
-    "jeju": [
-      "오름",
-      "해안",
-      "언덕"
-    ],
-    "sea": []
-  },
-  "clusters": [
-    {
-      "id": "bg_cluster_city_a_v10",
-      "tags": [
-        "도시"
-      ],
-      "height": 460
-    },
-    {
-      "id": "bg_cluster_village_a_v10",
-      "tags": [
-        "도시"
-      ],
-      "height": 460
-    },
-    {
-      "id": "bg_cluster_forest_a_v10",
-      "tags": [
-        "숲"
-      ],
-      "height": 460
-    },
-    {
-      "id": "bg_cluster_forest_b_v10",
-      "tags": [
-        "숲"
-      ],
-      "height": 460
-    },
-    {
-      "id": "bg_cluster_hill_a_v10",
-      "tags": [
-        "언덕",
-        "평야"
-      ],
-      "height": 220
-    },
-    {
-      "id": "L2_mountain_shoulder_left",
-      "tags": [
-        "산",
-        "언덕"
-      ],
-      "height": 220
-    },
-    {
-      "id": "L2_mountain_shoulder_right",
-      "tags": [
-        "산",
-        "언덕"
-      ],
-      "height": 220
-    },
-    {
-      "id": "L2_river_shore_patch",
-      "tags": [
-        "물가"
-      ],
-      "height": 220
-    },
-    {
-      "id": "L2_jeju_basalt_patch",
-      "tags": [
-        "오름",
-        "해안"
-      ],
-      "height": 160
-    }
-  ],
-  "cycle": 12288,
-  "clusterGap": 4100,
-  "seed": "journey ID + world segment",
   "portrait": {
     "width": 1170,
     "height": 2532,
@@ -1369,107 +1265,6 @@
     "pathY": 1140,
     "figureHeight": 406
   },
-  "speeds": {
-    "far": 0.05,
-    "cluster": 0.1,
-    "backTree": 0.2,
-    "frontTree": 0.3,
-    "meadow": 0.5,
-    "ground": 1,
-    "front": 1
-  },
-  "frontTrees": {
-    "common": [
-      [
-        "L3_common_pine_cluster",
-        300,
-        1000
-      ],
-      [
-        "L3_common_broadleaf_v10",
-        6400,
-        950
-      ]
-    ],
-    "spring": [
-      [
-        "L3_spring_forsythia",
-        1250,
-        420
-      ],
-      [
-        "L3_spring_cherry_v10",
-        3300,
-        1080
-      ],
-      [
-        "L3_spring_azalea",
-        7350,
-        400
-      ],
-      [
-        "L3_spring_magnolia",
-        9400,
-        920
-      ],
-      [
-        "L3_spring_plum",
-        11300,
-        980
-      ]
-    ],
-    "summer": [
-      [
-        "L3_common_broadleaf_v10",
-        3300,
-        1050
-      ],
-      [
-        "L3_summer_trumpet_vine",
-        7350,
-        460
-      ]
-    ],
-    "autumn": [
-      [
-        "L3_autumn_maple",
-        3300,
-        1080
-      ],
-      [
-        "L3_autumn_rose",
-        7350,
-        420
-      ],
-      [
-        "L3_autumn_ginkgo",
-        9400,
-        1000
-      ]
-    ],
-    "winter": []
-  },
-  "backTrees": [
-    [
-      "L3_common_pine_cluster",
-      800,
-      430
-    ],
-    [
-      "L3_common_broadleaf_v10",
-      4850,
-      460
-    ],
-    [
-      "L3_common_pine_cluster",
-      9000,
-      420
-    ]
-  ],
-  "treeFrontFeet": 2081,
-  "treeBackFeet": 1780,
-  "backTreeHaze": 0.25,
-  "clusterFeet": 2025,
   "boat": {
     "deckY": 1216,
     "charX": 1024,
@@ -1478,10 +1273,24 @@
     "deckAboveWater": 75
   },
   "camp": {
-    "y": 1132,
-    "fireX": 457,
-    "fireY": 791,
-    "frameSeconds": 0.18
+    "note": "넓은 그림(scene.json rest.files) 전 v11 자리. camp_wide.json 물건 자리에 땅이 맞도록 뒤판을 올리고, 앞판은 통나무가 캔버스 불꽃 아래에 오게 둠. 그림 px",
+    "backY": 906,
+    "frontY": 1212,
+    "fill": {
+      "source": [
+        140,
+        880,
+        900,
+        320
+      ],
+      "ridgeY": [
+        1776,
+        1752,
+        1764
+      ],
+      "stretchFromY": 1000,
+      "note": "빈 땅: 뒤판 아래쪽(stretchFromY부터)을 화면 아래까지 늘이고, 오른쪽은 맨땅(source)을 깔고 뒤판을 뒤집어 잇는다. ridgeY는 오른쪽 땅 윗선(시작·가운데·끝)"
+    }
   },
   "sky": {
     "cloudSpeed": 4,
@@ -1496,5 +1305,6 @@
     "textureWash": 0.035,
     "textureGrain": 0.025,
     "maxDecodeWidth": 2048
-  }
+  },
+  "note": "그림 파일 목록(assets)과 화면 배치. 조각 고르기·배치 규칙은 scene.json(pieces·layout)이 한 곳"
 }

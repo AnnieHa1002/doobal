@@ -19,23 +19,13 @@ import '../domain/helpers.dart';
 const _size = Size(390, 844);
 const _seoul = LatLng(37.5776, 126.9769);
 
-/// 그린 그림과 자리, 그때 시간대 보정 층 안에 있었는지를 적는 캔버스
+/// 그린 그림과 자리, 시간대 보정이 칠에 입혀졌는지를 적는 캔버스
 class _Canvas implements Canvas {
   final drawn = <({ui.Image image, Rect at, bool tinted})>[];
-  final _layers = <bool>[];
 
   @override
   void drawImageRect(ui.Image image, Rect src, Rect dst, Paint paint) =>
-      drawn.add((image: image, at: dst, tinted: _layers.contains(true)));
-
-  @override
-  void save() => _layers.add(false);
-
-  @override
-  void saveLayer(Rect? bounds, Paint paint) => _layers.add(true);
-
-  @override
-  void restore() => _layers.removeLast();
+      drawn.add((image: image, at: dst, tinted: paint.colorFilter != null));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => null;

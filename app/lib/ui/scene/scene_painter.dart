@@ -15,7 +15,29 @@ import 'sky_painter.dart';
 enum SceneMode { rest, walking }
 
 /// Rive 캐릭터 앞뒤의 그리기 순서. all은 기존 단독 그림 시험용.
-enum ScenePass { all, background, foreground }
+enum ScenePass {
+  all,
+  background,
+  foreground,
+
+  /// 쉼터 하늘 (시간이 흘러도 그대로)
+  restSky,
+
+  /// 쉼터 구름·지나가는 것 (시간에 따라 움직인다)
+  restClouds,
+
+  /// 쉼터 후경
+  restFar,
+
+  /// 쉼터 캠프 뒤판
+  restBack,
+
+  /// 쉼터 캠프 앞판
+  restFront,
+
+  /// 쉼터 불꽃
+  restFire,
+}
 
 /// 캐릭터 그림의 키 (발 0 ~ 베레모 꼭대기, 그림 좌표). 이게 config characterHeightPx가 된다
 const _figureHeight = 135.0;
@@ -31,8 +53,19 @@ const _tuftCount = 28;
 /// 바다 후경(울릉도 등)의 먼 산은 띠 안에서 이만큼만 오르내린다
 const _seaHillFlatten = 0.35;
 
-/// 쉼터 텐트 자리 (그림이 나오기 전 임시 위치)
-const _tentSpot = FootSpot(0.52, 0.74);
+/// 그림이 없을 때 그리는 임시 장면의 자리. x는 가로 비율, footY는 발 높이 비율
+class _FootSpot {
+  const _FootSpot(this.x, this.footY);
+
+  final double x;
+  final double footY;
+}
+
+// 쉼터 임시 그림의 자리 (캠프 그림을 읽는 동안·못 읽었을 때만 보인다)
+const _tentSpot = _FootSpot(0.52, 0.74);
+const _signpostSpot = _FootSpot(0.12, 0.62);
+const _characterSpot = _FootSpot(0.42, 0.845);
+const _companionSpot = _FootSpot(0.66, 0.80);
 
 const _white = 0xFFFFFFFF;
 
@@ -99,7 +132,7 @@ class ScenePainter extends CustomPainter {
     if (pass == ScenePass.foreground) {
       if (_rest) {
         if (camp != null) {
-          _tinted(canvas, size, () => _fire(canvas, size, u, camp!));
+          _tinted(canvas, size, () => _fire(canvas, size, u));
         }
       } else if (_shown(SceneLayerId.foreground)) {
         _tinted(canvas, size, () => _foreground(canvas, size, k));
@@ -113,12 +146,13 @@ class ScenePainter extends CustomPainter {
         _scenery(canvas, size, k);
         if (camp != null) {
           _tent(canvas, size, u, _tentSpot);
-          _signpost(canvas, size, u, camp!.signpost);
+          _signpost(canvas, size, u, _signpostSpot);
         }
       });
       if (pass == ScenePass.background) return;
-      final spot =
-          camp?.character ?? FootSpot(0.5, rules.pathY / rules.screenHeightPx);
+      final spot = camp != null
+          ? _characterSpot
+          : _FootSpot(0.5, rules.pathY / rules.screenHeightPx);
       _character(
         canvas,
         k,
@@ -127,7 +161,7 @@ class ScenePainter extends CustomPainter {
         standing: true,
       );
       if (camp != null) {
-        _tinted(canvas, size, () => _fire(canvas, size, u, camp!));
+        _tinted(canvas, size, () => _fire(canvas, size, u));
       }
       return;
     }
@@ -422,7 +456,7 @@ class ScenePainter extends CustomPainter {
     }
   }
 
-  void _tent(Canvas canvas, Size size, double u, FootSpot spot) {
+  void _tent(Canvas canvas, Size size, double u, _FootSpot spot) {
     final cx = spot.x * size.width;
     final fy = spot.footY * size.height;
     final w = 110 * u;
@@ -448,7 +482,7 @@ class ScenePainter extends CustomPainter {
     canvas.drawPath(door, stroke);
   }
 
-  void _signpost(Canvas canvas, Size size, double u, FootSpot spot) {
+  void _signpost(Canvas canvas, Size size, double u, _FootSpot spot) {
     final x = spot.x * size.width;
     final fy = spot.footY * size.height;
     final wood = Paint()..color = woodColor;
@@ -468,9 +502,9 @@ class ScenePainter extends CustomPainter {
   }
 
   /// 모닥불: 캐릭터와 동료 자리 사이, 캐릭터 앞쪽. 밤일수록 불빛이 번진다
-  void _fire(Canvas canvas, Size size, double u, CampTheme camp) {
-    final x = (camp.character.x + camp.companion.x) / 2 * size.width;
-    final fy = (camp.character.footY + 0.02) * size.height;
+  void _fire(Canvas canvas, Size size, double u) {
+    final x = (_characterSpot.x + _companionSpot.x) / 2 * size.width;
+    final fy = (_characterSpot.footY + 0.02) * size.height;
     final glow = switch (look.phase) {
       SkyPhase.night => 0.40,
       SkyPhase.sunset || SkyPhase.dawn => 0.25,

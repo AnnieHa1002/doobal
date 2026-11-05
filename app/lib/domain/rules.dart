@@ -12,8 +12,54 @@ class TimeTint {
   final double character;
 }
 
+/// 쉼터 넓히기·확대 규칙 (config rest.drag·rest.zoom)
+class RestRules {
+  const RestRules({
+    required this.zoomMin,
+    required this.zoomMax,
+    required this.snapEdgesWhenZoomed,
+    required this.snapToEnds,
+    required this.farParallax,
+    required this.snapSec,
+  });
+
+  final double zoomMin;
+  final double zoomMax;
+
+  /// 확대 중에도 손을 떼면 끝에 붙는가
+  final bool snapEdgesWhenZoomed;
+
+  /// 손을 떼면 처음·끝으로 붙는가
+  final bool snapToEnds;
+
+  /// 하늘·후경이 캠프 판의 몇 배로 움직이나
+  final double farParallax;
+
+  /// 끝에 붙는 시간
+  final double snapSec;
+}
+
 /// 장면 레이어 이름 (config scene.layers, 6역할 + 하늘). 그리는 순서는 painter가 정한다
 enum SceneLayerId { sky, backdrop, grove, roadside, meadow, ground, foreground }
+
+/// 계절 보정 (config scene.seasonTint). [layers]에만 입힌다
+class SeasonTint {
+  const SeasonTint({
+    required this.layers,
+    required this.multiply,
+    required this.strength,
+    this.saturation = 0,
+    this.brightness = 0,
+  });
+
+  final Set<SceneLayerId> layers;
+
+  /// 곱하기 색 (불투명 ARGB)과 세기
+  final int multiply;
+  final double strength;
+  final double saturation;
+  final double brightness;
+}
 
 /// 레이어 하나의 규격 (config scene.layers). 좌표는 기준 화면(1170×2532) px.
 /// sky는 그린 하늘이라 speed만 있고, 땅 이미지(ground)에는 띠가 없다
@@ -137,6 +183,8 @@ class Rules {
     required this.characterHeightPx,
     required this.characterCanvasHeightPx,
     required this.characterHeightLandscapePx,
+    required this.rest,
+    required this.seasonTint,
     required this.layers,
     required this.seaHiddenLayers,
     required this.sunZenithDeg,
@@ -302,6 +350,12 @@ class Rules {
   /// 가로 화면의 캐릭터 키 (기준 1170px, config character.canvas.screenHeightPx.landscape)
   final double characterHeightLandscapePx;
 
+  /// 쉼터 밀기·확대 (config rest)
+  final RestRules rest;
+
+  /// 계절 이름 → 계절 보정 (봄·여름은 없음)
+  final Map<String, SeasonTint> seasonTint;
+
   /// 레이어별 규격. 모든 SceneLayerId가 들어 있다
   final Map<SceneLayerId, SceneLayer> layers;
 
@@ -399,6 +453,8 @@ class Rules {
     final eta = journey['eta'] as Map<String, dynamic>;
     final firstSketch = journey['firstSketchKm'] as Map<String, dynamic>;
     final scene = j['scene'] as Map<String, dynamic>;
+    final restZoom = (j['rest'] as Map<String, dynamic>)['zoom'] as Map<String, dynamic>;
+    final restDrag = (j['rest'] as Map<String, dynamic>)['drag'] as Map<String, dynamic>;
     final sky = scene['sky'] as Map<String, dynamic>;
     final fromSunrise = sky['fromSunriseMin'] as Map<String, dynamic>;
     final fromSunset = sky['fromSunsetMin'] as Map<String, dynamic>;
@@ -525,6 +581,25 @@ class Rules {
           _d(((j['character'] as Map<String, dynamic>)['canvas'] as Map<String, dynamic>)['heightPx']),
       characterHeightLandscapePx: _d(((j['character'] as Map<String, dynamic>)['canvas']
           as Map<String, dynamic>)['screenHeightPx']['landscape']),
+      rest: RestRules(
+        zoomMin: _d(restZoom['min']),
+        zoomMax: _d(restZoom['max']),
+        snapEdgesWhenZoomed: restZoom['snapEdgesWhenZoomed'] as bool,
+        snapToEnds: restDrag['snapToEnds'] as bool,
+        farParallax: _d(restDrag['farParallax']),
+        snapSec: _d(restDrag['snapSec']),
+      ),
+      seasonTint: {
+        for (final e in (scene['seasonTint'] as Map<String, dynamic>).entries)
+          if (e.value is Map)
+            e.key: SeasonTint(
+              layers: {for (final n in (e.value as Map)['layers'] as List) layerId(n as String)},
+              multiply: _hex((e.value as Map)['multiply'] as String),
+              strength: _d((e.value as Map)['strength']),
+              saturation: _dn((e.value as Map)['saturation']) ?? 0,
+              brightness: _dn((e.value as Map)['brightness']) ?? 0,
+            ),
+      },
       layers: layers,
       seaHiddenLayers: {for (final n in scene['seaHiddenLayers'] as List) layerId(n as String)},
       sunZenithDeg: _d(scene['sunZenithDeg']),

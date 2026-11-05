@@ -30,7 +30,7 @@ Annie 1인 개발, MVP 2027년 3월(한국 명소 101곳, iOS + 안드로이드,
 ```
 app/                Flutter 앱 (패키지 doobal, 번들 ID com.annieha.doobal)
   assets/data/      정적 데이터 JSON: landmarks·props·events·milestones·config·sigungu·notifications·palette·companions·badges·shop·boats·scene·scene_art·moderation
-  assets/data/themes/  쉼터 테마(camp.json: 물건·캐릭터 자리, camp_wide.json: 넓은 쉼터 값, 아직 안 읽음)
+  assets/data/themes/  쉼터 테마(camp_wide.json: 장면 pt 좌표, 물건·정령·동행·불꽃·누름 순서)
   assets/map/       지도 시도 경계 SVG·위경도 투영 JSON (Drive 05_UI_화면 ui_map_*_v01 사본)
   assets/rive/      Rive 시험 파일
 functions/          Firebase Cloud Functions (에뮬레이터 시험까지, 배포·앱 연결 전. 실행법은 functions/README.md)

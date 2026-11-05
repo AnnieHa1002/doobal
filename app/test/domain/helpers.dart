@@ -70,9 +70,9 @@ final BadgeCatalog badgeCatalog = BadgeCatalog.fromJson(
   jsonDecode(File('assets/data/badges.json').readAsStringSync()) as Map<String, dynamic>,
 );
 
-/// 실제 themes/camp.json
+/// 실제 themes/camp_wide.json
 final CampTheme campTheme = CampTheme.fromJson(
-  jsonDecode(File('assets/data/themes/camp.json').readAsStringSync()) as Map<String, dynamic>,
+  jsonDecode(File('assets/data/themes/camp_wide.json').readAsStringSync()) as Map<String, dynamic>,
 );
 
 /// 실제 지도 투영 (assets/map/ui_map_projection_v01.json)
