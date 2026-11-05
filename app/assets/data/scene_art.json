@@ -1354,7 +1354,7 @@
     "groundY": 1892,
     "frontY": 1838,
     "pathY": 2171,
-    "figureHeight": 820
+    "figureHeight": 540
   },
   "landscape": {
     "width": 2532,
@@ -1367,7 +1367,7 @@
     "groundY": 922,
     "frontY": 880,
     "pathY": 1140,
-    "figureHeight": 616
+    "figureHeight": 406
   },
   "speeds": {
     "far": 0.05,

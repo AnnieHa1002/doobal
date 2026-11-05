@@ -55,7 +55,7 @@ void main() {
           props: props,
         );
 
-    test('울릉(명소 1곳): 첫 방문이 곧 완성이라 괭이갈매기', () {
+    test('울릉(명소 1곳): 첫 방문이 곧 완성이라 갈매기', () {
       expect(prop('ulleung', visited: _ids('ulleung'))?.id, 'pet_05');
     });
 
@@ -68,10 +68,10 @@ void main() {
       expect(prop(region, visitNo: 2, visited: _ids(region)), isNull);
     });
 
-    test('권역마다 자기 소품: 수도권 해치·전라 대나무 삿갓·경상 신라 금관', () {
+    test('권역마다 자기 소품: 수도권 해치·전라 삿갓·경상 금관', () {
       expect(prop('capital', visited: _ids('capital'))?.name, '해치');
-      expect(prop('jeolla', visited: _ids('jeolla'))?.name, '대나무 삿갓');
-      expect(prop('gyeongsang', visited: _ids('gyeongsang'))?.name, '신라 금관');
+      expect(prop('jeolla', visited: _ids('jeolla'))?.name, '삿갓');
+      expect(prop('gyeongsang', visited: _ids('gyeongsang'))?.name, '금관');
     });
 
     test('한 곳이 모자란 권역은 null', () {

@@ -1,0 +1,230 @@
+{
+ "version": 2,
+ "status": "ART_REVIEW_APP_OVERLAY_READY",
+ "source": "Drive 동행 이야기 그림 v02 story_layers.json(1akZxAhtSYX5RSfrasV3T2qqW0qUxipJZ) 사본, 11/6 개발 기획. 16장 11/4 '이야기 그림에 정령을 앱이 얹음'(Annie 재확인 대기)",
+ "canvas": [
+  1536,
+  1152
+ ],
+ "safeVerticalRange": [
+  120,
+  1032
+ ],
+ "sourceCharacterCanvas": [
+  1024,
+  1024
+ ],
+ "sourceFoot": [
+  512,
+  960
+ ],
+ "sourceHeadTop": [
+  512,
+  192
+ ],
+ "drawOrder": [
+  "scene_backplate",
+  "runtime_player_body_and_equipped_items",
+  "optional_story_fx"
+ ],
+ "scenes": [
+  {
+   "id": "m01_prologue",
+   "backplate": "clean/story_m01_prologue_v02_backplate_clean.png",
+   "player": {
+    "view": "back",
+    "sourceCanvas": [
+     1024,
+     1024
+    ],
+    "sourceFoot": [
+     512,
+     960
+    ],
+    "foot": [
+     375,
+     970
+    ],
+    "bodyVisibleHeight": 460,
+    "scale": 0.5989583333333334,
+    "canvasRect": [
+     68,
+     395,
+     613,
+     613
+    ],
+    "facingNote": "Back view looking toward companion."
+   },
+   "effects": [],
+   "giftInBackplate": false
+  },
+  {
+   "id": "m01_finale",
+   "backplate": "clean/story_m01_finale_v02_backplate_clean.png",
+   "player": {
+    "view": "back",
+    "sourceCanvas": [
+     1024,
+     1024
+    ],
+    "sourceFoot": [
+     512,
+     960
+    ],
+    "foot": [
+     375,
+     970
+    ],
+    "bodyVisibleHeight": 460,
+    "scale": 0.5989583333333334,
+    "canvasRect": [
+     68,
+     395,
+     613,
+     613
+    ],
+    "facingNote": "Back view looking toward companion."
+   },
+   "effects": [
+    {
+     "id": "little_moon",
+     "image": "clean/story_m01_moon_overlay_v02_clean.png",
+     "canvasSize": [
+      320,
+      320
+     ],
+     "center": [
+      410,
+      435
+     ],
+     "attachTo": "runtime_player_head_top",
+     "offsetFromHeadTop": [
+      35,
+      -75
+     ]
+    }
+   ],
+   "giftInBackplate": false
+  },
+  {
+   "id": "m02_prologue",
+   "backplate": "clean/story_m02_prologue_v02_backplate_clean.png",
+   "player": {
+    "view": "back",
+    "sourceCanvas": [
+     1024,
+     1024
+    ],
+    "sourceFoot": [
+     512,
+     960
+    ],
+    "foot": [
+     350,
+     980
+    ],
+    "bodyVisibleHeight": 490,
+    "scale": 0.6380208333333334,
+    "canvasRect": [
+     23,
+     368,
+     653,
+     653
+    ],
+    "facingNote": "Rear view follows Hyu along the receding lane."
+   },
+   "effects": [],
+   "giftInBackplate": false
+  },
+  {
+   "id": "m02_finale",
+   "backplate": "clean/story_m02_finale_v02_backplate_clean.png",
+   "player": {
+    "view": "back",
+    "sourceCanvas": [
+     1024,
+     1024
+    ],
+    "sourceFoot": [
+     512,
+     960
+    ],
+    "foot": [
+     350,
+     980
+    ],
+    "bodyVisibleHeight": 490,
+    "scale": 0.6380208333333334,
+    "canvasRect": [
+     23,
+     368,
+     653,
+     653
+    ],
+    "facingNote": "Back view looking toward companion."
+   },
+   "effects": [],
+   "giftInBackplate": true
+  },
+  {
+   "id": "m03_prologue",
+   "backplate": "clean/story_m03_prologue_v02_backplate_clean.png",
+   "player": {
+    "view": "back",
+    "sourceCanvas": [
+     1024,
+     1024
+    ],
+    "sourceFoot": [
+     512,
+     960
+    ],
+    "foot": [
+     300,
+     980
+    ],
+    "bodyVisibleHeight": 520,
+    "scale": 0.6770833333333334,
+    "canvasRect": [
+     -47,
+     330,
+     693,
+     693
+    ],
+    "facingNote": "Back view looking toward companion."
+   },
+   "effects": [],
+   "giftInBackplate": false
+  },
+  {
+   "id": "m03_finale",
+   "backplate": "clean/story_m03_finale_v02_backplate_clean.png",
+   "player": {
+    "view": "back",
+    "sourceCanvas": [
+     1024,
+     1024
+    ],
+    "sourceFoot": [
+     512,
+     960
+    ],
+    "foot": [
+     300,
+     980
+    ],
+    "bodyVisibleHeight": 520,
+    "scale": 0.6770833333333334,
+    "canvasRect": [
+     -47,
+     330,
+     693,
+     693
+    ],
+    "facingNote": "Back view looking toward companion."
+   },
+   "effects": [],
+   "giftInBackplate": true
+  }
+ ]
+}

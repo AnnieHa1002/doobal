@@ -1,6 +1,6 @@
 {
- "version": 8,
- "changes": "v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
+ "version": 10,
+ "changes": "v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
  "gait": {
   "walkMaxSpm": 130,
   "runMinSpm": 140,
@@ -149,7 +149,7 @@
   "screenHeightPx": 2532,
   "horizonY": 1580,
   "pathY": 2171,
-  "characterHeightPx": 820,
+  "characterHeightPx": 540,
   "layers": {
    "sky": {
     "speed": 0.03
@@ -183,17 +183,9 @@
      380,
      480
     ],
-    "tallObjectClearX": 250,
-    "tallNearCharacterOpacity": 0.35
-   },
-   "people": {
-    "approx": true,
-    "layer": "roadside",
-    "heightPx": [
-     300,
-     400
-    ],
-    "row": "back"
+    "tallObjectClearX": 140,
+    "tallNearCharacterOpacity": 0.35,
+    "tallObjectClearNote": "정령 화면 상자 x 445~725(가운데 585 ± 140), 11/5 정령 540px 기준"
    },
    "meadow": {
     "speed": 0.5,
@@ -409,7 +401,7 @@
    "maxGapSec": 6,
    "doubleChance": 0.15,
    "doubleGapSec": 0.3,
-   "note": "Rive v24는 blinkMode 0(자동)으로 스스로 깜빡임. 이 값은 Rive를 쓰지 않는 자리(동행 정지 그림 등)용"
+   "note": "시트 방식에서는 앱이 눈 층을 감은 눈으로 바꿔 깜빡임(이 값 사용). Rive v25 쓰는 동안은 Rive 자동"
   },
   "facing": {
    "approx": true,
@@ -439,15 +431,15 @@
     153
    ],
    "screenHeightPx": {
-    "portrait": 820,
-    "landscape": 616
+    "portrait": 540,
+    "landscape": 406
    },
    "scale": {
-    "portrait": 1.068,
-    "landscape": 0.802
+    "portrait": 0.703,
+    "landscape": 0.529
    },
    "riveArtboardPx": 600,
-   "note": "정령·동행 PNG 공통. Rive v24 600 아트보드는 1024 좌표에 맞춰져 있음. 배·쉼터는 발 y 960을 갑판·땅 기준선에 맞춤. 옆면은 머리 가운데 x 512"
+   "note": "11/5 Annie: 정령 약 180pt(세로 540px = 1024 캔버스 키 768 × 0.703). 발 기준선·길 높이 그대로. 동행도 같은 비율. 이전 820/616px은 폐기"
   },
   "tapReaction": {
    "approx": true,
@@ -461,7 +453,14 @@
     "taps": 5,
     "holdSec": 2
    },
-   "note": "쉼터·꾸미기에서 정령 몸을 누르면 행복(머리·배 누르기 동작 그대로), 3초 안에 5번이면 2초 화남 뒤 기본. 화면 글 없음"
+   "note": "쉼터·꾸미기에서 정령 몸을 누르면 행복(머리·배 누르기 동작 그대로), 3초 안에 5번이면 2초 화남 뒤 기본. 화면 글 없음 / 11/5 캔버스: 누르면 기쁨 1초",
+   "happySec": 1
+  },
+  "anim": {
+   "mode": "sheet",
+   "file": "spirit_anim.json",
+   "pending": true,
+   "note": "11/6 Annie: 전신 리깅 대신 동작 시트 11개 × 6프레임 + 소품 방향별 파츠. 초안·승인 전. 데이터 계약은 개발기획/정령_시트_계약.md. 승인 전까지 앱은 Rive v25 그대로"
   }
  },
  "notifications": {
@@ -492,25 +491,6 @@
   "maxChars": 1000000
  },
  "ui": {
-  "displayFonts": {
-   "default": "gaegu",
-   "options": {
-    "gaegu": {
-     "family": "Gaegu",
-     "scale": 1.3
-    },
-    "dongle": {
-     "family": "Dongle",
-     "scale": 1.5
-    },
-    "gowunBatang": {
-     "family": "Gowun Batang",
-     "scale": 1.0
-    }
-   },
-   "bodyFamily": "Gowun Dodum",
-   "note": "제목·숫자·버튼·딱지·이름표·굵은 글자만 표시 글꼴, 설정에서 고름(기기 저장, 백업 profile.displayFont)"
-  },
   "fontPt": {
    "min": 11,
    "body": 15,
@@ -520,6 +500,16 @@
    "bySeason": true,
    "files": "splash_{season}_v02",
    "note": "네이티브 스플래시는 종이색 + 로고 한 장(계절 바꾸기 불가), 앱 첫 화면에서 계절 스플래시를 이어 보여 줌(브랜드 v02)"
+  },
+  "font": {
+   "family": "Pretendard",
+   "weights": [
+    400,
+    600,
+    700
+   ],
+   "subset": true,
+   "note": "11/4 Annie: 제목·숫자·버튼·본문 모두 Pretendard 하나. 설정 글꼴 고르기·배율 없음(리포 DB v14에서 뺌), OFL 고지"
   }
  },
  "rest": {
@@ -545,6 +535,43 @@
    "cart"
   ],
   "parallax": "sky·backdrop는 걷는 중 속도(0.03·0.05)로, 캠프 판은 1.0",
-  "layoutFile": "themes/camp.json v2"
+  "layoutFile": "themes/camp_wide.json v3(캔버스 pt 값)",
+  "zoom": {
+   "min": 1.0,
+   "max": 1.5,
+   "gesture": "pinch",
+   "anchor": "bottom",
+   "snapEdgesWhenZoomed": false,
+   "fixedHud": true,
+   "note": "11/5 Annie: 확대 중 끌기는 처음·끝으로 붙지 않음, 장면은 아래 기준(작은 폰은 하늘 위가 잘림). 배치 값은 캔버스 2-2 메모"
+  },
+  "drag": {
+   "snapToEnds": true,
+   "farParallax": 0.45,
+   "note": "끌어 밀기에서 하늘·후경은 0.45배로 천천히(캔버스 2-2). 확대 중에는 붙지 않음"
+  },
+  "campfire": {
+   "frames": 3,
+   "frameSec": 0.2
+  }
+ },
+ "map": {
+  "firstView": {
+   "minLandmarks": 3,
+   "margin": 0.15,
+   "approx": true,
+   "note": "지도 첫 보기: 내 위치 기준으로 명소 3곳 이상 보이게(11/4), 리포 domain/map_first_view.dart 임시값"
+  }
+ },
+ "walk": {
+  "arrivalProbeSec": 5,
+  "autoFinishOnArrival": true,
+  "note": "걷다가 도착하면 걷기를 자동으로 마침(11/4) — 도착 확인 주기"
+ },
+ "hud": {
+  "eventCardSec": 7,
+  "stampLineSec": 4,
+  "approx": true,
+  "note": "이정표 카드·도장 줄 보이는 시간(리포 HudMetrics 임시값)"
  }
 }

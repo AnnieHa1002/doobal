@@ -447,20 +447,20 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('걸어서 얻은 소품은 그 칸에 props.json 순서로 붙는다 (11km → 봇짐 지팡이)', (tester) async {
+    testWidgets('걸어서 얻은 소품은 그 칸에 props.json 순서로 붙는다 (11km → 봇짐)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => _walk11km(e));
       await openProps(tester, e, ready: _prop('hand_02'));
 
       expect(shownProps(tester), expected((p) => isDefault(p) || p.id == 'hand_02'));
-      expect(find.descendant(of: _prop('hand_02'), matching: find.text('봇짐 지팡이')), findsOneWidget);
+      expect(find.descendant(of: _prop('hand_02'), matching: find.text('봇짐')), findsOneWidget);
       expect(find.descendant(of: _prop('hat_01'), matching: find.text('베레모')), findsOneWidget);
       // 25km에 얻는 모자는 아직 없다
       expect(_prop('hat_02'), findsNothing);
       await end(tester, e);
     });
 
-    testWidgets('권역을 채운 소품도 얻으면 나온다 (울릉 그림이 있으면 괭이갈매기)', (tester) async {
+    testWidgets('권역을 채운 소품도 얻으면 나온다 (울릉 그림이 있으면 갈매기)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         await e.ownPaintings({'kr089': Frame.wood});

@@ -123,11 +123,11 @@ class SceneView extends StatelessWidget {
                 ? baseFoot + Offset(-size.width * .10, -size.height * .075)
                 : baseFoot;
             // 정령의 머리 위 y150~발바닥 y440을 실제 캐릭터 키로 맞춘다.
-            // 가로 화면은 기준 1170px에서 키616px, 세로는 config의 키를 쓴다.
+            // 키는 config다: 가로 화면은 기준 1170px, 세로는 기준 화면 높이에 대한 값.
             final figureHeight =
                 artLayout?.figureHeight ??
                 (size.width > size.height
-                    ? 616 * size.height / 1170
+                    ? rules.characterHeightLandscapePx * size.height / 1170
                     : rules.characterHeightPx * k);
             final scale = figureHeight / (440 - 150);
             return Stack(

@@ -7,6 +7,9 @@
 - 시도 이름은 2026-07-01 행정구역(광주·전남 → 전남광주통합특별시, 인천 중구 → 제물포구).
   옛 이름이 CSV에 남아 있으면 멈춘다. 권역(region)은 그대로.
 - landmarks.json v3(11/3): firstPainting(첫 방문 그림 파일 이름, 디자인기획/명소_첫그림_101_v01.md)·note(설명 줄).
+- props.json v5(11/6): 화면 이름 짧게(11/4 Annie, 기획/소품_목록.md v04.3 — 두 낱말 이내, id·파일 이름은 그대로),
+  사용자 색 고르기(tint) 폐기 → 색 소품(11/4 밤 Annie): 색 바꿀 수 있는 기본 소품 7종에 material(Codex materials_v07 catalogId·기본 색),
+  색마다 따로 된 상점 소품은 COLOR_VARIANTS 표(디자인 기획이 색을 고르면 채움, id = <기본 id>_c<n>, 이름 = '<색 이름> <기본 이름>', 100 럭).
 - props.json v4(11/4): 둥실 나침반·큰 팔레트(hand_03·hand_04) → 몽실 구름 float_02(150km)·꼬마 열기구 float_03(200km),
   베레모 hat_01 tint(색 바꾸기, 견본은 palette.json body), cloth_02 이름 '여행복'(화면 글 원칙: '일체형' 같은 설명 없음).
   props.json v3(11/3): 정령 슬롯 9개(hat·face·cloth·shoe·hand·bag·pet·float·effect), 기획/소품_목록.md v04.1.
@@ -39,7 +42,33 @@ NOTES = {88: '산불 이전 모습'}
 SLOTS = ['hat', 'face', 'cloth', 'shoe', 'hand', 'bag', 'pet', 'float', 'effect']
 
 # 색을 바꿀 수 있는 소품(11/4): 회색조 파츠에 견본색을 입힘. swatches = palette.json의 어느 견본 묶음을 쓰는지.
-TINT = {'hat_01': {'swatches': 'body', 'default': '#A4502F'}}
+# 색을 바꿀 수 있게 그린 기본 소품 7종(Codex 기본 소품 v07 materials_v07.json, 11/4).
+# 그림 = 회색조 층 × 색 ÷ 180 + 고정 무늬 층. 사용자가 고르지 않고, 색마다 따로 된 소품(COLOR_VARIANTS)으로 판다(11/4 밤).
+MATERIAL = {
+    'hat_01': ('beret', '#D78A51'),
+    'hat_02': ('feather_hat', '#B2815D'),
+    'hat_04': ('bamboo_hat', '#E4AE5D'),
+    'hat_05': ('silla_crown', '#D6A24C'),
+    'cloth_01': ('work_apron', '#B79B78'),
+    'cloth_02': ('travel_vest', '#B5A576'),
+    'shoe_01': ('brown_shoes', '#B18B67'),
+}
+# 색 소품: {기본 id: [(색 이름, hex), ...]} — 가안 7종 × 3색, 각 100 럭(기준 문서 11장). 색은 디자인 기획이 고른다.
+# 비어 있으면 색 소품을 만들지 않는다(앱은 상점·꾸미기에 안 보임).
+SW = {'크림': '#F3E4C4', '살구': '#F5C9A3', '분홍': '#EFC0BE', '라벤더': '#D3C6E6', '하늘': '#BCD9E8',
+      '연두': '#CDE0AC', '이끼': '#9FAE7E', '흙': '#C4A07C', '테라코타': '#C9775A', '남청': '#7F8DB3'}  # palette body 견본
+# 기준 문서 11장(11/6 Annie): 색 = 몸 색 견본, 이름 = 색을 떠올리게 하는 말 + 소품(세 낱말까지). (색, 이름 앞말)
+COLOR_VARIANTS = {k: [(c, SW[c], w) for c, w in v] for k, v in {
+    'hat_01': [('하늘', '봄하늘'), ('남청', '밤바다'), ('이끼', '이끼숲')],
+    'hat_02': [('남청', '새벽'), ('이끼', '풀밭'), ('테라코타', '노을')],
+    'hat_04': [('흙', '흙길'), ('이끼', '대숲'), ('남청', '밤비')],
+    'hat_05': [('분홍', '벚꽃'), ('하늘', '서리'), ('라벤더', '라일락')],
+    'cloth_01': [('하늘', '물빛'), ('분홍', '복숭아'), ('연두', '새싹')],
+    'cloth_02': [('남청', '별밤'), ('테라코타', '벽돌길'), ('이끼', '숲길')],
+    'shoe_01': [('테라코타', '단풍'), ('남청', '밤길'), ('이끼', '들풀')]}.items()}
+# 이름 뒷말(기준 문서 11장 그대로): 갈색 신발은 '신발', 나머지는 기본 이름
+VARIANT_STEM = {'shoe_01': '신발'}
+COLOR_VARIANT_PRICE = 100
 
 
 def dump(name, obj, ascii_ok=False):
@@ -76,8 +105,8 @@ def build_landmarks():
 
 def p(id, slot, name, kind, status='mvp', **k):
     o = {'id': id, 'slot': slot, 'name': name, 'unlock': {'kind': kind, **k}, 'status': status}
-    if id in TINT:
-        o['tint'] = TINT[id]
+    if id in MATERIAL:
+        o['material'] = {'catalogId': MATERIAL[id][0], 'hex': MATERIAL[id][1]}
     return o
 
 
@@ -150,10 +179,30 @@ def build_props():
         # 출시 후: 1,000km 자리를 금빛 날개 팔에 넘김
         p('hat_03', 'hat', '금빛 베레모', 'none', 'later'),
     ]
+    # 화면 이름 짧게(11/4 Annie, 기획/소품_목록.md v04.3·럭_상점.md v2.3)
+    SHORT = {'hat_02': '여행 모자', 'hat_04': '삿갓', 'hat_05': '금관', 'hat_11': '안경', 'face_02': '귀마개',
+             'cloth_01': '앞치마', 'cloth_04': '금빛 코트', 'cloth_05': '연두 망토', 'shoe_04': '장화',
+             'shoe_05': '고양이 슬리퍼', 'hand_10': '금빛 날개', 'hand_11': '벙어리장갑', 'hand_12': '새 날개',
+             'hand_13': '잎 장갑', 'hand_02': '봇짐', 'pet_05': '갈매기', 'float_02': '구름', 'float_03': '열기구',
+             'hat_10': '달', 'effect_01': '나뭇잎', 'effect_02': '빗방울', 'effect_03': '반짝이', 'effect_04': '물감',
+             'effect_05': '반딧불'}
+    for x in props:
+        x['name'] = SHORT.get(x['id'], x['name'])
+    # 색 소품: 기본 소품과 같은 슬롯, 고정 색, 상점 100 럭, 기본 소품을 가져야 보임
+    base = {x['id']: x for x in props}
+    for bid, colors in COLOR_VARIANTS.items():
+        assert bid in MATERIAL, f'색을 바꿀 수 없는 소품: {bid}'
+        for n, (cname, hexv, word) in enumerate(colors, 1):
+            props.append({'id': f'{bid}_c{n}', 'slot': base[bid]['slot'], 'name': f"{word} {VARIANT_STEM.get(bid, base[bid]['name'])}", 'color': cname,
+                          'unlock': {'kind': 'shop', 'price': COLOR_VARIANT_PRICE, 'requires': bid},
+                          'status': 'mvp', 'variantOf': bid,
+                          'material': {'catalogId': MATERIAL[bid][0], 'hex': hexv}})
     ids = [x['id'] for x in props]
     assert len(ids) == len(set(ids)), 'id 중복'
+    assert all(len(x['name'].split()) <= 2 for x in props if x['status'] == 'mvp' and 'variantOf' not in x), '이름은 두 낱말 이내(14장)'
+    assert all(len(x['name'].split()) <= 3 for x in props if 'variantOf' in x), '색 소품 이름은 세 낱말까지(11장, 11/6)'
     assert not {'hand_03', 'hand_04'} & set(ids), '11/4 빠진 소품(나침반·큰 팔레트)'
-    mvp = [x for x in props if x['status'] == 'mvp']
+    mvp = [x for x in props if x['status'] == 'mvp' and 'variantOf' not in x]
     assert all(x['slot'] in SLOTS for x in mvp)
     c = collections.Counter(x['slot'] for x in mvp)
     assert dict(c) == {'hat': 4, 'face': 3, 'cloth': 5, 'shoe': 5, 'hand': 5, 'bag': 5, 'pet': 5, 'float': 5, 'effect': 5}, c
@@ -164,7 +213,13 @@ def build_props():
     assert sorted(x['unlock']['km'] for x in mvp if x['unlock']['kind'] == 'distance') == [10, 25, 50, 100, 150, 200, 300, 500, 700, 1000]
     assert sum(x['status'] == 'pending' for x in props) == 12
     assert all('일체형' not in x['name'] for x in props), '화면 글 원칙: 이름에 설명을 넣지 않음'
-    dump('props.json', {'version': 4, 'slots': SLOTS, 'props': props})
+    dump('props.json', {'version': 5, 'slots': SLOTS,
+                        'material': {'neutralReference': 180, 'formula': 'rgb = clamp(neutral.rgb × hex.rgb ÷ 180) 위에 고정 무늬 층',
+                                     'source': 'Codex 기본 소품 v07 recolor/materials_v07.json'},
+                        'colorVariants': {'price': COLOR_VARIANT_PRICE, 'perBase': 3, 'bases': list(MATERIAL),
+                                          'pending': not COLOR_VARIANTS,
+                                          'note': '기준 문서 11장(11/6 Annie): 색 = 몸 색 견본, 이름 = 색을 떠올리게 하는 말 + 소품(세 낱말까지), id <기본 id>_c<n>, color = 견본 이름'},
+                        'props': props})
     return props
 
 
@@ -183,3 +238,8 @@ if __name__ == '__main__':
     build_props()
     build_milestones()
     print(f'완료 → {OUT}')
+    # 파일 사이 값 맞춰 보기(11/6). 틀리면 여기서 멈춘다
+    import subprocess
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'check_data.py'), OUT])
+    if r.returncode:
+        sys.exit(r.returncode)

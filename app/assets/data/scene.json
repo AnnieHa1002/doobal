@@ -1,12 +1,11 @@
 {
- "version": 4,
- "asOf": "2026-11-04",
- "source": "Assets/02_Backgrounds_배경 background_panorama_v10(placement.json v10·기록/objects_manifest.json) + background_unified_v11(placement.json v11·clean) — 개발 기획 11/3. 리포 runtime_v12(scene_art.json)와 파일 이름·좌표를 대조할 것 / v3(11/4 개발 기획): 겨울 후경 v13 파일 이름(Assets/02_Backgrounds_배경/background_winter_far_v13, 바다도 겨울판), 배 9척은 boats.json·boat_layers.json, 정령 발 y 960을 갑판 y 1216에 맞춤, 쉼터 rest(장면 폭 약 1.5배·누름 순서) / v4(11/4): 겨울 타일 실제 이름, 사람 실루엣 v13(placement_additions.json), 충청·전라 이음새 v13 후보, 쉼터 넓은 캠프 값(codex_camp_wide_v01)",
+ "version": 5,
+ "asOf": "2026-11-06",
+ "source": "Assets/02_Backgrounds_배경 background_panorama_v10(placement.json v10·기록/objects_manifest.json) + background_unified_v11(placement.json v11·clean) — 개발 기획 11/3. 리포 runtime_v12(scene_art.json)와 파일 이름·좌표를 대조할 것 / v3(11/4 개발 기획): 겨울 후경 v13 파일 이름(Assets/02_Backgrounds_배경/background_winter_far_v13, 바다도 겨울판), 배 9척은 boats.json·boat_layers.json, 정령 발 y 960을 갑판 y 1216에 맞춤, 쉼터 rest(장면 폭 약 1.5배·누름 순서) / v4(11/4): 겨울 타일 실제 이름, 사람 실루엣 v13(placement_additions.json), 충청·전라 이음새 v13 후보, 쉼터 넓은 캠프 값(codex_camp_wide_v01) / v5(11/6): 사람 실루엣 뺌(11/4 Annie, 이음새 보정은 그대로), 긴 조각 비킴 ±140(정령 540px)",
  "assetDirs": {
   "v10": "backgrounds/v10",
   "v11": "backgrounds/v11",
-  "v13winter": "backgrounds/v13_winter",
-  "v13people": "backgrounds/v13_people"
+  "v13winter": "backgrounds/v13_winter"
  },
  "screen": {
   "portrait": [
@@ -522,39 +521,8 @@
   ]
  },
  "people": {
-  "source": "Drive Assets/02_Backgrounds_배경/background_people_v13 (placement_additions.json v13)",
-  "pieces": [
-   {
-    "id": "bg_object_people_walker_a",
-    "file": "bg_object_people_walker_a_v13_clean.png",
-    "tags": [],
-    "tall": true
-   },
-   {
-    "id": "bg_object_people_pair_b",
-    "file": "bg_object_people_pair_b_v13_clean.png",
-    "tags": [],
-    "tall": true
-   }
-  ],
-  "canvas": [
-   1024,
-   1280
-  ],
-  "assetFootY": 1216,
-  "occupiedHeight": 1088,
-  "heightPx": [
-   300,
-   400
-  ],
-  "feetY": 1780,
-  "speed": 0.2,
-  "haze": 0.25,
-  "maxGroupsPerCycle": 1,
-  "spawnProbability": 0.5,
-  "visibleAtNight": false,
-  "seed": "hash(journeyId, 'people', cycleIndex)",
-  "note": "뒷줄(roadside back)과 같은 줄. 밤(night)에는 확률을 보기 전에 끔. tall이라 캐릭터 ±250px 규칙 적용"
+  "removed": "2026-11-04 Annie 결정으로 걷는 중 배경에 사람 없음. background_people_v13은 쓰지 않음",
+  "pieces": []
  },
  "layout": {
   "cycleWidthPx": 12288,
@@ -590,7 +558,7 @@
     "approx": true,
     "slotsPerCycle": 5
    },
-   "tallObjectClearX": 250,
+   "tallObjectClearX": 140,
    "tallNearCharacterOpacity": 0.35
   }
  },

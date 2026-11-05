@@ -135,6 +135,7 @@ class Rules {
     required this.horizonY,
     required this.pathY,
     required this.characterHeightPx,
+    required this.characterHeightLandscapePx,
     required this.layers,
     required this.seaHiddenLayers,
     required this.sunZenithDeg,
@@ -289,6 +290,9 @@ class Rules {
   final double horizonY;
   final double pathY;
   final double characterHeightPx;
+
+  /// 가로 화면의 캐릭터 키 (기준 1170px, config character.canvas.screenHeightPx.landscape)
+  final double characterHeightLandscapePx;
 
   /// 레이어별 규격. 모든 SceneLayerId가 들어 있다
   final Map<SceneLayerId, SceneLayer> layers;
@@ -509,6 +513,8 @@ class Rules {
       horizonY: _d(scene['horizonY']),
       pathY: _d(scene['pathY']),
       characterHeightPx: _d(scene['characterHeightPx']),
+      characterHeightLandscapePx: _d(((j['character'] as Map<String, dynamic>)['canvas']
+          as Map<String, dynamic>)['screenHeightPx']['landscape']),
       layers: layers,
       seaHiddenLayers: {for (final n in scene['seaHiddenLayers'] as List) layerId(n as String)},
       sunZenithDeg: _d(scene['sunZenithDeg']),
