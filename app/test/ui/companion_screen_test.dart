@@ -1,12 +1,16 @@
 import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/domain/companion.dart';
 import 'package:doobal/ui/companion/companion_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../domain/helpers.dart';
 import 'ui_env.dart';
 
 // 동행 화면과 이야기 시트 (캔버스 7-1). 계산은 test/app/companion_sync_test.dart가 본다
+
+Companion get _bright => companionCatalog.byId('bright')!;
 
 Finder _row(String id, int no) => find.byKey(Key('story-row-$id-$no'));
 Finder _tile(String id) => find.byKey(Key('companion-tile-$id'));
@@ -145,9 +149,9 @@ void main() {
       expect(_row('bright', 1), findsOneWidget);
       expect(_row('bright', 2), findsOneWidget);
       expect(_row('bright', 3), findsNothing);
-      expect(find.text('처음 가 본 곳 목록'), findsNothing, reason: '3장 제목');
+      expect(find.text(_bright.chapters[3].title), findsNothing, reason: '3장 제목');
       expect(find.text('프롤로그'), findsOneWidget);
-      expect(find.text('걷는 게 좋은 이유'), findsOneWidget);
+      expect(find.text(_bright.chapters[1].title), findsOneWidget);
       expect(find.text('그림'), findsOneWidget);
       expect(find.text('이야기 2'), findsOneWidget);
       await end(tester, e);
@@ -173,7 +177,7 @@ void main() {
     testWidgets('8장까지 열리면 완결이 보이고 그림 표시가 둘이다', (tester) async {
       final e = await open(tester, (e) => met(e, 'bright', chapter: 8));
       await tester.scrollUntilVisible(_row('bright', 8), 200);
-      expect(find.text('두 발로 가는 길 (완결)'), findsOneWidget);
+      expect(find.text(_bright.chapters[8].title), findsOneWidget);
       expect(find.text('그림'), findsNWidgets(2));
       await end(tester, e);
     });
@@ -184,11 +188,22 @@ void main() {
       await refreshed(tester, () => find.byKey(const Key('story-sheet')).evaluate().isNotEmpty);
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('1장 · 걷는 게 좋은 이유'), findsOneWidget);
-      // 지문은 그대로, 말은 말하는 이와 함께 나온다
-      expect(find.text('퐁이가 앞서 뛰어갔다 돌아온다'), findsOneWidget);
-      expect(find.textContaining('와, 저 모퉁이 돌면 길이 또 바뀌어!', findRichText: true), findsOneWidget);
-      expect(find.textContaining('화가한테 딱 맞는 말이네', findRichText: true), findsOneWidget);
+      final chapter = _bright.chapters[1];
+      expect(find.text('1장 · ${chapter.title}'), findsOneWidget);
+      // 지문은 그대로, 말은 말하는 이와 함께 나온다. 본문은 데이터에서 온다
+      for (final l in chapter.lines) {
+        expect(
+          l.who == StorySpeaker.narr
+              ? find.text(l.text)
+              : find.textContaining(l.text, findRichText: true),
+          findsOneWidget,
+          reason: l.text,
+        );
+      }
+      final me = chapter.lines.firstWhere((l) => l.who == StorySpeaker.me);
+      final said = chapter.lines.firstWhere((l) => l.who == StorySpeaker.companion);
+      expect(find.textContaining('나 ${me.text}', findRichText: true), findsOneWidget);
+      expect(find.textContaining('퐁이 ${said.text}', findRichText: true), findsOneWidget);
       // 그림이 없는 장에는 그림 자리가 없다
       expect(find.byKey(const Key('story-art')), findsNothing);
 
@@ -206,7 +221,7 @@ void main() {
       await tester.tap(_row('rest', 0));
       await refreshed(tester, () => find.byKey(const Key('story-sheet')).evaluate().isNotEmpty);
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('프롤로그 · 만남'), findsOneWidget);
+      expect(find.text('프롤로그 · ${companionCatalog.byId('rest')!.chapters.first.title}'), findsOneWidget);
       expect(find.byKey(const Key('story-art')), findsOneWidget);
       await end(tester, e);
     });

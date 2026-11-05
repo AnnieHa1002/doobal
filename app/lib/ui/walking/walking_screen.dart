@@ -639,6 +639,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
                 key: ValueKey(meet.id),
                 companion: meet,
                 walkingWith: _meetWith,
+                rules: rules,
                 onChoose: _finishMeeting,
               ),
             ),

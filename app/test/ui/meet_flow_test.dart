@@ -49,6 +49,7 @@ void main() {
         body: MeetFlow(
           companion: companion,
           walkingWith: walkingWith,
+          rules: rules,
           onChoose: onChoose ?? (_) {},
         ),
       ),
@@ -77,26 +78,43 @@ void main() {
       expect(_approach(), findsOneWidget);
     });
 
+    testWidgets('실루엣 크기와 발은 장면과 같은 config 값을 따른다 (정령 키의 절반)', (tester) async {
+      // 정령 180pt(540 × 390/1170)의 절반, 길은 화면 아래에서 361 × 390/1170pt
+      await pumpFlow(tester, _c('bright'));
+      final figure = find.byKey(const Key('meet-silhouette'));
+      expect(rules.characterHeightPx, 540);
+      expect(tester.getSize(figure).height, closeTo(90, 0.01));
+      expect(tester.getBottomLeft(figure).dy, closeTo(844 - 361 * 390 / 1170, 0.01));
+
+      // 작은 폭에서는 장면처럼 같이 줄어든다
+      await pumpFlow(tester, _c('bright'), width: 320, height: 568);
+      expect(tester.getSize(figure).height, closeTo(540 * 320 / 1170 / 2, 0.01));
+    });
+
     testWidgets('다가가면 프롤로그: 지문·말하는 이·진행, 눌러서 넘긴다', (tester) async {
       await pumpFlow(tester, _c('bright'));
       await tester.tap(_approach());
       await tester.pump();
 
+      final beats = storyBeats(_c('bright').chapters.first.lines);
       expect(find.byKey(const Key('story-art')), findsOneWidget);
-      expect(find.textContaining('뒤뚱뒤뚱'), findsOneWidget);
+      expect(find.text('(${beats[0].direction})'), findsOneWidget);
       expect(find.text('퐁이'), findsOneWidget);
-      expect(find.textContaining('민들레'), findsOneWidget);
-      expect(find.text('1 / 5 · 눌러서 넘기기'), findsOneWidget);
+      expect(find.text(beats[0].text), findsOneWidget);
+      expect(find.text('1 / ${beats.length} · 눌러서 넘기기'), findsOneWidget);
 
       await tester.tap(_line());
       await tester.pump();
-      expect(find.text('2 / 5 · 눌러서 넘기기'), findsOneWidget);
-      expect(find.textContaining('뒤뚱뒤뚱'), findsNothing);
+      expect(find.text('2 / ${beats.length} · 눌러서 넘기기'), findsOneWidget);
+      expect(find.text('(${beats[0].direction})'), findsNothing);
 
-      await tester.tap(_line());
-      await tester.pump();
+      final me = beats.indexWhere((b) => b.who == StorySpeaker.me);
+      for (var i = 1; i < me; i++) {
+        await tester.tap(_line());
+        await tester.pump();
+      }
       expect(find.text('나'), findsOneWidget);
-      expect(find.text('응. 멀리 가는 중이야.'), findsOneWidget);
+      expect(find.text(beats[me].text), findsOneWidget);
     });
 
     testWidgets('대사가 끝나면 새 동행 카드: 혼자 걷던 중이면 함께 걷기·혼자 걷기', (tester) async {

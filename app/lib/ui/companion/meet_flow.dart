@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../domain/companion.dart';
 import '../../domain/companion_engine.dart';
 import '../../domain/notification_policy.dart' show josa;
+import '../../domain/rules.dart';
 import '../common/app_text.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
@@ -15,8 +16,8 @@ import 'companion_art.dart';
 /// 프롤로그 뒤 바탕
 const _prologueBg = Color(0xFF2E2420);
 
-/// 길(발)이 화면 아래에서 얼마나 위에 있는가: 폭 대비 (캔버스 390폭에서 118pt)
-const _footFromBottomRatio = 118 / 390;
+/// 실루엣 오른쪽 여백: 폭 대비 (캔버스 3-4, 390폭에서 49pt)
+const _silhouetteRightRatio = 0.125;
 
 /// 프롤로그 대사 카드 높이(글자 크기 1배)와, 쓸 수 있는 높이 중 대사·그림이 차지할 수 있는 비율
 const _lineHeight = 200.0;
@@ -30,10 +31,14 @@ class MeetFlow extends StatefulWidget {
     super.key,
     required this.companion,
     required this.walkingWith,
+    required this.rules,
     required this.onChoose,
   });
 
   final Companion companion;
+
+  /// 실루엣 크기·자리를 장면과 맞추는 값
+  final Rules rules;
 
   /// 지금 함께 걷는 동행 (혼자면 null). 있으면 버튼이 '퐁이와 함께 걷기'·'휴와 계속 걷기'로 바뀐다
   final Companion? walkingWith;
@@ -68,6 +73,7 @@ class _MeetFlowState extends State<MeetFlow> {
     return switch (_step) {
       _Step.silhouette => _SilhouetteStep(
           companion: widget.companion,
+          rules: widget.rules,
           onApproach: () => setState(() => _step = _Step.prologue),
         ),
       _Step.prologue => _PrologueStep(
@@ -88,9 +94,10 @@ class _MeetFlowState extends State<MeetFlow> {
 
 /// 첫 장면: 길 앞쪽의 실루엣과 카드, 다가가기
 class _SilhouetteStep extends StatefulWidget {
-  const _SilhouetteStep({required this.companion, required this.onApproach});
+  const _SilhouetteStep({required this.companion, required this.rules, required this.onApproach});
 
   final Companion companion;
+  final Rules rules;
   final VoidCallback onApproach;
 
   @override
@@ -119,12 +126,12 @@ class _SilhouetteStepState extends State<_SilhouetteStep> with SingleTickerProvi
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
+    final screen = MediaQuery.sizeOf(context);
     return Stack(
       children: [
         Positioned(
-          right: width * 0.1,
-          bottom: width * _footFromBottomRatio,
+          right: screen.width * _silhouetteRightRatio,
+          bottom: sceneFootFromBottom(widget.rules, screen),
           child: AnimatedBuilder(
             animation: _sway,
             builder: (context, child) =>
@@ -132,7 +139,7 @@ class _SilhouetteStepState extends State<_SilhouetteStep> with SingleTickerProvi
             child: CompanionFigure(
               key: const Key('meet-silhouette'),
               companion: widget.companion,
-              height: 90,
+              height: sceneCompanionHeight(widget.rules, screen),
               silhouette: true,
             ),
           ),

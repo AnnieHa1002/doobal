@@ -94,6 +94,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
         body: MeetFlow(
           companion: met,
           walkingWith: view.metById(view.walkingWith)?.companion,
+          rules: svc.rules,
           onChoose: (together) async {
             await svc.finishMeeting(met.id, ref.read(clockProvider)(), together: together);
             ref.invalidate(companionsViewProvider);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/companion.dart';
+import '../../domain/rules.dart';
 import '../common/app_text.dart';
 import '../common/palette.dart';
 
@@ -18,6 +19,26 @@ const _bodyColors = {
 
 /// 동행 종의 화면 이름. companions.json에 표시 이름이 없어 여기 둔다
 const speciesNames = {'duck': '오리', 'cat': '고양이', 'ginseng': '산삼'};
+
+/// 장면 기준 화면의 폭(px). 세로 화면은 폭, 가로 화면은 높이를 여기에 맞춰 줄인다 (scene_view와 같다)
+const _sceneBasisPx = 1170;
+
+/// 동행 자리표시 키 ÷ 정령 키 (캔버스 3-4: 90pt ÷ 180pt)
+const _companionToSpirit = 0.5;
+
+/// 장면 기준 1px이 [screen]에서 몇 pt인가
+double _sceneUnit(Size screen) =>
+    (screen.width > screen.height ? screen.height : screen.width) / _sceneBasisPx;
+
+/// 장면 위에 서는 동행의 키(pt). 정령 키(config character.canvas)를 따라 같은 비율로 줄어든다
+double sceneCompanionHeight(Rules rules, Size screen) =>
+    (screen.width > screen.height ? rules.characterHeightLandscapePx : rules.characterHeightPx) *
+    _sceneUnit(screen) *
+    _companionToSpirit;
+
+/// 길(발)이 화면 아래에서 얼마나 위에 있는가(pt). 장면은 아래 기준이다
+double sceneFootFromBottom(Rules rules, Size screen) =>
+    (rules.screenHeightPx - rules.pathY) * _sceneUnit(screen);
 
 /// 동행 전신 자리표시. [silhouette]이면 누구인지 안 보이는 검은 모습 (길 위 만남 첫 장면)
 class CompanionFigure extends StatelessWidget {
@@ -126,7 +147,8 @@ class CompanionPortrait extends StatelessWidget {
 }
 
 /// 이야기 그림 자리표시 (그림 있는 장: 프롤로그·완결, 1536×1152라 4:3).
-/// 그림 6장이 오면 정령 없는 뒷판 + 지금 입은 정령 뒷모습 얹기로 바뀐다 (T2c)
+/// 그림 6장이 오면 장의 art(story_layers.json 장면 id)로 정령 없는 뒷판 + 지금 입은 정령 뒷모습을
+/// 얹는다 (T2c: 정령 시트 back 방향이 필요해서 시트 승인 뒤)
 class StoryArt extends StatelessWidget {
   const StoryArt({super.key, required this.companion, this.radius = 18});
 

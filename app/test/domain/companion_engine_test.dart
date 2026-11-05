@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:doobal/domain/companion.dart';
 import 'package:doobal/domain/companion_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -232,8 +235,24 @@ void main() {
     test('캔버스 3-4와 같다: 퐁이 프롤로그는 5단위이고 첫 단위에 지문이 있다', () {
       final beats = storyBeats(companionCatalog.byId('bright')!.chapters.first.lines);
       expect(beats, hasLength(5));
-      expect(beats.first.direction, contains('뒤뚱뒤뚱'));
-      expect(beats.first.text, contains('민들레'));
+      expect(beats.first.direction, isNotEmpty);
+      expect(beats.first.who, StorySpeaker.companion);
+    });
+
+    test('그림 있는 장은 프롤로그·완결뿐이고, art는 story_layers.json 장면이다', () {
+      final layers = jsonDecode(File('assets/data/story_layers.json').readAsStringSync())
+          as Map<String, dynamic>;
+      final scenes = {for (final s in layers['scenes'] as List) (s as Map)['id'] as String};
+      final used = <String>{};
+      for (final c in companionCatalog.companions) {
+        for (final ch in c.chapters) {
+          final hasArt = ch.no == 0 || ch.no == rules.companionChapters;
+          expect(ch.art != null, hasArt, reason: '${c.id} ${ch.no}');
+          if (ch.art != null) used.add(ch.art!);
+        }
+      }
+      expect(used, hasLength(6));
+      expect(scenes, containsAll(used));
     });
   });
 }
