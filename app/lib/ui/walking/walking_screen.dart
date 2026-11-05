@@ -9,6 +9,7 @@ import '../../app/live_walker.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../data/walk_notice.dart';
+import '../../domain/companion.dart';
 import '../../domain/focus_walk.dart';
 import '../../domain/follow.dart';
 import '../../domain/badge.dart' as stamp;
@@ -22,6 +23,7 @@ import '../../domain/walk_arrival.dart';
 import '../../domain/walk_record.dart';
 import '../arrival/arrival_screen.dart';
 import '../common/toast.dart';
+import '../companion/meet_flow.dart';
 import '../scene/scene_view.dart';
 import '../walk_record/walk_record_screen.dart';
 import 'walking_hud.dart';
@@ -40,6 +42,7 @@ import 'walking_hud.dart';
 /// SyncService.addEventDistance에 넘긴다 (길 위 이벤트: 2km 칸을 넘으면 `2km 이정표` 카드가 몇 초 뜬다).
 /// 숨어 있던 동안 따라잡은 걸음은 넘기지 않고(LiveWalk.foregroundM), 아직 안 넘긴 거리는 앱이 꺼지면 잃는다.
 /// 새 도장을 받으면(SyncService.newBadges) 걸음 알약 아래에 작은 줄이 잠깐 뜬다 (토스트 대신).
+/// 칸이 이벤트 대신 동행 만남이면(pendingMeeting) HUD를 가리고 길 위 만남(MeetFlow)을 이 화면 위에 띄운다.
 /// 앱이 통째로 끝나서 화면이 정리되지 못한 경우는 다음 실행 때 AutoSync가 마지막으로 살아 있던
 /// 시각에서 닫는다 (appEnded).
 /// 진행이 100%가 되면(11/4 Annie) 걷기를 자동으로 마치고 도착 화면으로 바꾼다. 도착은 늘 health 동기화가
@@ -132,6 +135,16 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   Timer? _badgeTimer;
   StreamSubscription<List<stamp.Badge>>? _badgeSub;
 
+  /// 지금 띄운 길 위 만남의 동행과 그때 함께 걷던 동행 (만남은 이벤트 대신 나온다, 없으면 null)
+  Companion? _meet;
+  Companion? _meetWith;
+
+  /// 만남이 뜬 순간의 거리. 만남 동안 장면은 멈춰 있고, 걸음은 뒤에서 계속 센다
+  var _meetShownM = 0.0;
+
+  /// 이 걷기에서 이미 고른 동행 (저장이 끝나기 전에 읽어도 다시 띄우지 않게)
+  final _meetDone = <String>{};
+
   /// 도착으로 걷기를 마치는 중 (한 번만) / 마지막으로 도착 확인 동기화를 돌린 시각
   var _ending = false;
   DateTime? _probeAt;
@@ -154,7 +167,10 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
       if (s != null) _onSnapshot(s);
     }, fireImmediately: true);
     _service.then((svc) {
-      if (mounted) _badgeSub = svc.newBadges.listen(_onBadges);
+      if (!mounted) return;
+      _badgeSub = svc.newBadges.listen(_onBadges);
+      // 지난번에 만남 흐름을 못 끝냈으면 이어서 보여 준다
+      unawaited(_checkMeeting(svc).catchError((Object e) => debugPrint('길 위 만남 읽기 실패: $e')));
     }, onError: (_) {});
     _startRefreshing();
   }
@@ -221,7 +237,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   Future<void> _sendEvents(double deltaM, double sentM, DateTime now, EventLive facts) async {
     try {
-      final made = await (await _service).addEventDistance(deltaM, now, facts);
+      final svc = await _service;
+      final made = await svc.addEventDistance(deltaM, now, facts);
       _eventSentM = sentM;
       if (made.isNotEmpty && mounted) {
         _eventTimer?.cancel();
@@ -230,10 +247,38 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
           if (mounted) setState(() => _event = null);
         });
       }
+      await _checkMeeting(svc);
     } catch (e) {
       debugPrint('길 위 이벤트 계산 실패: $e');
     } finally {
       _eventBusy = false;
+    }
+  }
+
+  /// 만남 칸이 나왔거나 지난번에 흐름을 못 끝낸 동행이 있으면 길 위 만남을 띄운다
+  Future<void> _checkMeeting(SyncService svc) async {
+    if (_meet != null || _ending) return;
+    final met = await svc.pendingMeeting();
+    if (met == null || _meetDone.contains(met.id)) return;
+    final view = await svc.companionsView();
+    if (!mounted || _ending || _meetDone.contains(met.id)) return;
+    setState(() {
+      _meet = met;
+      _meetWith = view.metById(view.walkingWith)?.companion;
+      _meetShownM = _shownM;
+    });
+  }
+
+  /// 길 위 만남에서 골랐다. 저장에 실패하면 대기로 남아 다음 걷는 중에 다시 나온다
+  Future<void> _finishMeeting(bool together) async {
+    final met = _meet;
+    if (met == null) return;
+    _meetDone.add(met.id);
+    setState(() => _meet = null);
+    try {
+      await (await _service).finishMeeting(met.id, _clock(), together: together);
+    } catch (e) {
+      debugPrint('길 위 만남 저장 실패: $e');
     }
   }
 
@@ -550,39 +595,53 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final summary = _summaryAt(_now);
     final running = _isRunning(summary);
     final spirit = ref.watch(spiritLookProvider);
+    final meet = _meet;
 
     return Scaffold(
       body: Stack(
         children: [
           SceneView(
             mode: SceneMode.walking,
-            distanceM: _shownM,
+            distanceM: meet == null ? _shownM : _meetShownM,
             nowUtc: _now,
             position: position,
             onSea: snap.onSea,
             rules: rules,
             landmarks: landmarks,
-            running: running,
-            moving: summary != null && summary.lastSteps > 0,
+            running: meet == null && running,
+            moving: meet == null && summary != null && summary.lastSteps > 0,
             sceneSeed: snap.journey?.dest.id ?? 'home',
             spirit: spirit,
           ),
-          WalkingHud(
-            rules: rules,
-            snap: snap,
-            summary: summary,
-            shownM: _shownM,
-            shownSteps: _stepFollower.shown,
-            walkingTime: _now.difference(_start),
-            running: running,
-            nextMilestone: _nextMilestone(snap),
-            focusBadge: _focused ? focusBadgeText(rules) : null,
-            event: _event,
-            eventKm: rules.eventEveryKm,
-            onCloseEvent: _closeEvent,
-            badgeLine: _badgeLine,
-            onFinish: _finish,
+          // 길 위 만남 동안에는 HUD를 가린다 (상태는 그대로 둔다)
+          Offstage(
+            offstage: meet != null,
+            child: WalkingHud(
+              rules: rules,
+              snap: snap,
+              summary: summary,
+              shownM: _shownM,
+              shownSteps: _stepFollower.shown,
+              walkingTime: _now.difference(_start),
+              running: running,
+              nextMilestone: _nextMilestone(snap),
+              focusBadge: _focused ? focusBadgeText(rules) : null,
+              event: _event,
+              eventKm: rules.eventEveryKm,
+              onCloseEvent: _closeEvent,
+              badgeLine: _badgeLine,
+              onFinish: _finish,
+            ),
           ),
+          if (meet != null)
+            Positioned.fill(
+              child: MeetFlow(
+                key: ValueKey(meet.id),
+                companion: meet,
+                walkingWith: _meetWith,
+                onChoose: _finishMeeting,
+              ),
+            ),
         ],
       ),
     );

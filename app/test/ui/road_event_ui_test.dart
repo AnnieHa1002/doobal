@@ -52,6 +52,18 @@ void main() {
     await e.seed(tester, () async {
       await placeAt(e.db, nearGyeongbok, t0);
       await e.svc.startJourney(_farDest().id, t1, useFund: false);
+      // 첫 칸은 동행 첫 만남이 대신한다 (test/ui/meet_flow_test.dart). 여기서는 이벤트만 보려고 셋 다 만나 둔다
+      for (final c in companionCatalog.companions) {
+        await e.db
+            .into(e.db.companions)
+            .insert(CompanionsCompanion.insert(companionId: c.id, metUtc: 1));
+      }
+      // 셋 다 만난 도장은 받은 것으로 둔다 (도장 토스트·줄 시험에 안 끼게)
+      await e.db.into(e.db.badgesOwned).insert(BadgesOwnedCompanion.insert(
+            badgeId: badgeCatalog.badges.firstWhere((b) => b.cond['kind'] == 'companionsMet').id,
+            atUtc: 1,
+            seen: const Value(true),
+          ));
     });
     await pumpDoobal(tester, e, const DoobalApp());
     await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
