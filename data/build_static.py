@@ -55,7 +55,15 @@ MATERIAL = {
 }
 # 색 소품: {기본 id: [(색 이름, hex), ...]} — 가안 7종 × 3색, 각 100 럭(기준 문서 11장). 색은 디자인 기획이 고른다.
 # 비어 있으면 색 소품을 만들지 않는다(앱은 상점·꾸미기에 안 보임).
-COLOR_VARIANTS = {}
+SW = {'크림': '#F3E4C4', '살구': '#F5C9A3', '분홍': '#EFC0BE', '라벤더': '#D3C6E6', '하늘': '#BCD9E8',
+      '연두': '#CDE0AC', '이끼': '#9FAE7E', '흙': '#C4A07C', '테라코타': '#C9775A', '남청': '#7F8DB3'}  # palette body 견본
+# 11/6 디자인 기획 가안(기준 문서 11장): 몸 색 견본 이름·값 그대로
+COLOR_VARIANTS = {k: [(c, SW[c]) for c in v] for k, v in {
+    'hat_01': ['하늘', '남청', '이끼'], 'hat_02': ['남청', '이끼', '테라코타'], 'hat_04': ['흙', '이끼', '남청'],
+    'hat_05': ['분홍', '하늘', '라벤더'], 'cloth_01': ['하늘', '분홍', '연두'], 'cloth_02': ['남청', '테라코타', '이끼'],
+    'shoe_01': ['테라코타', '남청', '이끼']}.items()}
+# 색 소품 이름 = '<색> <줄기>'(두 낱말). 기본 이름이 두 낱말이면 줄기를 따로 둔다(가안, 디자인 기획 확인: 예 '남청 신발')
+VARIANT_STEM = {'hat_02': '모자', 'shoe_01': '신발'}
 COLOR_VARIANT_PRICE = 100
 
 
@@ -181,7 +189,7 @@ def build_props():
     for bid, colors in COLOR_VARIANTS.items():
         assert bid in MATERIAL, f'색을 바꿀 수 없는 소품: {bid}'
         for n, (cname, hexv) in enumerate(colors, 1):
-            props.append({'id': f'{bid}_c{n}', 'slot': base[bid]['slot'], 'name': f"{cname} {base[bid]['name']}",
+            props.append({'id': f'{bid}_c{n}', 'slot': base[bid]['slot'], 'name': f"{cname} {VARIANT_STEM.get(bid, base[bid]['name'])}",
                           'unlock': {'kind': 'shop', 'price': COLOR_VARIANT_PRICE, 'requires': bid},
                           'status': 'mvp', 'variantOf': bid,
                           'material': {'catalogId': MATERIAL[bid][0], 'hex': hexv}})

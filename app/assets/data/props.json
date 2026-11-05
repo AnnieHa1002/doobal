@@ -28,7 +28,7 @@
    "cloth_02",
    "shoe_01"
   ],
-  "pending": true,
+  "pending": false,
   "note": "색은 디자인 기획이 고름(11장 가안). 채우면 id <기본 id>_c<n>, 이름 <색> <기본 이름>"
  },
  "props": [
@@ -613,6 +613,342 @@
     "kind": "none"
    },
    "status": "later"
+  },
+  {
+   "id": "hat_01_c1",
+   "slot": "hat",
+   "name": "하늘 베레모",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_01"
+   },
+   "status": "mvp",
+   "variantOf": "hat_01",
+   "material": {
+    "catalogId": "beret",
+    "hex": "#BCD9E8"
+   }
+  },
+  {
+   "id": "hat_01_c2",
+   "slot": "hat",
+   "name": "남청 베레모",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_01"
+   },
+   "status": "mvp",
+   "variantOf": "hat_01",
+   "material": {
+    "catalogId": "beret",
+    "hex": "#7F8DB3"
+   }
+  },
+  {
+   "id": "hat_01_c3",
+   "slot": "hat",
+   "name": "이끼 베레모",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_01"
+   },
+   "status": "mvp",
+   "variantOf": "hat_01",
+   "material": {
+    "catalogId": "beret",
+    "hex": "#9FAE7E"
+   }
+  },
+  {
+   "id": "hat_02_c1",
+   "slot": "hat",
+   "name": "남청 모자",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_02"
+   },
+   "status": "mvp",
+   "variantOf": "hat_02",
+   "material": {
+    "catalogId": "feather_hat",
+    "hex": "#7F8DB3"
+   }
+  },
+  {
+   "id": "hat_02_c2",
+   "slot": "hat",
+   "name": "이끼 모자",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_02"
+   },
+   "status": "mvp",
+   "variantOf": "hat_02",
+   "material": {
+    "catalogId": "feather_hat",
+    "hex": "#9FAE7E"
+   }
+  },
+  {
+   "id": "hat_02_c3",
+   "slot": "hat",
+   "name": "테라코타 모자",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_02"
+   },
+   "status": "mvp",
+   "variantOf": "hat_02",
+   "material": {
+    "catalogId": "feather_hat",
+    "hex": "#C9775A"
+   }
+  },
+  {
+   "id": "hat_04_c1",
+   "slot": "hat",
+   "name": "흙 삿갓",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_04"
+   },
+   "status": "mvp",
+   "variantOf": "hat_04",
+   "material": {
+    "catalogId": "bamboo_hat",
+    "hex": "#C4A07C"
+   }
+  },
+  {
+   "id": "hat_04_c2",
+   "slot": "hat",
+   "name": "이끼 삿갓",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_04"
+   },
+   "status": "mvp",
+   "variantOf": "hat_04",
+   "material": {
+    "catalogId": "bamboo_hat",
+    "hex": "#9FAE7E"
+   }
+  },
+  {
+   "id": "hat_04_c3",
+   "slot": "hat",
+   "name": "남청 삿갓",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_04"
+   },
+   "status": "mvp",
+   "variantOf": "hat_04",
+   "material": {
+    "catalogId": "bamboo_hat",
+    "hex": "#7F8DB3"
+   }
+  },
+  {
+   "id": "hat_05_c1",
+   "slot": "hat",
+   "name": "분홍 금관",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_05"
+   },
+   "status": "mvp",
+   "variantOf": "hat_05",
+   "material": {
+    "catalogId": "silla_crown",
+    "hex": "#EFC0BE"
+   }
+  },
+  {
+   "id": "hat_05_c2",
+   "slot": "hat",
+   "name": "하늘 금관",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_05"
+   },
+   "status": "mvp",
+   "variantOf": "hat_05",
+   "material": {
+    "catalogId": "silla_crown",
+    "hex": "#BCD9E8"
+   }
+  },
+  {
+   "id": "hat_05_c3",
+   "slot": "hat",
+   "name": "라벤더 금관",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "hat_05"
+   },
+   "status": "mvp",
+   "variantOf": "hat_05",
+   "material": {
+    "catalogId": "silla_crown",
+    "hex": "#D3C6E6"
+   }
+  },
+  {
+   "id": "cloth_01_c1",
+   "slot": "cloth",
+   "name": "하늘 앞치마",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "cloth_01"
+   },
+   "status": "mvp",
+   "variantOf": "cloth_01",
+   "material": {
+    "catalogId": "work_apron",
+    "hex": "#BCD9E8"
+   }
+  },
+  {
+   "id": "cloth_01_c2",
+   "slot": "cloth",
+   "name": "분홍 앞치마",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "cloth_01"
+   },
+   "status": "mvp",
+   "variantOf": "cloth_01",
+   "material": {
+    "catalogId": "work_apron",
+    "hex": "#EFC0BE"
+   }
+  },
+  {
+   "id": "cloth_01_c3",
+   "slot": "cloth",
+   "name": "연두 앞치마",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "cloth_01"
+   },
+   "status": "mvp",
+   "variantOf": "cloth_01",
+   "material": {
+    "catalogId": "work_apron",
+    "hex": "#CDE0AC"
+   }
+  },
+  {
+   "id": "cloth_02_c1",
+   "slot": "cloth",
+   "name": "남청 여행복",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "cloth_02"
+   },
+   "status": "mvp",
+   "variantOf": "cloth_02",
+   "material": {
+    "catalogId": "travel_vest",
+    "hex": "#7F8DB3"
+   }
+  },
+  {
+   "id": "cloth_02_c2",
+   "slot": "cloth",
+   "name": "테라코타 여행복",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "cloth_02"
+   },
+   "status": "mvp",
+   "variantOf": "cloth_02",
+   "material": {
+    "catalogId": "travel_vest",
+    "hex": "#C9775A"
+   }
+  },
+  {
+   "id": "cloth_02_c3",
+   "slot": "cloth",
+   "name": "이끼 여행복",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "cloth_02"
+   },
+   "status": "mvp",
+   "variantOf": "cloth_02",
+   "material": {
+    "catalogId": "travel_vest",
+    "hex": "#9FAE7E"
+   }
+  },
+  {
+   "id": "shoe_01_c1",
+   "slot": "shoe",
+   "name": "테라코타 신발",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "shoe_01"
+   },
+   "status": "mvp",
+   "variantOf": "shoe_01",
+   "material": {
+    "catalogId": "brown_shoes",
+    "hex": "#C9775A"
+   }
+  },
+  {
+   "id": "shoe_01_c2",
+   "slot": "shoe",
+   "name": "남청 신발",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "shoe_01"
+   },
+   "status": "mvp",
+   "variantOf": "shoe_01",
+   "material": {
+    "catalogId": "brown_shoes",
+    "hex": "#7F8DB3"
+   }
+  },
+  {
+   "id": "shoe_01_c3",
+   "slot": "shoe",
+   "name": "이끼 신발",
+   "unlock": {
+    "kind": "shop",
+    "price": 100,
+    "requires": "shoe_01"
+   },
+   "status": "mvp",
+   "variantOf": "shoe_01",
+   "material": {
+    "catalogId": "brown_shoes",
+    "hex": "#9FAE7E"
+   }
   }
  ]
 }
