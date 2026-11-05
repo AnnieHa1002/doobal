@@ -278,7 +278,7 @@ void main() {
       expect(find.text('1.05 km'), findsNWidgets(2));
       expect(find.text('15:00'), findsOneWidget);
       expect(find.text('걷기 100% · 달리기 0%'), findsOneWidget);
-      expect(find.text('오늘 1/3번째 함께 걷기'), findsOneWidget);
+      expect(find.text('오늘 함께 걷기 1/3'), findsOneWidget);
       expect(find.text('다음 방명록 지점까지 3,500보'), findsOneWidget);
       // 진행 막대 연출과 쉼터로 버튼은 없고 뒤로 가기만 있다
       expect(find.textContaining('왔어요'), findsNothing);
@@ -325,9 +325,9 @@ void main() {
       }
 
       // 앞 셋은 그날의 1·2·3번째 인정, 넷째는 하루 최대를 채운 뒤라 인정 못 받는다
-      await view('10:00', '11월 18일 1/3번째 함께 걷기');
-      await view('10:30', '11월 18일 2/3번째 함께 걷기');
-      await view('11:00', '11월 18일 3/3번째 함께 걷기');
+      await view('10:00', '11월 18일 함께 걷기 1/3');
+      await view('10:30', '11월 18일 함께 걷기 2/3');
+      await view('11:00', '11월 18일 함께 걷기 3/3');
       await view('11:30', '11월 18일은 3/3번을 다 채웠어요');
       await end(tester, e);
     });

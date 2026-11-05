@@ -1,5 +1,6 @@
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/companion.dart';
+import 'package:doobal/domain/companion_engine.dart';
 import 'package:doobal/ui/companion/companion_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
@@ -253,6 +254,92 @@ void main() {
       await refreshed(tester, () => find.byKey(const Key('story-sheet')).evaluate().isNotEmpty);
       await tester.pump(const Duration(seconds: 1));
       expect(tester.takeException(), isNull);
+      await end(tester, e);
+    });
+  });
+
+  group('들어올 때 장을 가리키면', () {
+    Future<UiEnv> openAt(WidgetTester tester, StoryRef story) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await met(e, 'bright', chapter: 2);
+        await met(e, 'rest', at: 2, chapter: 1);
+        await walkWith(e, 'rest');
+      });
+      await openOnTop(
+        tester,
+        e,
+        CompanionScreen(openStory: story),
+        ready: () => find.byKey(const Key('companion-now')).evaluate().isNotEmpty,
+      );
+      return e;
+    }
+
+    final sheet = find.byKey(const Key('story-sheet'));
+
+    testWidgets('다른 동행과 걷는 중이어도 그 동행의 목록과 그 장의 시트가 뜬다', (tester) async {
+      final e = await openAt(tester, const StoryRef('bright', 2));
+      await settle(tester, () => sheet.evaluate().isNotEmpty);
+      expect(find.text('퐁이의 이야기'), findsOneWidget);
+      expect(_row('bright', 2), findsOneWidget);
+      expect(_row('rest', 1), findsNothing);
+      expect(tester.widget<Text>(find.byKey(const Key('companion-now'))).data, '휴',
+          reason: '보는 것만 바뀌고 함께 걷는 동행은 그대로다');
+      await end(tester, e);
+    });
+
+    testWidgets('칸을 고르면 목록이 그 동행을 따라간다', (tester) async {
+      final e = await openAt(tester, const StoryRef('bright', 9));
+      await settle(tester, () => find.text('퐁이의 이야기').evaluate().isNotEmpty);
+      expect(sheet, findsNothing, reason: '없는 장은 열지 않는다');
+      await tester.tap(_tile('rest'));
+      await refreshed(tester, () => find.text('휴의 이야기').evaluate().isNotEmpty);
+      expect(_row('rest', 1), findsOneWidget);
+      await end(tester, e);
+    });
+  });
+
+  group('안 읽은 장 점', () {
+    Finder tileDot(String id) => find.byKey(Key('companion-unread-$id'));
+    Finder rowDot(String id, int no) => find.byKey(Key('story-unread-$id-$no'));
+
+    testWidgets('안 읽은 장의 칸·줄에 점이 있고, 읽으면 없어진다', (tester) async {
+      final e = await open(tester, (e) async {
+        await met(e, 'bright', chapter: 2, read: 1);
+        await walkWith(e, 'bright');
+      });
+      expect(tileDot('bright'), findsOneWidget);
+      expect(rowDot('bright', 2), findsOneWidget);
+      expect(rowDot('bright', 1), findsNothing);
+      expect(rowDot('bright', 0), findsNothing);
+
+      await tester.tap(_row('bright', 2));
+      await refreshed(tester, () => rowDot('bright', 2).evaluate().isEmpty);
+      expect(tileDot('bright'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('프롤로그뿐이면 점이 없다', (tester) async {
+      final e = await open(tester, (e) => met(e, 'bright'));
+      expect(tileDot('bright'), findsNothing);
+      expect(rowDot('bright', 0), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('다른 동행에만 있으면 그 동행의 목록이 먼저 보이고, 읽은 뒤에도 그대로다', (tester) async {
+      final e = await open(tester, (e) async {
+        await met(e, 'bright', chapter: 1, read: 1);
+        await met(e, 'rest', at: 2, chapter: 1);
+        await walkWith(e, 'bright');
+      });
+      expect(find.text('휴의 이야기'), findsOneWidget);
+      expect(rowDot('rest', 1), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('companion-now'))).data, '퐁이',
+          reason: '보는 것만 바뀌고 함께 걷는 동행은 그대로다');
+
+      await tester.tap(_row('rest', 1));
+      await refreshed(tester, () => rowDot('rest', 1).evaluate().isEmpty);
+      expect(find.text('휴의 이야기'), findsOneWidget);
       await end(tester, e);
     });
   });

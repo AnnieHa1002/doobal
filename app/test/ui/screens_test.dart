@@ -1109,7 +1109,7 @@ void main() {
       expect(find.text('거리'), findsOneWidget);
       expect(find.text('시간'), findsOneWidget);
       expect(find.text('걷기 100% · 달리기 0%'), findsOneWidget);
-      expect(find.text('오늘 1/3번째 함께 걷기'), findsOneWidget);
+      expect(find.text('오늘 함께 걷기 1/3'), findsOneWidget);
       expect(find.text('다음 방명록 지점까지 3,500보'), findsOneWidget);
 
       // 진행 막대: 걷기 전 0%에서 지금 %까지
@@ -1165,7 +1165,7 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('인정된 걷기는 오늘 n/3번째 함께 걷기 (그날 둘째 걷기면 2/3)', (tester) async {
+    testWidgets('인정된 걷기는 오늘 함께 걷기 n/3 (그날 둘째 걷기면 2/3)', (tester) async {
       final e = _Env();
       await e.seed(tester);
       // 15분 × 100보를 15분 비우고 두 번: 둘 다 기준(10분·1,000보) 이상
@@ -1174,7 +1174,7 @@ void main() {
       final start = _t1.add(const Duration(minutes: 30));
       await openRecord(tester, e, start: start, end: start.add(const Duration(minutes: 15)));
 
-      expect(find.text('오늘 2/3번째 함께 걷기'), findsOneWidget);
+      expect(find.text('오늘 함께 걷기 2/3'), findsOneWidget);
       expect(find.textContaining('이어 걸으면'), findsNothing);
       await _end(tester, e);
     });

@@ -6,14 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/backup_policy.dart';
 import '../domain/badge.dart' as stamp;
 import '../domain/boat.dart';
+import '../domain/companion_engine.dart' show parseStoryNoticeKey;
 import '../domain/focus_walk.dart';
 import '../domain/notification_policy.dart' show NoticeKind, parseNoticePayload;
 import '../domain/prop.dart';
 import '../ui/arrival/arrival_screen.dart';
 import '../ui/common/toast.dart';
+import '../ui/companion/companion_screen.dart';
 import '../ui/guestbook/guestbook_write_screen.dart';
 import 'background_sync.dart';
 import 'backup_runner.dart';
+import 'companion_providers.dart';
 import 'notification_service.dart';
 import 'providers.dart';
 import 'shop_providers.dart';
@@ -160,14 +163,21 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     showToastOn(messenger, orphanWalkToast(steps));
   }
 
-  /// 누른 알림이 가리키는 화면 (UI 명세 13장): N1 → 그 걸음 숫자의 방명록 쓰기. N2 도착은 앱이 열리면
-  /// 도착 화면이 뜨고([_checkArrival]), N3(동행 화면, M4)·N4·N5는 쉼터 그대로라 따로 열지 않는다
+  /// 누른 알림이 가리키는 화면 (UI 명세 13장): N1 → 그 걸음 숫자의 방명록 쓰기, N3 → 그 동행의 그 장.
+  /// N2 도착은 앱이 열리면 도착 화면이 뜨고([_checkArrival]), N4·N5는 쉼터 그대로라 따로 열지 않는다
   void _openNotice(String payload) {
     final tap = parseNoticePayload(payload);
-    if (!mounted || tap == null || tap.kind != NoticeKind.n1) return;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => GuestbookWriteScreen(ticketId: tap.key)),
-    );
+    if (!mounted || tap == null) return;
+    final Widget? page = switch (tap.kind) {
+      NoticeKind.n1 => GuestbookWriteScreen(ticketId: tap.key),
+      NoticeKind.n3 => switch (parseStoryNoticeKey(tap.key)) {
+          final story? => CompanionScreen(openStory: story),
+          null => null,
+        },
+      _ => null,
+    };
+    if (page == null) return;
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
   }
 
   /// 새로 얻은 소품 한 줄 토스트. 같은 동기화의 `그동안 n km 걸었어요`나 걷는 중 토스트를 지우지 않고
@@ -296,6 +306,8 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
       final report = await svc.sync(ref.read(clockProvider)());
       if (!mounted) return;
       ref.invalidate(snapshotProvider);
+      // 앱 밖에서 열린 장도 동행 입구의 점에 나오게 한다
+      ref.invalidate(companionsViewProvider);
       if (report.advancedKm >= _toastMinKm) {
         scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(
           content: Text('그동안 ${report.advancedKm.toStringAsFixed(1)}km 걸었어요'),

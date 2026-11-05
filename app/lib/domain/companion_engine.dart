@@ -98,6 +98,82 @@ int openedChapter(int walks, Rules rules) {
   return n > rules.companionChapters ? rules.companionChapters : n;
 }
 
+/// 다음 장까지 함께 걷기 진행 n (`n/walksPerChapter`). 마지막 장까지 열렸으면 null
+int? walksToNextChapter(int walks, int chapter, Rules rules) =>
+    chapter >= rules.companionChapters ? null : walks % rules.companionWalksPerChapter;
+
+/// 동행 그림에서 숨길 층 (심 박사 안경). 건네는 장면을 읽기 전에 사라지지 않게 마지막 장을 읽은 뒤에만 있다
+/// (11/6 Annie). [readChapter]는 읽은 장
+String? hiddenLayerOf(Companion companion, int readChapter, Rules rules) =>
+    readChapter >= rules.companionChapters ? companion.hideLayerOnFinale : null;
+
+/// 이야기 한 장을 가리키는 값 (알림 N3·걷기 기록 ‘읽기’)
+class StoryRef {
+  const StoryRef(this.companionId, this.no);
+
+  final String companionId;
+  final int no;
+}
+
+/// N3 알림의 key: 'bright:3'. 같은 동행의 같은 장은 다시 알리지 않는다
+String storyNoticeKey(String companionId, int no) => '$companionId:$no';
+
+/// [storyNoticeKey]를 되돌린다. 모양이 다르면 null
+StoryRef? parseStoryNoticeKey(String key) {
+  final colon = key.lastIndexOf(':');
+  if (colon <= 0) return null;
+  final no = int.tryParse(key.substring(colon + 1));
+  return no == null ? null : StoryRef(key.substring(0, colon), no);
+}
+
+/// 걷기 한 번이 그 동행의 이야기에 어떻게 닿았나 (걷기 기록)
+class WalkStory {
+  const WalkStory({required this.companionId, this.opened, this.next, this.walks = 0});
+
+  final String companionId;
+
+  /// 이 걷기로 열린 장. 없으면 null
+  final int? opened;
+
+  /// 다음 장 번호. 마지막 장까지 열렸으면 null
+  final int? next;
+
+  /// 다음 장까지 걸은 수 ([next]가 null이면 0)
+  final int walks;
+}
+
+/// 걷기 한 번의 이야기 값. [thisWalk]는 이 걷기의 인정된 구간 시작(ms), [countedStarts]는 인정된 구간 전부.
+/// 동행은 이 걷기의 인정된 구간을 시작할 때 함께 걷던 동행이다. 인정된 구간이 없거나 그때 혼자였으면
+/// 걷기를 시작한 [startUtc] 때의 동행으로 지금까지의 진행만 보여 준다. 혼자였으면 null.
+/// [beforeUtc] 앞의 기록만 세므로 지난 걷기를 다시 볼 때는 그때의 값이다
+WalkStory? walkStoryOf({
+  required List<int> countedStarts,
+  required List<int> thisWalk,
+  required List<CompanionStint> stints,
+  required int startUtc,
+  required int beforeUtc,
+  required Rules rules,
+}) {
+  final sorted = [...stints]..sort((a, b) => a.startUtc.compareTo(b.startUtc));
+  String? id;
+  for (final s in thisWalk) {
+    id = companionAt(sorted, s) ?? id;
+  }
+  id ??= companionAt(sorted, startUtc);
+  if (id == null) return null;
+  final after = countedStarts.where((s) => s < beforeUtc && companionAt(sorted, s) == id).length;
+  final added = thisWalk.where((s) => s < beforeUtc && companionAt(sorted, s) == id).length;
+  final chapter = openedChapter(after, rules);
+  final open = chapter > openedChapter(after - added, rules);
+  final last = chapter >= rules.companionChapters;
+  return WalkStory(
+    companionId: id,
+    opened: open ? chapter : null,
+    next: last ? null : chapter + 1,
+    walks: last ? 0 : after % rules.companionWalksPerChapter,
+  );
+}
+
 /// 이야기를 한 번에 보는 단위: 말 한 줄과 그 앞의 지문
 class StoryBeat {
   const StoryBeat({required this.who, required this.text, this.direction});

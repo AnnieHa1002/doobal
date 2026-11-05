@@ -255,4 +255,93 @@ void main() {
       expect(scenes, containsAll(used));
     });
   });
+
+  group('이야기 진행 값', () {
+    test('다음 장까지 n/4, 마지막 장이면 없다', () {
+      expect(walksToNextChapter(0, 0, rules), 0);
+      expect(walksToNextChapter(3, 0, rules), 3);
+      expect(walksToNextChapter(4, 1, rules), 0);
+      expect(walksToNextChapter(10, 2, rules), 2);
+      final walks = rules.companionChapters * rules.companionWalksPerChapter;
+      expect(walksToNextChapter(walks, rules.companionChapters, rules), isNull);
+    });
+
+    test('hideLayerOnFinale는 마지막 장을 읽은 뒤에만 값이 있다', () {
+      final doctor = companionCatalog.byId('doctor')!;
+      expect(hiddenLayerOf(doctor, rules.companionChapters - 1, rules), isNull);
+      expect(hiddenLayerOf(doctor, rules.companionChapters, rules), doctor.hideLayerOnFinale);
+      expect(hiddenLayerOf(companionCatalog.byId('bright')!, rules.companionChapters, rules), isNull);
+    });
+
+    test('N3 key는 되돌릴 수 있고, 모양이 다르면 null', () {
+      final ref = parseStoryNoticeKey(storyNoticeKey('bright', 3))!;
+      expect((ref.companionId, ref.no), ('bright', 3));
+      expect(parseStoryNoticeKey(''), isNull);
+      expect(parseStoryNoticeKey('bright'), isNull);
+      expect(parseStoryNoticeKey(':3'), isNull);
+      expect(parseStoryNoticeKey('bright:x'), isNull);
+    });
+  });
+
+  group('걷기 한 번의 이야기 값', () {
+    const per = 60000 * 60 * 24;
+    int day(int d) => d * per;
+
+    WalkStory? story({
+      required List<int> counted,
+      required List<int> thisWalk,
+      required int start,
+      List<CompanionStint> stints = const [CompanionStint(0, 'a')],
+    }) =>
+        walkStoryOf(
+          countedStarts: counted,
+          thisWalk: thisWalk,
+          stints: stints,
+          startUtc: start,
+          beforeUtc: start + per ~/ 2,
+          rules: rules,
+        );
+
+    test('혼자면 null', () {
+      expect(
+        story(
+          counted: [day(1)],
+          thisWalk: [day(1)],
+          start: day(1),
+          stints: const [CompanionStint(0, null)],
+        ),
+        isNull,
+      );
+      expect(story(counted: [day(1)], thisWalk: [day(1)], start: day(1), stints: const []), isNull);
+    });
+
+    test('4번째 걷기에서 그 장이 열리고, 뒤의 기록은 안 센다', () {
+      final all = [for (var d = 1; d <= 6; d++) day(d)];
+      final third = story(counted: all, thisWalk: [day(3)], start: day(3))!;
+      expect((third.opened, third.next, third.walks), (null, 1, 3));
+      final fourth = story(counted: all, thisWalk: [day(4)], start: day(4))!;
+      expect((fourth.opened, fourth.next, fourth.walks), (1, 2, 0));
+    });
+
+    test('다른 동행과 걸은 기록은 안 센다', () {
+      const stints = [CompanionStint(0, 'b'), CompanionStint(60000 * 60 * 24 * 3, 'a')];
+      final all = [for (var d = 1; d <= 4; d++) day(d)];
+      final v = story(counted: all, thisWalk: [day(4)], start: day(4), stints: stints)!;
+      expect((v.companionId, v.opened, v.walks), ('a', null, 2));
+    });
+
+    test('인정된 구간이 없으면 시작 때 동행의 지금까지 진행', () {
+      final v = story(counted: [day(1), day(2)], thisWalk: const [], start: day(3))!;
+      expect((v.opened, v.next, v.walks), (null, 1, 2));
+    });
+
+    test('마지막 장이 열리는 걷기는 열린 장만, 그 뒤 걷기는 아무것도 없다', () {
+      final total = rules.companionChapters * rules.companionWalksPerChapter;
+      final all = [for (var d = 1; d <= total + 1; d++) day(d)];
+      final finale = story(counted: all, thisWalk: [day(total)], start: day(total))!;
+      expect((finale.opened, finale.next, finale.walks), (rules.companionChapters, null, 0));
+      final after = story(counted: all, thisWalk: [day(total + 1)], start: day(total + 1))!;
+      expect((after.opened, after.next), (null, null));
+    });
+  });
 }

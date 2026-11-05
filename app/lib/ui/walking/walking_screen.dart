@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/companion_providers.dart';
 import '../../app/live_walker.dart';
 import '../../app/providers.dart';
 import '../../app/shop_providers.dart';
@@ -25,6 +26,7 @@ import '../../domain/walk_record.dart';
 import '../arrival/arrival_screen.dart';
 import '../common/toast.dart';
 import '../companion/meet_flow.dart';
+import '../companion/story_lines.dart';
 import '../scene/scene_view.dart';
 import '../walk_record/walk_record_screen.dart';
 import 'walking_hud.dart';
@@ -278,6 +280,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     setState(() => _meet = null);
     try {
       await (await _service).finishMeeting(met.id, _clock(), together: together);
+      if (mounted) ref.invalidate(companionsViewProvider);
     } catch (e) {
       debugPrint('길 위 만남 저장 실패: $e');
     }
@@ -432,6 +435,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
       if (!mounted) return;
       final snap = await ref.refresh(snapshotProvider.future);
       if (!mounted) return;
+      // 걷기가 인정되면 이야기 진행이 는다 (펼침 카드의 동행 줄)
+      ref.invalidate(companionsViewProvider);
       final j = snap.journey;
       final refreshSec = ref.read(rulesProvider).requireValue.walkingRefreshSec;
       setState(() {
@@ -632,6 +637,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
               eventKm: rules.eventEveryKm,
               onCloseEvent: _closeEvent,
               badgeLine: _badgeLine,
+              storyLine: _storyLine(rules),
               onFinish: _finish,
             ),
           ),
@@ -648,6 +654,13 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
         ],
       ),
     );
+  }
+
+  /// 펼침 카드의 동행 줄. 혼자 걷는 중이면(또는 아직 못 읽었으면) null
+  String? _storyLine(Rules rules) {
+    final view = ref.watch(companionsViewProvider).value;
+    final now = view?.metById(view.walkingWith);
+    return now == null ? null : walkingStoryLine(now, rules);
   }
 
   /// 다음 방명록 지점까지 남은 걸음. 마지막 숫자를 넘었거나 아직 못 읽었으면 null

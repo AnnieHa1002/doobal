@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/companion_providers.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/companion.dart';
+import '../../domain/companion_engine.dart' show StoryRef;
 import '../../domain/focus_walk.dart';
 import '../../domain/gait.dart';
 import '../../domain/laps.dart';
@@ -19,10 +22,19 @@ import '../common/ink_bar.dart';
 import '../common/ink_card.dart';
 import '../common/palette.dart';
 import '../common/screen_header.dart';
+import '../companion/companion_art.dart';
+import '../companion/companion_screen.dart';
+import '../companion/story_lines.dart';
 import 'session_line.dart';
 
 /// 진행 막대가 걷기 전 비율에서 지금 비율까지 차오르는 시간
 const _barDuration = Duration(milliseconds: 1200);
+
+/// 인정된 걷기 줄 바탕 (캔버스 3-3)
+const _countedBg = Color(0xFFE8EBD6);
+
+/// 이야기가 열린 카드 바탕 (캔버스 3-3)
+const _storyOpenedBg = Color(0xFFF1E0B0);
 
 /// 걷기 기록 (걷기 마치기 직후). 열자마자 동기화를 한 번 하고 [start, end)의 기록을 계산한다.
 /// [ratioBefore]는 걷기 전 여정 진행 비율 (여정이 없으면 null).
@@ -59,6 +71,9 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
 
   /// 이 걷기 시간대에 생긴 길 위 이벤트 (2km 이정표). 없으면 빈 목록
   var _events = const <RoadEventView>[];
+
+  /// 이 걷기의 동행 이야기. 혼자 걸었으면 null
+  WalkStoryView? _story;
   Object? _error;
 
   @override
@@ -75,8 +90,11 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
       final nth =
           widget.review ? await ref.read(statsServiceProvider).countedNth(widget.start) : null;
       final events = await svc.eventsBetween(widget.start, widget.end);
+      final story = await svc.walkStory(widget.start, widget.end);
       // 기다리는 동안 화면을 떠났으면 ref를 더 쓰지 않는다
       if (!mounted) return;
+      // 방금 동기화로 장이 열렸을 수 있다 (동행 입구의 점)
+      if (!widget.review) ref.invalidate(companionsViewProvider);
       final snap = widget.review
           ? await ref.read(snapshotProvider.future)
           : await ref.refresh(snapshotProvider.future);
@@ -86,6 +104,7 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
         _snapshot = snap;
         _nth = nth;
         _events = events;
+        _story = story;
       });
     } catch (e) {
       debugPrint('걷기 기록 실패: $e');
@@ -280,9 +299,9 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
         ],
         if (_events.isNotEmpty) ..._eventLines(rules),
         const SizedBox(height: 16),
-        Text(
+        _SessionLine(
           _sessionText(rules, record),
-          style: context.display(15),
+          counted: record.sessions.any((s) => s.counted),
         ),
         // 다시 볼 때는 걷기 전 비율을 몰라서 진행 막대 연출이 없다
         if (!widget.review && j != null && before != null) ...[
@@ -301,11 +320,139 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
             ),
           ),
         ],
+        if (_storyRow(rules) case final row?) ...[
+          const SizedBox(height: 12),
+          row,
+        ],
         if (left != null) ...[
           const SizedBox(height: 12),
           Text('다음 방명록 지점까지 ${formatInt(left)}보', style: AppText.bodySub),
         ],
       ],
+    );
+  }
+
+  /// 이 걷기로 장이 열렸으면 읽기 카드, 아니면 다음 장까지의 함께 걷기 줄. 혼자 걸었거나
+  /// 이야기를 끝까지 열고 난 뒤의 걷기면 없다
+  Widget? _storyRow(Rules rules) {
+    final view = _story;
+    if (view == null) return null;
+    final story = view.story;
+    final opened = story.opened;
+    if (opened != null) {
+      return _StoryOpenedCard(
+        companion: view.companion,
+        title: storyOpenedLine(opened),
+        sub: storyOpenedSub(rules),
+        onRead: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => CompanionScreen(openStory: StoryRef(view.companion.id, opened)),
+        )),
+      );
+    }
+    if (story.next == null) return null;
+    return Row(
+      key: const ValueKey('walk-story-progress'),
+      children: [
+        const Icon(Icons.menu_book_outlined, size: 20, color: Palette.ink),
+        const SizedBox(width: 10),
+        Expanded(child: Text(storyProgressLine(story, rules), style: AppText.bodySub)),
+      ],
+    );
+  }
+}
+
+/// 인정된 걷기면 앞에 체크가 붙은 연두 줄 (캔버스 3-3 ‘오늘 함께 걷기 2/3’), 아니면 글만
+class _SessionLine extends StatelessWidget {
+  const _SessionLine(this.text, {required this.counted});
+
+  final String text;
+  final bool counted;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = Text(text, style: context.display(15));
+    if (!counted) return label;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: _countedBg, borderRadius: BorderRadius.circular(14)),
+      child: Row(
+        children: [
+          const Icon(Icons.check, size: 18, color: Palette.ink),
+          const SizedBox(width: 8),
+          Expanded(child: label),
+        ],
+      ),
+    );
+  }
+}
+
+/// 이 걷기로 이야기가 열렸을 때의 카드 (캔버스 3-3). 어디를 눌러도 그 장이 열린다
+class _StoryOpenedCard extends StatelessWidget {
+  const _StoryOpenedCard({
+    required this.companion,
+    required this.title,
+    required this.sub,
+    required this.onRead,
+  });
+
+  final Companion companion;
+  final String title;
+  final String sub;
+  final VoidCallback onRead;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '$title, 읽기',
+      child: GestureDetector(
+        key: const ValueKey('walk-story-opened'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onRead,
+        child: ExcludeSemantics(
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 72),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: _storyOpenedBg,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Palette.ink, width: InkLine.panel),
+            ),
+            child: Row(
+              children: [
+                CompanionFigure(companion: companion, height: 52),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: context.display(16)),
+                      const SizedBox(height: 2),
+                      Text(sub, style: AppText.label),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Palette.terracotta,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Palette.ink, width: InkLine.panel),
+                  ),
+                  child: Text(
+                    '읽기',
+                    style: context.display(14, color: Palette.card, weight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -13,6 +13,7 @@ class MetCompanion {
     required this.chapter,
     required this.readChapter,
     required this.walksTogether,
+    this.hiddenLayer,
   });
 
   final Companion companion;
@@ -25,6 +26,23 @@ class MetCompanion {
 
   /// 함께 인정된 걷기 1번 수
   final int walksTogether;
+
+  /// 동행 그림에서 숨길 층 (완결 장을 읽은 뒤 심 박사의 안경). 없으면 null. 그림을 얹을 때(T2c) 쓴다
+  final String? hiddenLayer;
+
+  /// 아직 안 읽은 장이 있는가 (읽은 장은 하나의 숫자라 뒤 장을 읽으면 앞 장도 읽은 것으로 본다)
+  bool get hasUnread => chapter > readChapter;
+
+  /// [no]장이 안 읽은 장인가
+  bool isUnread(int no) => no > readChapter && no <= chapter;
+}
+
+/// 걷기 한 번의 이야기 값과 그 동행 (걷기 기록)
+class WalkStoryView {
+  const WalkStoryView(this.companion, this.story);
+
+  final Companion companion;
+  final WalkStory story;
 }
 
 /// 동행 화면의 값
@@ -48,29 +66,66 @@ class CompanionsView {
     }
     return null;
   }
+
+  /// 안 읽은 장이 있는가 (동행 입구의 알림 점)
+  bool get hasUnread => met.any((m) => m.hasUnread);
+
+  /// 화면을 열 때 먼저 볼 동행: 지금 걷는(혼자면 마지막) 동행에 안 읽은 장이 없고 다른 동행에 있으면 그 동행.
+  /// 칸을 누르면 함께 걷는 동행이 바뀌므로, 점을 따라 들어와서 바꾸지 않고 읽을 수 있게 한다. 없으면 null
+  String? get unreadFocus {
+    if (metById(walkingWith ?? lastWith)?.hasUnread ?? false) return null;
+    return met.where((m) => m.hasUnread).firstOrNull?.companion.id;
+  }
 }
 
 extension CompanionSync on SyncService {
   /// 동기화 끝에 동행 일을 처리한다: 인정된 걷기 1번의 시작 시각에 함께 걷던 동행에게 +1,
   /// 걷기 4번마다 새 장. 저장된 기록에서 늘 처음부터 세므로 같은 기록으로 다시 돌려도 안 바뀐다.
   /// 늦게 들어온 기록으로 걷기 수가 줄어도 한 번 열린 장은 닫지 않는다.
-  /// 돌려주는 것은 이번에 새로 생긴 알림 후보(N3).
-  /// TODO(T2b): 새 장이 열리면 N3 후보를 돌려주고, 8장이 열리면 완결 소품을 준다
-  Future<List<NoticeCandidate>> _syncCompanions(DateTime now) async {
+  /// 돌려주는 것은 이번에 새로 생긴 일: 알림 후보 N3(동행마다 이번에 열린 마지막 장)와 완결 소품
+  Future<({List<NoticeCandidate> notices, List<Prop> props})> _syncCompanions(DateTime now) async {
     final rows = await db.select(db.companions).get();
-    if (rows.isEmpty) return const [];
+    if (rows.isEmpty) return (notices: const <NoticeCandidate>[], props: const <Prop>[]);
     final stints = await _companionStints();
     final sessions =
         await (db.select(db.walkSessions)..where((t) => t.counted.equals(true))).get();
     final walks = walksTogether([for (final s in sessions) s.startUtc], stints);
+    final notices = <NoticeCandidate>[];
+    final finished = <String>[];
     for (final r in rows) {
       final n = walks[r.companionId] ?? 0;
       final chapter = math.max(r.chapter, openedChapter(n, rules));
+      if (chapter >= rules.companionChapters) finished.add(r.companionId);
+      final name = companionCatalog?.byId(r.companionId)?.name;
+      if (chapter > r.chapter && name != null) {
+        notices.add(NoticeCandidate(NoticeKind.n3,
+            key: storyNoticeKey(r.companionId, chapter), vars: {'companion': name}));
+      }
       if (n == r.walksTogether && chapter == r.chapter) continue;
       await (db.update(db.companions)..where((t) => t.companionId.equals(r.companionId)))
           .write(CompanionsCompanion(walksTogether: Value(n), chapter: Value(chapter)));
     }
-    return const [];
+    return (notices: notices, props: await _grantFinaleProps(finished, now));
+  }
+
+  /// 이야기를 끝까지 연 동행의 완결 소품 중 아직 없는 것을 준다 (한 번 얻은 소품은 다시 안 준다).
+  /// 새로 준 소품을 돌려준다. 새 소품 표시(배낭 점)는 다른 소품처럼 켜진다
+  Future<List<Prop>> _grantFinaleProps(List<String> finished, DateTime now) async {
+    final catalog = companionCatalog;
+    if (catalog == null || finished.isEmpty) return const [];
+    final owned = {for (final r in await db.select(db.propsOwned).get()) r.propId};
+    final out = <Prop>[];
+    for (final id in finished) {
+      final propId = catalog.byId(id)?.finaleProp;
+      final prop = props.where((p) => p.id == propId).firstOrNull;
+      if (prop == null || owned.contains(prop.id)) continue;
+      await db.into(db.propsOwned).insert(PropsOwnedCompanion.insert(
+            propId: prop.id,
+            unlockedUtc: now.toUtc().millisecondsSinceEpoch,
+          ));
+      out.add(prop);
+    }
+    return out;
   }
 
   /// 도장 조건이 읽는 값: 만난 동행 수, 이야기를 끝까지 연 동행 수
@@ -197,6 +252,7 @@ extension CompanionSync on SyncService {
             chapter: r.chapter,
             readChapter: r.readChapter,
             walksTogether: r.walksTogether,
+            hiddenLayer: hiddenLayerOf(c, r.readChapter, rules),
           ),
     ];
     final stints = await _companionStints();
@@ -206,6 +262,34 @@ extension CompanionSync on SyncService {
       walkingWith: stints.isEmpty ? null : stints.last.companionId,
       lastWith: last ?? (met.isEmpty ? null : met.first.companion.id),
     );
+  }
+
+  /// 걷기 기록의 이야기 줄: [fromUtc]~[toUtc] 걷기와 겹치는 인정된 구간으로 센다 (walkRecord와 같은 분 범위).
+  /// 혼자 걸었으면 null. 동기화는 하지 않는다. 저장된 값이라 건강 기록이 늦으면 다음 동기화 때 맞는다
+  Future<WalkStoryView?> walkStory(DateTime fromUtc, DateTime toUtc) async {
+    final catalog = companionCatalog;
+    if (catalog == null) return null;
+    final fromMs = epochMinute(fromUtc) * Duration.millisecondsPerMinute;
+    final toMin = (toUtc.millisecondsSinceEpoch + Duration.millisecondsPerMinute - 1) ~/
+        Duration.millisecondsPerMinute;
+    final toMs = toMin * Duration.millisecondsPerMinute;
+    final rows = await (db.select(db.walkSessions)
+          ..where((t) => t.counted.equals(true))
+          ..orderBy([(t) => OrderingTerm(expression: t.startUtc)]))
+        .get();
+    final story = walkStoryOf(
+      countedStarts: [for (final r in rows) r.startUtc],
+      thisWalk: [
+        for (final r in rows)
+          if (r.startUtc < toMs && r.endUtc > fromMs) r.startUtc,
+      ],
+      stints: await _companionStints(),
+      startUtc: fromUtc.toUtc().millisecondsSinceEpoch,
+      beforeUtc: toMs,
+      rules: rules,
+    );
+    final companion = story == null ? null : catalog.byId(story.companionId);
+    return companion == null ? null : WalkStoryView(companion, story!);
   }
 
   /// 이야기 [no]장을 읽은 것으로 둔다 (읽은 장은 줄지 않는다)

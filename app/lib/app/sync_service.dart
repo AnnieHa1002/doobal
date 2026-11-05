@@ -611,7 +611,8 @@ class SyncService {
       await _advanceJourney(to);
       newProps = await _unlockProps(to);
       newBoats = await _unlockBoats(to);
-      final companionNotices = await _syncCompanions(to);
+      final companion = await _syncCompanions(to);
+      newProps = [...newProps, ...companion.props];
       newBadges = await _awardBadges(to);
       final newMilestones = await _updateGuestbookTickets(to);
       await (db.update(db.syncState)..where((t) => t.id.equals(1)))
@@ -625,7 +626,7 @@ class SyncService {
       advancedKm = math.max(0.0, (progressAfter?.progressKm ?? (await _fund()).km) - before);
 
       // 알림 후보: 이번에 새로 생긴 일만
-      candidates.addAll(companionNotices);
+      candidates.addAll(companion.notices);
       if (journeyAfter != null) {
         final dest = _placeNameOf(journeyAfter.destId);
         if (journeyAfter.status == JourneyStatus.arrived) {

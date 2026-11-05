@@ -80,7 +80,7 @@ class Companion {
   /// 이야기 완결 때 받는 소품 id
   final String finaleProp;
 
-  /// 완결 소품을 건넨 뒤 동행 그림에서 숨기는 층 (심 박사 안경)
+  /// 완결 장을 읽은 뒤 동행 그림에서 숨기는 층 (심 박사 안경)
   final String? hideLayerOnFinale;
   final List<String> faces;
 
