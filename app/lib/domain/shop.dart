@@ -181,7 +181,8 @@ ShopBlock? useBlock(
   final effect = item.effect;
   if (effect == null) return ShopBlock.unknownItem;
   if (held <= 0) return ShopBlock.notOwned;
-  if (item.requiresJourney && !hasJourney) return ShopBlock.noJourney;
+  // 효과는 여정 진행에만 들어가서 여정이 없으면 쓸 곳이 없다 (경비에는 안 더한다)
+  if (!hasJourney) return ShopBlock.noJourney;
   if (effect.kind == ShopEffectKind.travelRatioUntilWalkEnd && !inWalk) return ShopBlock.noWalk;
   if (item.dailyLimit case final limit? when usedToday >= limit) return ShopBlock.dailyLimit;
   return usedKmToday >= capKm ? ShopBlock.dailyCap : null;

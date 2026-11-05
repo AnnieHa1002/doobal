@@ -322,7 +322,8 @@ class _SceneArtHostState extends State<SceneArtHost> {
       widget.mode,
       widget.onSea,
       (scale * ratio * 100).round(),
-      widget.boat?.id,
+      // 땅 위에서는 배가 바뀌어도 그림을 다시 읽지 않는다
+      widget.onSea ? widget.boat?.id : null,
     );
     if (_key == key) {
       if (_loadedKey == key) _activeBuilder = widget.builder;

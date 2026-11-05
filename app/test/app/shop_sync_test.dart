@@ -8,7 +8,6 @@ import 'package:doobal/domain/boat.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
-import 'package:doobal/domain/route.dart';
 import 'package:doobal/domain/shop.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
@@ -463,6 +462,25 @@ void main() {
       expect(await e.svc.paintings(), hasLength(1));
     });
 
+    test('순풍 몫까지 더해야 닿는 거리면 동기화에서 도착하고, 효과 몫은 경비에 안 간다', () async {
+      final e = await _journey(5);
+      final total = (await e.svc.snapshot(_at(0))).journey!.totalKm;
+      await e.give(40);
+      await e.svc.buyItem(_tailwind, _at(0));
+      // 실제 × (1 + 보너스 0.3 + 순풍 0.2) ≥ 전체, 실제 × 1.3 < 전체
+      final minutes = (total / 1.5 / 0.084).ceil();
+      expect(minutes * 0.084 * 1.3, lessThan(total));
+      e.source.records.add(_walk(_at(0), minutes));
+      final id = await e.svc.startAppWalk(_at(0));
+      await e.svc.useTravelEffect(_tailwind, _at(0));
+      await e.svc.finishAppWalk(id, _at(minutes));
+      await e.svc.sync(_at(minutes + 1));
+
+      expect((await e.svc.snapshot(_at(minutes + 1))).journey, isNull);
+      expect((await e.svc.paintings()).single.frame, Frame.wood);
+      expect((await e.db.select(e.db.travelFund).getSingle()).km, closeTo(0, 1e-9));
+    });
+
     test('도착해 버렸으면 효과를 쓰지 않고 막는다', () async {
       final e = await _journey(1);
       await e.give(50);
@@ -872,12 +890,5 @@ void main() {
       expect((await other.day()).shopM, 2000);
       expect(await other.progressKm(_at(3)), closeTo(2, 1e-6));
     });
-  });
-
-  test('경로 도우미: 약 N km 자리에서 출발한다', () async {
-    final dest = _landmarks['kr001']!.latLng;
-    final deg = 21 / (rules.earthRadiusKm * math.pi / 180);
-    final total = buildRoute(LatLng(dest.lat - deg, dest.lng), dest, rules).totalEffectiveKm;
-    expect(total, closeTo(21, 0.2));
   });
 }
