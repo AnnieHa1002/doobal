@@ -3,6 +3,7 @@ import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/domain/bucket.dart';
+import 'package:doobal/domain/journey.dart' show Frame;
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:drift/native.dart';
@@ -107,6 +108,53 @@ void main() {
     }
 
     expect(find.text('그동안 2.1km 걸었어요'), findsOneWidget);
+    await tester.runAsync(db.close);
+  });
+
+  testWidgets('어느 동기화든 보상 배를 새로 얻으면 한 줄 토스트로 알린다 (켤 때 동기화)', (tester) async {
+    final db = AppDb(NativeDatabase.memory());
+    await tester.runAsync(() async {
+      await completeOnboarding(db);
+      // 제주 명소 그림이 있는데 아직 배 판정을 하지 않은 상태
+      await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
+            landmarkId: 'kr009',
+            visits: 1,
+            frame: Frame.wood,
+            bestKm: 1,
+            firstArrivedUtc: 1,
+            lastArrivedUtc: 1,
+          ));
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        rulesProvider.overrideWith((ref) => rules),
+        landmarksProvider.overrideWith((ref) => landmarks),
+        propsProvider.overrideWith((ref) => props),
+        milestonesProvider.overrideWith((ref) => milestones),
+        eventCatalogProvider.overrideWith((ref) => eventCatalog),
+        badgeCatalogProvider.overrideWith((ref) => badgeCatalog),
+        shopCatalogProvider.overrideWith((ref) => shopCatalog),
+        boatCatalogProvider.overrideWith((ref) => boatCatalog),
+        companionCatalogProvider.overrideWith((ref) => companionCatalog),
+        noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
+        campThemeProvider.overrideWith((ref) => campTheme),
+        mapProjectionProvider.overrideWith((ref) => mapProjection),
+        mapRegionsProvider.overrideWith((ref) => mapRegions),
+        dbProvider.overrideWithValue(db),
+        stepSourceProvider.overrideWithValue(FakeStepSource()),
+      ],
+      child: const DoobalApp(),
+    ));
+    final toast = find.text('새 배를 얻었어요 · ${boatCatalog.byId('boat_skiff')!.name}');
+    for (var i = 0; i < 60 && toast.evaluate().isEmpty; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(toast, findsOneWidget);
+    // 자동으로 갈아타지 않는다
+    final profile = (await tester.runAsync(() => db.select(db.profile).getSingle()))!;
+    expect(profile.boatId, isNull);
+    await tester.pumpWidget(const SizedBox());
     await tester.runAsync(db.close);
   });
 

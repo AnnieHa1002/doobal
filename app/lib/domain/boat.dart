@@ -1,3 +1,5 @@
+import 'sky.dart';
+
 // 배 9척 (boats.json v2, M4.5): 보상 배 3 + 상점 배 6. 배 구간 그림만 바뀌고 진행·거리와는 무관하다
 
 /// 배를 얻는 길 (boats.json unlock.kind, default는 예약어라 initial)
@@ -110,7 +112,85 @@ class BoatCatalog {
 
   /// 그림 파일의 에셋 경로
   String assetPath(String file) => 'assets/$assetDir/$file';
+
+  /// 장면이 읽을 [boat]의 그림 경로와 자리
+  BoatArt artOf(Boat boat) => BoatArt(
+        id: boat.id,
+        rear: assetPath(boat.layers.rear),
+        front: assetPath(boat.layers.front),
+        nightOverlay: boat.nightOverlay == null ? null : assetPath(boat.nightOverlay!),
+        mainFoot: boat.layers.mainFoot,
+        companionFoot: boat.layers.companionFoot,
+        canvasWidth: canvasWidth,
+        canvasHeight: canvasHeight,
+      );
 }
+
+/// 장면이 읽는 배 하나 (full 판은 쓰지 않는다)
+class BoatArt {
+  const BoatArt({
+    required this.id,
+    required this.rear,
+    required this.front,
+    required this.nightOverlay,
+    required this.mainFoot,
+    required this.companionFoot,
+    required this.canvasWidth,
+    required this.canvasHeight,
+  });
+
+  final String id;
+  final String rear;
+  final String front;
+  final String? nightOverlay;
+  final BoatPoint mainFoot;
+  final BoatPoint companionFoot;
+  final double canvasWidth;
+  final double canvasHeight;
+}
+
+/// 화면에 놓인 배. 뒤판·창 불빛·앞판은 모두 이 한 자리에 그린다 (같은 원점·같은 변환)
+typedef BoatPlacement = ({double left, double top, double width, double height, BoatPoint companionFoot});
+
+/// 정령 발([footX], [footY])이 [art]의 mainFoot에 닿도록 배를 놓는다. [scale]은 배 캔버스 px → 화면 px
+BoatPlacement placeBoat(
+  BoatArt art, {
+  required double footX,
+  required double footY,
+  required double scale,
+}) {
+  final left = footX - art.mainFoot.x * scale;
+  final top = footY - art.mainFoot.y * scale;
+  return (
+    left: left,
+    top: top,
+    width: art.canvasWidth * scale,
+    height: art.canvasHeight * scale,
+    companionFoot: (x: left + art.companionFoot.x * scale, y: top + art.companionFoot.y * scale),
+  );
+}
+
+/// 창 불빛을 켜는 때: 밤·새벽
+bool boatLightOn(SkyPhase phase) => phase == SkyPhase.night || phase == SkyPhase.dawn;
+
+/// 지금 얻은 보상 배 ([arrivedIslands]는 도착한 섬 이름, 내 동네 스케치 제외). order 순서
+List<Boat> earnedRewardBoats(BoatCatalog catalog, Set<String> arrivedIslands) => [
+      for (final b in catalog.boats)
+        if (b.kind == BoatUnlockKind.islandArrival &&
+            b.islands.isNotEmpty &&
+            (b.allIslands
+                ? b.islands.every(arrivedIslands.contains)
+                : b.islands.any(arrivedIslands.contains)))
+          b,
+    ];
+
+/// 탈 배: 고른 배, 안 골랐거나 데이터에 없는 배면 기본 배
+Boat? boatOf(BoatCatalog catalog, String? chosenId, String defaultId) =>
+    (chosenId == null ? null : catalog.byId(chosenId)) ?? catalog.byId(defaultId);
+
+/// 새 배 토스트 한 줄 (가안): `새 배를 얻었어요 · 조각배`, 여럿이면 `… · 조각배 외 1척`
+String newBoatToast(List<Boat> boats) => '새 배를 얻었어요 · ${boats.first.name}'
+    '${boats.length > 1 ? ' 외 ${boats.length - 1}척' : ''}';
 
 BoatCatalog parseBoats(Map<String, dynamic> json) {
   final canvas = json['canvas'] as List;

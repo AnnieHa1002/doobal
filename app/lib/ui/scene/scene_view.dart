@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/boat.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/geo.dart';
 import '../../domain/landmark.dart';
@@ -32,6 +33,7 @@ class SceneView extends StatelessWidget {
     this.seated = true,
     this.sceneSeed = 'default',
     this.spirit = SpiritLook.base,
+    this.boat,
   });
 
   final SceneMode mode;
@@ -62,6 +64,9 @@ class SceneView extends StatelessWidget {
   /// 정령이 입은 얼굴·소품
   final SpiritLook spirit;
 
+  /// 배 구간에 그릴 배. 없으면 옛 배 한 장
+  final BoatArt? boat;
+
   @override
   Widget build(BuildContext context) {
     final look = sceneLook(nowUtc, position, onSea, landmarks, rules);
@@ -91,6 +96,7 @@ class SceneView extends StatelessWidget {
           mode: mode,
           size: size,
           onSea: onSea,
+          boat: boat,
           builder: (context, art, elapsed) {
             final artLayout = art == null
                 ? null
@@ -121,7 +127,7 @@ class SceneView extends StatelessWidget {
             // 앞으로 뻗은 앉은 발이 모닥불에 겹치지 않도록 뒤·왼쪽에 앉힌다.
             final foot = rest && seated && !onSea
                 ? baseFoot + Offset(-size.width * .10, -size.height * .075)
-                : baseFoot;
+                : baseFoot + Offset(0, artLayout?.boatSwayY(elapsed) ?? 0);
             // 정령의 머리 위 y150~발바닥 y440을 실제 캐릭터 키로 맞춘다.
             // 가로 화면은 기준 1170px에서 키616px, 세로는 config의 키를 쓴다.
             final figureHeight =

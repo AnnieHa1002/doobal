@@ -1,3 +1,6 @@
+import 'gait.dart';
+import 'rules.dart';
+
 // 럭 상점 상품 (shop.json v4, M4.5): 여행 효과(소모품)·소품·꾸밈 효과·배. 값은 베타 뒤 조정
 
 /// 상점 탭. travel은 소모품, effect는 꾸미기 효과 칸의 영구 소품이다
@@ -112,3 +115,91 @@ ShopTab _tabOf(String name) => ShopTab.values.firstWhere(
       (t) => t.name == name,
       orElse: () => throw FormatException('모르는 상점 탭: $name'),
     );
+
+// 구매·사용 규칙 (M4.5). 화면과 동기화가 같은 판정을 쓴다
+
+/// 구매·사용이 막힌 까닭. [message]는 화면에 그대로 보여 줄 수 있다
+/// ('여정 중에만 쓸 수 있어요'만 명세 문구, 나머지는 가안)
+enum ShopBlock {
+  unknownItem('살 수 없는 상품이에요'),
+  owned('이미 가지고 있어요'),
+  holdFull('더 보관할 수 없어요'),
+  notEnoughCoins('럭이 모자라요'),
+  notOwned('가지고 있지 않아요'),
+  noJourney('여정 중에만 쓸 수 있어요'),
+  noWalk('걷는 중에만 쓸 수 있어요'),
+  dailyLimit('오늘은 더 쓸 수 없어요'),
+  dailyCap('오늘은 더 쓸 수 없어요');
+
+  const ShopBlock(this.message);
+
+  final String message;
+}
+
+/// 구매·사용을 막았을 때 던진다. 아무것도 바뀌지 않은 상태다
+class ShopBlocked extends StateError {
+  ShopBlocked(this.block) : super(block.message);
+
+  final ShopBlock block;
+}
+
+/// 잔액 = 들어온 럭(earn·gift·ad) − 쓴 럭(spend). 다시 계산한 earn이 줄어도 음수로 보이지 않는다
+int coinBalanceOf({required int credited, required int spent}) =>
+    credited > spent ? credited - spent : 0;
+
+/// 살 수 없는 까닭. 살 수 있으면 null. 여행 효과는 [held]가 [maxHold]보다 적어야 하고,
+/// 소품·배는 한 번만 산다
+ShopBlock? buyBlock(
+  ShopItem item, {
+  required int balance,
+  required int held,
+  required int maxHold,
+  required bool owned,
+}) {
+  if (item.effect == null && item.propId == null && item.boatId == null) {
+    return ShopBlock.unknownItem;
+  }
+  if (item.effect != null) {
+    if (held >= maxHold) return ShopBlock.holdFull;
+  } else if (owned) {
+    return ShopBlock.owned;
+  }
+  return balance < item.price ? ShopBlock.notEnoughCoins : null;
+}
+
+/// 여행 효과를 쓸 수 없는 까닭. 쓸 수 있으면 null. [usedToday]는 오늘 그 효과를 쓴 횟수,
+/// [usedKmToday]는 오늘 모든 효과로 더한 거리다. 상한이 다 찼으면 쓰지 않게 막는다 (효과만 버려진다)
+ShopBlock? useBlock(
+  ShopItem item, {
+  required int held,
+  required bool hasJourney,
+  required bool inWalk,
+  required int usedToday,
+  required double usedKmToday,
+  required double capKm,
+}) {
+  final effect = item.effect;
+  if (effect == null) return ShopBlock.unknownItem;
+  if (held <= 0) return ShopBlock.notOwned;
+  if (item.requiresJourney && !hasJourney) return ShopBlock.noJourney;
+  if (effect.kind == ShopEffectKind.travelRatioUntilWalkEnd && !inWalk) return ShopBlock.noWalk;
+  if (item.dailyLimit case final limit? when usedToday >= limit) return ShopBlock.dailyLimit;
+  return usedKmToday >= capKm ? ShopBlock.dailyCap : null;
+}
+
+/// 오늘 이미 더한 [usedKm] 위에 더할 수 있는 만큼 [wantKm]을 자른다 (넘는 만큼 버림)
+double clipEffectKm(double wantKm, {required double usedKm, required double capKm}) {
+  final room = capKm - usedKm;
+  if (room <= 0 || wantKm <= 0) return 0;
+  return wantKm < room ? wantKm : room;
+}
+
+/// 순풍이 보는 실제 거리(m): 분 시작이 [fromMs, toMs) 안인 분의 걸음 × 보폭
+double walkedMBetween(List<GaitMinute> minutes, int fromMs, int toMs, Rules rules) {
+  var sum = 0.0;
+  for (final m in minutes) {
+    final ms = m.minute * Duration.millisecondsPerMinute;
+    if (ms >= fromMs && ms < toMs) sum += m.steps * strideM(m.gait, rules);
+  }
+  return sum;
+}

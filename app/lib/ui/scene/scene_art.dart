@@ -1,19 +1,24 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data' show ByteData;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/boat.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/scene.dart';
 import 'scene_painter.dart';
 
 /// 승인된 v10·v11의 파일/배치 목록. 옛 중간 들판 config와 분리한다.
 class SceneArt {
-  SceneArt(this.data, this.images);
+  SceneArt(this.data, this.images, {this.boat});
   final Map<String, dynamic> data;
   final Map<String, ui.Image> images;
+
+  /// 고른 배의 판 그림. 파일이 아직 없으면 null이고 옛 배 한 장(prop_boat_01)으로 그린다
+  final BoatImages? boat;
 
   /// 배·물 그림은 [onSea](배 구간)일 때만 읽는다. 후경 이름이 sea여도 울릉도 섬 위라면
   /// 배에서 내린 땅이라 길·둑·나무를 읽는다 (그리는 쪽도 onSea로 고른다)
@@ -24,6 +29,7 @@ class SceneArt {
     double scale,
     double pixelRatio, {
     bool onSea = false,
+    BoatArt? boat,
   }) async {
     final data = jsonDecode(
       await bundle.loadString('assets/data/scene_art.json'),
@@ -54,10 +60,7 @@ class SceneArt {
           'fx_campfire_flame_${n}_v11_clean.png',
       ]);
     } else if (onSea) {
-      keys.addAll([
-        'bg_near_water_v11_clean.png',
-        'prop_boat_01_v11_clean.png',
-      ]);
+      keys.add('bg_near_water_v11_clean.png');
     } else {
       keys.addAll([
         'bg_path_v11_clean.png',
@@ -88,7 +91,14 @@ class SceneArt {
       }
     }
     final images = <String, ui.Image>{};
+    BoatImages? boatImages;
     try {
+      if (onSea && !rest) {
+        if (boat != null) {
+          boatImages = await _loadBoat(bundle, boat, scale * pixelRatio, data);
+        }
+        if (boatImages == null) keys.add('prop_boat_01_v11_clean.png');
+      }
       // 순차 디코딩으로 로드 순간의 메모리 급증을 제한한다.
       for (final key in keys) {
         final spec = assets[key] as Map<String, dynamic>;
@@ -114,12 +124,64 @@ class SceneArt {
           codec.dispose();
         }
       }
-      return SceneArt(data, images);
+      return SceneArt(data, images, boat: boatImages);
     } catch (_) {
       for (final image in images.values) {
         image.dispose();
       }
+      boatImages?.dispose();
       rethrow;
+    }
+  }
+
+  /// 고른 배의 뒤판·앞판·창 불빛을 읽는다. 뒤판이나 앞판 파일이 아직 없으면 null
+  static Future<BoatImages?> _loadBoat(
+    AssetBundle bundle,
+    BoatArt art,
+    double pixelsPerArtPx,
+    Map<String, dynamic> data,
+  ) async {
+    final rear = await _assetOrNull(bundle, art.rear);
+    final front = rear == null ? null : await _assetOrNull(bundle, art.front);
+    if (rear == null || front == null) return null;
+    final night = art.nightOverlay == null ? null : await _assetOrNull(bundle, art.nightOverlay!);
+    final width = math
+        .min(
+          art.canvasWidth,
+          math.min(
+            (art.canvasWidth * pixelsPerArtPx).ceilToDouble(),
+            (data['sky']['maxDecodeWidth'] as num).toDouble(),
+          ),
+        )
+        .round()
+        .clamp(1, 4096);
+    final decoded = <ui.Image>[];
+    try {
+      for (final bytes in [rear, front, ?night]) {
+        final codec = await ui.instantiateImageCodec(
+          bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+          targetWidth: width,
+        );
+        try {
+          decoded.add((await codec.getNextFrame()).image);
+        } finally {
+          codec.dispose();
+        }
+      }
+    } catch (_) {
+      for (final image in decoded) {
+        image.dispose();
+      }
+      rethrow;
+    }
+    return BoatImages(art, decoded[0], decoded[1], night == null ? null : decoded[2]);
+  }
+
+  static Future<ByteData?> _assetOrNull(AssetBundle bundle, String path) async {
+    try {
+      return await bundle.load(path);
+    } on FlutterError {
+      return null;
     }
   }
 
@@ -127,6 +189,22 @@ class SceneArt {
     for (final image in images.values) {
       image.dispose();
     }
+    boat?.dispose();
+  }
+}
+
+/// 읽어 둔 배 판 그림. 모두 같은 캔버스·같은 원점이다
+class BoatImages {
+  BoatImages(this.art, this.rear, this.front, this.night);
+
+  final BoatArt art;
+  final ui.Image rear, front;
+  final ui.Image? night;
+
+  void dispose() {
+    rear.dispose();
+    front.dispose();
+    night?.dispose();
   }
 }
 
@@ -165,6 +243,17 @@ class SceneArtLayout {
         : 0;
     return Offset(size.width / 2, y(n('pathY') - above));
   }
+
+  /// 배 흔들림(화면 px, 세로). 배 판·정령·동행이 모두 이 값을 쓴다.
+  /// 값은 scene_art.json boat의 swayPx·swaySec이고, 없으면 흔들리지 않는다
+  double boatSwayY(double elapsed) {
+    if (!sea) return 0;
+    final boat = art.data['boat'] as Map;
+    final px = boat['swayPx'] as num?;
+    final sec = boat['swaySec'] as num?;
+    if (px == null || sec == null || sec <= 0) return 0;
+    return px * scale * math.sin(elapsed * 2 * math.pi / sec);
+  }
 }
 
 /// 같은 여정·구간에서는 항상 같은 조각을 고른다. Dart hashCode에 의존하지 않는다.
@@ -184,10 +273,14 @@ class SceneArtHost extends StatefulWidget {
     required this.size,
     required this.builder,
     this.onSea = false,
+    this.boat,
   });
   final SceneLook look;
   final SceneMode mode;
   final Size size;
+
+  /// 고른 배. 바뀌면 배 그림을 다시 읽는다
+  final BoatArt? boat;
 
   /// 배 구간인가. 바뀌면 배·물 그림과 땅 그림을 바꿔 읽는다
   final bool onSea;
@@ -229,6 +322,7 @@ class _SceneArtHostState extends State<SceneArtHost> {
       widget.mode,
       widget.onSea,
       (scale * ratio * 100).round(),
+      widget.boat?.id,
     );
     if (_key == key) {
       if (_loadedKey == key) _activeBuilder = widget.builder;
@@ -243,6 +337,7 @@ class _SceneArtHostState extends State<SceneArtHost> {
       scale,
       ratio,
       onSea: widget.onSea,
+      boat: widget.boat,
     ).then(
       (art) {
         if (!mounted || generation != _generation) {

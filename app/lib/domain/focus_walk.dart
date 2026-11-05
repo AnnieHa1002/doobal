@@ -47,7 +47,7 @@ class MinuteTravel {
   /// 보너스 거리(m). 앱 걷기 창 안이고 인정된 걷기 1번 구간일 때만 실제 거리 × (배수 − 1), 아니면 0
   final double bonusM;
 
-  /// 상점 효과 거리(m). 아직 0
+  /// 상점 효과 거리(m). 효과는 분에 나누지 않아 늘 0이다 (하루 요약은 ShopUses에서 더한다)
   final double shopM;
 
   /// 이 분이 앱 걷기 창 안인가

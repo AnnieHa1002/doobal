@@ -135,6 +135,7 @@ class Rules {
     required this.horizonY,
     required this.pathY,
     required this.characterHeightPx,
+    required this.characterCanvasHeightPx,
     required this.layers,
     required this.seaHiddenLayers,
     required this.sunZenithDeg,
@@ -282,6 +283,9 @@ class Rules {
   final double horizonY;
   final double pathY;
   final double characterHeightPx;
+
+  /// 정령·동행 캔버스에서 머리~발 높이 (config character.canvas.heightPx). 배 판 그림과 같은 잣대다
+  final double characterCanvasHeightPx;
 
   /// 레이어별 규격. 모든 SceneLayerId가 들어 있다
   final Map<SceneLayerId, SceneLayer> layers;
@@ -502,6 +506,8 @@ class Rules {
       horizonY: _d(scene['horizonY']),
       pathY: _d(scene['pathY']),
       characterHeightPx: _d(scene['characterHeightPx']),
+      characterCanvasHeightPx:
+          _d(((j['character'] as Map<String, dynamic>)['canvas'] as Map<String, dynamic>)['heightPx']),
       layers: layers,
       seaHiddenLayers: {for (final n in scene['seaHiddenLayers'] as List) layerId(n as String)},
       sunZenithDeg: _d(scene['sunZenithDeg']),

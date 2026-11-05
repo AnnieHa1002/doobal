@@ -1,7 +1,9 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/boat.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/rules.dart';
 import '../../domain/scene.dart';
@@ -61,11 +63,13 @@ class SceneArtPainter extends CustomPainter {
           _land();
         }
       });
+      if (_layout.sea) _boatLight();
     } else {
       _tinted(() {
         if (_layout.rest) {
           if (camp != null) _camp(true);
         } else if (_layout.sea) {
+          _boatFront();
           _water();
         } else {
           _tile(
@@ -268,11 +272,15 @@ class SceneArtPainter extends CustomPainter {
   }
 
   void _boat() {
+    if (art.boat case final layers?) {
+      _boatLayer(layers.rear, layers);
+      return;
+    }
     final boat = art.data['boat'] as Map;
     final scale =
         _layout.figureHeight /
         ((boat['charFootY'] as num) - (boat['charTopY'] as num));
-    final foot = _layout.foot;
+    final foot = _layout.foot + Offset(0, _layout.boatSwayY(elapsed));
     _draw(
       'prop_boat_01_v11_clean.png',
       Rect.fromLTWH(
@@ -281,6 +289,35 @@ class SceneArtPainter extends CustomPainter {
         3072 * scale,
         1536 * scale,
       ),
+    );
+  }
+
+  /// 창 불빛은 밤·새벽에만, 시간대 보정 없이 뒤판 위에 얹는다
+  void _boatLight() {
+    final layers = art.boat;
+    final night = layers?.night;
+    if (layers == null || night == null || !boatLightOn(look.phase)) return;
+    _boatLayer(night, layers);
+  }
+
+  void _boatFront() {
+    if (art.boat case final layers?) _boatLayer(layers.front, layers);
+  }
+
+  /// 배 판 한 장. 어느 판이든 같은 자리·같은 흔들림으로 그린다
+  void _boatLayer(ui.Image image, BoatImages layers) {
+    final foot = _layout.foot;
+    final at = placeBoat(
+      layers.art,
+      footX: foot.dx,
+      footY: foot.dy + _layout.boatSwayY(elapsed),
+      scale: _layout.figureHeight / rules.characterCanvasHeightPx,
+    );
+    _canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromLTWH(at.left, at.top, at.width, at.height),
+      Paint()..filterQuality = FilterQuality.medium,
     );
   }
 
