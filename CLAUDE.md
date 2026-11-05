@@ -63,6 +63,7 @@ tools/              clean_assets.py (에셋 정리)
 - `events.json`(v3: 풍경 96·칭찬 17, 10/30 제안 삭제)은 `python3 data/build_events.py <이벤트_문구.md> app/assets/data/events.json`으로 만든다. 문구 원본은 Claude 프로젝트 문서 `기획/이벤트_문구.md`.
 - `sigungu.json`·`notifications.json`·`palette.json`·`companions.json`·`badges.json`은 Claude 프로젝트 문서 `데이터/app/`의 사본이다(companions는 `데이터/build_companions.py`로 만듦). 원본이 바뀌면 같이 바꾼다.
 - `config.json`은 손으로 고친다.
+- 데이터를 고친 뒤 `python3 data/check_data.py`로 파일 사이 값(상점↔소품·배 값과 이름, 색 소품↔견본, 동행↔이야기 그림, 정령 크기 등)을 맞춰 본다. 틀리면 1로 끝난다. build_static.py 끝에서도 돈다.
 
 ## 에셋
 

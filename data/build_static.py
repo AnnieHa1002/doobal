@@ -238,3 +238,8 @@ if __name__ == '__main__':
     build_props()
     build_milestones()
     print(f'완료 → {OUT}')
+    # 파일 사이 값 맞춰 보기(11/6). 틀리면 여기서 멈춘다
+    import subprocess
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'check_data.py'), OUT])
+    if r.returncode:
+        sys.exit(r.returncode)
