@@ -1,20 +1,96 @@
 {
- "version": 2,
+ "version": 3,
  "id": "camp",
  "approx": true,
- "note": "v2(11/4 개발 기획): 넓은 캠프(scene.json rest, 장면 폭 1760 = 화면 1.5배). x는 '장면 폭' 비율(v1은 화면 폭 비율이었음 — 코드가 x × sceneWidthRatio로 화면 비율을 구해야 함), footY·y는 화면 높이 비율. 값은 디자인기획/codex_camp_wide_v01.md 2장 가안(땅 y 2200 = 0.869, 동행 2230 = 0.881), 납품 README가 고치면 따름. 물건 y·size와 방명록 표지판 자리는 디자인 기획 확인 대기",
- "sceneWidthRatio": 1.5,
- "firstView": [0, 0.665],
+ "source": "v3(11/6 개발 기획): 프로토타입 캔버스 2-2 쉼터 메모(11/5 디자인 기획, 출시 수준 완료) 값. v2(11/4)는 Codex 넓은 판 지시서 가안(장면 폭 비율·가운데 기준)이라 이 값으로 바꿈",
+ "unit": "pt",
+ "scene": {
+  "widthPt": 585,
+  "refScreenPt": [
+   390,
+   844
+  ],
+  "widthRatio": 1.5,
+  "anchor": "bottom",
+  "note": "장면은 화면 아래 기준(작은 폰은 하늘 위쪽이 잘림). 좌표는 장면 왼쪽 위 기준 pt, 물건은 그 그림의 왼쪽 위 점(캔버스 메모 그대로). 기기 px = pt × 기기 배율"
+ },
  "objects": [
-  { "id": "backpack", "label": "배낭", "x": 0.06, "y": 0.86, "size": 64 },
-  { "id": "note",     "label": "노트", "x": 0.26, "y": 0.88, "size": 56 },
-  { "id": "map",      "label": "지도", "x": 0.36, "y": 0.83, "size": 64 },
-  { "id": "cart",     "label": "수레", "x": 0.82, "y": 0.869, "size": 120, "anchor": "bottom" }
+  {
+   "id": "backpack",
+   "label": "배낭",
+   "x": 268,
+   "y": 510
+  },
+  {
+   "id": "note",
+   "label": "노트",
+   "x": 184,
+   "y": 572
+  },
+  {
+   "id": "map",
+   "label": "지도",
+   "x": 318,
+   "y": 596
+  },
+  {
+   "id": "cart",
+   "label": "수레",
+   "x": 440,
+   "y": 530
+  },
+  {
+   "id": "guestbookSign",
+   "label": "방명록 표지판",
+   "x": 2,
+   "y": 470,
+   "onlyWhenTicket": true
+  }
  ],
- "campfire": { "x": 0.45, "footY": 0.869 },
- "character": { "x": 0.20, "footY": 0.869 },
- "companion": { "x": 0.56, "footY": 0.881 },
- "signpost": { "x": 0.63, "footY": 0.869 },
- "guestbookSign": { "x": 0.59, "footY": 0.869 },
- "hitOrder": ["cart", "map", "backpack", "note", "companion", "character"]
+ "character": {
+  "x": 20,
+  "y": 545,
+  "heightPt": 180
+ },
+ "companion": {
+  "x": 236,
+  "y": 612,
+  "note": "캔버스는 퐁이 자리. 동행이 없으면 비어 있음(첫날)"
+ },
+ "campfire": {
+  "x": 174,
+  "y": 684,
+  "frames": 3,
+  "frameSec": 0.2
+ },
+ "hitOrder": [
+  "cart",
+  "map",
+  "backpack",
+  "note",
+  "guestbookSign",
+  "companion",
+  "character"
+ ],
+ "drag": {
+  "snapToEnds": true,
+  "farParallax": 0.45
+ },
+ "zoom": "config rest.zoom",
+ "objectSizes": "캔버스 Main.dc.html의 그림 크기를 따름(이 파일에 없음, 개발이 그림 크기로 판정 상자)",
+ "exits": {
+  "profile": "9-1",
+  "settings": "10-1",
+  "map": "4-1",
+  "backpack": "6-1",
+  "note": "6-3",
+  "companion": "7-1",
+  "cart": "8-1",
+  "gem": "8-1",
+  "guestbookSign": "5-1",
+  "depart": {
+   "journey": "3-1",
+   "none": "4-1"
+  }
+ }
 }
