@@ -356,13 +356,13 @@ class Rules {
   /// 걷는 중 화면이 센서로 센 거리를 이벤트 계산에 넘기는 간격(초) (config events.flushSec)
   final int eventFlushSec;
 
-  /// 걷는 중 화면에 이정표 카드(config events.cardSec)·새 도장 줄(config events.stampLineSec)이
+  /// 걷는 중 화면에 이정표 카드(config hud.eventCardSec)·새 도장 줄(config hud.stampLineSec)이
   /// 떠 있는 시간(초). 지나면 저절로 사라진다
   final double eventCardSec;
   final double stampLineSec;
 
   /// 센서 미리보기가 남은 거리를 넘었을 때 도착 확인 동기화를 다시 돌리는 최소 간격(초)
-  /// (config live.arrivalProbeSec)
+  /// (config walk.arrivalProbeSec)
   final int arrivalProbeSec;
 
   /// 지도를 처음 열 때 현재 위치 둘레에 최소 몇 곳의 명소가 보이게 할지(config map.firstView.minLandmarks)와
@@ -413,6 +413,8 @@ class Rules {
     final backup = j['backup'] as Map<String, dynamic>;
     final events = j['events'] as Map<String, dynamic>;
     final firstView = (j['map'] as Map<String, dynamic>)['firstView'] as Map<String, dynamic>;
+    final hud = j['hud'] as Map<String, dynamic>;
+    final walk = j['walk'] as Map<String, dynamic>;
     final sources = j['allowedSources'] as Map<String, dynamic>;
     final companions = j['companions'] as Map<String, dynamic>;
     final companionPace = companions['pace'] as Map<String, dynamic>;
@@ -573,9 +575,9 @@ class Rules {
       guestbookWindowSteps: guestbook['milestoneWindowSteps'] as int,
       eventEveryKm: _d(events['everyKm']),
       eventFlushSec: events['flushSec'] as int,
-      eventCardSec: _d(events['cardSec']),
-      stampLineSec: _d(events['stampLineSec']),
-      arrivalProbeSec: live['arrivalProbeSec'] as int,
+      eventCardSec: _d(hud['eventCardSec']),
+      stampLineSec: _d(hud['stampLineSec']),
+      arrivalProbeSec: walk['arrivalProbeSec'] as int,
       mapFirstViewMinLandmarks: firstView['minLandmarks'] as int,
       mapFirstViewMargin: _d(firstView['margin']),
       backupMinIntervalMin: backup['minIntervalMin'] as int,

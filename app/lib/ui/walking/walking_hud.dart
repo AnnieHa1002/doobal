@@ -85,7 +85,7 @@ abstract final class HudMetrics {
   static const collapseAfter = Duration(seconds: 8);
 
   /// 시험에서만: 이정표 카드·새 도장 줄이 떠 있는 시간을 바꾼다.
-  /// null이면 config 값(events.cardSec·stampLineSec)
+  /// null이면 config 값(hud.eventCardSec·stampLineSec)
   static Duration? eventCardOverride;
   static Duration? badgeLineOverride;
 }
