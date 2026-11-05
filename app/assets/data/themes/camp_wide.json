@@ -2,7 +2,7 @@
  "version": 3,
  "id": "camp",
  "approx": true,
- "source": "v3(11/6 개발 기획): 프로토타입 캔버스 2-2 쉼터 메모(11/5 디자인 기획, 출시 수준 완료) 값. v2(11/4)는 Codex 넓은 판 지시서 가안(장면 폭 비율·가운데 기준)이라 이 값으로 바꿈",
+ "source": "v3(11/6 개발 기획): 프로토타입 캔버스 2-2 쉼터 메모(11/5 디자인 기획, 출시 수준 완료) 값. v2(11/4)는 Codex 넓은 판 지시서 가안(장면 폭 비율·가운데 기준)이라 이 값으로 바꿈 / 개발 T3(11/6): 물건 w·h(누름 상자)·artW·artH·labelTop·art, character.w, companion·campfire 크기, firstSign을 캔버스 Main.dc.html 값으로 더함",
  "unit": "pt",
  "scene": {
   "widthPt": 585,
@@ -19,49 +19,122 @@
    "id": "backpack",
    "label": "배낭",
    "x": 268,
-   "y": 510
+   "y": 510,
+   "w": 64,
+   "h": 80,
+   "artW": 64,
+   "artH": 62.5,
+   "labelTop": 62,
+   "art": {
+    "file": "assets/backgrounds/v11/obj_rest_backpack_v11_clean.png",
+    "canvas": [
+     384,
+     384
+    ],
+    "bbox": [
+     25,
+     29,
+     334,
+     326
+    ]
+   }
   },
   {
    "id": "note",
    "label": "노트",
    "x": 184,
-   "y": 572
+   "y": 572,
+   "w": 55,
+   "h": 72,
+   "artW": 54.5,
+   "artH": 56,
+   "labelTop": 55,
+   "art": {
+    "file": "assets/backgrounds/v11/obj_rest_note_v11_clean.png",
+    "canvas": [
+     384,
+     384
+    ],
+    "bbox": [
+     30,
+     25,
+     324,
+     334
+    ]
+   }
   },
   {
    "id": "map",
    "label": "지도",
    "x": 318,
-   "y": 596
+   "y": 596,
+   "w": 64,
+   "h": 64,
+   "artW": 64,
+   "artH": 48,
+   "labelTop": 47,
+   "art": {
+    "file": "assets/backgrounds/v11/obj_rest_map_v11_clean.png",
+    "canvas": [
+     384,
+     384
+    ],
+    "bbox": [
+     25,
+     67,
+     334,
+     250
+    ]
+   }
   },
   {
    "id": "cart",
    "label": "수레",
    "x": 440,
-   "y": 530
+   "y": 530,
+   "w": 120,
+   "h": 132,
+   "artW": 120,
+   "artH": 109,
+   "labelTop": 110
   },
   {
    "id": "guestbookSign",
    "label": "방명록 표지판",
    "x": 2,
    "y": 470,
-   "onlyWhenTicket": true
+   "onlyWhenTicket": true,
+   "w": 48,
+   "h": 70,
+   "artW": 48,
+   "artH": 56,
+   "labelTop": 54
   }
  ],
  "character": {
   "x": 20,
   "y": 545,
-  "heightPt": 180
+  "heightPt": 180,
+  "w": 144
  },
  "companion": {
   "x": 236,
   "y": 612,
-  "note": "캔버스는 퐁이 자리. 동행이 없으면 비어 있음(첫날)"
+  "note": "캔버스는 퐁이 자리. 동행이 없으면 비어 있음(첫날)",
+  "label": "동행",
+  "w": 69,
+  "h": 106,
+  "artW": 69,
+  "artH": 90,
+  "labelTop": 90
  },
  "campfire": {
   "x": 174,
   "y": 684,
   "frames": 3,
-  "frameSec": 0.2
+  "frameSec": 0.2,
+  "w": 46,
+  "h": 69
  },
  "hitOrder": [
   "cart",
@@ -92,5 +165,13 @@
    "journey": "3-1",
    "none": "4-1"
   }
+ },
+ "firstSign": {
+  "x": 334,
+  "y": 512,
+  "w": 56,
+  "h": 22,
+  "label": "첫 스케치 →",
+  "note": "첫날 이정표(UI 명세 v3 2장). 캔버스 2-1에는 자리가 없어 v11 이정표 판 위에 둔 개발 가안"
  }
 }

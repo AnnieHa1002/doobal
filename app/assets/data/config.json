@@ -548,6 +548,7 @@
   "drag": {
    "snapToEnds": true,
    "farParallax": 0.45,
+   "snapSec": 0.25,
    "note": "끌어 밀기에서 하늘·후경은 0.45배로 천천히(캔버스 2-2). 확대 중에는 붙지 않음"
   },
   "campfire": {
