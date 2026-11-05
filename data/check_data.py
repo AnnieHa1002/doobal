@@ -145,6 +145,10 @@ for b in boats['boats']:
         err(f"boats {b['id']}: 상점 배인데 shop.json에 없음")
     if b.get('recolor', {}) and b['recolor'].get('pending'):
         warn(f"boats {b['id']}: 색 구역 그림 대기")
+    if b.get('recolor', {}) and b['recolor'].get('method') not in ('materialIds', 'meanLuminance'):
+        err(f"boats {b['id']}: recolor.method가 materialIds·meanLuminance가 아님")
+    if b.get('recolor', {}) and b['recolor'].get('fileNamesPending'):
+        warn(f"boats {b['id']}: 색 구역 파일 이름 확인 대기(zip)")
     if not b.get('layers'):
         warn(f"boats {b['id']}: layers(그림·발 자리) 없음")
 
