@@ -96,7 +96,13 @@
    "h": 132,
    "artW": 120,
    "artH": 109,
-   "labelTop": 110
+   "labelTop": 110,
+   "artSource": {
+    "file": "obj_rest_cart_v01_clean.png",
+    "nightLantern": "obj_rest_cart_lantern_v01_clean.png",
+    "drive": "Assets 1APDxAIwdCagR9m_XdxtTrZDG6oV-jkdO",
+    "note": "11/6 개발 기획(R27): 그림 연결(art·bbox·scene_art)은 개발. 랜턴은 밤에 얹는 층(추정)"
+   }
   },
   {
    "id": "guestbookSign",

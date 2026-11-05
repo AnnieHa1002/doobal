@@ -1,7 +1,7 @@
 {
- "version": 5,
+ "version": 6,
  "asOf": "2026-11-06",
- "source": "Assets/02_Backgrounds_배경 background_panorama_v10(placement.json v10·기록/objects_manifest.json) + background_unified_v11(placement.json v11·clean) — 개발 기획 11/3. 리포 runtime_v12(scene_art.json)와 파일 이름·좌표를 대조할 것 / v3(11/4 개발 기획): 겨울 후경 v13 파일 이름(Assets/02_Backgrounds_배경/background_winter_far_v13, 바다도 겨울판), 배 9척은 boats.json·boat_layers.json, 정령 발 y 960을 갑판 y 1216에 맞춤, 쉼터 rest(장면 폭 약 1.5배·누름 순서) / v4(11/4): 겨울 타일 실제 이름, 사람 실루엣 v13(placement_additions.json), 충청·전라 이음새 v13 후보, 쉼터 넓은 캠프 값(codex_camp_wide_v01) / v5(11/6): 사람 실루엣 뺌(11/4 Annie, 이음새 보정은 그대로), 긴 조각 비킴 ±140(정령 540px)",
+ "source": "Assets/02_Backgrounds_배경 background_panorama_v10(placement.json v10·기록/objects_manifest.json) + background_unified_v11(placement.json v11·clean) — 개발 기획 11/3. 리포 runtime_v12(scene_art.json)와 파일 이름·좌표를 대조할 것 / v3(11/4 개발 기획): 겨울 후경 v13 파일 이름(Assets/02_Backgrounds_배경/background_winter_far_v13, 바다도 겨울판), 배 9척은 boats.json·boat_layers.json, 정령 발 y 960을 갑판 y 1216에 맞춤, 쉼터 rest(장면 폭 약 1.5배·누름 순서) / v4(11/4): 겨울 타일 실제 이름, 사람 실루엣 v13(placement_additions.json), 충청·전라 이음새 v13 후보, 쉼터 넓은 캠프 값(codex_camp_wide_v01) / v5(11/6): 사람 실루엣 뺌(11/4 Annie, 이음새 보정은 그대로), 긴 조각 비킴 ±140(정령 540px) / v6(11/6): rest.parallax·objectsNote·hitOrder 삭제(camp_wide.json·config rest.drag가 한 곳)",
  "assetDirs": {
   "v10": "backgrounds/v10",
   "v11": "backgrounds/v11",
@@ -644,12 +644,6 @@
   "approx": true,
   "widthRatio": 1.5,
   "viewport": "처음 화면 = 장면 x 0~1170, 오른쪽 끝까지 밀면 590~1760",
-  "parallax": {
-   "sky": 0.03,
-   "backdrop": 0.05,
-   "camp": 1.0
-  },
-  "objectsNote": "물건·캐릭터·동행 자리는 themes/camp.json v2(장면 폭 비율)가 한 곳. 여기는 장면 크기·그림 파일만",
   "fixedHud": "config rest.fixedHud",
   "widthPx": 1760,
   "firstViewPx": [
@@ -666,7 +660,6 @@
    "backY": 1432,
    "frontY": 1892,
    "pending": "Codex 납품 대기(디자인기획/codex_camp_wide_v01.md). 그전까지 v11 1170폭 캠프를 왼쪽에 두고 오른쪽은 빈 땅"
-  },
-  "hitOrder": "themes/camp.json hitOrder"
+  }
  }
 }

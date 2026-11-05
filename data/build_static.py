@@ -10,6 +10,7 @@
 - props.json v5(11/6): 화면 이름 짧게(11/4 Annie, 기획/소품_목록.md v04.3 — 두 낱말 이내, id·파일 이름은 그대로),
   사용자 색 고르기(tint) 폐기 → 색 소품(11/4 밤 Annie): 색 바꿀 수 있는 기본 소품 7종에 material(Codex materials_v07 catalogId·기본 색),
   색마다 따로 된 상점 소품은 COLOR_VARIANTS 표(디자인 기획이 색을 고르면 채움, id = <기본 id>_c<n>, 이름 = '<색 이름> <기본 이름>', 100 럭).
+- props.json v6(11/6): 손 소품 fit(장갑 wristOverlay·날개 팔 replaceArms, 컷아웃 공정).
 - props.json v4(11/4): 둥실 나침반·큰 팔레트(hand_03·hand_04) → 몽실 구름 float_02(150km)·꼬마 열기구 float_03(200km),
   베레모 hat_01 tint(색 바꾸기, 견본은 palette.json body), cloth_02 이름 '여행복'(화면 글 원칙: '일체형' 같은 설명 없음).
   props.json v3(11/3): 정령 슬롯 9개(hat·face·cloth·shoe·hand·bag·pet·float·effect), 기획/소품_목록.md v04.1.
@@ -106,8 +107,15 @@ def build_landmarks():
     return lms
 
 
+# 손 슬롯 붙는 법 (16장 11/6 컷아웃): 날개 팔은 팔 조각을 바꾸고, 장갑은 손목 기준점에 덧층
+HAND_FIT = {'hand_09': 'wristOverlay', 'hand_11': 'wristOverlay', 'hand_13': 'wristOverlay',
+            'hand_10': 'replaceArms', 'hand_12': 'replaceArms'}
+
+
 def p(id, slot, name, kind, status='mvp', **k):
     o = {'id': id, 'slot': slot, 'name': name, 'unlock': {'kind': kind, **k}, 'status': status}
+    if id in HAND_FIT:
+        o['fit'] = HAND_FIT[id]
     if id in MATERIAL:
         o['material'] = {'catalogId': MATERIAL[id][0], 'hex': MATERIAL[id][1]}
         if id in MATERIAL_SOURCE:
@@ -218,7 +226,7 @@ def build_props():
     assert sorted(x['unlock']['km'] for x in mvp if x['unlock']['kind'] == 'distance') == [10, 25, 50, 100, 150, 200, 300, 500, 700, 1000]
     assert sum(x['status'] == 'pending' for x in props) == 12
     assert all('일체형' not in x['name'] for x in props), '화면 글 원칙: 이름에 설명을 넣지 않음'
-    dump('props.json', {'version': 5, 'slots': SLOTS,
+    dump('props.json', {'version': 6, 'slots': SLOTS,
                         'material': {'neutralReference': 180, 'formula': 'rgb = clamp(neutral.rgb × hex.rgb ÷ 180) 위에 고정 무늬 층',
                                      'source': 'Codex 기본 소품 v07 recolor/materials_v07.json'},
                         'colorVariants': {'price': COLOR_VARIANT_PRICE, 'perBase': 3, 'bases': list(MATERIAL),

@@ -1,15 +1,17 @@
 {
- "version": 2,
+ "version": 3,
  "storyLayersFile": "story_layers.json",
  "companions": [
   {
    "id": "bright",
    "name": "퐁이",
    "species": "duck",
+   "speciesName": "오리",
    "terrain": "coast",
    "pace": "ahead",
    "finaleProp": "hat_10",
    "hideLayerOnFinale": null,
+   "hideLayerWhen": null,
    "faces": [
     "closed",
     "laugh",
@@ -387,10 +389,12 @@
    "id": "rest",
    "name": "휴",
    "species": "cat",
+   "speciesName": "고양이",
    "terrain": "city",
    "pace": "walkOnly",
    "finaleProp": "hand_09",
    "hideLayerOnFinale": null,
+   "hideLayerWhen": null,
    "faces": [
     "closed",
     "laugh",
@@ -780,10 +784,12 @@
    "id": "doctor",
    "name": "심 박사",
    "species": "ginseng",
+   "speciesName": "산삼",
    "terrain": "mountain",
    "pace": "match",
    "finaleProp": "hat_11",
    "hideLayerOnFinale": "glasses",
+   "hideLayerWhen": "finaleRead",
    "faces": [
     "closed",
     "laugh",
