@@ -371,6 +371,7 @@
    "approx": true,
    "aheadEverySec": 90,
    "aheadAwaySec": 8,
+   "walkMps": 1.3,
    "lagCatchUpMps": 0.5,
    "lateArrivalMaxSec": 600
   },
