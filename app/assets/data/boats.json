@@ -1,7 +1,7 @@
 {
- "version": 2,
- "asOf": "2026-11-04",
- "source": "기준 문서 4장(11/3 Annie 배 9척), Codex 납품 boat_upgrades_3stages_layered_v02·boat_skins_premium_3types_layered_v01·boat_skins_cruise_speed_pirate_recolor_v01(Assets/02_Backgrounds_배경), 고칠 것 디자인기획/codex_boats_fix_v01.md. 파일 이름·발 자리는 Codex가 합친 boat_layers.json(9척 한 파일) 납품 뒤 layers에 채움 / v2(11/4): layers는 Drive boats_9_fix_v01_검토_20261103/boat_layers.json(1ErhP2ERbebPfSNHKaXOI7Z57KeG_Zvg8, 고친 판 5항목 반영, 런타임 미검증)",
+ "version": 3,
+ "asOf": "2026-11-06",
+ "source": "기준 문서 4장(11/3 Annie 배 9척), Codex 납품 boat_upgrades_3stages_layered_v02·boat_skins_premium_3types_layered_v01·boat_skins_cruise_speed_pirate_recolor_v01(Assets/02_Backgrounds_배경), 고칠 것 디자인기획/codex_boats_fix_v01.md. 파일 이름·발 자리는 Codex가 합친 boat_layers.json(9척 한 파일) 납품 뒤 layers에 채움 / v2(11/4): layers는 Drive boats_9_fix_v01_검토_20261103/boat_layers.json(1ErhP2ERbebPfSNHKaXOI7Z57KeG_Zvg8, 고친 판 5항목 반영, 런타임 미검증) / v3(11/6): 짧은 이름(11/4), 상점 배 6척 산 뒤 3구역 색 바꾸기(11/4 밤 Annie, 무료, 견본 = palette body 10 + 직접 고르기). 구역 그림은 유람선·스피드보트·해적선 Codex recolor v01, 나머지 3척은 납품 대기",
  "canvas": [
   3072,
   1536
@@ -21,7 +21,7 @@
   {
    "id": "boat_raft",
    "codexId": "upgrade_01",
-   "name": "튼튼한 뗏목",
+   "name": "뗏목",
    "unlock": {
     "kind": "default"
    },
@@ -39,12 +39,13 @@
      1216
     ]
    },
-   "nightOverlay": null
+   "nightOverlay": null,
+   "recolor": null
   },
   {
    "id": "boat_skiff",
    "codexId": "upgrade_02",
-   "name": "나무 조각배",
+   "name": "조각배",
    "unlock": {
     "kind": "islandArrival",
     "islands": [
@@ -67,12 +68,13 @@
      1216
     ]
    },
-   "nightOverlay": null
+   "nightOverlay": null,
+   "recolor": null
   },
   {
    "id": "boat_voyage",
    "codexId": "upgrade_03",
-   "name": "여행 돛단배",
+   "name": "돛단배",
    "unlock": {
     "kind": "islandArrival",
     "islands": [
@@ -95,7 +97,8 @@
      1216
     ]
    },
-   "nightOverlay": null
+   "nightOverlay": null,
+   "recolor": null
   },
   {
    "id": "boat_cruise",
@@ -119,7 +122,21 @@
      1216
     ]
    },
-   "nightOverlay": "prop_boat_theme_01_windowlight_v01_clean.png"
+   "nightOverlay": "prop_boat_theme_01_windowlight_v01_clean.png",
+   "recolor": {
+    "zones": [
+     "hull",
+     "upper",
+     "accent"
+    ],
+    "defaults": {
+     "hull": "#688D83",
+     "upper": "#6C938A",
+     "accent": "#61877E"
+    },
+    "pending": false,
+    "files": "recolor/<zone>_mask·neutral (Codex recolor v01 묶음, 이름은 리포에 넣을 때 확정)"
+   }
   },
   {
    "id": "boat_speed",
@@ -143,7 +160,21 @@
      1216
     ]
    },
-   "nightOverlay": null
+   "nightOverlay": null,
+   "recolor": {
+    "zones": [
+     "hull",
+     "upper",
+     "accent"
+    ],
+    "defaults": {
+     "hull": "#28494D",
+     "upper": "#426763",
+     "accent": "#FAE2B6"
+    },
+    "pending": false,
+    "files": "recolor/<zone>_mask·neutral (Codex recolor v01 묶음, 이름은 리포에 넣을 때 확정)"
+   }
   },
   {
    "id": "boat_pirate",
@@ -167,7 +198,21 @@
      1216
     ]
    },
-   "nightOverlay": null
+   "nightOverlay": null,
+   "recolor": {
+    "zones": [
+     "hull",
+     "upper",
+     "accent"
+    ],
+    "defaults": {
+     "hull": "#943228",
+     "upper": "#8F3931",
+     "accent": "#483E3C"
+    },
+    "pending": false,
+    "files": "recolor/<zone>_mask·neutral (Codex recolor v01 묶음, 이름은 리포에 넣을 때 확정)"
+   }
   },
   {
    "id": "boat_canopy",
@@ -191,12 +236,22 @@
      1216
     ]
    },
-   "nightOverlay": null
+   "nightOverlay": null,
+   "recolor": {
+    "zones": [
+     "hull",
+     "upper",
+     "accent"
+    ],
+    "defaults": null,
+    "pending": true,
+    "files": null
+   }
   },
   {
    "id": "boat_atelier",
    "codexId": "premium_02",
-   "name": "화가 오두막 돛배",
+   "name": "오두막 돛배",
    "unlock": {
     "kind": "shop",
     "price": 8000
@@ -215,12 +270,22 @@
      1216
     ]
    },
-   "nightOverlay": null
+   "nightOverlay": null,
+   "recolor": {
+    "zones": [
+     "hull",
+     "upper",
+     "accent"
+    ],
+    "defaults": null,
+    "pending": true,
+    "files": null
+   }
   },
   {
    "id": "boat_starlight",
    "codexId": "premium_03",
-   "name": "별빛 항해선",
+   "name": "별빛배",
    "unlock": {
     "kind": "shop",
     "price": 12000
@@ -239,7 +304,17 @@
      1216
     ]
    },
-   "nightOverlay": null
+   "nightOverlay": null,
+   "recolor": {
+    "zones": [
+     "hull",
+     "upper",
+     "accent"
+    ],
+    "defaults": null,
+    "pending": true,
+    "files": null
+   }
   }
  ],
  "assetDir": "boats/v01fix",
@@ -250,5 +325,18 @@
   "companion",
   "front",
   "water foreground"
- ]
+ ],
+ "recolorRule": {
+  "zones": {
+   "hull": "선체",
+   "upper": "지붕·좌석",
+   "accent": "장식 천"
+  },
+  "fixed": "나무·금속·창틀·외곽선은 고정 층",
+  "formula": "rgb = clamp(neutral.rgb × 고른 색 ÷ 기준 밝기) — 기준 밝기는 구역 그림의 meanLuminance(Codex recolor_report)",
+  "swatches": "palette body.swatches 10 + 직접 고르기",
+  "price": 0,
+  "save": "Profile.boatColors{boatId:{zone:{kind swatch,i}|{kind custom,hex}}}, 처음은 defaults(그림 원래 색)",
+  "reset": "원래 색으로 되돌리기 있음"
+ }
 }

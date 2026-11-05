@@ -1,5 +1,5 @@
 {
- "version": 4,
+ "version": 5,
  "slots": [
   "hat",
   "face",
@@ -11,6 +11,26 @@
   "float",
   "effect"
  ],
+ "material": {
+  "neutralReference": 180,
+  "formula": "rgb = clamp(neutral.rgb × hex.rgb ÷ 180) 위에 고정 무늬 층",
+  "source": "Codex 기본 소품 v07 recolor/materials_v07.json"
+ },
+ "colorVariants": {
+  "price": 100,
+  "perBase": 3,
+  "bases": [
+   "hat_01",
+   "hat_02",
+   "hat_04",
+   "hat_05",
+   "cloth_01",
+   "cloth_02",
+   "shoe_01"
+  ],
+  "pending": true,
+  "note": "색은 디자인 기획이 고름(11장 가안). 채우면 id <기본 id>_c<n>, 이름 <색> <기본 이름>"
+ },
  "props": [
   {
    "id": "hat_01",
@@ -20,45 +40,57 @@
     "kind": "default"
    },
    "status": "mvp",
-   "tint": {
-    "swatches": "body",
-    "default": "#A4502F"
+   "material": {
+    "catalogId": "beret",
+    "hex": "#D78A51"
    }
   },
   {
    "id": "hat_02",
    "slot": "hat",
-   "name": "깃털 꽂은 여행 모자",
+   "name": "여행 모자",
    "unlock": {
     "kind": "distance",
     "km": 25
    },
-   "status": "mvp"
+   "status": "mvp",
+   "material": {
+    "catalogId": "feather_hat",
+    "hex": "#B2815D"
+   }
   },
   {
    "id": "hat_04",
    "slot": "hat",
-   "name": "대나무 삿갓",
+   "name": "삿갓",
    "unlock": {
     "kind": "region",
     "region": "jeolla"
    },
-   "status": "mvp"
+   "status": "mvp",
+   "material": {
+    "catalogId": "bamboo_hat",
+    "hex": "#E4AE5D"
+   }
   },
   {
    "id": "hat_05",
    "slot": "hat",
-   "name": "신라 금관",
+   "name": "금관",
    "unlock": {
     "kind": "region",
     "region": "gyeongsang"
    },
-   "status": "mvp"
+   "status": "mvp",
+   "material": {
+    "catalogId": "silla_crown",
+    "hex": "#D6A24C"
+   }
   },
   {
    "id": "hat_11",
    "slot": "face",
-   "name": "동그란 안경",
+   "name": "안경",
    "unlock": {
     "kind": "companion",
     "companion": "doctor"
@@ -78,7 +110,7 @@
   {
    "id": "face_02",
    "slot": "face",
-   "name": "털 귀마개",
+   "name": "귀마개",
    "unlock": {
     "kind": "shop",
     "price": 300
@@ -88,11 +120,15 @@
   {
    "id": "cloth_01",
    "slot": "cloth",
-   "name": "앞치마 작업복",
+   "name": "앞치마",
    "unlock": {
     "kind": "default"
    },
-   "status": "mvp"
+   "status": "mvp",
+   "material": {
+    "catalogId": "work_apron",
+    "hex": "#B79B78"
+   }
   },
   {
    "id": "cloth_02",
@@ -102,7 +138,11 @@
     "kind": "distance",
     "km": 300
    },
-   "status": "mvp"
+   "status": "mvp",
+   "material": {
+    "catalogId": "travel_vest",
+    "hex": "#B5A576"
+   }
   },
   {
    "id": "cloth_03",
@@ -117,7 +157,7 @@
   {
    "id": "cloth_04",
    "slot": "cloth",
-   "name": "금빛 화가 코트",
+   "name": "금빛 코트",
    "unlock": {
     "kind": "steps",
     "steps": 1000000
@@ -127,7 +167,7 @@
   {
    "id": "cloth_05",
    "slot": "cloth",
-   "name": "연두 여행 망토",
+   "name": "연두 망토",
    "unlock": {
     "kind": "shop",
     "price": 600
@@ -141,7 +181,11 @@
    "unlock": {
     "kind": "default"
    },
-   "status": "mvp"
+   "status": "mvp",
+   "material": {
+    "catalogId": "brown_shoes",
+    "hex": "#B18B67"
+   }
   },
   {
    "id": "shoe_02",
@@ -156,7 +200,7 @@
   {
    "id": "shoe_04",
    "slot": "shoe",
-   "name": "초록 장화",
+   "name": "장화",
    "unlock": {
     "kind": "shop",
     "price": 300
@@ -166,7 +210,7 @@
   {
    "id": "shoe_05",
    "slot": "shoe",
-   "name": "고양이 얼굴 슬리퍼",
+   "name": "고양이 슬리퍼",
    "unlock": {
     "kind": "shop",
     "price": 300
@@ -196,7 +240,7 @@
   {
    "id": "hand_10",
    "slot": "hand",
-   "name": "금빛 날개 팔",
+   "name": "금빛 날개",
    "unlock": {
     "kind": "distance",
     "km": 1000
@@ -206,7 +250,7 @@
   {
    "id": "hand_11",
    "slot": "hand",
-   "name": "털실 벙어리장갑",
+   "name": "벙어리장갑",
    "unlock": {
     "kind": "shop",
     "price": 400
@@ -216,7 +260,7 @@
   {
    "id": "hand_12",
    "slot": "hand",
-   "name": "작은 새 날개 팔",
+   "name": "새 날개",
    "unlock": {
     "kind": "shop",
     "price": 400
@@ -226,7 +270,7 @@
   {
    "id": "hand_13",
    "slot": "hand",
-   "name": "잎사귀 장갑",
+   "name": "잎 장갑",
    "unlock": {
     "kind": "shop",
     "price": 400
@@ -254,7 +298,7 @@
   {
    "id": "hand_02",
    "slot": "bag",
-   "name": "봇짐 지팡이",
+   "name": "봇짐",
    "unlock": {
     "kind": "distance",
     "km": 10
@@ -323,7 +367,7 @@
   {
    "id": "pet_05",
    "slot": "pet",
-   "name": "괭이갈매기",
+   "name": "갈매기",
    "unlock": {
     "kind": "region",
     "region": "ulleung"
@@ -343,7 +387,7 @@
   {
    "id": "float_02",
    "slot": "float",
-   "name": "몽실 구름",
+   "name": "구름",
    "unlock": {
     "kind": "distance",
     "km": 150
@@ -353,7 +397,7 @@
   {
    "id": "float_03",
    "slot": "float",
-   "name": "꼬마 열기구",
+   "name": "열기구",
    "unlock": {
     "kind": "distance",
     "km": 200
@@ -363,7 +407,7 @@
   {
    "id": "hat_10",
    "slot": "float",
-   "name": "작은 달",
+   "name": "달",
    "unlock": {
     "kind": "companion",
     "companion": "bright"
@@ -383,7 +427,7 @@
   {
    "id": "effect_01",
    "slot": "effect",
-   "name": "떨어지는 나뭇잎",
+   "name": "나뭇잎",
    "unlock": {
     "kind": "shop",
     "price": 200
@@ -393,7 +437,7 @@
   {
    "id": "effect_02",
    "slot": "effect",
-   "name": "빗방울 + 발밑 물웅덩이",
+   "name": "빗방울",
    "unlock": {
     "kind": "shop",
     "price": 200
@@ -403,7 +447,7 @@
   {
    "id": "effect_03",
    "slot": "effect",
-   "name": "별 반짝이",
+   "name": "반짝이",
    "unlock": {
     "kind": "shop",
     "price": 200
@@ -413,7 +457,7 @@
   {
    "id": "effect_04",
    "slot": "effect",
-   "name": "물감 방울",
+   "name": "물감",
    "unlock": {
     "kind": "shop",
     "price": 200
@@ -423,7 +467,7 @@
   {
    "id": "effect_05",
    "slot": "effect",
-   "name": "반딧불 빛",
+   "name": "반딧불",
    "unlock": {
     "kind": "shop",
     "price": 200
