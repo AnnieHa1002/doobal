@@ -26,7 +26,7 @@ class StoryLine {
       );
 }
 
-/// 이야기 한 장. [art]는 그림 id (0장·8장만), [prop]은 이 장에서 받는 완결 소품,
+/// 이야기 한 장. [art]는 story_layers.json 장면 id (0장·8장만), [prop]은 이 장에서 받는 완결 소품,
 /// [choices]는 장 끝의 고르기 (0장: together·solo)
 class StoryChapter {
   const StoryChapter({

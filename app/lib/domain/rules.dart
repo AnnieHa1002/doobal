@@ -171,6 +171,8 @@ class Rules {
     required this.companionGuaranteeDays,
     required this.companionWalksPerChapter,
     required this.companionChapters,
+    required this.companionMeetChanceMatch,
+    required this.companionMeetChanceOther,
     required this.companionAheadEverySec,
     required this.companionAheadAwaySec,
     required this.companionLagCatchUpMps,
@@ -189,6 +191,11 @@ class Rules {
 
   /// 이야기 마지막 장 번호 (config companions.chapters, 이 장이 완결)
   final int companionChapters;
+
+  /// 둘째·셋째 동행을 칸마다 만날 확률: 안 만난 동행의 지형이 맞는 칸, 그 밖의 칸
+  /// (config companions.meetChance, 가안)
+  final double companionMeetChanceMatch;
+  final double companionMeetChanceOther;
 
   /// 걷는 중 연출 (config companions.pace, 저장하지 않는다)
   final double companionAheadEverySec;
@@ -561,6 +568,8 @@ class Rules {
       companionGuaranteeDays: (companions['guaranteeByDay'] as List).cast<int>(),
       companionWalksPerChapter: companions['walksPerChapter'] as int,
       companionChapters: companions['chapters'] as int,
+      companionMeetChanceMatch: _d((companions['meetChance'] as Map)['terrainMatch']),
+      companionMeetChanceOther: _d((companions['meetChance'] as Map)['other']),
       companionAheadEverySec: _d(companionPace['aheadEverySec']),
       companionAheadAwaySec: _d(companionPace['aheadAwaySec']),
       companionLagCatchUpMps: _d(companionPace['lagCatchUpMps']),

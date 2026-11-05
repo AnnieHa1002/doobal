@@ -3,8 +3,12 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/companion_providers.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../common/palette.dart';
+import '../companion/companion_screen.dart';
+import '../companion/meet_flow.dart';
 import 'rive_preview_screen.dart';
 
 /// 거리 배수 고르기 선택지 (테스트용이라 코드에 둔다)
@@ -74,6 +78,43 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
     final svc = await ref.read(syncServiceProvider.future);
     await svc.stopJourney(ref.read(clockProvider)());
     return '멈춤';
+  }
+
+  /// 칸 없이 다음 동행을 바로 만나 길 위 만남 흐름을 본다 (폰에서 2km를 안 걸어도 되게)
+  Future<String> _meetNext() async {
+    final svc = await ref.read(syncServiceProvider.future);
+    final now = ref.read(clockProvider)();
+    final met = await svc.debugMeetNext(now);
+    if (met == null) return '다 만남';
+    final view = await svc.companionsView();
+    if (!mounted) return met.name;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (page) => Scaffold(
+        backgroundColor: Palette.moss,
+        body: MeetFlow(
+          companion: met,
+          walkingWith: view.metById(view.walkingWith)?.companion,
+          rules: svc.rules,
+          onChoose: (together) async {
+            await svc.finishMeeting(met.id, ref.read(clockProvider)(), together: together);
+            ref.invalidate(companionsViewProvider);
+            if (page.mounted) Navigator.of(page).pop();
+          },
+        ),
+      ),
+    ));
+    return met.name;
+  }
+
+  /// 함께 걷는(없으면 마지막) 동행의 이야기를 한 장 더 연다 (걷기 4번을 안 채워도 읽어 보게)
+  Future<String> _openChapter() async {
+    final svc = await ref.read(syncServiceProvider.future);
+    final view = await svc.companionsView();
+    final met = view.metById(view.walkingWith ?? view.lastWith);
+    if (met == null) return '만난 동행 없음';
+    await svc.debugOpenNextChapter(met.companion.id);
+    ref.invalidate(companionsViewProvider);
+    return '${met.companion.name} 한 장 더';
   }
 
   @override
@@ -148,6 +189,21 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                   MaterialPageRoute<void>(builder: (_) => const SpiritPreviewScreen()),
                 ),
                 child: const Text('정령 움직임'),
+              ),
+              // 동행 임시 입구 (쉼터 입구는 T3가 연 자리에 끼운다)
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const CompanionScreen()),
+                ),
+                child: const Text('동행'),
+              ),
+              OutlinedButton(
+                onPressed: _busy ? null : () => _run('길 위 만남', _meetNext),
+                child: const Text('길 위 만남'),
+              ),
+              OutlinedButton(
+                onPressed: _busy ? null : () => _run('이야기', _openChapter),
+                child: const Text('이야기 한 장 더'),
               ),
             ],
           ),
