@@ -294,6 +294,54 @@ describe('kakaoSignIn: 다른 계정에 연결된 카카오', () => {
   });
 });
 
+describe('kakaoUnlink', () => {
+  test('로그인해야 한다', async () => {
+    await rejects('kakaoUnlink', {}, undefined, 'UNAUTHENTICATED', 'signed-out');
+  });
+
+  test('내 연결만 지우고 서버 기록은 그대로 둔다', async () => {
+    const me = await linkedOwner();
+    const other = await linkedOwner();
+    await db.doc(`users/${me.uid}/backup/state`).set({ data: 'gz' });
+    const { scope, ticketId } = freshMilestone();
+    await ok('postGuestbook', { ticketId, scope, text: '내 글' }, me.idToken);
+
+    assert.deepEqual(await ok('kakaoUnlink', {}, me.idToken), { unlinked: 1 });
+
+    assert.equal(await exists(`kakaoLinks/${kakaoIdOf(me.kakaoAccessToken)}`), false);
+    assert.ok(await exists(`kakaoLinks/${kakaoIdOf(other.kakaoAccessToken)}`));
+    assert.ok(await exists(`users/${me.uid}`));
+    assert.ok(await exists(`users/${me.uid}/backup/state`));
+    assert.ok(await exists(`guestbook/${me.uid}_${ticketId}`));
+    assert.ok(await authExists(me.uid));
+  });
+
+  test('카카오를 둘 연결했으면 둘 다 지우고, 다시 불러도 오류가 나지 않는다', async () => {
+    const me = await linkedOwner();
+    await ok('kakaoSignIn', { kakaoAccessToken: freshKakao() }, me.idToken);
+    assert.deepEqual(await ok('kakaoUnlink', {}, me.idToken), { unlinked: 2 });
+    assert.deepEqual(await ok('kakaoUnlink', {}, me.idToken), { unlinked: 0 });
+  });
+
+  test('해제한 카카오는 다른 계정에 처음처럼 연결된다', async () => {
+    const before = await linkedOwner();
+    await ok('kakaoUnlink', {}, before.idToken);
+    const next = await makeUser();
+    const r = await ok('kakaoSignIn', { kakaoAccessToken: before.kakaoAccessToken }, next.idToken);
+    assert.equal(r.status, 'linked');
+    assert.equal(r.uid, next.uid);
+    assert.ok(await exists(`users/${before.uid}`), '옛 계정 기록은 합치지 않는다');
+  });
+
+  test('해제한 뒤 같은 계정에 다시 연결할 수 있다', async () => {
+    const me = await linkedOwner();
+    await ok('kakaoUnlink', {}, me.idToken);
+    const r = await ok('kakaoSignIn', { kakaoAccessToken: me.kakaoAccessToken }, me.idToken);
+    assert.equal(r.status, 'linked');
+    assert.equal(r.uid, me.uid);
+  });
+});
+
 describe('deleteAccount', () => {
   test('로그인해야 한다', async () => {
     await rejects('deleteAccount', {}, undefined, 'UNAUTHENTICATED', 'signed-out');

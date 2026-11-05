@@ -45,6 +45,7 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 | `readGuestbook` | `scope` | `{ total, posts: [{ postId, nickname, text, hearts, createdAt(ms), myReaction: heart\|report\|null }] }` |
 | `react` | `postId` `kind: heart\|report\|null` | `{ hearts, myReaction }` |
 | `kakaoSignIn` | `kakaoAccessToken` `confirmSwitch?: bool` | 아래 표 |
+| `kakaoUnlink` | 없음 | `{ unlinked }` (지운 연결 수) |
 | `deleteAccount` | 없음 | `{ deleted: true }` |
 
 - `ticketId`·`scope`는 앱 `domain/guestbook.dart` 꼴 그대로: `a:<여정 id>`와 명소 id·`sketch`, `m:<숫자>`와 `steps:<숫자>`.
@@ -60,6 +61,8 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 | `switched` | 그 계정으로 바꿈 | `uid` `customToken` `merged` `backupMoved` `hasBackup` | 토큰으로 로그인 → `hasBackup`이면 복원 |
 
 `merged`가 참이면 그냥 익명 계정이라서 서버 기록을 그 계정으로 합치고 익명 계정을 없앴다는 뜻이다: 글·반응은 옮기고(같은 기회의 글이 있으면 그 계정 것을 남김), 백업은 그 계정에 없을 때만 옮기고(`backupMoved`), 제재는 삭제 횟수를 더하고 늦은 제한을 쓴다. 구글·애플·다른 카카오에 연결된 계정은 합치지 않고 그대로 둔다.
+
+`kakaoUnlink`는 이 계정의 `kakaoLinks`만 지운다(M6: 서버 기록은 그대로). 이 기기의 로그인은 유지되지만, 다른 연결이 없으면 앱을 지운 뒤나 다른 기기에서 이 기록을 찾을 수 없으니 앱이 해제 전에 알려야 한다. 같은 카카오로 다시 로그인하면 처음처럼 그때의 uid에 연결된다. 카카오 쪽 연결 끊기가 필요하면 앱의 카카오 SDK가 한다.
 
 ### 오류
 

@@ -46,6 +46,13 @@ async function removeReaction(ref: DocumentReference): Promise<void> {
   });
 }
 
+/** 이 계정의 카카오 연결을 모두 지우고 지운 수를 돌려준다 */
+export async function deleteKakaoLinks(uid: string): Promise<number> {
+  const links = await db.collection('kakaoLinks').where('uid', '==', uid).get();
+  await Promise.all(links.docs.map((l) => l.ref.delete()));
+  return links.size;
+}
+
 /** 계정 삭제: 모두 즉시 파기한다 (약관 v02 제3조). 제재 기록도 users 문서와 함께 사라진다 */
 export async function wipeUser(uid: string): Promise<void> {
   for (const r of (await reactionsBy(uid)).docs) await removeReaction(r.ref);
@@ -54,8 +61,7 @@ export async function wipeUser(uid: string): Promise<void> {
     await db.recursiveDelete(p.ref);
     await db.doc(`reviewQueue/${p.id}`).delete();
   }
-  const links = await db.collection('kakaoLinks').where('uid', '==', uid).get();
-  for (const l of links.docs) await l.ref.delete();
+  await deleteKakaoLinks(uid);
   await db.recursiveDelete(db.doc(`users/${uid}`));
   await deleteAuthUser(uid);
 }

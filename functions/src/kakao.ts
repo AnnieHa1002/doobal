@@ -3,7 +3,7 @@
 import { auth, callableOptions, db, fail, isEmulator, requireUid } from './firebase';
 import { defineString } from 'firebase-functions/params';
 import { onCall, type CallableRequest } from 'firebase-functions/v2/https';
-import { authUserOrNull, mergeAnonymousInto } from './account';
+import { authUserOrNull, deleteKakaoLinks, mergeAnonymousInto } from './account';
 import { FieldValue } from 'firebase-admin/firestore';
 
 /** 카카오 앱 ID. 다른 앱에서 받은 토큰을 막는 값이다. 진짜 값은 .env.<프로젝트 id>에 둔다 */
@@ -101,4 +101,12 @@ export const kakaoSignIn = onCall(callableOptions, async (request) => {
     backupMoved,
     hasBackup: await hasBackup(owner),
   };
+});
+
+/**
+ * 카카오 연결 해제 (M6 설정: 서버 기록은 그대로). 구글·애플은 Auth unlink로 끝나지만 카카오는
+ * Auth 연결이 아니라 kakaoLinks 문서라 서버가 지운다. 이 기기의 로그인은 유지된다
+ */
+export const kakaoUnlink = onCall(callableOptions, async (request) => {
+  return { unlinked: await deleteKakaoLinks(requireUid(request)) };
 });
