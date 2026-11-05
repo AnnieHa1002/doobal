@@ -7,11 +7,15 @@ import '../../domain/boat.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/rules.dart';
 import '../../domain/scene.dart';
+import '../../domain/scene_plan.dart';
 import '../../domain/sky.dart';
 import '../../domain/time_tint.dart';
 import 'scene_art.dart';
 import 'scene_painter.dart';
 import 'sky_painter.dart';
+
+/// 조각이 화면 왼쪽 밖으로 나가도 걸쳐 있을 수 있는 폭 (그림 px). 가장 넓은 조각보다 크다
+const _maxPieceWidth = 2400.0;
 
 /// 원화 PNG만 배치한다. 임시 능선·중간 들판·바다 면을 함께 그리지 않는다.
 class SceneArtPainter extends CustomPainter {
@@ -46,7 +50,6 @@ class SceneArtPainter extends CustomPainter {
   double get _k => _layout.scale;
   double get _groundScale => _layout.size.width > _layout.size.height ? .78 : 1;
   Map get _assets => art.data['assets'] as Map;
-  double _number(String key) => (art.data[key] as num).toDouble();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -74,7 +77,7 @@ class SceneArtPainter extends CustomPainter {
             _tile(
               'bg_front_${look.season.name}_v11_clean.png',
               _layout.n('frontY'),
-              1,
+              rules.layers[SceneLayerId.foreground]!.speed,
             );
           }
         });
@@ -153,7 +156,7 @@ class SceneArtPainter extends CustomPainter {
     final keys = (art.data['far'][region] as List).cast<String>();
     final width = _layout.n('farWidth') * _k;
     final height = _layout.n(_layout.sea ? 'seaFarHeight' : 'farHeight') * _k;
-    final offset = _scroll(.05) * _k % width;
+    final offset = _scroll(rules.layers[SceneLayerId.backdrop]!.speed) * _k % width;
     for (var x = -offset; x < _size.width; x += width) {
       for (var i = 0; i < keys.length; i++) {
         _draw(
@@ -169,29 +172,26 @@ class SceneArtPainter extends CustomPainter {
     }
   }
 
-  /// 구간 번호를 시드에 포함해 먼 거리를 가도 같은 배열만 반복하지 않는다.
-  /// 앞뒤 조각을 함께 계산하므로 구간 경계에서 갑자기 바뀌지 않는다.
-  void _clusters() {
-    final tags = (art.data['tags'][look.backdrop] as List? ?? [])
-        .cast<String>();
-    final eligible = (art.data['clusters'] as List)
-        .where((item) => (item['tags'] as List).any(tags.contains))
-        .toList();
-    if (eligible.isEmpty) return;
-    final gap = _number('clusterGap');
-    final offset = _scroll(.1);
-    final start = ((offset - 2200) / gap).floor();
-    final end = ((offset + _size.width / _k + 2200) / gap).ceil();
-    for (var n = start; n <= end; n++) {
-      final hash = sceneArtHash('$seed:${look.backdrop}', n);
-      final item = eligible[hash % eligible.length];
-      final x = n * gap + 300 + (hash % 700);
-      _sprite(
-        item['id'] as String,
-        (x - offset) * _k,
-        (item['height'] as num).toDouble(),
-        _number('clusterFeet'),
-      );
+  /// 조각 한 줄을 그린다. 주기 번호를 시드에 넣어 먼 거리를 가도 같은 배열만 되풀이하지 않고,
+  /// 앞뒤 주기를 함께 계산하므로 경계에서 갑자기 바뀌지 않는다
+  void _row(SceneRow row) {
+    final plan = art.plan!;
+    final spec = plan.spec(row);
+    final offset = _scroll(spec.speed);
+    final first = ((offset - _maxPieceWidth) / plan.cycle).floor();
+    final last = ((offset + _size.width / (_k * _groundScale)) / plan.cycle).floor();
+    for (var c = first; c <= last; c++) {
+      for (final p in art.placed(
+        row,
+        seed: seed,
+        region: look.backdrop,
+        season: look.season.name,
+        cycleIndex: c,
+      )) {
+        final key = art.assetKeyOf(p.piece.file);
+        if (key == null) continue;
+        _sprite(key, (p.x - offset) * _k, p.height, spec.feetY, haze: spec.haze, tall: p.piece.tall);
+      }
     }
   }
 
@@ -201,6 +201,7 @@ class SceneArtPainter extends CustomPainter {
     double height,
     double feet, {
     double haze = 0,
+    bool tall = false,
   }) {
     final b = (_assets[id]['bbox'] as List).cast<num>();
     x *= _groundScale;
@@ -208,12 +209,24 @@ class SceneArtPainter extends CustomPainter {
     feet = _layout.n('groundY') + (feet - (art.data['portrait']['groundY'] as num)) * _groundScale;
     if (x > _size.width || x + w < 0) return;
     final rect = Rect.fromLTWH(x, _layout.y(feet) - h, w, h);
-    _draw(id, rect, crop: true);
+    final plan = art.plan!;
+    // 키 큰 조각은 정령 뒤를 지나는 동안 흐려진다 (scene.json tallObjectClearX)
+    final opacity = tall
+        ? ScenePlan.tallOpacity(
+            left: rect.left,
+            right: rect.right,
+            center: _layout.foot.dx,
+            clear: plan.tallClearX * _k * _groundScale,
+            near: plan.tallNearOpacity,
+            fade: plan.tallFadePx * _k * _groundScale,
+          )
+        : 1.0;
+    _draw(id, rect, crop: true, paint: Paint()..color = Colors.white.withValues(alpha: opacity));
     if (haze > 0) {
       // 같은 PNG의 알파로만 안개색을 입혀 투명 여백에 벽이 생기지 않게 한다.
       _canvas.saveLayer(
         rect,
-        Paint()..color = Colors.white.withValues(alpha: haze),
+        Paint()..color = Colors.white.withValues(alpha: haze * opacity),
       );
       _draw(
         id,
@@ -229,55 +242,20 @@ class SceneArtPainter extends CustomPainter {
     }
   }
 
-  void _tree(List tree, double feet, double speed, {double haze = 0}) {
-    final cycle = _number('cycle');
-    final x = (tree[1] as num).toDouble();
-    final height = (tree[2] as num).toDouble();
-    final offset = _scroll(speed);
-    final first = ((offset - x - 2400) / cycle).floor();
-    final last = ((offset + _size.width / _k - x) / cycle).ceil();
-    for (var i = first; i <= last; i++) {
-      _sprite(
-        tree[0] as String,
-        (x + i * cycle - offset) * _k,
-        height,
-        feet,
-        haze: haze,
-      );
-    }
-  }
-
   void _land() {
-    _clusters();
-    for (final tree in art.data['backTrees'] as List) {
-      _tree(
-        tree as List,
-        _number('treeBackFeet'),
-        .2,
-        haze: _number('backTreeHaze'),
-      );
-    }
-    for (final row in ['common', look.season.name]) {
-      for (final tree in art.data['frontTrees'][row] as List) {
-        _tree(tree as List, _number('treeFrontFeet'), .3);
-      }
-    }
-    final tags = art.data['tags'][look.backdrop] as List? ?? [];
-    if (tags.contains('도시') || tags.contains('평야')) {
-      _tree(['bg_object_utility_pole_a_v10', 4200, 900], 2090, .3);
-    }
-    _tree(['bg_object_bush_a_v10', 1000, 250], 2110, .3);
-    _tree(['bg_object_bush_b_v10', 7900, 280], 2110, .3);
+    _row(SceneRow.grove);
+    _row(SceneRow.back);
+    _row(SceneRow.front);
     _tile(
       'bg_back_meadow_${look.season.name}_v10_preview.png',
       _layout.n('meadowY'),
-      .5,
+      rules.layers[SceneLayerId.meadow]!.speed,
     );
-    _tile('bg_path_v11_clean.png', _layout.n('groundY'), 1);
+    _tile('bg_path_v11_clean.png', _layout.n('groundY'), rules.layers[SceneLayerId.ground]!.speed);
     _tile(
       'bg_lower_bank_${look.season.name}_v11_clean.png',
       _layout.n('groundY'),
-      1,
+      rules.layers[SceneLayerId.ground]!.speed,
     );
   }
 
@@ -547,7 +525,7 @@ class SceneArtPainter extends CustomPainter {
     _tinted(() {
       final width = (s['cloudWidth'] as num) * _k;
       final period = 3400 * _k;
-      final offset = (_scroll(.03) + (elapsed * (s['cloudSpeed'] as num))) * _k;
+      final offset = (_scroll(rules.layers[SceneLayerId.sky]!.speed) + (elapsed * (s['cloudSpeed'] as num))) * _k;
       for (var i = 0; i < 2; i++) {
         final x = ((i * 1700 * _k - offset) % period) - width;
         final key = 'sky_cloud_0${i + 1}_v11_clean.png';

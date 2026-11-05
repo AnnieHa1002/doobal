@@ -9,13 +9,42 @@ import 'package:flutter/material.dart';
 import '../../domain/boat.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/scene.dart';
+import '../../domain/scene_plan.dart';
 import 'scene_painter.dart';
+
+export '../../domain/scene_plan.dart' show sceneArtHash;
 
 /// 승인된 v10·v11의 파일/배치 목록. 옛 중간 들판 config와 분리한다.
 class SceneArt {
-  SceneArt(this.data, this.images, {this.boat, this.wideCamp});
+  SceneArt(this.data, this.images, {this.boat, this.wideCamp, this.plan});
   final Map<String, dynamic> data;
   final Map<String, ui.Image> images;
+
+  /// 조각 고르기·배치 (scene.json)
+  final ScenePlan? plan;
+
+  /// 그림 파일 이름 → assets 키 (scene.json은 파일 이름으로 적는다)
+  late final Map<String, String> _keyOfFile = {
+    for (final e in (data['assets'] as Map<String, dynamic>).entries)
+      ((e.value as Map)['file'] as String).split('/').last: e.key,
+  };
+
+  String? assetKeyOf(String file) => _keyOfFile[file];
+
+  final _placed = <String, List<PlacedPiece>>{};
+
+  /// 주기 하나의 조각 배치. 주기당 한 번만 계산한다
+  List<PlacedPiece> placed(
+    SceneRow row, {
+    required String seed,
+    required String region,
+    required String season,
+    required int cycleIndex,
+  }) =>
+      _placed.putIfAbsent(
+        '$seed:$region:$season:${row.name}:$cycleIndex',
+        () => plan!.place(row, seed: seed, region: region, season: season, cycleIndex: cycleIndex),
+      );
 
   /// 넓은 캠프 그림 4장. 아직 납품 전이면 null이고 v11 캠프 + 빈 땅으로 그린다
   final WideCampImages? wideCamp;
@@ -39,6 +68,9 @@ class SceneArt {
       await bundle.loadString('assets/data/scene_art.json'),
     ) as Map<String, dynamic>;
     final assets = data['assets'] as Map<String, dynamic>;
+    final plan = ScenePlan.fromJson(
+      jsonDecode(await bundle.loadString('assets/data/scene.json')) as Map<String, dynamic>,
+    );
     final region = (data['far'] as Map).containsKey(look.backdrop)
         ? look.backdrop
         : 'capital';
@@ -80,26 +112,16 @@ class SceneArt {
         'bg_front_${look.season.name}_v11_clean.png',
         'bg_back_meadow_${look.season.name}_v10_preview.png',
       ]);
-      for (final row in ['common', look.season.name]) {
-        for (final tree in data['frontTrees'][row] as List) {
-          keys.add(tree[0] as String);
+      // 이 지역·계절에 설 수 있는 조각만 읽는다
+      final byFile = <String, String>{
+        for (final e in assets.entries)
+          ((e.value as Map)['file'] as String).split('/').last: e.key,
+      };
+      for (final row in SceneRow.values) {
+        for (final piece in plan.eligible(row, region, look.season.name)) {
+          final key = byFile[piece.file];
+          if (key != null) keys.add(key);
         }
-      }
-      for (final tree in data['backTrees'] as List) {
-        keys.add(tree[0] as String);
-      }
-      final tags = (data['tags'][region] as List).cast<String>();
-      for (final item in data['clusters'] as List) {
-        if ((item['tags'] as List).any(tags.contains)) {
-          keys.add(item['id'] as String);
-        }
-      }
-      for (final id in [
-        'bg_object_utility_pole_a_v10',
-        'bg_object_bush_a_v10',
-        'bg_object_bush_b_v10',
-      ]) {
-        if (assets.containsKey(id)) keys.add(id);
       }
     }
     final images = <String, ui.Image>{};
@@ -136,7 +158,7 @@ class SceneArt {
           codec.dispose();
         }
       }
-      return SceneArt(data, images, boat: boatImages, wideCamp: wide);
+      return SceneArt(data, images, boat: boatImages, wideCamp: wide, plan: plan);
     } catch (_) {
       for (final image in images.values) {
         image.dispose();
@@ -350,15 +372,6 @@ class SceneArtLayout {
     if (px == null || sec == null || sec <= 0) return 0;
     return px * scale * math.sin(elapsed * 2 * math.pi / sec);
   }
-}
-
-/// 같은 여정·구간에서는 항상 같은 조각을 고른다. Dart hashCode에 의존하지 않는다.
-int sceneArtHash(String seed, int segment) {
-  var h = 2166136261;
-  for (final c in '$seed:$segment'.codeUnits) {
-    h = ((h ^ c) * 16777619) & 0x7fffffff;
-  }
-  return h;
 }
 
 class SceneArtHost extends StatefulWidget {
