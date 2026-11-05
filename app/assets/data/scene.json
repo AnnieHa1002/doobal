@@ -211,7 +211,8 @@
      230,
      1661,
      585
-    ]
+    ],
+    "heightPx": 460
    },
    {
     "id": "bg_cluster_village_a",
@@ -226,7 +227,8 @@
      242,
      1341,
      550
-    ]
+    ],
+    "heightPx": 460
    },
    {
     "id": "bg_cluster_forest_a",
@@ -241,7 +243,8 @@
      112,
      1538,
      686
-    ]
+    ],
+    "heightPx": 460
    },
    {
     "id": "bg_cluster_forest_b",
@@ -256,7 +259,8 @@
      92,
      1718,
      723
-    ]
+    ],
+    "heightPx": 460
    },
    {
     "id": "bg_cluster_hill_a",
@@ -272,7 +276,8 @@
      415,
      1496,
      256
-    ]
+    ],
+    "heightPx": 220
    },
    {
     "id": "L2_mountain_shoulder_left",
@@ -282,7 +287,8 @@
      "언덕"
     ],
     "source": "v11",
-    "tall": false
+    "tall": false,
+    "heightPx": 220
    },
    {
     "id": "L2_mountain_shoulder_right",
@@ -292,7 +298,8 @@
      "언덕"
     ],
     "source": "v11",
-    "tall": false
+    "tall": false,
+    "heightPx": 220
    },
    {
     "id": "L2_river_shore_patch",
@@ -301,7 +308,8 @@
      "물가"
     ],
     "source": "v11",
-    "tall": false
+    "tall": false,
+    "heightPx": 220
    },
    {
     "id": "L2_jeju_basalt_patch",
@@ -311,7 +319,8 @@
      "해안"
     ],
     "source": "v11",
-    "tall": false
+    "tall": false,
+    "heightPx": 160
    }
   ],
   "roadside": [
@@ -530,7 +539,8 @@
    "speed": 0.1,
    "gapMinPx": 2500,
    "approx": true,
-   "slotsPerCycle": 3
+   "slotsPerCycle": 3,
+   "feetY": 2025
   },
   "roadside": {
    "front": {
@@ -545,7 +555,8 @@
      480
     ],
     "approx": true,
-    "slotsPerCycle": 6
+    "slotsPerCycle": 6,
+    "jitterPx": 600
    },
    "back": {
     "speed": 0.2,
@@ -556,10 +567,12 @@
     ],
     "haze": 0.25,
     "approx": true,
-    "slotsPerCycle": 5
+    "slotsPerCycle": 5,
+    "jitterPx": 800
    },
    "tallObjectClearX": 140,
-   "tallNearCharacterOpacity": 0.35
+   "tallNearCharacterOpacity": 0.35,
+   "tallFadePx": 80
   }
  },
  "ground": {
