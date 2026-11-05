@@ -123,52 +123,65 @@ class SceneView extends StatelessWidget {
             }
             return ValueListenableBuilder<double>(
               valueListenable: clock,
-              builder: (context, elapsed, _) {
-            final artLayout = art == null
-                ? null
-                : SceneArtLayout(art, size, mode, onSea, camp);
-            CustomPainter layer(ScenePass pass) => art == null
-                ? painter(pass)
-                : SceneArtPainter(
-                    art: art,
-                    look: look,
-                    mode: mode,
-                    distanceM: distanceM,
-                    rules: rules,
-                    onSea: onSea,
-                    pass: pass,
-                    elapsed: elapsed,
-                    camp: camp,
-                    seed: sceneSeed,
-                  );
-            final k = size.height / rules.screenHeightPx;
-            final baseFoot = artLayout?.foot ?? Offset(size.width / 2, rules.pathY * k);
-            final foot = baseFoot + Offset(0, artLayout?.boatSwayY(elapsed) ?? 0);
-            // 정령의 머리 위 y150~발바닥 y440을 실제 캐릭터 키로 맞춘다.
-            // 키는 config다: 가로 화면은 기준 1170px, 세로는 기준 화면 높이에 대한 값.
-            final figureHeight =
-                artLayout?.figureHeight ??
-                (size.width > size.height
-                    ? rules.characterHeightLandscapePx * size.height / 1170
-                    : rules.characterHeightPx * k);
-            return Stack(
-              children: [
-                Positioned.fill(
-                  child: CustomPaint(painter: layer(ScenePass.background)),
-                ),
-                _character(foot, figureHeight, speed, pose, tint),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(painter: layer(ScenePass.foreground)),
-                  ),
-                ),
-              ],
-            );
-              },
+              builder: (context, elapsed, _) =>
+                  _walkStage(size, art, elapsed, look, pose, speed, tint, painter),
             );
           },
         );
       },
+    );
+  }
+
+  /// 걷는 중 장면: 땅·배 판 → 정령 → 앞풀. 거리와 시계에 따라 다시 그린다
+  Widget _walkStage(
+    Size size,
+    SceneArt? art,
+    double elapsed,
+    SceneLook look,
+    DoobalPose pose,
+    double speed,
+    int tint,
+    ScenePainter Function(ScenePass) painter,
+  ) {
+    final artLayout = art == null
+        ? null
+        : SceneArtLayout(art, size, mode, onSea, camp);
+    CustomPainter layer(ScenePass pass) => art == null
+        ? painter(pass)
+        : SceneArtPainter(
+            art: art,
+            look: look,
+            mode: mode,
+            distanceM: distanceM,
+            rules: rules,
+            onSea: onSea,
+            pass: pass,
+            elapsed: elapsed,
+            camp: camp,
+            seed: sceneSeed,
+          );
+    final k = size.height / rules.screenHeightPx;
+    final baseFoot = artLayout?.foot ?? Offset(size.width / 2, rules.pathY * k);
+    final foot = baseFoot + Offset(0, artLayout?.boatSwayY(elapsed) ?? 0);
+    // 정령의 머리 위 y150~발바닥 y440을 실제 캐릭터 키로 맞춘다.
+    // 키는 config다: 가로 화면은 기준 1170px, 세로는 기준 화면 높이에 대한 값.
+    final figureHeight =
+        artLayout?.figureHeight ??
+        (size.width > size.height
+            ? rules.characterHeightLandscapePx * size.height / 1170
+            : rules.characterHeightPx * k);
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: CustomPaint(painter: layer(ScenePass.background)),
+        ),
+        _character(foot, figureHeight, speed, pose, tint),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(painter: layer(ScenePass.foreground)),
+          ),
+        ),
+      ],
     );
   }
 

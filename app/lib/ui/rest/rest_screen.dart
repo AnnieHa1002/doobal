@@ -200,14 +200,14 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                         padding: const EdgeInsets.symmetric(horizontal: 72),
                         child: IgnorePointer(
                           child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _StatusPill(_statusText(snap)),
-                            if (scale != 1) ...[
-                              const SizedBox(height: 6),
-                              _ScaleBadge(distanceScaleBadge(scale)),
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _StatusPill(_statusText(snap)),
+                              if (scale != 1) ...[
+                                const SizedBox(height: 6),
+                                _ScaleBadge(distanceScaleBadge(scale)),
+                              ],
                             ],
-                          ],
                           ),
                         ),
                       ),

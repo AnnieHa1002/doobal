@@ -690,10 +690,10 @@ void main() {
       expect(deco.shape, BoxShape.circle);
       expect((deco.border! as Border).top.width, 1.5);
       expect(tester.getSize(dot()), const Size(10, 10));
-      // 배낭 물건의 오른쪽 위 모서리에 걸쳐 있다
+      // 배낭 그림의 오른쪽 위 모서리 안쪽 (캔버스 2-2: 왼쪽 50, 위 4, 폭 64 그림에서)
       final bag = find.byKey(const ValueKey('camp-object-backpack'));
       final corner = tester.getTopRight(bag);
-      expect((tester.getCenter(dot()) - corner).distance, lessThan(8));
+      expect(tester.getCenter(dot()) - corner, const Offset(-9, 9));
 
       await tester.tap(find.byKey(const ValueKey('camp-object-backpack')));
       await transition(tester);
