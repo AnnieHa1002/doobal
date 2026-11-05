@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/rest_camera.dart';
@@ -12,6 +15,7 @@ import '../album/album_screen.dart';
 import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
+import '../common/ink_press.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
 import '../debug/debug_screen.dart';
@@ -24,6 +28,7 @@ import '../settings/settings_screen.dart';
 import '../walking/walking_screen.dart';
 import 'prop_wiggle.dart';
 import 'rest_gestures.dart';
+import 'rest_slots.dart';
 
 /// 쉼터 (홈, 루트 화면). 장면(하늘 → 후경 → 캠프 뒤 → 물건 → 정령 → 동행 → 캠프 앞 → 불꽃)은 화면 폭의
 /// 1.5배이고 좌우로 민다. 프로필·설정·상태 알약·출발하기는 고정이다 (캔버스 2-2).
@@ -37,6 +42,12 @@ class RestScreen extends ConsumerStatefulWidget {
 
 /// 흔들림 id: 캠프 물건은 테마의 id(지도·배낭·노트), 방명록 표지판은 이것
 const _guestbookWiggleId = 'guestbook';
+
+// 고정 HUD 자리 (캔버스 2-2)
+const _hudInset = 16.0;
+const _hudButton = 56.0;
+const _gemGap = 10.0;
+const _departBottom = 20.0;
 
 /// 그림으로 서는 물건 (수레·표지판·동행은 따로)
 const _artObjects = {'map', 'backpack', 'note'};
@@ -87,6 +98,8 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     final snap = ref.watch(snapshotProvider).value;
     final now = ref.watch(minuteClockProvider).value ?? ref.watch(clockProvider)();
     final spirit = ref.watch(spiritLookProvider);
+    final slots = ref.watch(restSlotsProvider);
+    final luck = ref.watch(coinBalanceProvider).value ?? 0;
     // 테스트용 거리 배수가 켜져 있으면 알려 준다 (켜 둔 채 잊지 않게)
     final scale = kDebugMode ? ref.watch(debugDistanceScaleProvider) : 1.0;
     // 데이터가 올 때까지는 종이색 빈 화면
@@ -106,7 +119,10 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
           for (final o in camp.objects)
             if (_artObjects.contains(o.id)) o.id,
           if (ticket != null) campGuestbookSignId,
+          if (slots.cart != null) campCartId,
+          if (slots.companion != null) campCompanionId,
         };
+        final padding = MediaQuery.viewPaddingOf(context);
         return Stack(
           children: [
             Positioned.fill(
@@ -127,19 +143,36 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                   seated: false,
                   camera: _camera,
                   sceneBehind: [
+                    if (firstSketch != null) _firstSign(stage, camp.firstSign),
                     for (final o in camp.objects)
-                      if (shown.contains(o.id)) _objectArt(stage, o, hasNew: _hasNew(snap)),
+                      if (shown.contains(o.id))
+                        o.id == campCartId
+                            ? _slotArt(stage, o, slots.cart!)
+                            : _objectArt(stage, o, hasNew: _hasNew(snap)),
+                  ],
+                  sceneBeside: [
+                    if (slots.companion case final slot?) _slotArt(stage, camp.companion, slot),
                   ],
                   sceneAbove: [
                     for (final id in camp.hitStack(shown))
-                      _hitBox(context, stage, camp.object(id), ticket),
+                      _hitBox(
+                        context,
+                        stage,
+                        id == campCompanionId ? camp.companion : camp.object(id),
+                        ticket,
+                        id == campCompanionId
+                            ? slots.companion
+                            : id == campCartId
+                            ? slots.cart
+                            : null,
+                      ),
                   ],
                 ),
               ),
             ),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(_hudInset),
                 child: Stack(
                   children: [
                     Align(
@@ -165,7 +198,8 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                       child: Padding(
                         // 양쪽 모서리 버튼(56pt + 간격) 사이에 들어가게
                         padding: const EdgeInsets.symmetric(horizontal: 72),
-                        child: Column(
+                        child: IgnorePointer(
+                          child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _StatusPill(_statusText(snap)),
@@ -174,48 +208,41 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                               _ScaleBadge(distanceScaleBadge(scale)),
                             ],
                           ],
-                        ),
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          if (firstSketch != null) ...[
-                            _SpeechBubble(key: const ValueKey('first-sketch-bubble'), firstSketch),
-                            const SizedBox(height: 6),
-                          ],
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              CornerButton(
-                                icon: Icons.directions_walk,
-                                label: '출발하기',
-                                tag: '출발하기',
-                                size: 72,
-                                primary: true,
-                                onPressed: () => _push(
-                                  context,
-                                  snap.journey == null
-                                      ? const MapScreen()
-                                      : const WalkingScreen(),
-                                ),
-                              ),
-                              if (firstSketch != null)
-                                const Positioned(
-                                  top: 4,
-                                  right: 4,
-                                  child: NoticeDot(key: ValueKey('depart-dot')),
-                                ),
-                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
                 ),
+              ),
+            ),
+            // 럭 보석: 프로필 바로 아래, 첫날도 '0'으로 늘 보인다
+            Positioned(
+              left: 14,
+              top: padding.top + _hudInset + _hudButton + _gemGap,
+              child: _LuckGem(luck: luck, slot: slots.gem),
+            ),
+            Positioned(
+              right: _hudInset,
+              bottom: math.max(padding.bottom, _departBottom),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (firstSketch != null) ...[
+                    IgnorePointer(
+                      child: _SpeechBubble(key: const ValueKey('first-sketch-bubble'), firstSketch),
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+                  _DepartButton(
+                    notice: firstSketch != null,
+                    onPressed: () => _push(
+                      context,
+                      snap.journey == null ? const MapScreen() : const WalkingScreen(),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -233,8 +260,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
   }
 
   /// 첫 여정 '내 동네 스케치'를 아직 한 걸음도 안 걸었을 때 출발하기 위에 띄우는 말풍선 글.
-  /// 그 밖에는 null (걷기 시작해서 진행이 생기면 말풍선과 출발하기의 알림 점이 함께 사라진다).
-  /// TODO: 첫날 이정표 "첫 스케치 →"는 쉼터에 이정표 물건이 생기면 붙인다 (UI 명세 2장)
+  /// 그 밖에는 null (걷기 시작해서 진행이 생기면 말풍선·첫날 이정표·출발하기의 알림 점이 함께 사라진다).
   String? _firstSketchBubble(Snapshot snap, Rules rules) {
     final j = snap.journey;
     final home = snap.home;
@@ -286,10 +312,51 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     );
   }
 
+  /// 다른 트랙이 끼운 물건의 그림 (수레·동행). 알림 점까지 여기서 붙인다
+  Widget _slotArt(RestGeometry stage, CampObject o, RestObjectSlot slot) {
+    final k = stage.k;
+    return Positioned(
+      left: stage.sx(o.box.x),
+      top: stage.sy(o.box.y),
+      width: o.artW * k,
+      height: o.artH * k,
+      child: IgnorePointer(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(child: Builder(builder: slot.art)),
+            if (slot.notice)
+              Positioned(top: 4, right: 4, child: NoticeDot(key: ValueKey('${o.id}-dot'))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 첫날 이정표 글 (이정표 판 위). 눌리지 않는다
+  Widget _firstSign(RestGeometry stage, CampSign sign) {
+    final k = stage.k;
+    return Positioned(
+      key: const ValueKey('first-sign'),
+      left: stage.sx(sign.box.x),
+      top: stage.sy(sign.box.y),
+      width: sign.box.w * k,
+      height: sign.box.h * k,
+      child: IgnorePointer(child: FittedBox(child: _SceneLabel(sign.label))),
+    );
+  }
+
   /// 누름 상자와 이름표 (장면 맨 위). 쌓는 순서가 곧 겹칠 때 누름 순서다 (테마의 hitOrder)
-  Widget _hitBox(BuildContext context, RestGeometry stage, CampObject o, GuestbookTicket? ticket) {
+  Widget _hitBox(
+    BuildContext context,
+    RestGeometry stage,
+    CampObject o,
+    GuestbookTicket? ticket,
+    RestObjectSlot? slot,
+  ) {
     final k = stage.k;
     final sign = o.id == campGuestbookSignId;
+    final label = sign ? '방명록' : slot?.label ?? o.label;
     return Positioned(
       left: stage.sx(o.box.x),
       top: stage.sy(o.box.y),
@@ -297,22 +364,24 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
       height: o.box.h * k,
       child: Semantics(
         button: true,
-        label: o.label,
+        label: label,
         excludeSemantics: true,
         child: GestureDetector(
           key: ValueKey(sign ? 'signpost' : 'camp-object-${o.id}'),
           behavior: HitTestBehavior.opaque,
-          onTap: () => _push(
-            context,
-            sign ? GuestbookWriteScreen(ticketId: ticket!.id) : _screenOf(o.id),
-          ),
+          onTap: () => slot != null
+              ? slot.onTap(context)
+              : _push(
+                  context,
+                  sign ? GuestbookWriteScreen(ticketId: ticket!.id) : _screenOf(o.id),
+                ),
           child: Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.topCenter,
             children: [
               Positioned(
                 top: o.labelTop * k,
-                child: _SceneLabel(sign ? '방명록' : o.label),
+                child: _SceneLabel(label),
               ),
             ],
           ),
@@ -399,6 +468,165 @@ class _SceneLabel extends StatelessWidget {
       child: Text(text, maxLines: 1, softWrap: false, style: context.display(11)),
     );
   }
+}
+
+/// 럭 보석과 숫자 (캔버스 2-2). 판 없이 보석 그림 오른쪽에 테두리 글씨.
+/// 그림은 T4b가 끼운다 (ui_gem 납품 전 자리표시)
+class _LuckGem extends StatelessWidget {
+  const _LuckGem({required this.luck, required this.slot});
+
+  final int luck;
+  final RestGemSlot slot;
+
+  static const _width = 44.0;
+  static const _height = 40.5;
+
+  @override
+  Widget build(BuildContext context) {
+    final number = formatInt(luck);
+    final style = context.display(18);
+    final onTap = slot.onTap;
+    final body = SizedBox(
+      height: 48,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: _width,
+            height: _height,
+            child: slot.art == null
+                ? const _GemPlaceholder()
+                : Builder(builder: slot.art!),
+          ),
+          const SizedBox(width: 4),
+          Stack(
+            children: [
+              Text(
+                number,
+                style: style.copyWith(
+                  foreground: Paint()
+                    ..style = PaintingStyle.stroke
+                    ..strokeWidth = 5
+                    ..strokeJoin = StrokeJoin.round
+                    ..color = Palette.ink,
+                ),
+              ),
+              Text(number, key: const ValueKey('luck-number'), style: style.copyWith(color: Palette.card)),
+            ],
+          ),
+        ],
+      ),
+    );
+    return Semantics(
+      button: onTap != null,
+      label: '럭 $number',
+      excludeSemantics: true,
+      child: GestureDetector(
+        key: const ValueKey('rest-gem'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap == null ? null : () => onTap(context),
+        child: body,
+      ),
+    );
+  }
+}
+
+/// 보석 그림이 오기 전 자리표시: 보석색 둥근 덩어리 + 하이라이트 한 점
+class _GemPlaceholder extends StatelessWidget {
+  const _GemPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Palette.gem,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Palette.ink, width: InkLine.panel),
+      ),
+      alignment: const Alignment(-0.45, -0.5),
+      child: Container(
+        width: 9,
+        height: 7,
+        decoration: BoxDecoration(
+          color: Palette.card,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    );
+  }
+}
+
+/// 출발하기: 테라코타 둥근 네모에 깃발과 글 (캔버스 2-2). 깃발 그림(ui_obj_flag_start_v01)이 오기 전에는 선으로 그린다
+class _DepartButton extends StatelessWidget {
+  const _DepartButton({required this.notice, required this.onPressed});
+
+  final bool notice;
+  final VoidCallback onPressed;
+
+  static const _size = 72.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: '출발하기',
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          InkPress(
+            onPressed: onPressed,
+            fill: Palette.terracotta,
+            height: _size,
+            width: _size,
+            radius: 22,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CustomPaint(size: const Size(34, 28), painter: _FlagPainter()),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('출발하기', maxLines: 1, style: context.display(13, color: Palette.card)),
+                ),
+              ],
+            ),
+          ),
+          if (notice)
+            const Positioned(
+              top: -4,
+              right: -4,
+              child: NoticeDot(key: ValueKey('depart-dot')),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 깃발: 깃대 하나와 꼬리가 갈라진 천 (캔버스 그대로의 선)
+class _FlagPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawPath(
+      Path()
+        ..moveTo(9, 26)
+        ..lineTo(9, 3)
+        ..moveTo(9, 4)
+        ..lineTo(27, 4)
+        ..lineTo(23, 10)
+        ..lineTo(27, 16)
+        ..lineTo(9, 16),
+      Paint()
+        ..color = Palette.card
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_FlagPainter old) => false;
 }
 
 /// 위쪽 가운데 상태 알약 (카드색 90%)

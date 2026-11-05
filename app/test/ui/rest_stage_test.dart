@@ -2,6 +2,7 @@ import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/map/map_screen.dart';
 import 'package:doobal/ui/rest/prop_wiggle.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
+import 'package:doobal/ui/rest/rest_slots.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -226,6 +227,129 @@ void main() {
       await tester.tap(_backpack);
       await settle(tester, () => find.byType(AlbumScreen).evaluate().isNotEmpty);
       expect(find.byType(AlbumScreen), findsOneWidget);
+      await end(tester, e);
+    });
+  });
+
+  group('자리 열기', () {
+    testWidgets('아무도 안 끼우면 수레·동행은 비어 있고 누를 수 없다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      expect(find.byKey(const ValueKey('camp-object-cart')), findsNothing);
+      expect(find.byKey(const ValueKey('camp-object-companion')), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('수레를 끼우면 테마 자리에 서고, 끝까지 밀면 화면 안에 들어와 눌린다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      var taps = 0;
+      await _open(tester, e, more: [
+        restSlotsProvider.overrideWithValue(RestSlots(
+          cart: RestObjectSlot(
+            art: (_) => const ColoredBox(key: ValueKey('cart-art'), color: Colors.brown),
+            label: '상점',
+            notice: true,
+            onTap: (_) => taps++,
+          ),
+        )),
+      ]);
+      final cart = find.byKey(const ValueKey('camp-object-cart'));
+      // 처음 화면 밖
+      expect(tester.getTopLeft(cart).dx, 440);
+      expect(tester.getRect(find.byKey(const ValueKey('cart-art'))), const Rect.fromLTWH(440, 530, 120, 109));
+      expect(find.text('상점'), findsOneWidget);
+      expect(find.byKey(const ValueKey('cart-dot')), findsOneWidget);
+      await tester.dragFrom(const Offset(380, 300), const Offset(-300, 0));
+      await _settleSnap(tester);
+      expect(tester.getTopLeft(cart).dx, closeTo(440 - 195, 0.01));
+      await tester.tap(cart);
+      await tester.pump();
+      expect(taps, 1);
+      await end(tester, e);
+    });
+
+    testWidgets('동행을 끼우면 불 옆 자리, 노트와 겹친 곳은 노트가 먼저 눌린다 (hitOrder)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      var taps = 0;
+      await _open(tester, e, more: [
+        restSlotsProvider.overrideWithValue(RestSlots(
+          companion: RestObjectSlot(
+            art: (_) => const ColoredBox(key: ValueKey('companion-art'), color: Colors.yellow),
+            onTap: (_) => taps++,
+          ),
+        )),
+      ]);
+      final box = find.byKey(const ValueKey('camp-object-companion'));
+      expect(tester.getRect(box), const Rect.fromLTWH(236, 612, 69, 106));
+      // 동행 혼자인 자리
+      await tester.tapAt(const Offset(280, 680));
+      await tester.pump();
+      expect(taps, 1);
+      // 노트(184~239 × 572~644)와 겹치는 자리: 노트 화면으로 간다
+      await tester.tapAt(const Offset(237, 620));
+      await tester.pump();
+      expect(taps, 1);
+      await settle(tester, () => find.text('내 방명록').evaluate().isNotEmpty);
+      expect(find.text('내 방명록'), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('럭 보석은 첫날도 0으로 보이고 프로필 아래에 고정, 콜백이 있으면 눌린다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.insertSketchJourney(0.6));
+      var taps = 0;
+      await _open(tester, e, more: [
+        restSlotsProvider.overrideWithValue(RestSlots(gem: RestGemSlot(onTap: (_) => taps++))),
+      ]);
+      final gem = find.byKey(const ValueKey('rest-gem'));
+      await settle(tester, () => gem.evaluate().isNotEmpty);
+      expect(
+        find.descendant(of: gem, matching: find.byKey(const ValueKey('luck-number'))),
+        findsOneWidget,
+      );
+      expect(tester.widget<Text>(find.byKey(const ValueKey('luck-number'))).data, '0');
+      final at = tester.getRect(gem);
+      final profile = tester.getRect(find.byTooltip('나의 정보'));
+      expect(at.top, greaterThan(profile.bottom));
+      expect(at.left, 14);
+      await tester.dragFrom(const Offset(300, 300), const Offset(-150, 0));
+      await _settleSnap(tester);
+      expect(tester.getRect(gem), at);
+      await tester.tap(gem);
+      await tester.pump();
+      expect(taps, 1);
+      await end(tester, e);
+    });
+
+    testWidgets('첫날: 이정표 글이 서고 출발하기에 점, 걸으면 함께 사라진다는 조건은 말풍선과 같다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.insertSketchJourney(0.6));
+      await _open(tester, e);
+      expect(find.text('첫 스케치 →'), findsOneWidget);
+      expect(find.byKey(const ValueKey('depart-dot')), findsOneWidget);
+      expect(find.byKey(const ValueKey('first-sketch-bubble')), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('첫날이 아니면 이정표 글이 없다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      expect(find.text('첫 스케치 →'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('출발하기는 둥근 네모에 글이 들어 있고 72pt, 오른쪽 아래 고정', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      final button = tester.getRect(find.byTooltip('출발하기'));
+      expect(button.width, 72);
+      expect(button.right, 390 - 16);
+      expect(find.descendant(of: find.byTooltip('출발하기'), matching: find.text('출발하기')), findsOneWidget);
       await end(tester, e);
     });
   });
