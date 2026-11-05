@@ -125,7 +125,7 @@ class WalkRecord {
   /// 이번 걷기의 실제 거리(m) = [summary]의 거리
   double get actualM => summary.distanceM;
 
-  /// 이번 걷기의 이동 거리(m) = 실제 + 보너스 (상점은 아직 0). 여정은 이만큼 나아간다
+  /// 이번 걷기의 이동 거리(m) = 실제 + 보너스 (상점 효과는 걷기 기록에 넣지 않는다). 여정은 이만큼 나아간다
   double get travelM => actualM + bonusM;
 
   /// 랩(rules.lapKm마다)과 마지막에 남은 부분 랩. 걸음이 없으면 빈 목록

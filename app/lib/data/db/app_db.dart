@@ -27,7 +27,7 @@ class StepMinutes extends Table {
 }
 
 /// 하루 요약. distanceM은 실제로 걸은 거리(걸음 × 보폭)이고 보너스·상점은 안 들어 있다 (이름을 바꾸지 않았다).
-/// 본격 걷기(스키마 11)의 열: bonusM은 앱 걷기 보너스, shopM은 상점 효과(아직 0),
+/// 본격 걷기(스키마 11)의 열: bonusM은 앱 걷기 보너스, shopM은 상점 효과,
 /// travelM = distanceM + bonusM + shopM은 여정·경비·도착 예정일이 쓰는 이동 거리,
 /// walkTravelM은 앱 걷기 창 안에서 걸은 이동 거리(상점 뺌, 소품 거리의 기준), coins는 그날 번 럭
 @DataClassName('DaySummaryRow')
