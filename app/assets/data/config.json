@@ -370,6 +370,11 @@
   ],
   "walksPerChapter": 4,
   "chapters": 8,
+  "meetChance": {
+   "approx": true,
+   "terrainMatch": 0.2,
+   "other": 0.03
+  },
   "pace": {
    "approx": true,
    "aheadEverySec": 90,
