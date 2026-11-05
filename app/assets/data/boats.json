@@ -1,7 +1,7 @@
 {
- "version": 3,
+ "version": 4,
  "asOf": "2026-11-06",
- "source": "기준 문서 4장(11/3 Annie 배 9척), Codex 납품 boat_upgrades_3stages_layered_v02·boat_skins_premium_3types_layered_v01·boat_skins_cruise_speed_pirate_recolor_v01(Assets/02_Backgrounds_배경), 고칠 것 디자인기획/codex_boats_fix_v01.md. 파일 이름·발 자리는 Codex가 합친 boat_layers.json(9척 한 파일) 납품 뒤 layers에 채움 / v2(11/4): layers는 Drive boats_9_fix_v01_검토_20261103/boat_layers.json(1ErhP2ERbebPfSNHKaXOI7Z57KeG_Zvg8, 고친 판 5항목 반영, 런타임 미검증) / v3(11/6): 짧은 이름(11/4), 상점 배 6척 산 뒤 3구역 색 바꾸기(11/4 밤 Annie, 무료, 견본 = palette body 10 + 직접 고르기). 구역 그림은 유람선·스피드보트·해적선 Codex recolor v01, 나머지 3척은 납품 대기",
+ "source": "기준 문서 4장(11/3 Annie 배 9척), Codex 납품 boat_upgrades_3stages_layered_v02·boat_skins_premium_3types_layered_v01·boat_skins_cruise_speed_pirate_recolor_v01(Assets/02_Backgrounds_배경), 고칠 것 디자인기획/codex_boats_fix_v01.md. 파일 이름·발 자리는 Codex가 합친 boat_layers.json(9척 한 파일) 납품 뒤 layers에 채움 / v2(11/4): layers는 Drive boats_9_fix_v01_검토_20261103/boat_layers.json(1ErhP2ERbebPfSNHKaXOI7Z57KeG_Zvg8, 고친 판 5항목 반영, 런타임 미검증) / v3(11/6): 짧은 이름(11/4), 상점 배 6척 산 뒤 3구역 색 바꾸기(11/4 밤 Annie, 무료, 견본 = palette body 10 + 직접 고르기). 구역 그림은 유람선·스피드보트·해적선 Codex recolor v01, 나머지 3척은 납품 대기 / v4(11/6): 상점 배 premium 3척 색 구역 납품(Drive Assets/상점배3척_색변경_v01_검토본_20261106, 미술 승인 전 검토본) — 구역 3·공식 ÷192·원래 색 = 원본 픽셀",
  "canvas": [
   3072,
   1536
@@ -135,7 +135,8 @@
      "accent": "#61877E"
     },
     "pending": false,
-    "files": "recolor/<zone>_mask·neutral (Codex recolor v01 묶음, 이름은 리포에 넣을 때 확정)"
+    "files": "recolor/<zone>_mask·neutral (Codex recolor v01 묶음, 이름은 리포에 넣을 때 확정)",
+    "method": "meanLuminance"
    }
   },
   {
@@ -173,7 +174,8 @@
      "accent": "#FAE2B6"
     },
     "pending": false,
-    "files": "recolor/<zone>_mask·neutral (Codex recolor v01 묶음, 이름은 리포에 넣을 때 확정)"
+    "files": "recolor/<zone>_mask·neutral (Codex recolor v01 묶음, 이름은 리포에 넣을 때 확정)",
+    "method": "meanLuminance"
    }
   },
   {
@@ -211,7 +213,8 @@
      "accent": "#483E3C"
     },
     "pending": false,
-    "files": "recolor/<zone>_mask·neutral (Codex recolor v01 묶음, 이름은 리포에 넣을 때 확정)"
+    "files": "recolor/<zone>_mask·neutral (Codex recolor v01 묶음, 이름은 리포에 넣을 때 확정)",
+    "method": "meanLuminance"
    }
   },
   {
@@ -243,9 +246,43 @@
      "upper",
      "accent"
     ],
+    "zoneLabels": {
+     "hull": "크림 선체 면",
+     "upper": "청록 차양 줄",
+     "accent": "쿠션 띠·선체의 좁은 청록 띠"
+    },
     "defaults": null,
-    "pending": true,
-    "files": null
+    "pending": false,
+    "method": "materialIds",
+    "dir": "recolor/premium_01/",
+    "files": {
+     "materialIds": "material_ids.png",
+     "masks": {
+      "hull": "hull_mask.png",
+      "upper": "upper_mask.png",
+      "accent": "accent_mask.png"
+     },
+     "shading": {
+      "rear": {
+       "hull": "rear_hull_shading.png",
+       "upper": "rear_upper_shading.png",
+       "accent": "rear_accent_shading.png"
+      },
+      "front": {
+       "hull": "front_hull_shading.png",
+       "upper": "front_upper_shading.png",
+       "accent": "front_accent_shading.png"
+      }
+     },
+     "fixed": {
+      "rear": "rear_fixed.png",
+      "front": "front_fixed.png"
+     },
+     "meta": "materials.json"
+    },
+    "review": "미술 승인 전 검토본, 극단적 색 경계 확대 검수 남음",
+    "neutralMidpoint": 192,
+    "source": "Drive Assets/상점배3척_색변경_v01_검토본_20261106 (zip 4개를 한 곳에 풀면 premium_boat_colors_v01/), clean 앞·뒤판은 기존 승인 원화와 바이트 같음"
    }
   },
   {
@@ -277,9 +314,43 @@
      "upper",
      "accent"
     ],
+    "zoneLabels": {
+     "hull": "선체·선실 아래 면",
+     "upper": "지붕",
+     "accent": "깃발·돛 테두리·구명환 색 띠"
+    },
     "defaults": null,
-    "pending": true,
-    "files": null
+    "pending": false,
+    "method": "materialIds",
+    "dir": "recolor/premium_02/",
+    "files": {
+     "materialIds": "material_ids.png",
+     "masks": {
+      "hull": "hull_mask.png",
+      "upper": "upper_mask.png",
+      "accent": "accent_mask.png"
+     },
+     "shading": {
+      "rear": {
+       "hull": "rear_hull_shading.png",
+       "upper": "rear_upper_shading.png",
+       "accent": "rear_accent_shading.png"
+      },
+      "front": {
+       "hull": "front_hull_shading.png",
+       "upper": "front_upper_shading.png",
+       "accent": "front_accent_shading.png"
+      }
+     },
+     "fixed": {
+      "rear": "rear_fixed.png",
+      "front": "front_fixed.png"
+     },
+     "meta": "materials.json"
+    },
+    "review": "미술 승인 전 검토본, 극단적 색 경계 확대 검수 남음",
+    "neutralMidpoint": 192,
+    "source": "Drive Assets/상점배3척_색변경_v01_검토본_20261106 (zip 4개를 한 곳에 풀면 premium_boat_colors_v01/), clean 앞·뒤판은 기존 승인 원화와 바이트 같음"
    }
   },
   {
@@ -311,9 +382,43 @@
      "upper",
      "accent"
     ],
+    "zoneLabels": {
+     "hull": "선체·선실 아래 면",
+     "upper": "지붕",
+     "accent": "깃발·돛 테두리·구명환 색 띠"
+    },
     "defaults": null,
-    "pending": true,
-    "files": null
+    "pending": false,
+    "method": "materialIds",
+    "dir": "recolor/premium_03/",
+    "files": {
+     "materialIds": "material_ids.png",
+     "masks": {
+      "hull": "hull_mask.png",
+      "upper": "upper_mask.png",
+      "accent": "accent_mask.png"
+     },
+     "shading": {
+      "rear": {
+       "hull": "rear_hull_shading.png",
+       "upper": "rear_upper_shading.png",
+       "accent": "rear_accent_shading.png"
+      },
+      "front": {
+       "hull": "front_hull_shading.png",
+       "upper": "front_upper_shading.png",
+       "accent": "front_accent_shading.png"
+      }
+     },
+     "fixed": {
+      "rear": "rear_fixed.png",
+      "front": "front_fixed.png"
+     },
+     "meta": "materials.json"
+    },
+    "review": "미술 승인 전 검토본, 극단적 색 경계 확대 검수 남음",
+    "neutralMidpoint": 192,
+    "source": "Drive Assets/상점배3척_색변경_v01_검토본_20261106 (zip 4개를 한 곳에 풀면 premium_boat_colors_v01/), clean 앞·뒤판은 기존 승인 원화와 바이트 같음"
    }
   }
  ],
@@ -333,10 +438,14 @@
    "accent": "장식 천"
   },
   "fixed": "나무·금속·창틀·외곽선은 고정 층",
-  "formula": "rgb = clamp(neutral.rgb × 고른 색 ÷ 기준 밝기) — 기준 밝기는 구역 그림의 meanLuminance(Codex recolor_report)",
+  "formula": {
+   "materialIds": "premium 3척: 앞·뒤판 각각 fixed 층 + 구역 shading 층마다 rgb = min(255, 고른 색 × shadingGray ÷ 192), 알파 그대로. 고른 색이 없으면 clean 원본 그림 그대로(평균색 쓰지 않음)",
+   "meanLuminance": "theme 3척(Codex recolor v01): rgb = clamp(중립 × 고른 색 ÷ 구역 meanLuminance), defaults는 구역 대표색"
+  },
   "swatches": "palette body.swatches 10 + 직접 고르기",
   "price": 0,
-  "save": "Profile.boatColors{boatId:{zone:{kind swatch,i}|{kind custom,hex}}}, 처음은 defaults(그림 원래 색)",
-  "reset": "원래 색으로 되돌리기 있음"
+  "save": "BoatsOwned.colors(얻은 배 줄의 JSON {zone:{kind swatch,i}|{kind custom,hex}}, 고른 적 없으면 null = 그림 원래 색). 11/6 개발 구현에 맞춤(이전 문서의 Profile.boatColors)",
+  "reset": "원래 색으로 되돌리기 있음",
+  "drawOrder": "색 입힌 rear → 정령·동행 → front (3072×1536 좌표 그대로, 발 자리는 boat_layers.json)"
  }
 }
