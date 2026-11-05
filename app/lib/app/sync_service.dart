@@ -10,6 +10,7 @@ import '../domain/badge.dart';
 import '../domain/boat.dart';
 import '../domain/bucket.dart';
 import '../domain/companion.dart';
+import '../domain/companion_engine.dart';
 import '../domain/eta.dart';
 import '../domain/focus_walk.dart';
 import '../domain/gait.dart';
@@ -923,11 +924,10 @@ class SyncService {
             ..orderBy([(t) => OrderingTerm.desc(t.k)])
             ..limit(1))
           .getSingleOrNull();
-      final slots =
-          newEventSlots(eventM: eventM, everyKm: rules.eventEveryKm, doneK: last?.k ?? 0);
+      // 만남 칸에는 이벤트 줄이 없으니 만남이 차지한 칸까지 건너뛴다
+      final doneK = math.max(last?.k ?? 0, await _lastMeetK(active.id));
+      final slots = newEventSlots(eventM: eventM, everyKm: rules.eventEveryKm, doneK: doneK);
       if (slots.isEmpty) return <RoadEventView>[];
-      // TODO(M4 동행): 첫 실제 여정(스케치 다음 여정)의 k=1은 동행 첫 만남이 대신한다. 동행이 생기면
-      // 그 칸은 이벤트 대신 만남으로 보낸다. 지금은 다른 칸과 같은 이벤트로 둔다
 
       final state = await _ensureState(now);
       final today = kstDayKey(now);
@@ -952,7 +952,14 @@ class SyncService {
       var lastPct = total <= 0 ? 100.0 : (active.fundKm / total * 100).clamp(0.0, 100.0);
       if (last != null) lastPct = last.progressPct;
       final views = <RoadEventView>[];
+      var met = false;
       for (final k in slots) {
+        // 만남은 이벤트 대신 나온다 (첫 실제 여정의 k=1은 늘 만남이다, companion_engine.dart).
+        // 화면은 pendingMeeting으로 알아서 길 위 만남 흐름을 띄운다
+        if (await _meetAtSlot(active, k, terrain, state, installId, now) != null) {
+          met = true;
+          continue;
+        }
         final pct = prog.ratio * 100;
         final pick = pickRoadEvent(
           catalog: catalog,
@@ -1009,7 +1016,7 @@ class SyncService {
           at: _utc(at),
         ));
       }
-      if (views.isNotEmpty) badges = await _awardBadges(now);
+      if (views.isNotEmpty || met) badges = await _awardBadges(now);
       return views;
     });
     if (badges.isNotEmpty) _newBadges.add(badges);
