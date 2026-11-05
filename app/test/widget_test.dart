@@ -209,7 +209,7 @@ void main() {
       child: const DoobalApp(),
     ));
     // 같은 동기화의 `그동안 n km 걸었어요`를 지우지 않고 그 앞이나 뒤에 이어서 뜬다
-    final toast = find.text('새 소품을 얻었어요 · 봇짐 지팡이');
+    final toast = find.text('새 소품을 얻었어요 · 봇짐');
     var walked = false;
     for (var i = 0; i < 60 && toast.evaluate().isEmpty; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));

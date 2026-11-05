@@ -57,11 +57,20 @@ void main() {
       });
     });
 
-    test('기준 화면 2532px: 지평선 1580 · 길 2171 · 캐릭터 키 820', () {
+    test('기준 화면 2532px: 지평선 1580 · 길 2171 · 정령 키 세로 540·가로 406 (16장 11/5)', () {
       expect(rules.screenHeightPx, 2532);
       expect(rules.horizonY, 1580);
       expect(rules.pathY, 2171);
-      expect(rules.characterHeightPx, 820);
+      expect(rules.characterHeightPx, 540);
+      expect(rules.characterHeightLandscapePx, 406);
+    });
+
+    test('앱이 그릴 때 읽는 scene_art.json의 정령 키가 config와 같다', () {
+      final art = jsonDecode(File('assets/data/scene_art.json').readAsStringSync())
+          as Map<String, dynamic>;
+      expect((art['portrait'] as Map<String, dynamic>)['figureHeight'], rules.characterHeightPx);
+      expect((art['landscape'] as Map<String, dynamic>)['figureHeight'],
+          rules.characterHeightLandscapePx);
     });
 
     test('잘못된 레이어 이름은 받아들이지 않는다', () {

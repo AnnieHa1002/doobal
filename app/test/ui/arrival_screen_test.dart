@@ -278,14 +278,14 @@ void main() {
       });
     });
 
-    testWidgets('권역을 채운 첫 방문은 소품 카드: `울릉 완성`과 괭이갈매기', (tester) async {
+    testWidgets('권역을 채운 첫 방문은 소품 카드: `울릉 완성`과 갈매기', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => e.insertArrival('j1', 'kr089', _day));
       await _openArrival(tester, e, 'j1');
       final prop = find.byKey(const ValueKey('arrival-prop'));
       expect(prop, findsOneWidget);
       expect(find.descendant(of: prop, matching: find.text('울릉 완성')), findsOneWidget);
-      expect(find.descendant(of: prop, matching: find.text('괭이갈매기')), findsOneWidget);
+      expect(find.descendant(of: prop, matching: find.text('갈매기')), findsOneWidget);
       await end(tester, e);
     });
 

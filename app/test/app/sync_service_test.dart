@@ -1767,7 +1767,7 @@ void main() {
       expect((await e.svc.arrivalView('j4')).prevBestKm, 40);
     });
 
-    test('울릉(명소 1곳)에 도착하면 첫 방문이 권역을 채워서 괭이갈매기', () async {
+    test('울릉(명소 1곳)에 도착하면 첫 방문이 권역을 채워서 갈매기', () async {
       final e = await _env();
       await e.svc.sync(_t0);
       final ulleung = _landmarks['kr089']!;
@@ -1777,7 +1777,7 @@ void main() {
       final v = await e.svc.arrivalView((await _startedAt(e.db, t1)).id);
       expect(v.visitNo, 1);
       expect(v.regionProp?.id, 'pet_05');
-      expect(v.regionProp?.name, '괭이갈매기');
+      expect(v.regionProp?.name, '갈매기');
     });
 
     test('제주(2곳)는 둘째 그림에서 돌하르방, 첫째에서는 없다', () async {

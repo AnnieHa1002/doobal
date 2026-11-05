@@ -1,7 +1,7 @@
 {
- "version": 4,
- "asOf": "2026-11-04",
- "source": "v4(11/4 개발 기획): 배 9척(11/3 Annie) — 상점 배 6(5,000·5,000·5,000·8,000·8,000·12,000럭, 값은 베타 뒤 조정), 나룻배 800·작은 돛단배 1,200 상품 없앰. 보상 배 3은 상품이 아니라 boats.json unlock. 탭 화면 이름 tabLabels(UI 명세 15장). v3(11/3): 상품 19개, 기획/럭_상점.md v2.1·소품_목록.md v04.1",
+ "version": 5,
+ "asOf": "2026-11-06",
+ "source": "v5(11/6 개발 기획): 짧은 이름(11/4 Annie, 럭_상점.md v2.3), 색 소품은 props.json colorVariants에서 빌드(색 정해지면 tab prop, 100 럭), 상점 배 6척 산 뒤 색 바꾸기(boats.json recolor, 무료). v4(11/4 개발 기획): 배 9척(11/3 Annie) — 상점 배 6(5,000·5,000·5,000·8,000·8,000·12,000럭, 값은 베타 뒤 조정), 나룻배 800·작은 돛단배 1,200 상품 없앰. 보상 배 3은 상품이 아니라 boats.json unlock. 탭 화면 이름 tabLabels(UI 명세 15장). v3(11/3): 상품 19개, 기획/럭_상점.md v2.1·소품_목록.md v04.1",
  "currencyName": "럭",
  "priceFormat": "{n} 럭",
  "tabs": [
@@ -23,7 +23,7 @@
   {
    "id": "fx_shortcut",
    "tab": "travel",
-   "name": "지름길 지도",
+   "name": "지름길",
    "price": 50,
    "order": 1,
    "effect": {
@@ -37,7 +37,7 @@
   {
    "id": "fx_tailwind",
    "tab": "travel",
-   "name": "순풍 깃발",
+   "name": "순풍",
    "price": 40,
    "order": 2,
    "effect": {
@@ -60,7 +60,7 @@
   {
    "id": "face_02",
    "tab": "prop",
-   "name": "털 귀마개",
+   "name": "귀마개",
    "price": 300,
    "order": 2,
    "propId": "face_02",
@@ -69,7 +69,7 @@
   {
    "id": "cloth_05",
    "tab": "prop",
-   "name": "연두 여행 망토",
+   "name": "연두 망토",
    "price": 600,
    "order": 3,
    "propId": "cloth_05",
@@ -78,7 +78,7 @@
   {
    "id": "shoe_04",
    "tab": "prop",
-   "name": "초록 장화",
+   "name": "장화",
    "price": 300,
    "order": 4,
    "propId": "shoe_04",
@@ -87,7 +87,7 @@
   {
    "id": "shoe_05",
    "tab": "prop",
-   "name": "고양이 얼굴 슬리퍼",
+   "name": "고양이 슬리퍼",
    "price": 300,
    "order": 5,
    "propId": "shoe_05",
@@ -105,7 +105,7 @@
   {
    "id": "hand_11",
    "tab": "prop",
-   "name": "털실 벙어리장갑",
+   "name": "벙어리장갑",
    "price": 400,
    "order": 7,
    "propId": "hand_11",
@@ -114,7 +114,7 @@
   {
    "id": "hand_12",
    "tab": "prop",
-   "name": "작은 새 날개 팔",
+   "name": "새 날개",
    "price": 400,
    "order": 8,
    "propId": "hand_12",
@@ -123,7 +123,7 @@
   {
    "id": "hand_13",
    "tab": "prop",
-   "name": "잎사귀 장갑",
+   "name": "잎 장갑",
    "price": 400,
    "order": 9,
    "propId": "hand_13",
@@ -141,7 +141,7 @@
   {
    "id": "effect_01",
    "tab": "effect",
-   "name": "떨어지는 나뭇잎",
+   "name": "나뭇잎",
    "price": 200,
    "order": 1,
    "propId": "effect_01",
@@ -150,7 +150,7 @@
   {
    "id": "effect_02",
    "tab": "effect",
-   "name": "빗방울 + 발밑 물웅덩이",
+   "name": "빗방울",
    "price": 200,
    "order": 2,
    "propId": "effect_02",
@@ -159,7 +159,7 @@
   {
    "id": "effect_03",
    "tab": "effect",
-   "name": "별 반짝이",
+   "name": "반짝이",
    "price": 200,
    "order": 3,
    "propId": "effect_03",
@@ -168,7 +168,7 @@
   {
    "id": "effect_04",
    "tab": "effect",
-   "name": "물감 방울",
+   "name": "물감",
    "price": 200,
    "order": 4,
    "propId": "effect_04",
@@ -177,7 +177,7 @@
   {
    "id": "effect_05",
    "tab": "effect",
-   "name": "반딧불 빛",
+   "name": "반딧불",
    "price": 200,
    "order": 5,
    "propId": "effect_05",
@@ -189,7 +189,8 @@
    "name": "유람선",
    "price": 5000,
    "order": 1,
-   "boatId": "boat_cruise"
+   "boatId": "boat_cruise",
+   "recolor": true
   },
   {
    "id": "boat_speed",
@@ -197,7 +198,8 @@
    "name": "스피드보트",
    "price": 5000,
    "order": 2,
-   "boatId": "boat_speed"
+   "boatId": "boat_speed",
+   "recolor": true
   },
   {
    "id": "boat_pirate",
@@ -205,7 +207,8 @@
    "name": "해적선",
    "price": 5000,
    "order": 3,
-   "boatId": "boat_pirate"
+   "boatId": "boat_pirate",
+   "recolor": true
   },
   {
    "id": "boat_canopy",
@@ -213,23 +216,31 @@
    "name": "차양 보트",
    "price": 8000,
    "order": 4,
-   "boatId": "boat_canopy"
+   "boatId": "boat_canopy",
+   "recolor": true
   },
   {
    "id": "boat_atelier",
    "tab": "boat",
-   "name": "화가 오두막 돛배",
+   "name": "오두막 돛배",
    "price": 8000,
    "order": 5,
-   "boatId": "boat_atelier"
+   "boatId": "boat_atelier",
+   "recolor": true
   },
   {
    "id": "boat_starlight",
    "tab": "boat",
-   "name": "별빛 항해선",
+   "name": "별빛배",
    "price": 12000,
    "order": 6,
-   "boatId": "boat_starlight"
+   "boatId": "boat_starlight",
+   "recolor": true
   }
- ]
+ ],
+ "colorVariantItems": {
+  "from": "props.json colorVariants",
+  "tab": "prop",
+  "note": "props.json에 variantOf가 있는 소품을 상점 소품 탭에 '기본 소품 바로 뒤' 순서로 띄움. 기본 소품(requires)을 아직 못 얻었으면 숨김. shop.json에는 따로 적지 않음(값은 props unlock.price 하나)"
+ }
 }
