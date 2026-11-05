@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// 두발 보안 규칙. 방명록 쓰기·반응·제재·카카오 연결은 모두 Callable(관리자 권한)만 한다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // 닉네임 상한 20은 이상한 값만 막는 넉넉한 값이다. 화면 제한은 config profile.nicknameMax
+    function validProfile(data) {
+      return (!('nickname' in data)
+          || (data.nickname is string && data.nickname.size() > 0 && data.nickname.size() <= 20))
+        && (!('totalSteps' in data) || (data.totalSteps is int && data.totalSteps >= 0));
+    }
+
+    // 본인만. banUntil·deleteCount는 제재 기록이라 본인도 못 고치고, 문서 삭제는 deleteAccount로만 한다
+    match /users/{uid} {
+      allow read: if isSelf(uid);
+      allow create: if isSelf(uid)
+        && request.resource.data.keys().hasOnly(['nickname', 'totalSteps', 'createdAt'])
+        && (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time)
+        && validProfile(request.resource.data);
+      allow update: if isSelf(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'totalSteps'])
+        && validProfile(request.resource.data);
+
+      match /backup/{doc} {
+        allow read, write: if isSelf(uid) && doc == 'state';
+      }
+    }
+
+    // 로그인 읽기만. 숨긴 글은 쓴 사람만 볼 수 있다
+    match /guestbook/{postId} {
+      allow read: if signedIn()
+        && (resource.data.hidden == false || resource.data.uid == request.auth.uid);
+
+      // 누가 무엇을 눌렀는지·셈에 들어갔는지(counted)는 앱에 보이지 않는다. 내 반응은 readGuestbook이 준다
+      match /reactions/{reactionUid} {
+        allow read, write: if false;
+      }
+    }
+
+    // config/moderation은 앱이 받아 쓰는 글 검사에 쓴다
+    match /config/{doc} {
+      allow read: if signedIn();
+    }
+
+    // kakaoLinks·reviewQueue·stats와 그 밖의 모든 곳은 앱이 닿지 못한다
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
