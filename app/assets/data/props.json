@@ -29,7 +29,7 @@
    "shoe_01"
   ],
   "pending": false,
-  "note": "색은 디자인 기획이 고름(11장 가안). 채우면 id <기본 id>_c<n>, 이름 <색> <기본 이름>"
+  "note": "기준 문서 11장(11/6 Annie): 색 = 몸 색 견본, 이름 = 색을 떠올리게 하는 말 + 소품(세 낱말까지), id <기본 id>_c<n>, color = 견본 이름"
  },
  "props": [
   {
@@ -617,7 +617,8 @@
   {
    "id": "hat_01_c1",
    "slot": "hat",
-   "name": "하늘 베레모",
+   "name": "봄하늘 베레모",
+   "color": "하늘",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -633,7 +634,8 @@
   {
    "id": "hat_01_c2",
    "slot": "hat",
-   "name": "남청 베레모",
+   "name": "밤바다 베레모",
+   "color": "남청",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -649,7 +651,8 @@
   {
    "id": "hat_01_c3",
    "slot": "hat",
-   "name": "이끼 베레모",
+   "name": "이끼숲 베레모",
+   "color": "이끼",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -665,7 +668,8 @@
   {
    "id": "hat_02_c1",
    "slot": "hat",
-   "name": "남청 모자",
+   "name": "새벽 여행 모자",
+   "color": "남청",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -681,7 +685,8 @@
   {
    "id": "hat_02_c2",
    "slot": "hat",
-   "name": "이끼 모자",
+   "name": "풀밭 여행 모자",
+   "color": "이끼",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -697,7 +702,8 @@
   {
    "id": "hat_02_c3",
    "slot": "hat",
-   "name": "테라코타 모자",
+   "name": "노을 여행 모자",
+   "color": "테라코타",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -713,7 +719,8 @@
   {
    "id": "hat_04_c1",
    "slot": "hat",
-   "name": "흙 삿갓",
+   "name": "흙길 삿갓",
+   "color": "흙",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -729,7 +736,8 @@
   {
    "id": "hat_04_c2",
    "slot": "hat",
-   "name": "이끼 삿갓",
+   "name": "대숲 삿갓",
+   "color": "이끼",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -745,7 +753,8 @@
   {
    "id": "hat_04_c3",
    "slot": "hat",
-   "name": "남청 삿갓",
+   "name": "밤비 삿갓",
+   "color": "남청",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -761,7 +770,8 @@
   {
    "id": "hat_05_c1",
    "slot": "hat",
-   "name": "분홍 금관",
+   "name": "벚꽃 금관",
+   "color": "분홍",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -777,7 +787,8 @@
   {
    "id": "hat_05_c2",
    "slot": "hat",
-   "name": "하늘 금관",
+   "name": "서리 금관",
+   "color": "하늘",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -793,7 +804,8 @@
   {
    "id": "hat_05_c3",
    "slot": "hat",
-   "name": "라벤더 금관",
+   "name": "라일락 금관",
+   "color": "라벤더",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -809,7 +821,8 @@
   {
    "id": "cloth_01_c1",
    "slot": "cloth",
-   "name": "하늘 앞치마",
+   "name": "물빛 앞치마",
+   "color": "하늘",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -825,7 +838,8 @@
   {
    "id": "cloth_01_c2",
    "slot": "cloth",
-   "name": "분홍 앞치마",
+   "name": "복숭아 앞치마",
+   "color": "분홍",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -841,7 +855,8 @@
   {
    "id": "cloth_01_c3",
    "slot": "cloth",
-   "name": "연두 앞치마",
+   "name": "새싹 앞치마",
+   "color": "연두",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -857,7 +872,8 @@
   {
    "id": "cloth_02_c1",
    "slot": "cloth",
-   "name": "남청 여행복",
+   "name": "별밤 여행복",
+   "color": "남청",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -873,7 +889,8 @@
   {
    "id": "cloth_02_c2",
    "slot": "cloth",
-   "name": "테라코타 여행복",
+   "name": "벽돌길 여행복",
+   "color": "테라코타",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -889,7 +906,8 @@
   {
    "id": "cloth_02_c3",
    "slot": "cloth",
-   "name": "이끼 여행복",
+   "name": "숲길 여행복",
+   "color": "이끼",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -905,7 +923,8 @@
   {
    "id": "shoe_01_c1",
    "slot": "shoe",
-   "name": "테라코타 신발",
+   "name": "단풍 신발",
+   "color": "테라코타",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -921,7 +940,8 @@
   {
    "id": "shoe_01_c2",
    "slot": "shoe",
-   "name": "남청 신발",
+   "name": "밤길 신발",
+   "color": "남청",
    "unlock": {
     "kind": "shop",
     "price": 100,
@@ -937,7 +957,8 @@
   {
    "id": "shoe_01_c3",
    "slot": "shoe",
-   "name": "이끼 신발",
+   "name": "들풀 신발",
+   "color": "이끼",
    "unlock": {
     "kind": "shop",
     "price": 100,

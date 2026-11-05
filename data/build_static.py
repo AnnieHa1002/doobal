@@ -57,13 +57,17 @@ MATERIAL = {
 # 비어 있으면 색 소품을 만들지 않는다(앱은 상점·꾸미기에 안 보임).
 SW = {'크림': '#F3E4C4', '살구': '#F5C9A3', '분홍': '#EFC0BE', '라벤더': '#D3C6E6', '하늘': '#BCD9E8',
       '연두': '#CDE0AC', '이끼': '#9FAE7E', '흙': '#C4A07C', '테라코타': '#C9775A', '남청': '#7F8DB3'}  # palette body 견본
-# 11/6 디자인 기획 가안(기준 문서 11장): 몸 색 견본 이름·값 그대로
-COLOR_VARIANTS = {k: [(c, SW[c]) for c in v] for k, v in {
-    'hat_01': ['하늘', '남청', '이끼'], 'hat_02': ['남청', '이끼', '테라코타'], 'hat_04': ['흙', '이끼', '남청'],
-    'hat_05': ['분홍', '하늘', '라벤더'], 'cloth_01': ['하늘', '분홍', '연두'], 'cloth_02': ['남청', '테라코타', '이끼'],
-    'shoe_01': ['테라코타', '남청', '이끼']}.items()}
-# 색 소품 이름 = '<색> <줄기>'(두 낱말). 기본 이름이 두 낱말이면 줄기를 따로 둔다(가안, 디자인 기획 확인: 예 '남청 신발')
-VARIANT_STEM = {'hat_02': '모자', 'shoe_01': '신발'}
+# 기준 문서 11장(11/6 Annie): 색 = 몸 색 견본, 이름 = 색을 떠올리게 하는 말 + 소품(세 낱말까지). (색, 이름 앞말)
+COLOR_VARIANTS = {k: [(c, SW[c], w) for c, w in v] for k, v in {
+    'hat_01': [('하늘', '봄하늘'), ('남청', '밤바다'), ('이끼', '이끼숲')],
+    'hat_02': [('남청', '새벽'), ('이끼', '풀밭'), ('테라코타', '노을')],
+    'hat_04': [('흙', '흙길'), ('이끼', '대숲'), ('남청', '밤비')],
+    'hat_05': [('분홍', '벚꽃'), ('하늘', '서리'), ('라벤더', '라일락')],
+    'cloth_01': [('하늘', '물빛'), ('분홍', '복숭아'), ('연두', '새싹')],
+    'cloth_02': [('남청', '별밤'), ('테라코타', '벽돌길'), ('이끼', '숲길')],
+    'shoe_01': [('테라코타', '단풍'), ('남청', '밤길'), ('이끼', '들풀')]}.items()}
+# 이름 뒷말(기준 문서 11장 그대로): 갈색 신발은 '신발', 나머지는 기본 이름
+VARIANT_STEM = {'shoe_01': '신발'}
 COLOR_VARIANT_PRICE = 100
 
 
@@ -188,14 +192,15 @@ def build_props():
     base = {x['id']: x for x in props}
     for bid, colors in COLOR_VARIANTS.items():
         assert bid in MATERIAL, f'색을 바꿀 수 없는 소품: {bid}'
-        for n, (cname, hexv) in enumerate(colors, 1):
-            props.append({'id': f'{bid}_c{n}', 'slot': base[bid]['slot'], 'name': f"{cname} {VARIANT_STEM.get(bid, base[bid]['name'])}",
+        for n, (cname, hexv, word) in enumerate(colors, 1):
+            props.append({'id': f'{bid}_c{n}', 'slot': base[bid]['slot'], 'name': f"{word} {VARIANT_STEM.get(bid, base[bid]['name'])}", 'color': cname,
                           'unlock': {'kind': 'shop', 'price': COLOR_VARIANT_PRICE, 'requires': bid},
                           'status': 'mvp', 'variantOf': bid,
                           'material': {'catalogId': MATERIAL[bid][0], 'hex': hexv}})
     ids = [x['id'] for x in props]
     assert len(ids) == len(set(ids)), 'id 중복'
-    assert all(len(x['name'].split()) <= 2 for x in props if x['status'] == 'mvp'), '이름은 두 낱말 이내(14장)'
+    assert all(len(x['name'].split()) <= 2 for x in props if x['status'] == 'mvp' and 'variantOf' not in x), '이름은 두 낱말 이내(14장)'
+    assert all(len(x['name'].split()) <= 3 for x in props if 'variantOf' in x), '색 소품 이름은 세 낱말까지(11장, 11/6)'
     assert not {'hand_03', 'hand_04'} & set(ids), '11/4 빠진 소품(나침반·큰 팔레트)'
     mvp = [x for x in props if x['status'] == 'mvp' and 'variantOf' not in x]
     assert all(x['slot'] in SLOTS for x in mvp)
@@ -213,7 +218,7 @@ def build_props():
                                      'source': 'Codex 기본 소품 v07 recolor/materials_v07.json'},
                         'colorVariants': {'price': COLOR_VARIANT_PRICE, 'perBase': 3, 'bases': list(MATERIAL),
                                           'pending': not COLOR_VARIANTS,
-                                          'note': '색은 디자인 기획이 고름(11장 가안). 채우면 id <기본 id>_c<n>, 이름 <색> <기본 이름>'},
+                                          'note': '기준 문서 11장(11/6 Annie): 색 = 몸 색 견본, 이름 = 색을 떠올리게 하는 말 + 소품(세 낱말까지), id <기본 id>_c<n>, color = 견본 이름'},
                         'props': props})
     return props
 
