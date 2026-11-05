@@ -102,9 +102,10 @@ int openedChapter(int walks, Rules rules) {
 int? walksToNextChapter(int walks, int chapter, Rules rules) =>
     chapter >= rules.companionChapters ? null : walks % rules.companionWalksPerChapter;
 
-/// 동행 그림에서 숨길 층. 완결 소품을 건넨 뒤(마지막 장이 열린 뒤)에만 있다 (심 박사 안경)
-String? hiddenLayerOf(Companion companion, int chapter, Rules rules) =>
-    chapter >= rules.companionChapters ? companion.hideLayerOnFinale : null;
+/// 동행 그림에서 숨길 층 (심 박사 안경). 건네는 장면을 읽기 전에 사라지지 않게 마지막 장을 읽은 뒤에만 있다
+/// (11/6 Annie). [readChapter]는 읽은 장
+String? hiddenLayerOf(Companion companion, int readChapter, Rules rules) =>
+    readChapter >= rules.companionChapters ? companion.hideLayerOnFinale : null;
 
 /// 이야기 한 장을 가리키는 값 (알림 N3·걷기 기록 ‘읽기’)
 class StoryRef {

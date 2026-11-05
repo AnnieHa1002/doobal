@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/companion_engine.dart' show storyNoticeKey;
 import '../../domain/notification_policy.dart';
+import '../common/notice_dot.dart';
 import '../common/palette.dart';
 import '../companion/companion_screen.dart';
 import '../companion/meet_flow.dart';
@@ -219,7 +220,16 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const CompanionScreen()),
                 ),
-                child: const Text('동행'),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('동행'),
+                    if (ref.watch(unreadStoryProvider)) ...const [
+                      SizedBox(width: 6),
+                      NoticeDot(key: Key('debug-companion-dot')),
+                    ],
+                  ],
+                ),
               ),
               OutlinedButton(
                 onPressed: _busy ? null : () => _run('길 위 만남', _meetNext),

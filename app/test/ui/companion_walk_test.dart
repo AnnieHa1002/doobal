@@ -1,3 +1,4 @@
+import 'package:doobal/app/companion_providers.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/landmark.dart';
@@ -5,10 +6,13 @@ import 'package:doobal/domain/notification_policy.dart';
 import 'package:doobal/domain/route.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/companion/companion_screen.dart';
+import 'package:doobal/ui/debug/debug_screen.dart';
+import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../app/helpers.dart';
@@ -121,6 +125,60 @@ void main() {
     await pumpDoobal(tester, e, const DoobalApp());
     await settle(tester, () => find.text('새 소품을 얻었어요 · ${prop.name}').evaluate().isNotEmpty);
     await end(tester, e);
+  });
+
+  group('동행 입구의 점 값', () {
+    testWidgets('앱 밖에서 장이 열려도 앱으로 돌아온 동기화 뒤에 켜진다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await met(e, 'bright', walks: 3);
+        await withCompanion(e, 'bright');
+        for (var d = -3; d <= -1; d++) {
+          await session(e, d);
+        }
+      });
+      await pumpDoobal(tester, e, const DoobalApp());
+      await settle(tester, () => find.byType(RestScreen).evaluate().isNotEmpty);
+      final container = ProviderScope.containerOf(tester.element(find.byType(RestScreen)));
+      final unread = container.listen(unreadStoryProvider, (_, _) {});
+      addTearDown(unread.close);
+      await settle(tester, () => false, tries: 4);
+      expect(unread.read(), isFalse);
+
+      // 앱을 뒤로 보낸 동안 4번째 걷기가 인정된다
+      for (final s in [
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(s);
+      }
+      e.source.records.add(walkRecord(t1, 12, 100));
+      e.now = t1.add(const Duration(minutes: 13));
+      for (final s in [
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(s);
+      }
+      await settle(tester, () => unread.read());
+      expect(unread.read(), isTrue);
+      await end(tester, e);
+    });
+
+    testWidgets('개발 화면 입구에 점이 뜬다 (쉼터 입구는 T3)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => met(e, 'bright', walks: 4, chapter: 1));
+      await openOnTop(
+        tester,
+        e,
+        const DebugScreen(),
+        ready: () => find.byKey(const Key('debug-companion-dot')).evaluate().isNotEmpty,
+      );
+      expect(find.byKey(const Key('debug-companion-dot')), findsOneWidget);
+      await end(tester, e);
+    });
   });
 
   group('걷기 기록', () {

@@ -8,3 +8,8 @@ final companionsViewProvider = FutureProvider.autoDispose<CompanionsView>((ref) 
   final svc = await ref.watch(syncServiceProvider.future);
   return svc.companionsView();
 });
+
+/// 동행 입구의 알림 점: 안 읽은 장이 있는가. 쉼터 입구(T3)가 NoticeDot으로 읽는다
+final unreadStoryProvider = Provider.autoDispose<bool>(
+  (ref) => ref.watch(companionsViewProvider).value?.hasUnread ?? false,
+);

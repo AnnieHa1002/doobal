@@ -266,7 +266,7 @@ void main() {
       expect(walksToNextChapter(walks, rules.companionChapters, rules), isNull);
     });
 
-    test('hideLayerOnFinale는 마지막 장이 열린 뒤에만 값이 있다', () {
+    test('hideLayerOnFinale는 마지막 장을 읽은 뒤에만 값이 있다', () {
       final doctor = companionCatalog.byId('doctor')!;
       expect(hiddenLayerOf(doctor, rules.companionChapters - 1, rules), isNull);
       expect(hiddenLayerOf(doctor, rules.companionChapters, rules), doctor.hideLayerOnFinale);

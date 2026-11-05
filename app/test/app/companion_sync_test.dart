@@ -553,21 +553,28 @@ void main() {
       expect((row.unlockedUtc, row.seen), (1, true));
     });
 
-    test('심 박사만 8장이 열린 뒤 안경 층을 숨긴다', () async {
-      await walked('doctor', walksFor(rules.companionChapters - 1));
+    test('심 박사만 8장을 읽은 뒤 안경 층을 숨긴다 (열리기만 해서는 그대로, 11/6 Annie)', () async {
+      final last = rules.companionChapters;
+      await walked('doctor', walksFor(last));
       await e.svc.sync(_t1);
-      var view = await e.svc.companionsView();
-      expect(view.metById('doctor')!.hiddenLayer, isNull);
+      Future<String?> hidden(String id) async =>
+          (await e.svc.companionsView()).metById(id)!.hiddenLayer;
+      expect((await e.row('doctor')).chapter, last);
+      expect(await hidden('doctor'), isNull, reason: '열렸지만 아직 안 읽었다');
 
-      await e.svc.debugOpenNextChapter('doctor');
-      view = await e.svc.companionsView();
-      expect(view.metById('doctor')!.hiddenLayer, 'glasses');
+      await e.svc.markStoryRead('doctor', last - 1);
+      expect(await hidden('doctor'), isNull);
 
-      // 안경 층이 없는 동행은 8장이 열려도 숨길 것이 없다
+      await e.svc.markStoryRead('doctor', last);
+      expect(await hidden('doctor'), 'glasses');
+
+      await e.svc.sync(_t1.add(const Duration(minutes: 1)));
+      expect(await hidden('doctor'), 'glasses', reason: '다시 동기화해도 그대로');
+
+      // 안경 층이 없는 동행은 8장을 읽어도 숨길 것이 없다
       await e.db.into(e.db.companions).insert(CompanionsCompanion.insert(
-          companionId: 'rest', metUtc: 2, chapter: Value(rules.companionChapters)));
-      view = await e.svc.companionsView();
-      expect(view.metById('rest')!.hiddenLayer, isNull);
+          companionId: 'rest', metUtc: 2, chapter: Value(last), readChapter: Value(last)));
+      expect(await hidden('rest'), isNull);
     });
 
     test('개발 화면으로 8장을 열어도 다음 동기화에 소품이 들어온다', () async {
@@ -576,6 +583,77 @@ void main() {
       await e.svc.debugOpenNextChapter('bright');
       final report = await e.svc.sync(_t1);
       expect(report.newProps.map((p) => p.id), [companionCatalog.byId('bright')!.finaleProp]);
+    });
+  });
+
+  group('안 읽은 장', () {
+    Future<CompanionsView> view() => e.svc.companionsView();
+
+    test('장이 열리면 생기고 읽으면 없어진다. 프롤로그뿐이면 없다', () async {
+      await e.met('bright');
+      expect((await view()).hasUnread, isFalse);
+      await e.svc.walkWith('bright', _t0);
+      for (var d = 1; d <= 4; d++) {
+        await e.walkOn(d);
+      }
+      var v = await view();
+      expect(v.hasUnread, isTrue);
+      expect(v.metById('bright')!.isUnread(1), isTrue);
+      expect(v.metById('bright')!.isUnread(0), isFalse);
+      expect(v.metById('bright')!.isUnread(2), isFalse, reason: '안 열린 장은 아니다');
+
+      await e.svc.markStoryRead('bright', 1);
+      v = await view();
+      expect(v.hasUnread, isFalse);
+
+      await e.svc.sync(_t0.add(const Duration(days: 4, hours: 4)));
+      expect((await view()).hasUnread, isFalse, reason: '다시 동기화해도 다시 안 켜진다');
+    });
+
+    test('뒤 장을 읽으면 앞 장도 읽은 것으로 본다', () async {
+      await e.db.into(e.db.companions).insert(CompanionsCompanion.insert(
+          companionId: 'rest', metUtc: 1, chapter: const Value(3)));
+      expect((await view()).metById('rest')!.isUnread(2), isTrue);
+      await e.svc.markStoryRead('rest', 3);
+      final m = (await view()).metById('rest')!;
+      expect((m.hasUnread, m.isUnread(2)), (false, false));
+    });
+
+    test('만남 흐름을 안 끝낸 동행은 세지 않는다', () async {
+      await e.db.into(e.db.companions).insert(CompanionsCompanion.insert(
+          companionId: 'doctor', metUtc: 1, readChapter: const Value(-1)));
+      expect((await view()).hasUnread, isFalse);
+    });
+
+    group('먼저 볼 동행', () {
+      Future<void> withChapter(String id, int chapter, {int read = 0, int at = 1}) => e.db
+          .into(e.db.companions)
+          .insert(CompanionsCompanion.insert(
+              companionId: id, metUtc: at, chapter: Value(chapter), readChapter: Value(read)));
+
+      test('지금 걷는 동행에 있으면 그대로 둔다', () async {
+        await withChapter('bright', 1);
+        await withChapter('rest', 1, at: 2);
+        await e.svc.walkWith('rest', _t0);
+        expect((await view()).unreadFocus, isNull);
+      });
+
+      test('지금 걷는 동행에 없고 다른 동행에 있으면 그 동행', () async {
+        await withChapter('bright', 1, read: 1);
+        await withChapter('rest', 1, at: 2);
+        await e.svc.walkWith('bright', _t0);
+        expect((await view()).unreadFocus, 'rest');
+      });
+
+      test('혼자 걷는 중이면 마지막 동행 기준', () async {
+        await withChapter('bright', 1, read: 1);
+        await withChapter('rest', 2, at: 2);
+        await e.svc.walkWith('rest', _t0);
+        await e.svc.walkWith(null, _t1);
+        expect((await view()).unreadFocus, isNull);
+        await e.svc.markStoryRead('rest', 2);
+        expect((await view()).unreadFocus, isNull, reason: '안 읽은 장이 없다');
+      });
     });
   });
 

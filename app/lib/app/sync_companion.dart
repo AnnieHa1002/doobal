@@ -27,8 +27,14 @@ class MetCompanion {
   /// 함께 인정된 걷기 1번 수
   final int walksTogether;
 
-  /// 동행 그림에서 숨길 층 (완결 소품을 건넨 심 박사의 안경). 없으면 null. 그림을 얹을 때(T2c) 쓴다
+  /// 동행 그림에서 숨길 층 (완결 장을 읽은 뒤 심 박사의 안경). 없으면 null. 그림을 얹을 때(T2c) 쓴다
   final String? hiddenLayer;
+
+  /// 아직 안 읽은 장이 있는가 (읽은 장은 하나의 숫자라 뒤 장을 읽으면 앞 장도 읽은 것으로 본다)
+  bool get hasUnread => chapter > readChapter;
+
+  /// [no]장이 안 읽은 장인가
+  bool isUnread(int no) => no > readChapter && no <= chapter;
 }
 
 /// 걷기 한 번의 이야기 값과 그 동행 (걷기 기록)
@@ -59,6 +65,16 @@ class CompanionsView {
       if (m.companion.id == id) return m;
     }
     return null;
+  }
+
+  /// 안 읽은 장이 있는가 (동행 입구의 알림 점)
+  bool get hasUnread => met.any((m) => m.hasUnread);
+
+  /// 화면을 열 때 먼저 볼 동행: 지금 걷는(혼자면 마지막) 동행에 안 읽은 장이 없고 다른 동행에 있으면 그 동행.
+  /// 칸을 누르면 함께 걷는 동행이 바뀌므로, 점을 따라 들어와서 바꾸지 않고 읽을 수 있게 한다. 없으면 null
+  String? get unreadFocus {
+    if (metById(walkingWith ?? lastWith)?.hasUnread ?? false) return null;
+    return met.where((m) => m.hasUnread).firstOrNull?.companion.id;
   }
 }
 
@@ -236,7 +252,7 @@ extension CompanionSync on SyncService {
             chapter: r.chapter,
             readChapter: r.readChapter,
             walksTogether: r.walksTogether,
-            hiddenLayer: hiddenLayerOf(c, r.chapter, rules),
+            hiddenLayer: hiddenLayerOf(c, r.readChapter, rules),
           ),
     ];
     final stints = await _companionStints();

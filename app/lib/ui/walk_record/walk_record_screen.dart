@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/companion_providers.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/companion.dart';
@@ -92,6 +93,8 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
       final story = await svc.walkStory(widget.start, widget.end);
       // 기다리는 동안 화면을 떠났으면 ref를 더 쓰지 않는다
       if (!mounted) return;
+      // 방금 동기화로 장이 열렸을 수 있다 (동행 입구의 점)
+      if (!widget.review) ref.invalidate(companionsViewProvider);
       final snap = widget.review
           ? await ref.read(snapshotProvider.future)
           : await ref.refresh(snapshotProvider.future);
