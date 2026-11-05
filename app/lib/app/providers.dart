@@ -68,7 +68,7 @@ final badgeCatalogProvider = FutureProvider<BadgeCatalog>((ref) => loadBadgeCata
 /// 방명록 걸음 숫자 (milestones.json)
 final milestonesProvider = FutureProvider<List<int>>((ref) => loadMilestones());
 
-/// 쉼터 테마 (themes/camp.json)
+/// 쉼터 테마 (themes/camp_wide.json)
 final campThemeProvider = FutureProvider<CampTheme>((ref) => loadCampTheme());
 
 /// 지도 위경도 → 캔버스 px (assets/map/ui_map_projection_v01.json)

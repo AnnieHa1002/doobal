@@ -1478,10 +1478,15 @@
     "deckAboveWater": 75
   },
   "camp": {
-    "y": 1132,
-    "fireX": 457,
-    "fireY": 791,
-    "frameSeconds": 0.18
+    "note": "넓은 그림(scene.json rest.files) 전 v11 자리. camp_wide.json 물건 자리에 땅이 맞도록 뒤판을 올리고, 앞판은 통나무가 캔버스 불꽃 아래에 오게 둠. 그림 px",
+    "backY": 906,
+    "frontY": 1212,
+    "fill": {
+      "source": [140, 880, 900, 320],
+      "ridgeY": [1776, 1752, 1764],
+      "stretchFromY": 1000,
+      "note": "빈 땅: 뒤판 아래쪽(stretchFromY부터)을 화면 아래까지 늘이고, 오른쪽은 맨땅(source)을 깔고 뒤판을 뒤집어 잇는다. ridgeY는 오른쪽 땅 윗선(시작·가운데·끝)"
+    }
   },
   "sky": {
     "cloudSpeed": 4,

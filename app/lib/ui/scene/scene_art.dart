@@ -13,9 +13,12 @@ import 'scene_painter.dart';
 
 /// 승인된 v10·v11의 파일/배치 목록. 옛 중간 들판 config와 분리한다.
 class SceneArt {
-  SceneArt(this.data, this.images, {this.boat});
+  SceneArt(this.data, this.images, {this.boat, this.wideCamp});
   final Map<String, dynamic> data;
   final Map<String, ui.Image> images;
+
+  /// 넓은 캠프 그림 4장. 아직 납품 전이면 null이고 v11 캠프 + 빈 땅으로 그린다
+  final WideCampImages? wideCamp;
 
   /// 고른 배의 판 그림. 파일이 아직 없으면 null이고 옛 배 한 장(prop_boat_01)으로 그린다
   final BoatImages? boat;
@@ -30,6 +33,7 @@ class SceneArt {
     double pixelRatio, {
     bool onSea = false,
     BoatArt? boat,
+    double? restFarWidthPx,
   }) async {
     final data = jsonDecode(
       await bundle.loadString('assets/data/scene_art.json'),
@@ -38,24 +42,32 @@ class SceneArt {
     final region = (data['far'] as Map).containsKey(look.backdrop)
         ? look.backdrop
         : 'capital';
-    final keys = <String>{...(data['far'][region] as List).cast<String>()};
+    final farParts = (data['far'][region] as List).cast<String>();
+    // 쉼터는 후경이 앞쪽만 보인다 (restFarWidthPx: 보일 수 있는 폭, 그림 px)
+    final keys = <String>{
+      ...restFarWidthPx == null
+          ? farParts
+          : farParts.take(
+              (restFarWidthPx / ((data['portrait']['farWidth'] as num) / farParts.length))
+                  .ceil()
+                  .clamp(1, farParts.length),
+            ),
+    };
     keys.addAll(
       assets.keys.where((k) => k.startsWith('sky_') && !k.contains('balloon')),
     );
     keys.addAll(['paper_grain_v01.png']);
+    WideCampImages? wide;
     if (rest) {
-      keys.addAll([
-        'bg_rest_camp_back_${look.season.name}_preview',
-        'bg_rest_camp_front_${look.season.name}_preview',
-      ]);
+      wide = await WideCampImages.load(bundle, scale * pixelRatio, data);
       // 완성 PNG를 중복 보관하지 않고 본판과 회색 풀에만 계절색을 입힌다.
-      keys.removeWhere((k) => k.endsWith('_preview'));
       keys.addAll([
-        'bg_rest_camp_back_v11_clean.png',
-        'bg_rest_camp_back_landscape_v12_clean.png',
-        'bg_rest_camp_back_grass_v11_clean.png',
-        'bg_rest_camp_front_v11_clean.png',
-        'bg_rest_camp_front_grass_v11_clean.png',
+        if (wide == null) ...[
+          'bg_rest_camp_back_v11_clean.png',
+          'bg_rest_camp_back_grass_v11_clean.png',
+          'bg_rest_camp_front_v11_clean.png',
+          'bg_rest_camp_front_grass_v11_clean.png',
+        ],
         for (final n in ['01', '02', '03'])
           'fx_campfire_flame_${n}_v11_clean.png',
       ]);
@@ -124,12 +136,13 @@ class SceneArt {
           codec.dispose();
         }
       }
-      return SceneArt(data, images, boat: boatImages);
+      return SceneArt(data, images, boat: boatImages, wideCamp: wide);
     } catch (_) {
       for (final image in images.values) {
         image.dispose();
       }
       boatImages?.dispose();
+      wide?.dispose();
       rethrow;
     }
   }
@@ -190,6 +203,83 @@ class SceneArt {
       image.dispose();
     }
     boat?.dispose();
+    wideCamp?.dispose();
+  }
+}
+
+/// 넓은 캠프 그림 4장 (scene.json rest.files). 파일 이름과 세로 자리는 scene.json이 정하고,
+/// 모두 있어야 쓴다. WebP를 먼저 찾고 없으면 적힌 PNG를 찾는다
+class WideCampImages {
+  WideCampImages(this.back, this.backGrass, this.front, this.frontGrass, this.backY, this.frontY, this.widthPx);
+
+  final ui.Image back, backGrass, front, frontGrass;
+
+  /// 뒤판·앞판의 세로 자리와 장면 폭 (그림 px)
+  final double backY, frontY, widthPx;
+
+  static const dir = 'assets/backgrounds/v11';
+
+  static Future<WideCampImages?> load(
+    AssetBundle bundle,
+    double pixelsPerArtPx,
+    Map<String, dynamic> data,
+  ) async {
+    final rest = (jsonDecode(await bundle.loadString('assets/data/scene.json')) as Map)['rest'] as Map;
+    final files = rest['files'] as Map;
+    final widthPx = (rest['widthPx'] as num).toDouble();
+    final found = <ByteData>[];
+    for (final key in ['back', 'backGrass', 'front', 'frontGrass']) {
+      final name = files[key] as String;
+      final bytes = await SceneArt._assetOrNull(bundle, '$dir/${name.replaceAll('.png', '.webp')}') ??
+          await SceneArt._assetOrNull(bundle, '$dir/$name');
+      if (bytes == null) return null;
+      found.add(bytes);
+    }
+    final width = math
+        .min(
+          widthPx,
+          math.min(
+            (widthPx * pixelsPerArtPx).ceilToDouble(),
+            (data['sky']['maxDecodeWidth'] as num).toDouble(),
+          ),
+        )
+        .round()
+        .clamp(1, 4096);
+    final decoded = <ui.Image>[];
+    try {
+      for (final bytes in found) {
+        final codec = await ui.instantiateImageCodec(
+          bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+          targetWidth: width,
+        );
+        try {
+          decoded.add((await codec.getNextFrame()).image);
+        } finally {
+          codec.dispose();
+        }
+      }
+    } catch (_) {
+      for (final image in decoded) {
+        image.dispose();
+      }
+      rethrow;
+    }
+    return WideCampImages(
+      decoded[0],
+      decoded[1],
+      decoded[2],
+      decoded[3],
+      (files['backY'] as num).toDouble(),
+      (files['frontY'] as num).toDouble(),
+      widthPx,
+    );
+  }
+
+  void dispose() {
+    back.dispose();
+    backGrass.dispose();
+    front.dispose();
+    frontGrass.dispose();
   }
 }
 
@@ -212,9 +302,13 @@ class BoatImages {
 /// 짧은 폰·태블릿에서도 길과 캐릭터 발이 화면 아래로 빠지지 않는다.
 class SceneArtLayout {
   SceneArtLayout(this.art, this.size, this.mode, this.onSea, this.camp) {
-    final key = size.width > size.height ? 'landscape' : 'portrait';
+    final theme = mode == SceneMode.rest ? camp : null;
+    final key = theme == null && size.width > size.height ? 'landscape' : 'portrait';
     config = art.data[key] as Map<String, dynamic>;
-    scale = key == 'portrait'
+    restK = theme?.scaleFor(size.width, size.height);
+    scale = restK != null
+        ? restK! * theme!.refW / n('width')
+        : key == 'portrait'
         ? size.width / n('width')
         : size.height / n('height');
     dy = size.height - n('height') * scale;
@@ -226,17 +320,19 @@ class SceneArtLayout {
   final CampTheme? camp;
   late final Map<String, dynamic> config;
   late final double scale, dy;
+
+  /// 쉼터 테마가 있을 때 기기 pt ÷ 장면 pt
+  late final double? restK;
   double n(String key) => (config[key] as num).toDouble();
   double y(double value) => dy + value * scale;
   bool get rest => mode == SceneMode.rest;
   bool get sea => onSea && !rest;
-  double get figureHeight => n('figureHeight') * scale;
+  double get figureHeight =>
+      restK != null ? camp!.character.heightPt * restK! : n('figureHeight') * scale;
   Offset get foot {
-    if (rest && camp != null) {
-      return Offset(
-        camp!.character.x * size.width,
-        camp!.character.footY * size.height,
-      );
+    if (restK != null) {
+      final c = camp!.character;
+      return Offset(c.footX * restK!, size.height - (camp!.refH - c.footY) * restK!);
     }
     final above = sea
         ? (art.data['boat']['deckAboveWater'] as num).toDouble()
@@ -274,10 +370,18 @@ class SceneArtHost extends StatefulWidget {
     required this.builder,
     this.onSea = false,
     this.boat,
+    this.camp,
+    this.restFarWidth,
   });
   final SceneLook look;
   final SceneMode mode;
   final Size size;
+
+  /// 쉼터 테마. 있으면 그림 배율을 장면 배율로 잡는다
+  final CampTheme? camp;
+
+  /// 쉼터 후경이 보일 수 있는 폭 (기기 pt)
+  final double? restFarWidth;
 
   /// 고른 배. 바뀌면 배 그림을 다시 읽는다
   final BoatArt? boat;
@@ -312,7 +416,10 @@ class _SceneArtHostState extends State<SceneArtHost> {
   void _load() {
     final bundle = DefaultAssetBundle.of(context);
     final ratio = MediaQuery.devicePixelRatioOf(context);
-    final scale = widget.size.width > widget.size.height
+    final theme = widget.mode == SceneMode.rest ? widget.camp : null;
+    final scale = theme != null
+        ? theme.scaleFor(widget.size.width, widget.size.height) * theme.refW / 1170
+        : widget.size.width > widget.size.height
         ? widget.size.height / 1170
         : widget.size.width / 1170;
     final key = (
@@ -339,6 +446,7 @@ class _SceneArtHostState extends State<SceneArtHost> {
       ratio,
       onSea: widget.onSea,
       boat: widget.boat,
+      restFarWidthPx: widget.restFarWidth == null ? null : widget.restFarWidth! / scale,
     ).then(
       (art) {
         if (!mounted || generation != _generation) {

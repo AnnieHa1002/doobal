@@ -26,6 +26,7 @@ class SceneArtPainter extends CustomPainter {
     required this.elapsed,
     this.camp,
     this.seed = 'default',
+    this.layoutSize,
   });
   final SceneArt art;
   final SceneLook look;
@@ -36,11 +37,14 @@ class SceneArtPainter extends CustomPainter {
   final ScenePass pass;
   final CampTheme? camp;
   final String seed;
+
+  /// 배치 기준 화면. 쉼터 층은 화면보다 넓게 그리므로 따로 준다 (없으면 그리는 크기)
+  final Size? layoutSize;
   late Canvas _canvas;
   late SceneArtLayout _layout;
   late Size _size;
   double get _k => _layout.scale;
-  double get _groundScale => _size.width > _size.height ? .78 : 1;
+  double get _groundScale => _layout.size.width > _layout.size.height ? .78 : 1;
   Map get _assets => art.data['assets'] as Map;
   double _number(String key) => (art.data[key] as num).toDouble();
 
@@ -48,37 +52,43 @@ class SceneArtPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     _canvas = canvas;
     _size = size;
-    _layout = SceneArtLayout(art, size, mode, onSea, camp);
+    _layout = SceneArtLayout(art, layoutSize ?? size, mode, onSea, camp);
     canvas.save();
     canvas.clipRect(Offset.zero & size);
-    if (pass == ScenePass.background) {
-      _sky();
-      _tinted(() {
-        _far();
-        if (_layout.rest) {
-          if (camp != null) _camp(false);
-        } else if (_layout.sea) {
-          _boat();
-        } else {
-          _land();
-        }
-      });
-      if (_layout.sea) _boatLight();
-    } else {
-      _tinted(() {
-        if (_layout.rest) {
-          if (camp != null) _camp(true);
-        } else if (_layout.sea) {
-          _boatFront();
-          _water();
-        } else {
-          _tile(
-            'bg_front_${look.season.name}_v11_clean.png',
-            _layout.n('frontY'),
-            1,
-          );
-        }
-      });
+    switch (pass) {
+      case ScenePass.restFar:
+        _sky();
+        _tinted(_far);
+      case ScenePass.restBack:
+        _tinted(_campBack);
+      case ScenePass.restFront:
+        _tinted(_campFront);
+      case ScenePass.restFire:
+        _tinted(_campFire);
+      case ScenePass.foreground:
+        _tinted(() {
+          if (_layout.sea) {
+            _boatFront();
+            _water();
+          } else if (!_layout.rest) {
+            _tile(
+              'bg_front_${look.season.name}_v11_clean.png',
+              _layout.n('frontY'),
+              1,
+            );
+          }
+        });
+      case ScenePass.background || ScenePass.all:
+        _sky();
+        _tinted(() {
+          _far();
+          if (_layout.sea) {
+            _boat();
+          } else if (!_layout.rest) {
+            _land();
+          }
+        });
+        if (_layout.sea) _boatLight();
     }
     canvas.restore();
   }
@@ -324,38 +334,143 @@ class SceneArtPainter extends CustomPainter {
   void _water() =>
       _tile('bg_near_water_v11_clean.png', _layout.n('pathY') - 279 * _groundScale, 1);
 
-  void _camp(bool front) {
-    final config = art.data['camp'] as Map;
-    if (!front && _size.width > _size.height) {
-      const key = 'bg_rest_camp_back_landscape_v12_clean.png';
-      final canvas = _assets[key]['canvas'] as List;
-      final h = _size.width * (canvas[1] as num) / (canvas[0] as num);
-      _draw(key, Rect.fromLTWH(0, _size.height - h, _size.width, h));
+  /// 캠프 뒤판: 넓은 그림이 있으면 그것, 없으면 v11을 왼쪽에 두고 나머지는 빈 땅
+  void _campBack() {
+    if (art.wideCamp case final wide?) {
+      _wide(wide.back, wide.backY, wide);
+      _wide(wide.backGrass, wide.backY, wide, paint: _grassPaint());
       return;
     }
-    final k = _k * _groundScale;
-    final y = _size.width > _size.height ? _size.height - 1400 * k : _layout.y((config['y'] as num).toDouble());
-    if (front) {
-      final frame = (elapsed / (config['frameSeconds'] as num)).floor() % 3 + 1;
-      final key = 'fx_campfire_flame_0${frame}_v11_clean.png';
-      _draw(
-        key,
-        Rect.fromLTWH(
-          (_size.width - 1170 * k) / 2 + (config['fireX'] as num) * k,
-          y + (config['fireY'] as num) * k,
-          256 * k,
-          384 * k,
-        ),
+    _campFill();
+    _v11Back();
+  }
+
+  /// v11 뒤판과 풀. 아래쪽을 늘여 화면 아래까지 닿게 한다 (뒤판을 올려 둔 만큼)
+  void _v11Back() {
+    final config = art.data['camp'] as Map;
+    final top = _layout.y((config['backY'] as num).toDouble());
+    final from = ((config['fill'] as Map)['stretchFromY'] as num).toDouble();
+    for (final (key, paint) in [
+      ('bg_rest_camp_back_v11_clean.png', Paint()),
+      ('bg_rest_camp_back_grass_v11_clean.png', _grassPaint()),
+    ]) {
+      final image = art.images[key];
+      if (image == null) continue;
+      final canvas = (_assets[key] as Map)['canvas'] as List;
+      final w = (canvas[0] as num).toDouble(), h = (canvas[1] as num).toDouble();
+      final imageScale = image.width / w;
+      paint.filterQuality = FilterQuality.medium;
+      final split = top + from * _k;
+      _canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), from * imageScale),
+        Rect.fromLTWH(0, top, w * _k, from * _k),
+        paint,
+      );
+      _canvas.drawImageRect(
+        image,
+        Rect.fromLTRB(0, from * imageScale, image.width.toDouble(), h * imageScale),
+        // 이음매가 안 보이게 살짝 겹친다
+        Rect.fromLTRB(0, split - .5, w * _k, math.max(_layout.size.height, top + h * _k)),
+        paint,
       );
     }
-    final id = front ? 'front' : 'back';
-    final rect = Rect.fromLTWH(
-      (_size.width - 1170 * k) / 2,
-      y,
-      1170 * k,
-      1400 * k,
+  }
+
+  void _campFront() {
+    if (art.wideCamp case final wide?) {
+      _wide(wide.front, wide.frontY, wide);
+      _wide(wide.frontGrass, wide.frontY, wide, paint: _grassPaint());
+      return;
+    }
+    final rect = _v11Rect(((art.data['camp'] as Map)['frontY'] as num).toDouble());
+    _draw('bg_rest_camp_front_v11_clean.png', rect);
+    _draw('bg_rest_camp_front_grass_v11_clean.png', rect, paint: _grassPaint());
+  }
+
+  /// 불꽃 지금 프레임. 자리와 프레임 시간은 테마가 정한다
+  void _campFire() {
+    final theme = camp;
+    final restK = _layout.restK;
+    if (theme == null || restK == null) return;
+    final fire = theme.campfire;
+    final frame = (elapsed / fire.frameSec).floor() % fire.frames + 1;
+    _draw(
+      'fx_campfire_flame_0${frame}_v11_clean.png',
+      Rect.fromLTWH(
+        fire.box.x * restK,
+        _size.height - (theme.refH - fire.box.y) * restK,
+        fire.box.w * restK,
+        fire.box.h * restK,
+      ),
     );
-    _draw('bg_rest_camp_${id}_v11_clean.png', rect);
+  }
+
+  /// 지금 v11 캠프 그림의 자리 (왼쪽에 붙인다)
+  Rect _v11Rect(double artY) {
+    final spec = _assets['bg_rest_camp_back_v11_clean.png'] as Map;
+    return Rect.fromLTWH(
+      0,
+      _layout.y(artY),
+      (spec['canvas'][0] as num) * _k,
+      (spec['canvas'][1] as num) * _k,
+    );
+  }
+
+  /// 빈 땅 (넓은 그림이 오면 안 쓴다): v11 오른쪽에 맨땅을 깔고 뒤판을 좌우로 뒤집어 이어 붙여
+  /// 경계를 없앤다. 뒤집은 이정표는 땅 윗선(ridgeY)에서 잘린다
+  void _campFill() {
+    const back = 'bg_rest_camp_back_v11_clean.png';
+    final image = art.images[back];
+    if (image == null) return;
+    final config = art.data['camp'] as Map;
+    final fill = config['fill'] as Map;
+    final s = (fill['source'] as List).cast<num>();
+    final ridge = (fill['ridgeY'] as List).cast<num>();
+    final imageScale = image.width / ((_assets[back] as Map)['canvas'][0] as num);
+    final seam = ((_assets[back] as Map)['canvas'][0] as num) * _k;
+    final width = _size.width, bottom = _size.height;
+    final top0 = _layout.y(ridge[0].toDouble());
+    final top1 = _layout.y(ridge[1].toDouble());
+    final top2 = _layout.y(ridge[2].toDouble());
+    final right = Path()
+      ..moveTo(seam, top0)
+      ..quadraticBezierTo((seam + width) / 2, top1 * 2 - (top0 + top2) / 2, width, top2)
+      ..lineTo(width, bottom)
+      ..lineTo(seam, bottom)
+      ..close();
+    // 맨땅
+    _canvas.save();
+    _canvas.clipPath(right);
+    _canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(s[0] * imageScale, s[1] * imageScale, s[2] * imageScale, s[3] * imageScale),
+      Rect.fromLTRB(seam, math.min(top0, top1), width, bottom),
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+    _canvas.restore();
+    // 좌우로 뒤집기 (풀까지)
+    _canvas.save();
+    _canvas.clipPath(right);
+    _canvas.translate(seam * 2, 0);
+    _canvas.scale(-1, 1);
+    _v11Back();
+    _canvas.restore();
+  }
+
+  /// 넓은 그림 한 장: 장면 폭에 맞추고 세로는 비율대로
+  void _wide(ui.Image image, double artY, WideCampImages wide, {Paint? paint}) {
+    final w = wide.widthPx * _k;
+    _canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromLTWH(0, _layout.y(artY), w, w * image.height / image.width),
+      (paint ?? Paint())..filterQuality = FilterQuality.medium,
+    );
+  }
+
+  /// 회색조 풀에 계절색을 입히는 칠
+  Paint _grassPaint() {
     const palettes = {
       Season.spring: Color(0xffb5c98a),
       Season.summer: Color(0xff6f8f4e),
@@ -363,33 +478,13 @@ class SceneArtPainter extends CustomPainter {
       Season.winter: Color(0xffd8d6cc),
     };
     final c = palettes[look.season]!;
-    _draw(
-      'bg_rest_camp_${id}_grass_v11_clean.png',
-      rect,
-      paint: Paint()
-        ..colorFilter = ColorFilter.matrix([
-          c.r * 255 / 150,
-          0,
-          0,
-          0,
-          0,
-          0,
-          c.g * 255 / 150,
-          0,
-          0,
-          0,
-          0,
-          0,
-          c.b * 255 / 150,
-          0,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-        ]),
-    );
+    return Paint()
+      ..colorFilter = ColorFilter.matrix([
+        c.r * 255 / 150, 0, 0, 0, 0,
+        0, c.g * 255 / 150, 0, 0, 0,
+        0, 0, c.b * 255 / 150, 0, 0,
+        0, 0, 0, 1, 0,
+      ]);
   }
 
   void _sky() {
@@ -541,8 +636,17 @@ class SceneArtPainter extends CustomPainter {
       old.onSea != onSea ||
       old.pass != pass ||
       old.distanceM != distanceM ||
-      old.elapsed != elapsed ||
       old.camp != camp ||
       old.seed != seed ||
-      old.rules != rules;
+      old.rules != rules ||
+      old.layoutSize != layoutSize ||
+      _elapsedChanged(old);
+
+  /// 쉼터 판은 시간이 흘러도 그대로, 불꽃은 프레임이 바뀔 때만 다시 그린다
+  bool _elapsedChanged(SceneArtPainter old) => switch (pass) {
+        ScenePass.restBack || ScenePass.restFront => false,
+        ScenePass.restFire when camp != null =>
+          (old.elapsed / camp!.campfire.frameSec).floor() != (elapsed / camp!.campfire.frameSec).floor(),
+        _ => old.elapsed != elapsed,
+      };
 }

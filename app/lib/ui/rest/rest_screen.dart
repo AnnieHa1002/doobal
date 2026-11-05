@@ -5,13 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/camp_theme.dart';
+import '../../domain/rest_camera.dart';
 import '../../domain/rules.dart';
 import '../../domain/sketch.dart';
 import '../album/album_screen.dart';
 import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
-import '../common/name_tag.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
 import '../debug/debug_screen.dart';
@@ -23,8 +23,10 @@ import '../scene/scene_view.dart';
 import '../settings/settings_screen.dart';
 import '../walking/walking_screen.dart';
 import 'prop_wiggle.dart';
+import 'rest_gestures.dart';
 
-/// 쉼터 (홈, 루트 화면). 하늘 → 후경 → 캠프 → 캐릭터 → 물건·버튼 → 상태 알약.
+/// 쉼터 (홈, 루트 화면). 장면(하늘 → 후경 → 캠프 뒤 → 물건 → 정령 → 동행 → 캠프 앞 → 불꽃)은 화면 폭의
+/// 1.5배이고 좌우로 민다. 프로필·설정·상태 알약·출발하기는 고정이다 (캔버스 2-2).
 /// 물건은 3~6초마다 하나씩 살짝 흔들린다 (알림 점이 있는 물건 우선, 연출 값은 prop_wiggle.dart)
 class RestScreen extends ConsumerStatefulWidget {
   const RestScreen({super.key});
@@ -34,10 +36,14 @@ class RestScreen extends ConsumerStatefulWidget {
 }
 
 /// 흔들림 id: 캠프 물건은 테마의 id(지도·배낭·노트), 방명록 표지판은 이것
-const _guestbookSignId = 'guestbook';
+const _guestbookWiggleId = 'guestbook';
+
+/// 그림으로 서는 물건 (수레·표지판·동행은 따로)
+const _artObjects = {'map', 'backpack', 'note'};
 
 class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProviderStateMixin {
   late final PropWiggler _wiggler;
+  final _camera = ValueNotifier(const RestCamera());
 
   @override
   void initState() {
@@ -48,6 +54,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
   @override
   void dispose() {
     _wiggler.dispose();
+    _camera.dispose();
     super.dispose();
   }
 
@@ -64,8 +71,8 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     }
     final sign = snap.guestbookTicket != null;
     return (
-      all: [for (final o in camp.objects) o.id, if (sign) _guestbookSignId],
-      notice: {if (_hasNew(snap)) 'backpack', if (sign) _guestbookSignId},
+      all: [..._artObjects, if (sign) _guestbookWiggleId],
+      notice: {if (_hasNew(snap)) 'backpack', if (sign) _guestbookWiggleId},
     );
   }
 
@@ -93,30 +100,43 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
 
     return Scaffold(
       body: LayoutBuilder(builder: (context, box) {
+        final stage = RestGeometry(camp, rules.rest, box.maxWidth, box.maxHeight);
+        final ticket = snap.guestbookTicket;
+        final shown = {
+          for (final o in camp.objects)
+            if (_artObjects.contains(o.id)) o.id,
+          if (ticket != null) campGuestbookSignId,
+        };
         return Stack(
           children: [
-            SceneView(
-              mode: SceneMode.rest,
-              distanceM: 0,
-              nowUtc: now,
-              position: position,
-              onSea: snap.onSea,
-              rules: rules,
-              landmarks: landmarks,
-              camp: camp,
-              sceneSeed: snap.journey?.dest.id ?? 'home',
-              spirit: spirit,
-            ),
-            for (final o in camp.objects)
-              _campObject(
-                context,
-                box.biggest,
-                o,
-                hasNew: _hasNew(snap),
+            Positioned.fill(
+              child: RestGestures(
+                stage: stage,
+                camera: _camera,
+                child: SceneView(
+                  mode: SceneMode.rest,
+                  distanceM: 0,
+                  nowUtc: now,
+                  position: position,
+                  onSea: snap.onSea,
+                  rules: rules,
+                  landmarks: landmarks,
+                  camp: camp,
+                  sceneSeed: snap.journey?.dest.id ?? 'home',
+                  spirit: spirit,
+                  seated: false,
+                  camera: _camera,
+                  sceneBehind: [
+                    for (final o in camp.objects)
+                      if (shown.contains(o.id)) _objectArt(stage, o, hasNew: _hasNew(snap)),
+                  ],
+                  sceneAbove: [
+                    for (final id in camp.hitStack(shown))
+                      _hitBox(context, stage, camp.object(id), ticket),
+                  ],
+                ),
               ),
-            // 방명록 표지판은 쓸 기회가 있을 때만 선다
-            if (snap.guestbookTicket != null)
-              _guestbookSign(context, box.biggest, camp.guestbookSign, snap.guestbookTicket!),
+            ),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -127,6 +147,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                       child: CornerButton(
                         icon: Icons.person,
                         label: '나의 정보',
+                        radius: 18,
                         onPressed: () => _push(context, const ProfileScreen()),
                       ),
                     ),
@@ -135,6 +156,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                       child: CornerButton(
                         icon: Icons.settings,
                         label: '설정',
+                        radius: 18,
                         onPressed: () => _push(context, const SettingsScreen()),
                       ),
                     ),
@@ -224,38 +246,82 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
         '약 ${formatInt(sketchSteps(km, rules))}보';
   }
 
-  /// 방명록 표지판 (이정표 옆): 물건과 같은 모양의 자리표시에 이름표 "방명록".
-  /// 테마의 footY에 표지판 아래 가장자리가 오고, 누르면 그 기회의 쓰기 화면으로 간다.
-  /// TODO: 그림(ui_signpost)이 나오면 자리표시를 바꾼다
-  Widget _guestbookSign(BuildContext context, Size screen, FootSpot spot, GuestbookTicket ticket) {
-    const size = 56.0;
-    const tagRoom = 40.0;
+  /// 물건 그림 (장면 층, 정령 뒤). 누름 상자·이름표는 [_hitBox]가 맡는다
+  Widget _objectArt(RestGeometry stage, CampObject o, {required bool hasNew}) {
+    final k = stage.k;
+    final sign = o.id == campGuestbookSignId;
+    final art = o.art;
     return Positioned(
-      left: spot.x * screen.width - size / 2 - tagRoom,
-      top: spot.footY * screen.height - size,
-      width: size + tagRoom * 2,
-      child: GestureDetector(
-        key: const ValueKey('signpost'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _push(context, GuestbookWriteScreen(ticketId: ticket.id)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PropWiggle(
-              key: const ValueKey('wiggle-$_guestbookSignId'),
-              wiggler: _wiggler,
-              id: _guestbookSignId,
-              child: _objectBox(size, Icons.edit_note_outlined),
-            ),
-            const SizedBox(height: 2),
-            const NameTag('방명록'),
-          ],
+      left: stage.sx(o.box.x),
+      top: stage.sy(o.box.y),
+      width: o.artW * k,
+      height: o.artH * k,
+      child: IgnorePointer(
+        child: PropWiggle(
+          key: ValueKey('wiggle-${sign ? _guestbookWiggleId : o.id}'),
+          wiggler: _wiggler,
+          id: sign ? _guestbookWiggleId : o.id,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (art != null)
+                Positioned.fill(
+                  child: _CampArtImage(art, fallback: _objectBox(o.artW * k, _iconOf(o.id))),
+                )
+              else
+                // TODO: 그림(ui_signpost)이 나오면 자리표시를 바꾼다
+                _objectBox(o.artW * k, _iconOf(o.id)),
+              if (o.id == 'backpack' && hasNew)
+                const Positioned(
+                  top: 4,
+                  right: 4,
+                  child: NoticeDot(key: ValueKey('backpack-dot')),
+                ),
+              if (sign)
+                const Positioned(top: -4, right: -4, child: NoticeDot()),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  /// 물건의 몸통: 카드색 바탕, 잉크 테두리, 가운데 아이콘
+  /// 누름 상자와 이름표 (장면 맨 위). 쌓는 순서가 곧 겹칠 때 누름 순서다 (테마의 hitOrder)
+  Widget _hitBox(BuildContext context, RestGeometry stage, CampObject o, GuestbookTicket? ticket) {
+    final k = stage.k;
+    final sign = o.id == campGuestbookSignId;
+    return Positioned(
+      left: stage.sx(o.box.x),
+      top: stage.sy(o.box.y),
+      width: o.box.w * k,
+      height: o.box.h * k,
+      child: Semantics(
+        button: true,
+        label: o.label,
+        excludeSemantics: true,
+        child: GestureDetector(
+          key: ValueKey(sign ? 'signpost' : 'camp-object-${o.id}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _push(
+            context,
+            sign ? GuestbookWriteScreen(ticketId: ticket!.id) : _screenOf(o.id),
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.topCenter,
+            children: [
+              Positioned(
+                top: o.labelTop * k,
+                child: _SceneLabel(sign ? '방명록' : o.label),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 그림이 없을 때의 몸통: 카드색 바탕, 잉크 테두리, 가운데 아이콘
   Widget _objectBox(double size, IconData icon) => Container(
         width: size,
         height: size,
@@ -267,51 +333,6 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
         child: Icon(icon, size: size * 0.5, color: Palette.ink),
       );
 
-  /// 물건: 테마가 정한 비율 위치에 중심을 두고, 아래에 이름표를 붙인다.
-  /// 배낭은 [hasNew]이면(아직 안 본 소품이나 그림이 있으면) 오른쪽 위에 알림 점이 붙는다
-  Widget _campObject(BuildContext context, Size screen, CampObject o, {required bool hasNew}) {
-    const tagRoom = 40.0;
-    return Positioned(
-      left: o.x * screen.width - o.size / 2 - tagRoom,
-      top: o.y * screen.height - o.size / 2,
-      width: o.size + tagRoom * 2,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _push(context, _screenOf(o.id)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PropWiggle(
-              key: ValueKey('wiggle-${o.id}'),
-              wiggler: _wiggler,
-              id: o.id,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  SizedBox(
-                    key: ValueKey('camp-object-${o.id}'),
-                    width: o.size, height: o.size,
-                    child: Image.asset('assets/backgrounds/v11/obj_rest_${o.id}_v11_clean.png',
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, error, stack) => _objectBox(o.size, _iconOf(o.id))),
-                  ),
-                  if (o.id == 'backpack' && hasNew)
-                    const Positioned(
-                      top: -4,
-                      right: -4,
-                      child: NoticeDot(key: ValueKey('backpack-dot')),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 2),
-            NameTag(o.label),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _screenOf(String id) => switch (id) {
         'map' => const MapScreen(),
         'backpack' => const AlbumScreen(),
@@ -322,8 +343,62 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
   IconData _iconOf(String id) => switch (id) {
         'map' => Icons.map_outlined,
         'backpack' => Icons.backpack_outlined,
+        campGuestbookSignId => Icons.edit_note_outlined,
         _ => Icons.menu_book_outlined,
       };
+}
+
+/// 물건 그림: 파일의 투명 여백을 뺀 상자가 이 위젯 크기에 맞는다. 화면에 필요한 크기로만 푼다
+class _CampArtImage extends StatelessWidget {
+  const _CampArtImage(this.art, {required this.fallback});
+
+  final CampArt art;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = MediaQuery.devicePixelRatioOf(context);
+    return LayoutBuilder(builder: (context, box) {
+      final sx = box.maxWidth / art.bbox[2];
+      final sy = box.maxHeight / art.bbox[3];
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: -art.bbox[0] * sx,
+            top: -art.bbox[1] * sy,
+            width: art.canvas[0] * sx,
+            height: art.canvas[1] * sy,
+            child: Image.asset(
+              art.file,
+              fit: BoxFit.fill,
+              cacheWidth: (art.canvas[0] * sx * ratio).ceil(),
+              errorBuilder: (_, error, stack) => fallback,
+            ),
+          ),
+        ],
+      );
+    });
+  }
+}
+
+/// 물건 이름표 (캔버스 .lbl). 선 없는 작은 카드색 띠
+class _SceneLabel extends StatelessWidget {
+  const _SceneLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: Palette.card.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(text, maxLines: 1, softWrap: false, style: context.display(11)),
+    );
+  }
 }
 
 /// 위쪽 가운데 상태 알약 (카드색 90%)

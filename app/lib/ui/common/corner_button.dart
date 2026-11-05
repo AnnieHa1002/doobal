@@ -15,6 +15,7 @@ class CornerButton extends StatelessWidget {
     this.size = 56,
     this.primary = false,
     this.tag,
+    this.radius,
   });
 
   final IconData icon;
@@ -23,6 +24,9 @@ class CornerButton extends StatelessWidget {
   final double size;
   final bool primary;
   final String? tag;
+
+  /// 주면 둥근 네모 (쉼터 구석 버튼), 없으면 동그라미
+  final double? radius;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +40,8 @@ class CornerButton extends StatelessWidget {
             fill: primary ? Palette.terracotta : Palette.card,
             height: size,
             width: size,
-            circle: true,
+            circle: radius == null,
+            radius: radius ?? 12,
             child: Icon(icon, size: size * 0.5, color: primary ? Palette.paper : Palette.ink),
           ),
           if (tag != null)

@@ -128,10 +128,9 @@ void main() {
       await openRest(tester, e);
       expect(_sign, findsOneWidget);
       expect(find.descendant(of: _sign, matching: find.text('방명록')), findsOneWidget);
-      // 가로는 테마의 guestbookSign.x 비율, 아래 가장자리 근처(이름표가 붙는다)는 footY 아래
-      expect(tester.getCenter(_sign).dx, closeTo(campTheme.guestbookSign.x * 390, 1));
-      expect(tester.getRect(_sign).top, lessThan(campTheme.guestbookSign.footY * 844));
-      expect(tester.getRect(_sign).bottom, greaterThan(campTheme.guestbookSign.footY * 844));
+      // 자리는 테마의 표지판 상자 (기준 화면 390×844에서 pt 그대로)
+      final box = campTheme.object('guestbookSign').box;
+      expect(tester.getRect(_sign), Rect.fromLTWH(box.x, box.y, box.w, box.h));
       await end(tester, e);
     });
 
