@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/rest_camera.dart';
 
-/// 쉼터 장면을 끌어 민다. 손을 떼면 [RestGeometry.settle]이 정한 자리로 부드럽게 간다.
+/// 쉼터 장면을 끌어 밀고 두 손가락으로 확대한다. 손을 떼면 [RestGeometry.settle]이 정한 자리로 부드럽게 간다.
 /// [camera] 값만 바꾸므로 그림은 다시 그리지 않는다
 class RestGestures extends StatefulWidget {
   const RestGestures({super.key, required this.stage, required this.camera, required this.child});
@@ -50,6 +50,7 @@ class _RestGesturesState extends State<RestGestures> with SingleTickerProviderSt
   void _onUpdate(ScaleUpdateDetails d) {
     widget.camera.value = widget.stage.gesture(
       _start,
+      scale: d.scale,
       fromX: _startFocalX,
       toX: d.localFocalPoint.dx,
     );

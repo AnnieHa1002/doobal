@@ -140,4 +140,93 @@ void main() {
       await end(tester, e);
     });
   });
+
+  group('두 손가락 확대', () {
+    /// 두 손가락을 [spread]만큼 벌린다 (가운데 고정). 손가락은 댄 채로 돌려준다
+    Future<List<TestGesture>> pinch(WidgetTester tester, double spread) async {
+      final a = await tester.startGesture(const Offset(150, 300), pointer: 1);
+      final b = await tester.startGesture(const Offset(250, 300), pointer: 2);
+      await a.moveBy(Offset(-spread / 2, 0));
+      await b.moveBy(Offset(spread / 2, 0));
+      await tester.pump();
+      return [a, b];
+    }
+
+    testWidgets('벌리면 커지고 장면은 아래 기준, HUD는 고정', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      final depart = tester.getRect(find.byTooltip('출발하기'));
+      final fingers = await pinch(tester, 50);
+      // 손가락 사이 100 → 150 = 1.5배 (config max)
+      final rect = tester.getRect(_backpack);
+      expect(rect.width, closeTo(64 * 1.5, 0.5));
+      // 아래 기준: 물건의 y는 화면 아래에서 (844 − 510) × 배율
+      expect(rect.top, closeTo(844 - (844 - 510) * 1.5, 0.5));
+      expect(tester.getRect(find.byTooltip('출발하기')), depart);
+      for (final f in fingers) {
+        await f.up();
+      }
+      await _settleSnap(tester);
+      await end(tester, e);
+    });
+
+    testWidgets('1.5배를 넘게 벌려도 1.5배, 오므려도 1배 아래로 안 간다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      var fingers = await pinch(tester, 200);
+      expect(tester.getRect(_backpack).width, closeTo(96, 0.5));
+      for (final f in fingers) {
+        await f.up();
+      }
+      await _settleSnap(tester);
+      fingers = await pinch(tester, -90);
+      for (final f in fingers) {
+        await f.up();
+      }
+      await _settleSnap(tester);
+      // 100 → 10 = 0.1배, 1.5 × 0.1은 1로 막힌다. 1배로 돌아오면 끝에 붙는다
+      expect(tester.getRect(_backpack).width, closeTo(64, 0.01));
+      final x = tester.getTopLeft(_backpack).dx;
+      expect(x == 268 || (x - (268 - 195)).abs() < 0.01, isTrue, reason: '$x');
+      await end(tester, e);
+    });
+
+    testWidgets('확대 중 끌기는 놓아도 끝에 안 붙는다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      final fingers = await pinch(tester, 25);
+      for (final f in fingers) {
+        await f.up();
+      }
+      await _settleSnap(tester);
+      expect(tester.getRect(_backpack).width, closeTo(64 * 1.25, 0.5));
+
+      await tester.dragFrom(const Offset(300, 300), const Offset(-120, 0));
+      await tester.pump();
+      final moved = tester.getTopLeft(_backpack).dx;
+      expect(moved, lessThan(268 * 1.25));
+      await _settleSnap(tester);
+      // 처음 자리도 오른쪽 끝도 아닌 그 자리에 그대로
+      expect(tester.getTopLeft(_backpack).dx, closeTo(moved, 0.01));
+      await end(tester, e);
+    });
+
+    testWidgets('확대 중에도 물건을 누르면 그 화면으로 간다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      final fingers = await pinch(tester, 25);
+      for (final f in fingers) {
+        await f.up();
+      }
+      await _settleSnap(tester);
+      await tester.tap(_backpack);
+      await settle(tester, () => find.byType(AlbumScreen).evaluate().isNotEmpty);
+      expect(find.byType(AlbumScreen), findsOneWidget);
+      await end(tester, e);
+    });
+  });
 }
