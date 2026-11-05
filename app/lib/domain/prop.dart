@@ -17,7 +17,6 @@ class Prop {
     this.steps,
     this.companion,
     this.price,
-    this.tintable = false,
   });
 
   final String id;
@@ -35,9 +34,6 @@ class Prop {
 
   /// shop: 상점 값(럭). 사면 얻은 소품에 들어간다
   final int? price;
-
-  /// 색을 고를 수 있는 소품 (props.json에 tint가 있다). 견본·기본 색은 palette.json tintProps
-  final bool tintable;
 
   factory Prop.fromJson(Map<String, dynamic> j) {
     final u = j['unlock'] as Map<String, dynamic>;
@@ -59,7 +55,6 @@ class Prop {
       steps: u['steps'] as int?,
       companion: u['companion'] as String?,
       price: u['price'] as int?,
-      tintable: j['tint'] != null,
     );
   }
 }

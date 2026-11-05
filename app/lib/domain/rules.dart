@@ -167,7 +167,43 @@ class Rules {
     required this.allowedSourcesIos,
     required this.allowedSourcesAndroid,
     required this.tapReaction,
+    required this.companionGuaranteeDays,
+    required this.companionWalksPerChapter,
+    required this.companionChapters,
+    required this.companionAheadEverySec,
+    required this.companionAheadAwaySec,
+    required this.companionLagCatchUpMps,
+    required this.companionLateArrivalMaxSec,
+    required this.shopDailyEffectCapKm,
+    required this.shopMaxHoldPerItem,
+    required this.adsRewardedPerDay,
+    required this.adsMaxRewardCoins,
   });
+
+  /// 설치 뒤 며칠까지 둘째·셋째 동행을 꼭 만나는지 (config companions.guaranteeByDay)
+  final List<int> companionGuaranteeDays;
+
+  /// 함께 인정된 걷기 1번 몇 번마다 이야기 한 장 (config companions.walksPerChapter)
+  final int companionWalksPerChapter;
+
+  /// 이야기 마지막 장 번호 (config companions.chapters, 이 장이 완결)
+  final int companionChapters;
+
+  /// 걷는 중 연출 (config companions.pace, 저장하지 않는다)
+  final double companionAheadEverySec;
+  final double companionAheadAwaySec;
+  final double companionLagCatchUpMps;
+  final double companionLateArrivalMaxSec;
+
+  /// 여행 효과로 하루에 더할 수 있는 거리 (config shop.dailyEffectCapKm)
+  final double shopDailyEffectCapKm;
+
+  /// 여행 효과를 종류마다 몇 개까지 보관하는지 (config shop.maxHoldPerItem)
+  final int shopMaxHoldPerItem;
+
+  /// 보상형 광고 하루 횟수와 한 번에 받는 럭 상한 (config ads)
+  final int adsRewardedPerDay;
+  final int adsMaxRewardCoins;
 
   final int walkMaxSpm;
   final int runMinSpm;
@@ -354,6 +390,10 @@ class Rules {
     final backup = j['backup'] as Map<String, dynamic>;
     final events = j['events'] as Map<String, dynamic>;
     final sources = j['allowedSources'] as Map<String, dynamic>;
+    final companions = j['companions'] as Map<String, dynamic>;
+    final companionPace = companions['pace'] as Map<String, dynamic>;
+    final shop = j['shop'] as Map<String, dynamic>;
+    final ads = j['ads'] as Map<String, dynamic>;
     final tap = (j['character'] as Map<String, dynamic>)['tapReaction'] as Map<String, dynamic>;
     final tapAngry = tap['angry'] as Map<String, dynamic>;
     final tapReaction = TapReaction(
@@ -512,6 +552,17 @@ class Rules {
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),
       allowedSourcesAndroid: (sources['android'] as List).cast<String>(),
       tapReaction: tapReaction,
+      companionGuaranteeDays: (companions['guaranteeByDay'] as List).cast<int>(),
+      companionWalksPerChapter: companions['walksPerChapter'] as int,
+      companionChapters: companions['chapters'] as int,
+      companionAheadEverySec: _d(companionPace['aheadEverySec']),
+      companionAheadAwaySec: _d(companionPace['aheadAwaySec']),
+      companionLagCatchUpMps: _d(companionPace['lagCatchUpMps']),
+      companionLateArrivalMaxSec: _d(companionPace['lateArrivalMaxSec']),
+      shopDailyEffectCapKm: _d(shop['dailyEffectCapKm']),
+      shopMaxHoldPerItem: shop['maxHoldPerItem'] as int,
+      adsRewardedPerDay: ads['rewardedPerDay'] as int,
+      adsMaxRewardCoins: ads['maxRewardCoins'] as int,
     );
   }
 }

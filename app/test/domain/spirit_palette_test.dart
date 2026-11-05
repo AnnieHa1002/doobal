@@ -50,12 +50,6 @@ void main() {
       expect(f['nose']!.last, (id: 'shy', name: '쑥스러움'));
     });
 
-    test('소품 색 규칙: 베레모(hat_01)의 기본 색은 #A4502F, base는 아직 없다', () {
-      final r = spiritPalette.tints['hat_01']!;
-      expect((r.defaultHex, r.base), ('#A4502F', null));
-      expect(spiritPalette.tints.keys, ['hat_01']);
-    });
-
     test('모양이 틀리면 FormatException (모르는 파츠 id, 기본 견본 없음, 기준 밝기 0)', () {
       expect(() {
         final j = _json();

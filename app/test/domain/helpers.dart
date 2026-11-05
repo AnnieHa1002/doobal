@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:doobal/domain/badge.dart';
+import 'package:doobal/domain/boat.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/camp_theme.dart';
 import 'package:doobal/domain/geo.dart';
@@ -15,6 +16,8 @@ import 'package:doobal/domain/road_event.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/sigungu.dart';
 import 'package:doobal/domain/spirit_palette.dart';
+import 'package:doobal/domain/companion.dart';
+import 'package:doobal/domain/shop.dart';
 
 /// 테스트도 실제 config.json 값으로 돈다 (flutter test는 app/에서 실행)
 final Rules rules = Rules.fromJson(
@@ -51,6 +54,18 @@ final EventCatalog eventCatalog = EventCatalog.fromJson(
 );
 
 /// 실제 badges.json (도장 20개와 하늘 구간)
+final ShopCatalog shopCatalog = parseShop(
+  jsonDecode(File('assets/data/shop.json').readAsStringSync()) as Map<String, dynamic>,
+);
+
+final BoatCatalog boatCatalog = parseBoats(
+  jsonDecode(File('assets/data/boats.json').readAsStringSync()) as Map<String, dynamic>,
+);
+
+final CompanionCatalog companionCatalog = parseCompanions(
+  jsonDecode(File('assets/data/companions.json').readAsStringSync()) as Map<String, dynamic>,
+);
+
 final BadgeCatalog badgeCatalog = BadgeCatalog.fromJson(
   jsonDecode(File('assets/data/badges.json').readAsStringSync()) as Map<String, dynamic>,
 );

@@ -294,55 +294,6 @@ class PartCell extends StatelessWidget {
   }
 }
 
-/// 소품 색 줄 (모자 탭의 베레모처럼 tint가 있는 소품): 기본 색 하나 + 몸 색 견본.
-/// 칸의 key는 `'tint-default'`, `'tint-swatch-번호'`
-class TintRow extends StatelessWidget {
-  const TintRow({
-    super.key,
-    required this.propName,
-    required this.defaultHex,
-    required this.body,
-    required this.selected,
-    required this.onPick,
-  });
-
-  final String propName;
-  final String defaultHex;
-  final BodyPalette body;
-
-  /// 지금 고른 색. null이면 기본 색
-  final BodyColor? selected;
-
-  /// 고른 색, 기본 색이면 null
-  final ValueChanged<BodyColor?> onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          SwatchDot(
-            key: const ValueKey('tint-default'),
-            name: '$propName 기본',
-            color: Color(argbFromHex(defaultHex)),
-            selected: selected == null,
-            onTap: () => onPick(null),
-          ),
-          for (final s in body.swatches)
-            SwatchDot(
-              key: ValueKey('tint-swatch-${s.id}'),
-              name: '$propName ${s.name}',
-              color: Color(s.color),
-              selected: selected == SwatchBodyColor(s.id),
-              onTap: () => onPick(SwatchBodyColor(s.id)),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// 선반 위 소품 칸 하나 (3열). 그림 자리는 자리표시 색 상자, 아래에 선반과 이름표(이름 + 입는 중/가짐).
 /// 고른 것은 점선 고리. [state]가 비면 상태 줄이 없다 ("없음" 칸)
 class ShelfCell extends StatelessWidget {

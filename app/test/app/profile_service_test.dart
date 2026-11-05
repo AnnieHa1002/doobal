@@ -129,8 +129,7 @@ void main() {
           )
           .withSlot('hat', 'hat_02')
           .withSlot('bag', 'bag_02')
-          .withSlot('hand', null)
-          .withTint('hat_02', const SwatchBodyColor(4));
+          .withSlot('hand', null);
       await svc.saveLook(look);
       expect(await stored(), look);
       final r = (await svc.row())!;

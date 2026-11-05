@@ -44,10 +44,13 @@ import '../domain/sigungu.dart';
 import '../domain/walk_history.dart';
 import 'backup_runner.dart';
 import 'backup_service.dart';
+import 'catalog_providers.dart';
 import 'notification_service.dart';
 import 'profile_service.dart';
 import 'stats_service.dart';
 import 'sync_service.dart';
+
+export 'catalog_providers.dart';
 
 final rulesProvider = FutureProvider<Rules>((ref) => loadRules());
 
@@ -77,7 +80,7 @@ final mapRegionsProvider = FutureProvider<List<MapRegion>>((ref) => loadMapRegio
 /// 시·군·구 (sigungu.json). 출발 동네 고르기
 final sigunguProvider = FutureProvider<List<Sigungu>>((ref) => loadSigungu());
 
-/// 정령 팔레트 (palette.json body·customParts·tintProps): 몸 색 견본, 얼굴 파츠 이름, 소품 색 규칙
+/// 정령 팔레트 (palette.json body·customParts): 몸 색 견본, 얼굴 파츠 이름, 소품 색 규칙
 final spiritPaletteProvider = FutureProvider<SpiritPalette>((ref) => loadSpiritPalette());
 
 /// 지금 시각(UTC). 화면과 서비스는 DateTime.now()를 직접 부르지 않고 이걸 쓴다. 테스트에서 바꾼다
@@ -298,6 +301,9 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
   final milestones = await ref.watch(milestonesProvider.future);
   final eventCatalog = await ref.watch(eventCatalogProvider.future);
   final badgeCatalog = await ref.watch(badgeCatalogProvider.future);
+  final companionCatalog = await ref.watch(companionCatalogProvider.future);
+  final shopCatalog = await ref.watch(shopCatalogProvider.future);
+  final boatCatalog = await ref.watch(boatCatalogProvider.future);
   // 첫 여정 '내 동네 스케치'의 목적지가 바다에 떨어지지 않게 지도 경계로 땅을 판정한다
   final projection = await ref.watch(mapProjectionProvider.future);
   final regions = await ref.watch(mapRegionsProvider.future);
@@ -311,6 +317,9 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
     milestones: milestones,
     eventCatalog: eventCatalog,
     badgeCatalog: badgeCatalog,
+    companionCatalog: companionCatalog,
+    shopCatalog: shopCatalog,
+    boatCatalog: boatCatalog,
     onLand: (p, island) => onIsland(p, island, projection, regions),
     distanceScale: distanceScale,
     notificationService: await ref.watch(notificationServiceProvider.future),

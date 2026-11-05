@@ -10,7 +10,8 @@ part 'app_db.g.dart';
 // + 스키마 4 (화집 벽) + 스키마 5 (새 그림 표시) + 스키마 6 (프로필: 시작 흐름)
 // + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지) + 스키마 8 (방명록 쓸 기회·쓴 글)
 // + 스키마 9 (알림 기록·알림 켜고 끄기) + 스키마 10 (복원한 하루 요약 지키기: 동기화 상태 열)
-// + 스키마 11 (본격 걷기: 앱 걷기 창·이동 거리·럭 장부) + 스키마 13 (길 위 이벤트·도장, 화집 벽 표 삭제).
+// + 스키마 11 (본격 걷기: 앱 걷기 창·이동 거리·럭 장부) + 스키마 13 (길 위 이벤트·도장, 화집 벽 표 삭제)
+// + 스키마 15 (동행·상점 보관함·상점 사용 기록·얻은 배, 프로필: 고른 배).
 // 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
@@ -196,6 +197,9 @@ class Profile extends Table {
   IntColumn get linkConsentAt => integer().nullable()();
   IntColumn get guestbookConsentAt => integer().nullable()();
 
+  /// 고른 배 (boats.json id, 스키마 15). null이면 기본 배 (shop.json defaultBoat)
+  TextColumn get boatId => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -329,6 +333,69 @@ class BadgesOwned extends Table {
   Set<Column> get primaryKey => {badgeId};
 }
 
+/// 만난 동행 (스키마 15, companions.json id마다 한 줄). 처음 만날 때 만든다.
+/// metJourneyId·metK는 만남이 일어난 칸 (같은 칸에서 두 번 만나지 않게), walksTogether는 함께 인정된 걷기 1번 수,
+/// chapter는 열린 장(0 = 프롤로그, 끝은 config companions.chapters), readChapter는 읽은 장
+@DataClassName('CompanionRow')
+class Companions extends Table {
+  TextColumn get companionId => text()();
+  IntColumn get metUtc => integer()();
+  TextColumn get metJourneyId => text().nullable()();
+  IntColumn get metK => integer().nullable()();
+  IntColumn get walksTogether => integer().withDefault(const Constant(0))();
+  IntColumn get chapter => integer().withDefault(const Constant(0))();
+  IntColumn get readChapter => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {companionId};
+}
+
+/// 함께 걷는 동행이 바뀐 기록 (스키마 15). startUtc부터 다음 줄 앞까지 그 동행과 걷는다 (null은 혼자 걷기).
+/// 걸음 기록이 늦게 들어와도 '그 걷기 1번을 시작할 때 누구와 걸었나'가 같게 나오도록 지금 값만 두지 않는다.
+/// 지금 함께 걷는 동행은 마지막 줄이다 (줄이 없으면 혼자)
+@DataClassName('CompanionStintRow')
+class CompanionStints extends Table {
+  IntColumn get startUtc => integer()();
+  TextColumn get companionId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {startUtc};
+}
+
+/// 상점 보관함 (스키마 15): 산 뒤 아직 안 쓴 여행 효과 (shop.json id마다 한 줄, 한도 config shop.maxHoldPerItem)
+@DataClassName('ShopInventoryRow')
+class ShopInventory extends Table {
+  TextColumn get itemId => text()();
+  IntColumn get count => integer()();
+
+  @override
+  Set<Column> get primaryKey => {itemId};
+}
+
+/// 여행 효과를 쓴 기록 (스키마 15). day는 한국 날짜, km은 여행 거리에 더한 양(하루 상한 config shop.dailyEffectCapKm),
+/// appWalkId는 이번 걷는 중에만 듣는 효과(순풍)의 앱 걷기 창
+@DataClassName('ShopUseRow')
+class ShopUses extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get itemId => text()();
+  TextColumn get day => text()();
+  TextColumn get journeyId => text()();
+  IntColumn get appWalkId => integer().nullable()();
+  RealColumn get km => real().withDefault(const Constant(0.0))();
+}
+
+/// 얻은 배 (스키마 15). 기본 배는 줄이 없어도 가진 것으로 본다. colors는 고른 색 JSON
+/// (상점 배 6척만 3구역, 16장 11/4), 고른 적 없으면 null
+@DataClassName('BoatOwnedRow')
+class BoatsOwned extends Table {
+  TextColumn get boatId => text()();
+  IntColumn get atUtc => integer()();
+  TextColumn get colors => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {boatId};
+}
+
 @DriftDatabase(
   tables: [
     StepMinutes,
@@ -348,13 +415,18 @@ class BadgesOwned extends Table {
     CoinLedger,
     JourneyEvents,
     BadgesOwned,
+    Companions,
+    CompanionStints,
+    ShopInventory,
+    ShopUses,
+    BoatsOwned,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -435,6 +507,15 @@ class AppDb extends _$AppDb {
             await m.createTable(journeyEvents);
             await m.createTable(badgesOwned);
             await customStatement('DROP TABLE IF EXISTS wall_slots');
+          }
+          // 15: 동행·상점·배. 2 이하에서 올라올 때는 위 createTable(profile)이 지금 정의라 열이 이미 있다
+          if (from < 15) {
+            if (from >= 3) await m.addColumn(profile, profile.boatId);
+            await m.createTable(companions);
+            await m.createTable(companionStints);
+            await m.createTable(shopInventory);
+            await m.createTable(shopUses);
+            await m.createTable(boatsOwned);
           }
         },
       );

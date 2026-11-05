@@ -910,17 +910,6 @@ void main() {
       await end(tester, e);
     });
 
-    _scaleCases('소품 색 줄 (모자: 베레모)', (tester, fit) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await openDecorate(tester, e, fit);
-      await _tap(tester, _key('tab-hat'));
-      expect(_key('tint-default'), findsOneWidget);
-      await _tap(tester, _key('tint-swatch-4'));
-      fit.check('베레모 색을 고름');
-      await end(tester, e);
-    });
-
     _scaleCases('소품 (모자: 다음 소품 한 줄)', (tester, fit) async {
       final e = UiEnv();
       await e.seed(tester, () => ownProps(e, ['hat_02']));

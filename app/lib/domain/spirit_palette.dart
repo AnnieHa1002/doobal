@@ -56,26 +56,16 @@ class BodyPalette {
 /// 얼굴 파츠 하나: 저장 id와 화면 이름
 typedef FacePart = ({String id, String name});
 
-/// 색을 고를 수 있는 소품의 규칙 (palette.json tintProps): 기본 색, 회색조 기준 밝기(납품 전엔 null)
-class TintRule {
-  const TintRule({required this.defaultHex, required this.base});
-
-  final String defaultHex;
-  final int? base;
-}
-
-/// 꾸미기·시작 화면이 읽는 palette.json: 몸 색, 얼굴 파츠 이름, 소품 색 규칙
+/// 꾸미기·시작 화면이 읽는 palette.json: 몸 색, 얼굴 파츠 이름
 /// (잔디는 쉼터 쪽이 따로 읽는다)
 class SpiritPalette {
-  const SpiritPalette({required this.body, required this.faces, required this.tints});
+  const SpiritPalette({required this.body, required this.faces});
 
   final BodyPalette body;
 
   /// 'eyes'·'brows'·'nose'·'mouth' → 파츠 목록 (palette.json 순서)
   final Map<String, List<FacePart>> faces;
 
-  /// 소품 id → 색 규칙
-  final Map<String, TintRule> tints;
 
   /// 모양이 틀리면 FormatException (견본 없음, 기본 견본이 없음, 파츠 id가 코드 표와 다름 …)
   factory SpiritPalette.fromJson(Map<String, dynamic> json) {
@@ -108,7 +98,6 @@ class SpiritPalette {
       return list;
     }
 
-    final tintJson = json['tintProps'] as Map<String, dynamic>? ?? const {};
     return SpiritPalette(
       body: BodyPalette(
         base: base,
@@ -123,14 +112,6 @@ class SpiritPalette {
         'brows': face('brows', browParts),
         'nose': face('nose', noseParts),
         'mouth': face('mouth', mouthParts),
-      },
-      tints: {
-        for (final e in tintJson.entries)
-          if (e.value is Map<String, dynamic>)
-            e.key: TintRule(
-              defaultHex: checkedHex((e.value as Map<String, dynamic>)['default']),
-              base: (e.value as Map<String, dynamic>)['base'] as int?,
-            ),
       },
     );
   }

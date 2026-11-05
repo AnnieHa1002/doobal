@@ -56,6 +56,11 @@ class BackupService {
     db.coinLedger: {},
     db.journeyEvents: {},
     db.badgesOwned: {},
+    db.companions: {},
+    db.companionStints: {},
+    db.shopInventory: {},
+    db.shopUses: {},
+    db.boatsOwned: {},
     db.profile: {
       db.profile.ageConfirmedAt.$name,
       db.profile.onboardedAt.$name,

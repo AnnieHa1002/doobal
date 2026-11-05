@@ -283,6 +283,7 @@ Future<void> _fill(AppDb db) async {
         onboardedAt: const Value(_onboardedAt),
         linkConsentAt: const Value(_linkAt),
         guestbookConsentAt: const Value(_guestbookAt),
+        boatId: const Value('boat_skiff'),
       ),
     );
     // 안 들어가는 표
@@ -290,6 +291,39 @@ Future<void> _fill(AppDb db) async {
       StepMinutesCompanion.insert(minuteUtc: Value(_ms(_synced) ~/ 60000 - 2), steps: 100),
       StepMinutesCompanion.insert(minuteUtc: Value(_ms(_synced) ~/ 60000 - 1), steps: 110),
     ]);
+    b.insert(
+      db.companions,
+      CompanionsCompanion.insert(
+        companionId: 'bright',
+        metUtc: 3000,
+        metJourneyId: const Value('j2'),
+        metK: const Value(1),
+        walksTogether: const Value(5),
+        chapter: const Value(1),
+        readChapter: const Value(1),
+      ),
+    );
+    b.insert(
+      db.companionStints,
+      CompanionStintsCompanion.insert(
+          startUtc: const Value(3000), companionId: const Value('bright')),
+    );
+    b.insert(db.shopInventory, ShopInventoryCompanion.insert(itemId: 'fx_shortcut', count: 2));
+    b.insert(
+      db.shopUses,
+      ShopUsesCompanion.insert(
+        itemId: 'fx_tailwind',
+        day: '2026-11-18',
+        journeyId: 'j2',
+        appWalkId: const Value(1),
+        km: const Value(0.4),
+      ),
+    );
+    b.insert(
+      db.boatsOwned,
+      BoatsOwnedCompanion.insert(
+          boatId: 'boat_skiff', atUtc: 3500, colors: const Value('{"hull":1}')),
+    );
     b.insert(
       db.syncState,
       SyncStateCompanion.insert(
@@ -322,6 +356,11 @@ Future<Map<String, Object?>> _userState(AppDb db) async => {
       'noticeSettings': await db.select(db.notificationSettings).get(),
       'appWalks': await db.select(db.appWalks).get(),
       'coins': await db.select(db.coinLedger).get(),
+      'companions': await db.select(db.companions).get(),
+      'stints': await db.select(db.companionStints).get(),
+      'inventory': await db.select(db.shopInventory).get(),
+      'shopUses': await db.select(db.shopUses).get(),
+      'boats': await db.select(db.boatsOwned).get(),
       'profile': [
         for (final r in await db.select(db.profile).get())
           r.copyWith(
@@ -392,7 +431,7 @@ void main() {
       final json = _json(await svcA.exportBackup(_now));
       expect(json['format'], 1);
       expect(json['schema'], a.schemaVersion);
-      expect(json['schema'], 14);
+      expect(json['schema'], 15);
       expect(json['createdUtc'], _ms(_now));
       expect(json['syncedUtc'], _ms(_synced));
       expect((json['tables'] as Map<String, dynamic>).keys, svcA.includedTableNames);
@@ -831,7 +870,7 @@ void main() {
     test('이 앱보다 새 스키마면 StateError (DB는 그대로)', () async {
       await _fill(b);
       final before = await _userState(b);
-      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 15))), throwsStateError);
+      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 16))), throwsStateError);
       expect(await _userState(b), before);
     });
 

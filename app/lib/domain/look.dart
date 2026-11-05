@@ -24,7 +24,7 @@ const defaultSlots = <String, String?>{
 /// 처음부터 가진 소품: props.json에서 unlock.kind가 default인 것 (look_test가 맞는지 본다)
 const initialPropIds = {'hat_01', 'cloth_01', 'shoe_01', 'hand_01', 'bag_01', 'pet_01'};
 
-/// 몸 색 (palette.json body): 견본 번호 | 직접 고른 색. 소품 색(Look.tints)도 같은 모양이다.
+/// 몸 색 (palette.json body): 견본 번호 | 직접 고른 색.
 /// JSON은 {kind: swatch, i} | {kind: custom, hex}
 sealed class BodyColor {
   const BodyColor();
@@ -79,9 +79,10 @@ class CustomBodyColor extends BodyColor {
 /// 기본 몸 색: 견본 1 (크림)
 const defaultBody = SwatchBodyColor(1);
 
-/// 캐릭터(정령)의 모습 (Profile.look): `{eyes, brows, nose, mouth, body, slots{9칸}, tints{propId: 색}}`.
+/// 캐릭터(정령)의 모습 (Profile.look): `{eyes, brows, nose, mouth, body, slots{9칸}}`.
 /// 얼굴 값은 palette.json customParts의 문자 id다 (Rive 값으로는 domain/spirit_look.dart가 바꾼다).
-/// 옛 사람형 JSON은 [Look.fromJson]이 기본 얼굴·크림으로 읽는다
+/// 옛 사람형 JSON은 [Look.fromJson]이 기본 얼굴·크림으로 읽는다. 소품 색은 직접 고르지 않고
+/// 색마다 따로 된 상점 소품이라(16장 11/4) 옛 JSON의 tints는 읽지 않는다
 class Look {
   const Look({
     this.eyes = defaultEyes,
@@ -90,10 +91,9 @@ class Look {
     this.mouth = defaultMouth,
     this.body = defaultBody,
     this.slots = defaultSlots,
-    this.tints = const {},
   });
 
-  /// 첫 실행의 기본 모습: 기본 얼굴, 크림 몸, 칸마다 기본 소품, 소품 색 없음
+  /// 첫 실행의 기본 모습: 기본 얼굴, 크림 몸, 칸마다 기본 소품
   static const initial = Look();
 
   final String eyes;
@@ -105,9 +105,6 @@ class Look {
   /// 칸 이름([lookSlots]) → 끼운 소품 id. 비운 칸은 null. 아홉 칸을 모두 가진다
   final Map<String, String?> slots;
 
-  /// 소품 id → 고른 색 (props.json에서 tint가 있는 소품만). 없으면 소품의 기본 색
-  final Map<String, BodyColor> tints;
-
   Look copyWith({String? eyes, String? brows, String? nose, String? mouth, BodyColor? body}) =>
       Look(
         eyes: eyes ?? this.eyes,
@@ -116,7 +113,6 @@ class Look {
         mouth: mouth ?? this.mouth,
         body: body ?? this.body,
         slots: slots,
-        tints: tints,
       );
 
   /// [slot] 칸에 [propId]를 끼운 모습 (null이면 비운다). 칸 이름과 옷 비우기만 막고,
@@ -135,24 +131,8 @@ class Look {
       slots: Map.unmodifiable({
         for (final s in lookSlots) s: s == slot ? propId : slots[s],
       }),
-      tints: tints,
     );
   }
-
-  /// [propId] 소품의 색을 [color]로 (null이면 기본 색으로 되돌린다)
-  Look withTint(String propId, BodyColor? color) => Look(
-        eyes: eyes,
-        brows: brows,
-        nose: nose,
-        mouth: mouth,
-        body: body,
-        slots: slots,
-        tints: Map.unmodifiable({
-          for (final e in tints.entries)
-            if (e.key != propId) e.key: e.value,
-          propId: ?color,
-        }),
-      );
 
   Map<String, dynamic> toJson() => {
         'eyes': eyes,
@@ -161,7 +141,6 @@ class Look {
         'mouth': mouth,
         'body': body.toJson(),
         'slots': {for (final s in lookSlots) s: slots[s]},
-        'tints': {for (final e in tints.entries) e.key: e.value.toJson()},
       };
 
   /// 옛 사람형 JSON(`hair` 키가 있거나 eyes가 숫자)은 예외 없이 기본 얼굴·크림으로 읽고,
@@ -179,7 +158,6 @@ class Look {
       mouth: _part(j, 'mouth', mouthParts, defaultMouth),
       body: j['body'] == null ? defaultBody : BodyColor.fromJson(_map(j['body'], '몸 색')),
       slots: _slotsOf(j['slots']),
-      tints: _tintsOf(j['tints']),
     );
   }
 
@@ -191,9 +169,7 @@ class Look {
       other.nose == nose &&
       other.mouth == mouth &&
       other.body == body &&
-      lookSlots.every((s) => other.slots[s] == slots[s]) &&
-      other.tints.length == tints.length &&
-      tints.entries.every((e) => other.tints[e.key] == e.value);
+      lookSlots.every((s) => other.slots[s] == slots[s]);
 
   @override
   int get hashCode => Object.hash(
@@ -203,12 +179,11 @@ class Look {
         mouth,
         body,
         Object.hashAll([for (final s in lookSlots) slots[s]]),
-        Object.hashAllUnordered([for (final e in tints.entries) Object.hash(e.key, e.value)]),
       );
 
   @override
   String toString() => 'Look(eyes: $eyes, brows: $brows, nose: $nose, mouth: $mouth, '
-      'body: $body, slots: $slots, tints: $tints)';
+      'body: $body, slots: $slots)';
 }
 
 /// 얼굴 파츠 id 하나. 없으면 [fallback], 있는데 [parts]에 없으면 FormatException
@@ -254,19 +229,6 @@ Map<String, String?> _legacySlots(dynamic raw) {
         : v is String && v.isNotEmpty
             ? v
             : defaultSlots[slot];
-  }
-  return Map.unmodifiable(out);
-}
-
-/// tints 읽기: 없으면 비어 있고, 있으면 {propId: 색} 맵이어야 한다
-Map<String, BodyColor> _tintsOf(dynamic raw) {
-  if (raw == null) return const {};
-  if (raw is! Map) throw FormatException('tints가 맵이 아니다: $raw');
-  final out = <String, BodyColor>{};
-  for (final e in raw.entries) {
-    final id = e.key;
-    if (id is! String) throw FormatException('소품 id가 아니다: $id');
-    out[id] = BodyColor.fromJson(_map(e.value, '소품 색'));
   }
   return Map.unmodifiable(out);
 }

@@ -13,12 +13,11 @@ Look _roundTrip(Look look) =>
 
 void main() {
   group('Look', () {
-    test('기본값은 기본 얼굴(점·시바·쑥스러움·ω), 크림 몸, 칸마다 기본 소품, 소품 색 없음', () {
+    test('기본값은 기본 얼굴(점·시바·쑥스러움·ω), 크림 몸, 칸마다 기본 소품', () {
       final l = Look.initial;
       expect([l.eyes, l.brows, l.nose, l.mouth], ['dot', 'shiba', 'shy', 'omega']);
       expect(l.body, const SwatchBodyColor(1));
       expect(l.slots, defaultSlots);
-      expect(l.tints, isEmpty);
     });
 
     test('기본 얼굴은 palette.json defaultFace와 같다', () {
@@ -63,7 +62,6 @@ void main() {
           'float': null,
           'effect': null,
         },
-        'tints': <String, dynamic>{},
       });
       expect(_roundTrip(Look.initial), Look.initial);
     });
@@ -83,14 +81,9 @@ void main() {
           'shoe': 'shoe_02',
           'cloth': 'cloth_03',
         },
-        tints: {'hat_01': SwatchBodyColor(7), 'hat_02': CustomBodyColor('#102030')},
       );
       final json = look.toJson();
       expect(json['body'], {'kind': 'custom', 'hex': '#A1B2C3'});
-      expect(json['tints'], {
-        'hat_01': {'kind': 'swatch', 'i': 7},
-        'hat_02': {'kind': 'custom', 'hex': '#102030'},
-      });
       expect((json['slots'] as Map)['hand'], isNull);
       expect((json['slots'] as Map).containsKey('hand'), isTrue);
       final back = _roundTrip(look);
@@ -98,7 +91,6 @@ void main() {
       // 칸을 빠뜨린 slots도 읽을 때 기본 소품으로 채워지므로 같은 모습으로 돌아온다
       expect(back, _roundTrip(back));
       expect(back.eyes, 'cat');
-      expect(back.tints, look.tints);
       expect(back.body, look.body);
     });
 
@@ -106,23 +98,21 @@ void main() {
       expect(const SwatchBodyColor(1), const SwatchBodyColor(1));
       expect(const SwatchBodyColor(1) == const SwatchBodyColor(2), isFalse);
       expect(const CustomBodyColor('#000000') == const SwatchBodyColor(1), isFalse);
-      final a = Look.initial.withTint('hat_01', const SwatchBodyColor(3));
-      expect(a, Look.initial.withTint('hat_01', const SwatchBodyColor(3)));
-      expect(a.hashCode, Look.initial.withTint('hat_01', const SwatchBodyColor(3)).hashCode);
+      final a = Look.initial.withSlot('hat', 'hat_02');
+      expect(a, Look.initial.withSlot('hat', 'hat_02'));
+      expect(a.hashCode, Look.initial.withSlot('hat', 'hat_02').hashCode);
       expect(a == Look.initial, isFalse);
-      expect(a == a.withTint('hat_01', const SwatchBodyColor(4)), isFalse);
       expect(Look.initial == Look.initial.copyWith(nose: 'heart'), isFalse);
       expect(Look.initial == Look.initial.copyWith(body: const SwatchBodyColor(2)), isFalse);
       expect(Look.initial == Look.initial.withSlot('hat', 'hat_02'), isFalse);
     });
 
-    test('copyWith는 준 것만 바꾸고 소품 칸·소품 색을 그대로 가져간다', () {
-      final base = Look.initial.withSlot('hat', 'hat_02').withTint('hat_01', defaultBody);
+    test('copyWith는 준 것만 바꾸고 소품 칸을 그대로 가져간다', () {
+      final base = Look.initial.withSlot('hat', 'hat_02');
       final a = base.copyWith(eyes: 'bean', body: const SwatchBodyColor(5));
       expect((a.eyes, a.brows, a.nose, a.mouth), ('bean', 'shiba', 'shy', 'omega'));
       expect(a.body, const SwatchBodyColor(5));
       expect(a.slots, base.slots);
-      expect(a.tints, base.tints);
     });
 
     test('withSlot: 그 칸만 바꾸고, 비우기는 옷만 막는다', () {
@@ -137,16 +127,6 @@ void main() {
       expect(() => a.withSlot('wing', 'wing_01'), throwsArgumentError);
       expect(a.eyes, Look.initial.eyes);
       expect(a.body, Look.initial.body);
-    });
-
-    test('withTint: 소품 색을 정하고, null이면 기본 색으로 되돌린다', () {
-      final a = Look.initial.withTint('hat_01', const CustomBodyColor('#102030'));
-      expect(a.tints, {'hat_01': const CustomBodyColor('#102030')});
-      final b = a.withTint('hat_01', const SwatchBodyColor(2));
-      expect(b.tints, {'hat_01': const SwatchBodyColor(2)});
-      expect(b.withTint('hat_01', null).tints, isEmpty);
-      expect(_roundTrip(b).tints, b.tints);
-      expect(Look.initial.tints, isEmpty);
     });
   });
 
@@ -203,7 +183,6 @@ void main() {
       });
       expect([look.eyes, look.brows, look.nose, look.mouth], ['dot', 'shiba', 'shy', 'omega']);
       expect(look.body, const SwatchBodyColor(1));
-      expect(look.tints, isEmpty);
       expect(look.slots['hat'], 'hat_02');
       expect(look.slots['hand'], isNull);
       expect(look.slots['bag'], 'bag_01');
@@ -212,7 +191,7 @@ void main() {
       expect(look.slots['shoe'], 'shoe_01');
       expect(look.slots['cloth'], 'cloth_01');
       // 다시 적으면 새 모양이 되어 그대로 읽힌다
-      expect(look.toJson().keys, ['eyes', 'brows', 'nose', 'mouth', 'body', 'slots', 'tints']);
+      expect(look.toJson().keys, ['eyes', 'brows', 'nose', 'mouth', 'body', 'slots']);
       expect(_roundTrip(look), look);
     });
 
@@ -238,10 +217,6 @@ void main() {
       expect(() => Look.fromJson(face('slots', ['hat_01'])), throwsFormatException);
       expect(() => Look.fromJson(face('slots', {'hat': 5})), throwsFormatException);
       expect(() => Look.fromJson(face('slots', {'hat': ''})), throwsFormatException);
-      expect(() => Look.fromJson(face('tints', ['x'])), throwsFormatException);
-      expect(() => Look.fromJson(face('tints', {'hat_01': 'red'})), throwsFormatException);
-      expect(() => Look.fromJson(face('tints', {'hat_01': {'kind': 'rainbow'}})),
-          throwsFormatException);
     });
 
     test('BodyColor: 견본·직접 고른 색을 왕복하고, 틀린 모양은 FormatException', () {

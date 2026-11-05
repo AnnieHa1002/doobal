@@ -7,7 +7,9 @@ import '../data/db/app_db.dart';
 import '../data/step_source.dart';
 import '../domain/arrival.dart';
 import '../domain/badge.dart';
+import '../domain/boat.dart';
 import '../domain/bucket.dart';
+import '../domain/companion.dart';
 import '../domain/eta.dart';
 import '../domain/focus_walk.dart';
 import '../domain/gait.dart';
@@ -24,11 +26,15 @@ import '../domain/route.dart';
 import '../domain/rules.dart';
 import '../domain/scene.dart' show nearestLandmark, seasonOf;
 import '../domain/session.dart';
+import '../domain/shop.dart';
 import '../domain/sketch.dart';
 import '../domain/sun.dart';
 import '../domain/time_kst.dart';
 import '../domain/walk_record.dart';
 import 'notification_service.dart';
+
+part 'sync_companion.dart';
+part 'sync_shop.dart';
 
 /// 한 번 가져온 결과. 출처별 걸음은 허용 목록을 정하는 실기기 확인용
 class SyncReport {
@@ -40,6 +46,7 @@ class SyncReport {
     this.notices = const [],
     this.newProps = const [],
     this.newBadges = const [],
+    this.newBoats = const [],
   });
 
   final int records;
@@ -62,6 +69,9 @@ class SyncReport {
 
   /// 이번 동기화에서 새로 받은 도장 (badges.json 순서). 토스트·배낭 점으로 알린다
   final List<Badge> newBadges;
+
+  /// 이번 동기화에서 새로 얻은 보상 배 (boats.json 순서). 한 줄 토스트로 알린다
+  final List<Boat> newBoats;
 }
 
 /// 길 위 이벤트 한 줄을 화면에서 보는 값: 칭찬 한 줄과 풍경 한 줄 (2km 이정표 카드)
@@ -500,6 +510,9 @@ class SyncService {
     this.notificationService,
     this.eventCatalog,
     this.badgeCatalog,
+    this.companionCatalog,
+    this.shopCatalog,
+    this.boatCatalog,
   }) : assert(distanceScale > 0);
 
   final AppDb db;
@@ -534,6 +547,15 @@ class SyncService {
   /// 도장 목록과 하늘 구간 (badges.json). 없으면 도장을 주지 않는다
   final BadgeCatalog? badgeCatalog;
 
+  /// 동행과 이야기 (companions.json). 없으면 동행을 만나지 않는다
+  final CompanionCatalog? companionCatalog;
+
+  /// 럭 상점 상품 (shop.json)
+  final ShopCatalog? shopCatalog;
+
+  /// 배 9척 (boats.json). 없으면 보상 배를 주지 않는다
+  final BoatCatalog? boatCatalog;
+
   final _newBadges = StreamController<List<Badge>>.broadcast();
 
   /// 어느 화면에서 동기화했든 새로 받은 도장이 있으면 흘려보낸다 ([SyncReport.newBadges], 이벤트로 받은 것도).
@@ -545,6 +567,11 @@ class SyncService {
   /// 어느 화면에서 동기화했든 새로 얻은 소품([SyncReport.newProps])이 있으면 흘려보낸다.
   /// AutoSync가 듣고 한 줄 토스트를 띄운다 (UI 명세 12장)
   Stream<List<Prop>> get newProps => _newProps.stream;
+
+  final _newBoats = StreamController<List<Boat>>.broadcast();
+
+  /// 어느 화면에서 동기화했든 새로 얻은 보상 배([SyncReport.newBoats])가 있으면 흘려보낸다
+  Stream<List<Boat>> get newBoats => _newBoats.stream;
 
   Future<SyncReport> sync(DateTime now) async {
     final state = await _ensureState(now);
@@ -567,6 +594,7 @@ class SyncService {
     final candidates = <NoticeCandidate>[];
     var newProps = <Prop>[];
     var newBadges = <Badge>[];
+    var newBoats = <Boat>[];
     await db.transaction(() async {
       final activeBefore = await _activeJourney();
       final progressBefore = await _progressOf(activeBefore, to);
@@ -581,6 +609,8 @@ class SyncService {
       await _recomputeDays(kstDayKey(from), kstDayKey(to), state.restoreFloorDay, to);
       await _advanceJourney(to);
       newProps = await _unlockProps(to);
+      newBoats = await _unlockBoats(to);
+      final companionNotices = await _syncCompanions(to);
       newBadges = await _awardBadges(to);
       final newMilestones = await _updateGuestbookTickets(to);
       await (db.update(db.syncState)..where((t) => t.id.equals(1)))
@@ -593,7 +623,8 @@ class SyncService {
       final progressAfter = await _progressOf(journeyAfter, to);
       advancedKm = math.max(0.0, (progressAfter?.progressKm ?? (await _fund()).km) - before);
 
-      // 알림 후보: 이번에 새로 생긴 일만 (N3 이야기 새 장은 M4에서)
+      // 알림 후보: 이번에 새로 생긴 일만
+      candidates.addAll(companionNotices);
       if (journeyAfter != null) {
         final dest = _placeNameOf(journeyAfter.destId);
         if (journeyAfter.status == JourneyStatus.arrived) {
@@ -619,8 +650,13 @@ class SyncService {
     await notificationService?.afterSync(candidates, to);
     if (newProps.isNotEmpty) _newProps.add(newProps);
     if (newBadges.isNotEmpty) _newBadges.add(newBadges);
+    if (newBoats.isNotEmpty) _newBoats.add(newBoats);
     return _report(raw, kept,
-        advancedKm: advancedKm, notices: candidates, newProps: newProps, newBadges: newBadges);
+        advancedKm: advancedKm,
+        notices: candidates,
+        newProps: newProps,
+        newBadges: newBadges,
+        newBoats: newBoats);
   }
 
   /// 저장하지 않고 출처만 본다 (허용 목록을 정할 때)
@@ -1064,7 +1100,7 @@ class SyncService {
   /// 도장 조건이 읽는 기록. 거리는 실제 + 본격 걷기 보너스(상점 효과 제외),
   /// 걷기 1번 횟수·시간대·계절은 인정된 걷기 1번(counted)으로 센다.
   /// 시간대는 걷기 1번을 한 지점을 몰라서 출발 동네 좌표로 근사한다 (출발 동네가 없으면 세지 않는다).
-  /// 동행은 아직 없어서 companionsMet·finaleCount는 0이다. 안 받은 도장([pending])이 읽는 값만 계산한다
+  /// 안 받은 도장([pending])이 읽는 값만 계산한다
   Future<BadgeFacts> _badgeFacts(BadgeCatalog catalog, List<Badge> pending, DateTime now) async {
     bool needs(String kind) => pending.any((b) => b.cond['kind'] == kind);
 
@@ -1132,6 +1168,8 @@ class SyncService {
       }
     }
 
+    final companion = await _companionBadgeFacts();
+
     return BadgeFacts(
       sessionsCount: counted.length,
       bestSessionKm: bestSessionKm,
@@ -1149,6 +1187,8 @@ class SyncService {
           if (p.landmarkId != sketchId) p.frame.name,
       },
       bestJourneyKm: bestJourneyKm,
+      companionsMet: companion.met,
+      finaleCount: companion.finales,
     );
   }
 
@@ -2201,13 +2241,18 @@ class SyncService {
     List<NoticeCandidate> notices = const [],
     List<Prop> newProps = const [],
     List<Badge> newBadges = const [],
+    List<Boat> newBoats = const [],
   }) {
     final bySource = <String, int>{};
     for (final r in raw) {
       bySource[r.sourceId] = (bySource[r.sourceId] ?? 0) + r.steps;
     }
     return SyncReport(raw.length, raw.length - kept.length, bySource,
-        advancedKm: advancedKm, notices: notices, newProps: newProps, newBadges: newBadges);
+        advancedKm: advancedKm,
+        notices: notices,
+        newProps: newProps,
+        newBadges: newBadges,
+        newBoats: newBoats);
   }
 }
 

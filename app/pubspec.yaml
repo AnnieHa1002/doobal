@@ -50,6 +50,9 @@ flutter:
     # 명소 풍경화 추천101장 (최종 채택 전 검토본)
     - assets/paintings/
     - assets/items/basic_v02/
+    # 배 9척 (boats.json assetDir). 동행 Rive 밖 그림(이야기 6장 등)
+    - assets/boats/v01fix/
+    - assets/companions/
     - assets/ui/
 
   # 표시 글꼴(제목·숫자·버튼·굵은 글자, 설정에서 고름) 개구·동글·고운바탕 Bold, 본문 고운돋움. 모두 SIL OFL 1.1.

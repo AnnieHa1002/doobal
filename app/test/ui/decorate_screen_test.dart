@@ -760,72 +760,13 @@ void main() {
     });
   });
 
-  group('소품 색 (베레모)', () {
-    testWidgets('모자 탭에서 베레모를 입고 있으면 색 줄(기본 + 몸 색 10)이 칸 위에 붙는다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => _ownProps(e.db, ['hat_02']));
-      await _open(tester, e);
-
-      expect(_key('tint-default'), findsOneWidget);
-      for (final s in spiritPalette.body.swatches) {
-        expect(_key('tint-swatch-${s.id}'), findsOneWidget, reason: s.name);
-      }
-      // 기본이 골라져 있다
-      expect(_swatchCheck('tint-default'), findsOneWidget);
-      expect(_swatchCheck('tint-swatch-1'), findsNothing);
-      // 줄은 칸들 위에 있다
-      expect(tester.getBottomLeft(_key('tint-default')).dy,
-          lessThan(tester.getTopLeft(find.byType(ShelfCell).first).dy));
-
-      // 색이 없는 소품이나 비운 칸에는 색 줄이 없다
-      await _tap(tester, _key('prop-hat_02'));
-      expect(_key('tint-default'), findsNothing);
-      await _tap(tester, _key('prop-none'));
-      expect(_key('tint-default'), findsNothing);
-      // 베레모로 돌아오면 다시 붙는다
-      await _tap(tester, _key('prop-hat_01'));
-      expect(_key('tint-default'), findsOneWidget);
-      // 다른 탭에는 없다
-      await _goTab(tester, 'cloth');
-      expect(_key('tint-default'), findsNothing);
-      await end(tester, e);
+  test('Look에 소품 색이 없다: 옛 tints 키는 읽지 않고 저장하지도 않는다', () {
+    final look = Look.fromJson({
+      ...Look.initial.toJson(),
+      'tints': {'hat_01': {'kind': 'swatch', 'i': 4}},
     });
-
-    testWidgets('색을 고르면 저장할 것이 생기고, 저장하면 tints에 남으며, 기본으로 돌아오면 지워진다', (tester) async {
-      final handle = tester.ensureSemantics();
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
-
-      expect(find.bySemanticsLabel('베레모 기본'), findsOneWidget);
-      expect(find.bySemanticsLabel('베레모 라벤더'), findsOneWidget);
-      await _tap(tester, _key('tint-swatch-4'));
-      expect(_swatchCheck('tint-swatch-4'), findsOneWidget);
-      expect(_swatchCheck('tint-default'), findsNothing);
-      expect(_enabled(tester, '저장'), isTrue);
-      await _save(tester);
-      expect((await _stored(tester, e)).tints, {'hat_01': const SwatchBodyColor(4)});
-
-      await _tap(tester, _key('tint-default'));
-      expect(_enabled(tester, '저장'), isTrue);
-      await _save(tester);
-      expect((await _stored(tester, e)).tints, isEmpty);
-      handle.dispose();
-      await end(tester, e);
-    });
-
-    testWidgets('되돌리기는 소품 색도 저장된 모습으로 돌린다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
-      await _tap(tester, _key('tint-swatch-7'));
-      expect(_enabled(tester, '되돌리기'), isTrue);
-      await tester.tap(find.widgetWithText(GameButton, '되돌리기'));
-      await tester.pump();
-      expect(_swatchCheck('tint-default'), findsOneWidget);
-      expect(_enabled(tester, '저장'), isFalse);
-      await end(tester, e);
-    });
+    expect(look, Look.initial);
+    expect(look.toJson().containsKey('tints'), isFalse);
   });
 
   group('저장 · 되돌리기', () {

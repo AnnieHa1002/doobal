@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../domain/color.dart';
 import '../../domain/look.dart';
 import '../../domain/prop.dart';
 import '../../domain/spirit_palette.dart';
@@ -68,8 +67,7 @@ String _ga(String word) {
 
 /// 소품 탭: 한 칸([slot])의 가진 소품만 선반 3열로. 옷이 아니면 맨 앞에 "없음"(손은 "맨손") 칸.
 /// 잠긴 소품은 보여 주지 않고, 칸 위에 다음 거리 소품까지 남은 본격 걷기 거리 한 줄만 둔다
-/// (무엇인지는 숨긴다, UI 명세 12장·16장 11/3). 거리 소품을 다 얻었으면 그 줄도 없다.
-/// 입고 있는 소품에 tint가 있으면(베레모) 색 줄이 칸 위에 붙는다
+/// (무엇인지는 숨긴다, UI 명세 12장·16장 11/3). 거리 소품을 다 얻었으면 그 줄도 없다
 class PropTab extends StatelessWidget {
   const PropTab({
     super.key,
@@ -77,9 +75,7 @@ class PropTab extends StatelessWidget {
     required this.look,
     required this.props,
     required this.nextKm,
-    required this.palette,
     required this.onPick,
-    required this.onTint,
   });
 
   final String slot;
@@ -90,25 +86,9 @@ class PropTab extends StatelessWidget {
 
   /// 다음 거리 소품까지 남은 km ([kmToNextDistanceProp]), 없으면 null
   final double? nextKm;
-  final SpiritPalette palette;
 
   /// 고른 소품 id, "없음"이면 null
   final ValueChanged<String?> onPick;
-
-  /// 소품 색을 고른다 (기본 색이면 null)
-  final void Function(String propId, BodyColor? color) onTint;
-
-  /// 소품의 그림 자리표시 색: 색을 고를 수 있으면 지금 고른 색(없으면 기본 색)
-  Color _swatchOf(Prop p) {
-    if (!p.tintable) return _placeholder;
-    final c = look.tints[p.id];
-    final rule = palette.tints[p.id];
-    return Color(c != null
-        ? palette.body.argbOf(c)
-        : rule == null
-            ? palette.body.swatches.first.color
-            : argbFromHex(rule.defaultHex));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,8 +96,6 @@ class PropTab extends StatelessWidget {
     final next = nextKm;
     final emptyName = _emptyNames[slot];
     final empty = emptyName != null && props.isEmpty;
-    final worn = props.where((p) => p.id == current && p.tintable).firstOrNull;
-    final rule = worn == null ? null : palette.tints[worn.id];
 
     final cells = <Widget>[
       if (!empty && slot != alwaysWornSlot)
@@ -137,7 +115,7 @@ class PropTab extends StatelessWidget {
             name: p.name,
             state: current == p.id ? '입는 중' : '가짐',
             selected: current == p.id,
-            swatch: _swatchOf(p),
+            swatch: _placeholder,
             tilt: props.indexOf(p) + 1,
             onTap: () => onPick(p.id),
           ),
@@ -160,16 +138,6 @@ class PropTab extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 10),
-          ],
-          if (worn != null && rule != null) ...[
-            TintRow(
-              propName: worn.name,
-              defaultHex: rule.defaultHex,
-              body: palette.body,
-              selected: look.tints[worn.id],
-              onPick: (c) => onTint(worn.id, c),
             ),
             const SizedBox(height: 10),
           ],
