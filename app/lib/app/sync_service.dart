@@ -61,11 +61,11 @@ class SyncReport {
   /// 디버그 거리 배수가 켜져 있으면 진행 거리의 증가에는 그 배수가 곱해져 있다
   final double advancedKm;
 
-  /// 이번 동기화에서 새로 생긴 일 (알림 후보 N1·N2·N4). 앱이 켜져 있는지·꺼진 종류인지·하루 최대는
+  /// 이번 동기화에서 새로 생긴 일 (알림 후보 N1·N2·N3·N4). 앱이 켜져 있는지·꺼진 종류인지·하루 최대는
   /// 아직 안 따진 것이다 (NotificationService가 이어서 정한다)
   final List<NoticeCandidate> notices;
 
-  /// 이번 동기화에서 새로 얻어 토스트로 알릴 소품 (거리·걸음, [announcesProp]). props.json 순서
+  /// 이번 동기화에서 새로 얻어 토스트로 알릴 소품 (거리·걸음은 [announcesProp], 동행 완결은 동행 동기화). props.json 순서
   final List<Prop> newProps;
 
   /// 이번 동기화에서 새로 받은 도장 (badges.json 순서). 토스트·배낭 점으로 알린다
