@@ -45,7 +45,7 @@ SLOTS = ['hat', 'face', 'cloth', 'shoe', 'hand', 'bag', 'pet', 'float', 'effect'
 # 색을 바꿀 수 있게 그린 기본 소품 7종(Codex 기본 소품 v07 materials_v07.json, 11/4).
 # 그림 = 회색조 층 × 색 ÷ 180 + 고정 무늬 층. 사용자가 고르지 않고, 색마다 따로 된 소품(COLOR_VARIANTS)으로 판다(11/4 밤).
 MATERIAL = {
-    'hat_01': ('beret', '#D78A51'),
+    'hat_01': ('beret', '#A4502F'),  # 기준 문서 7장 기본 테라코타(Codex v07 미리보기 #D78A51 대신, 11/6)
     'hat_02': ('feather_hat', '#B2815D'),
     'hat_04': ('bamboo_hat', '#E4AE5D'),
     'hat_05': ('silla_crown', '#D6A24C'),

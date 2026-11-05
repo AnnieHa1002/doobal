@@ -336,7 +336,7 @@
   "formula": "rgb = clamp(neutral.rgb × 고른 색 ÷ 기준 밝기) — 기준 밝기는 구역 그림의 meanLuminance(Codex recolor_report)",
   "swatches": "palette body.swatches 10 + 직접 고르기",
   "price": 0,
-  "save": "Profile.boatColors{boatId:{zone:{kind swatch,i}|{kind custom,hex}}}, 처음은 defaults(그림 원래 색)",
+  "save": "BoatsOwned.colors(얻은 배 줄의 JSON {zone:{kind swatch,i}|{kind custom,hex}}, 고른 적 없으면 null = 그림 원래 색). 11/6 개발 구현에 맞춤(이전 문서의 Profile.boatColors)",
   "reset": "원래 색으로 되돌리기 있음"
  }
 }
