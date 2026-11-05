@@ -176,6 +176,7 @@ class Rules {
     required this.companionMeetChanceOther,
     required this.companionAheadEverySec,
     required this.companionAheadAwaySec,
+    required this.companionWalkMps,
     required this.companionLagCatchUpMps,
     required this.companionLateArrivalMaxSec,
     required this.shopDailyEffectCapKm,
@@ -201,6 +202,9 @@ class Rules {
   /// 걷는 중 연출 (config companions.pace, 저장하지 않는다)
   final double companionAheadEverySec;
   final double companionAheadAwaySec;
+
+  /// 동행의 걷기 속도(m/s): 뒤처지는 속도와 쉼터 늦은 도착을 잰다 (config companions.pace.walkMps, 가안)
+  final double companionWalkMps;
   final double companionLagCatchUpMps;
   final double companionLateArrivalMaxSec;
 
@@ -578,6 +582,7 @@ class Rules {
       companionMeetChanceOther: _d((companions['meetChance'] as Map)['other']),
       companionAheadEverySec: _d(companionPace['aheadEverySec']),
       companionAheadAwaySec: _d(companionPace['aheadAwaySec']),
+      companionWalkMps: _d(companionPace['walkMps']),
       companionLagCatchUpMps: _d(companionPace['lagCatchUpMps']),
       companionLateArrivalMaxSec: _d(companionPace['lateArrivalMaxSec']),
       shopDailyEffectCapKm: _d(shop['dailyEffectCapKm']),

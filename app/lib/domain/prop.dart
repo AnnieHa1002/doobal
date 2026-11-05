@@ -107,5 +107,5 @@ String newPropToast(List<Prop> props) => '새 소품을 얻었어요 · ${props.
     '${props.length > 1 ? ' 외 ${props.length - 1}개' : ''}';
 
 /// 토스트로 알리는 소품인가: 거리·걸음 소품만. 권역 소품은 도착 화면이 따로 알리고,
-/// 기본 소품은 처음부터 가진 것이다 (동행 소품은 M4에서 이야기를 마칠 때 준다)
+/// 기본 소품은 처음부터 가진 것이다 (동행 소품은 이야기 완결 때 동행 동기화가 따로 준다: 그때도 토스트)
 bool announcesProp(Prop p) => p.kind == PropUnlockKind.distance || p.kind == PropUnlockKind.steps;

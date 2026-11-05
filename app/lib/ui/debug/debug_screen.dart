@@ -6,10 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/companion_providers.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/companion_engine.dart' show storyNoticeKey;
+import '../../domain/notification_policy.dart';
 import '../common/palette.dart';
 import '../companion/companion_screen.dart';
 import '../companion/meet_flow.dart';
 import 'rive_preview_screen.dart';
+
+/// 개발 화면이 띄우는 이야기 알림의 번호 (알림 기록의 번호와 겹치지 않을 만큼 크게)
+const _debugNoticeId = 1 << 30;
 
 /// 거리 배수 고르기 선택지 (테스트용이라 코드에 둔다)
 const debugDistanceScales = [1.0, 10.0, 100.0];
@@ -117,6 +122,25 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
     return '${met.companion.name} 한 장 더';
   }
 
+  /// 지금 열린 장의 이야기 알림(N3)을 바로 띄운다 (폰에서 눌러 그 장이 열리는지 보게. 기록에는 안 남는다)
+  Future<String> _noticeChapter() async {
+    final svc = await ref.read(syncServiceProvider.future);
+    final view = await svc.companionsView();
+    final met = view.metById(view.walkingWith ?? view.lastWith);
+    if (met == null) return '만난 동행 없음';
+    final message = buildNotice(
+      NoticeCandidate(NoticeKind.n3,
+          key: storyNoticeKey(met.companion.id, met.chapter),
+          vars: {'companion': met.companion.name}),
+      await ref.read(noticeCatalogProvider.future),
+      '',
+      ref.read(clockProvider)(),
+    );
+    await ref.read(systemNotifierProvider).show(
+        _debugNoticeId, message.kind, message.title, message.body, message.payload);
+    return message.payload;
+  }
+
   @override
   Widget build(BuildContext context) {
     final snapshot = ref.watch(snapshotProvider);
@@ -204,6 +228,10 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
               OutlinedButton(
                 onPressed: _busy ? null : () => _run('이야기', _openChapter),
                 child: const Text('이야기 한 장 더'),
+              ),
+              OutlinedButton(
+                onPressed: _busy ? null : () => _run('이야기 알림', _noticeChapter),
+                child: const Text('이야기 알림'),
               ),
             ],
           ),

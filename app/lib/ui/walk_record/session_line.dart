@@ -10,7 +10,7 @@ import '../common/format.dart';
 String sessionLine(WalkRecord record, Rules rules, {String dayLabel = '오늘', int? nth}) {
   final max = rules.sessionMaxPerDay;
   if (record.sessions.any((s) => s.counted)) {
-    return '$dayLabel ${nth ?? record.countedToday}/$max번째 함께 걷기';
+    return '$dayLabel 함께 걷기 ${nth ?? record.countedToday}/$max';
   }
   if (record.sessions.any((s) => s.qualified)) {
     return '$dayLabel은 $max/$max번을 다 채웠어요';

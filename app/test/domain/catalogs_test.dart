@@ -181,6 +181,7 @@ void main() {
     expect((rules.companionWalksPerChapter, rules.companionChapters), (4, 8));
     expect((rules.companionAheadEverySec, rules.companionAheadAwaySec), (90, 8));
     expect((rules.companionLagCatchUpMps, rules.companionLateArrivalMaxSec), (0.5, 600));
+    expect(rules.companionWalkMps, 1.3);
     expect((rules.shopDailyEffectCapKm, rules.shopMaxHoldPerItem), (3, 9));
     expect((rules.adsRewardedPerDay, rules.adsMaxRewardCoins), (1, 400));
   });

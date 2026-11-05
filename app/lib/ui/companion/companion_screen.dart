@@ -5,6 +5,7 @@ import '../../app/companion_providers.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/companion.dart';
+import '../../domain/companion_engine.dart' show StoryRef;
 import '../common/app_text.dart';
 import '../common/ink_press.dart';
 import '../common/palette.dart';
@@ -21,31 +22,64 @@ const _tileLine = Color(0xFFD9C9AE);
 
 /// 동행 (캔버스 7-1): 지금 함께 걷는 동행, 만난 동행, 그 동행의 열린 이야기.
 /// 만나지 않은 동행은 어떤 표시도 없다 (11/5 Annie, 기준 문서 16장). 안 열린 장도 줄 자체가 없다.
-/// 칸을 누르면 그 동행과 걷는다. 지금은 개발 화면에서 들어온다 (쉼터 입구는 T3)
-class CompanionScreen extends ConsumerWidget {
-  const CompanionScreen({super.key});
+/// 칸을 누르면 그 동행과 걷는다. 지금은 개발 화면에서 들어온다 (쉼터 입구는 T3).
+/// [openStory]를 주면(알림 N3·걷기 기록 ‘읽기’) 그 동행의 이야기 목록을 보여 주고 그 장의 시트를 바로 연다.
+/// 안 만난 동행이거나 아직 안 열린 장이면 화면만 연다
+class CompanionScreen extends ConsumerStatefulWidget {
+  const CompanionScreen({super.key, this.openStory});
 
-  Future<void> _walkWith(BuildContext context, WidgetRef ref, String? id) async {
-    final svc = await ref.read(syncServiceProvider.future);
-    await svc.walkWith(id, ref.read(clockProvider)());
-    if (context.mounted) ref.invalidate(companionsViewProvider);
+  final StoryRef? openStory;
+
+  @override
+  ConsumerState<CompanionScreen> createState() => _CompanionScreenState();
+}
+
+class _CompanionScreenState extends ConsumerState<CompanionScreen> {
+  /// 이야기 목록을 볼 동행 (들어올 때 가리킨 동행). 칸을 고르면 그 동행을 따라가므로 없앤다
+  String? _focus;
+
+  @override
+  void initState() {
+    super.initState();
+    final story = widget.openStory;
+    if (story != null) {
+      _focus = story.companionId;
+      // 화면을 짓는 중에는 시트를 못 올린다
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openStory(story));
+    }
   }
 
-  Future<void> _open(
-    BuildContext context,
-    WidgetRef ref,
-    Companion companion,
-    StoryChapter chapter,
-  ) async {
+  Future<void> _openStory(StoryRef story) async {
+    try {
+      final view = await ref.read(companionsViewProvider.future);
+      if (!mounted) return;
+      final met = view.metById(story.companionId);
+      final chapter = met?.companion.chapters.where((c) => c.no == story.no).firstOrNull;
+      if (met == null || chapter == null || chapter.no > met.chapter) return;
+      await _open(met.companion, chapter);
+    } catch (e) {
+      debugPrint('이야기 열기 실패: $e');
+    }
+  }
+
+  Future<void> _walkWith(String? id) async {
+    final svc = await ref.read(syncServiceProvider.future);
+    await svc.walkWith(id, ref.read(clockProvider)());
+    if (!mounted) return;
+    setState(() => _focus = null);
+    ref.invalidate(companionsViewProvider);
+  }
+
+  Future<void> _open(Companion companion, StoryChapter chapter) async {
     final svc = await ref.read(syncServiceProvider.future);
     await svc.markStoryRead(companion.id, chapter.no);
-    if (!context.mounted) return;
+    if (!mounted) return;
     ref.invalidate(companionsViewProvider);
     await showStorySheet(context, companion, chapter);
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final view = ref.watch(companionsViewProvider).value;
     return Scaffold(
       body: SafeArea(
@@ -57,8 +91,9 @@ class CompanionScreen extends ConsumerWidget {
               Expanded(
                 child: _Body(
                   view: view,
-                  onWalkWith: (id) => _walkWith(context, ref, id),
-                  onOpen: (c, ch) => _open(context, ref, c, ch),
+                  focus: _focus,
+                  onWalkWith: _walkWith,
+                  onOpen: _open,
                 ),
               ),
           ],
@@ -69,16 +104,22 @@ class CompanionScreen extends ConsumerWidget {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.view, required this.onWalkWith, required this.onOpen});
+  const _Body({
+    required this.view,
+    required this.focus,
+    required this.onWalkWith,
+    required this.onOpen,
+  });
 
   final CompanionsView view;
+  final String? focus;
   final ValueChanged<String?> onWalkWith;
   final void Function(Companion, StoryChapter) onOpen;
 
   @override
   Widget build(BuildContext context) {
     final walking = view.metById(view.walkingWith);
-    final shown = walking ?? view.metById(view.lastWith);
+    final shown = view.metById(focus) ?? walking ?? view.metById(view.lastWith);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
       children: [

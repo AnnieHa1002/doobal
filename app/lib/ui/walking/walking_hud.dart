@@ -34,6 +34,7 @@ class WalkingHud extends StatefulWidget {
     this.eventKm = 2,
     this.onCloseEvent,
     this.badgeLine,
+    this.storyLine,
   });
 
   final Rules rules;
@@ -62,6 +63,9 @@ class WalkingHud extends StatefulWidget {
 
   /// 걸음 알약 아래 작은 줄: 새 도장 문구. 없으면 null
   final String? badgeLine;
+
+  /// 펼침 카드의 동행 줄: ‘퐁이 이야기 2/4’. 혼자 걷는 중이면 null
+  final String? storyLine;
 
   @override
   State<WalkingHud> createState() => _WalkingHudState();
@@ -331,8 +335,7 @@ class _DetailCard extends StatelessWidget {
           ],
           if (widget.nextMilestone != null)
             _Note('다음 방명록 지점까지 ${formatInt(widget.nextMilestone!)}보'),
-          // 동행 이야기 n/4는 M4(동행)에서. 지금은 늘 혼자
-          const _Note('혼자 걷는 중'),
+          _Note(widget.storyLine ?? '혼자 걷는 중'),
         ],
       ),
     );

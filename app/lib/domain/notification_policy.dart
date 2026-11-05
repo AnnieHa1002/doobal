@@ -77,7 +77,8 @@ class NoticeCatalog {
   int priorityOf(NoticeKind kind) => specs[kind]!.priority;
 }
 
-/// 이번 동기화에서 새로 생긴 일 하나. [key]는 그 일을 가리키는 값 (N1은 기회 id, N2·N4는 여정 id).
+/// 이번 동기화에서 새로 생긴 일 하나. [key]는 그 일을 가리키는 값 (N1은 기회 id, N2·N4는 여정 id,
+/// N3은 동행과 장: storyNoticeKey).
 /// 같은 (종류, key)로는 다시 알리지 않는다. [vars]는 문구에 채울 값:
 /// milestone(int)·remainingKm(num)·dest·companion
 class NoticeCandidate {
