@@ -32,18 +32,14 @@ Finder _badgeLine() => find.byKey(const Key('walk-badge-line'));
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
-  late Duration savedCard;
-  late Duration savedLine;
   setUp(() {
-    savedCard = HudMetrics.eventCardFor;
-    savedLine = HudMetrics.badgeLineFor;
     // 실제 시간이 지나야 사라지므로 시험에서는 짧게 한다
-    HudMetrics.eventCardFor = const Duration(milliseconds: 400);
-    HudMetrics.badgeLineFor = const Duration(milliseconds: 400);
+    HudMetrics.eventCardOverride = const Duration(milliseconds: 400);
+    HudMetrics.badgeLineOverride = const Duration(milliseconds: 400);
   });
   tearDown(() {
-    HudMetrics.eventCardFor = savedCard;
-    HudMetrics.badgeLineFor = savedLine;
+    HudMetrics.eventCardOverride = null;
+    HudMetrics.badgeLineOverride = null;
   });
 
   /// 먼 여정 중 걷는 중 화면을 연다. 센서 기준값(1,000)도 받아 둔다
@@ -155,7 +151,7 @@ void main() {
     testWidgets('걷는 중에 도장을 받으면 걸음 알약 아래 작은 줄이 뜨고(토스트는 없다) 몇 초 뒤 사라진다',
         (tester) async {
       // 동기화 주기(30초)를 한 번에 흘려보내므로 그동안 사라지지 않게 길게 두었다가 그 뒤 흘려보낸다
-      HudMetrics.badgeLineFor = const Duration(seconds: 60);
+      HudMetrics.badgeLineOverride = const Duration(seconds: 60);
       final e = await openWalking(tester);
       await earnFirstWalk(tester, e, walking: true);
       await settle(tester, () => _badgeLine().evaluate().isNotEmpty);

@@ -28,6 +28,15 @@ void main() {
     expect(rules.liveNoticeUpdateSec, 60);
   });
 
+  test('config의 도착 확인 간격은 5초, 이정표 카드 7초·도장 줄 4초, 지도 첫 보기 3곳·여백 0.15', () {
+    expect(rules.arrivalProbeSec, 5);
+    expect(rules.arrivalProbeSec, lessThan(rules.walkingRefreshSec));
+    expect(rules.eventCardSec, 7);
+    expect(rules.stampLineSec, 4);
+    expect(rules.mapFirstViewMinLandmarks, 3);
+    expect(rules.mapFirstViewMargin, 0.15);
+  });
+
   group('foregroundM: 길 위 이벤트가 세는 앱이 앞에 있는 동안의 거리', () {
     test('센 걸음 × 보폭이고, 첫 값(기준)은 세지 않는다', () {
       final w = LiveWalk(rules);

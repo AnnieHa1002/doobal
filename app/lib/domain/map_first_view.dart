@@ -3,14 +3,6 @@ import 'dart:math' as math;
 import 'map_projection.dart';
 import 'map_regions.dart';
 
-/// 지도를 처음 열 때 이 곳에서 최소 몇 곳은 보이게 할지.
-/// config로 옮길 값 (11/4 Annie: 명소가 3곳 이상 보이게)
-const mapFirstViewMinLandmarks = 3;
-
-/// 보이는 범위 가장자리 여백 비율 (명소가 가장자리에 딱 붙지 않게).
-/// config로 옮길 값
-const mapFirstViewMargin = 0.15;
-
 /// 지도 첫 보기: 가운데(캔버스 px)와 확대 배율
 class MapFirstView {
   const MapFirstView(this.center, this.zoom);
@@ -29,14 +21,15 @@ class MapFirstView {
 /// 배율은 [minZoom]~[maxZoom]으로 자른다.
 /// 가운데를 민 뒤에도 [minCount]곳이 안 보이면(섬·끝 위치) 배율을 줄여 맞춘다.
 /// 명소가 [minCount]곳보다 적으면 있는 만큼으로 본다
+/// [minCount]와 가장자리 여백 비율 [margin]은 config map.firstView (rules.mapFirstView*)
 MapFirstView mapFirstView({
   required MapPoint current,
   required List<MapPoint> landmarks,
   required MapRect bounds,
   required double viewW,
   required double viewH,
-  int minCount = mapFirstViewMinLandmarks,
-  double margin = mapFirstViewMargin,
+  required int minCount,
+  required double margin,
   double minZoom = 1,
   double maxZoom = 6,
 }) {

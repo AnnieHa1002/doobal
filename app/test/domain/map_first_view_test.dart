@@ -22,6 +22,8 @@ MapFirstView _view(MapPoint at, {List<MapPoint>? lms}) => mapFirstView(
       bounds: _bounds,
       viewW: _viewW,
       viewH: _viewH,
+      minCount: rules.mapFirstViewMinLandmarks,
+      margin: rules.mapFirstViewMargin,
     );
 
 MapRect _visible(MapFirstView v) => MapRect(
