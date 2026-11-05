@@ -1154,19 +1154,20 @@ class SyncService {
       switch (r.status) {
         case JourneyStatus.arrived:
           if (!sketch) arrivalCount++;
-          bestJourneyKm = math.max(bestJourneyKm, r.totalEffectiveKm);
+          bestJourneyKm = math.max(bestJourneyKm, await _withoutShopKm(r.id, r.totalEffectiveKm));
           if (checkSea && !sketch) seaCrossed |= _hasSea(_toJourney(r).route);
         case JourneyStatus.stopped:
           // 멈춘 지점까지의 경로 (끝이 안 적힌 옛 기록은 건너뛴다)
           if (r.endLat == null || r.endLng == null) break;
           final route = buildRoute(LatLng(r.originLat, r.originLng),
               LatLng(r.endLat!, r.endLng!), rules);
-          bestJourneyKm = math.max(bestJourneyKm, route.totalEffectiveKm);
+          bestJourneyKm =
+              math.max(bestJourneyKm, await _withoutShopKm(r.id, route.totalEffectiveKm));
           if (checkSea) seaCrossed |= _hasSea(route);
         case JourneyStatus.active:
           final here = await _whereNow(r, now);
           final prog = here.progress!;
-          bestJourneyKm = math.max(bestJourneyKm, prog.progressKm);
+          bestJourneyKm = math.max(bestJourneyKm, await _withoutShopKm(r.id, prog.progressKm));
           if (checkSea) {
             // 지금 지점이 놓인 다리까지 중에 배 구간이 있으면 건넌(건너는) 것이다
             final leg = positionAt(here.journey!.route, prog.progressKm).legIndex;
@@ -1998,8 +1999,8 @@ class SyncService {
     }
     final dist = {for (final d in days) d: byDay[d]?.actualM ?? 0.0};
     final bonus = {for (final d in days) d: byDay[d]?.bonusM ?? 0.0};
-    final shop = {for (final d in days) d: byDay[d]?.shopM ?? 0.0};
-    final travelM = {for (final d in days) d: byDay[d]?.travelM ?? 0.0};
+    final shop = await _shopMetersByDay(days, gaits, now);
+    final travelM = {for (final d in days) d: (byDay[d]?.travelM ?? 0.0) + shop[d]!};
     final walkTravel = {for (final d in days) d: byDay[d]?.walkTravelM ?? 0.0};
     final coins = {
       for (final d in days) d: byDay[d] == null ? 0 : dailyCoins(byDay[d]!, rules),
@@ -2110,8 +2111,8 @@ class SyncService {
       if (p.arrived) {
         await _arrive(active, to,
             frameKm: frameBasisKm(j.fundKm, walked.actualKm, j.route.totalEffectiveKm));
-        // 넘친 거리는 배수를 곱하기 전 걸은 거리로 되돌려 경비에 넣는다
-        km = addToFund(km, p.overflowKm / distanceScale, rules);
+        // 넘친 거리는 배수를 곱하기 전 걸은 거리로 되돌려 경비에 넣는다 (상점 효과는 경비에 안 더한다)
+        km = addToFund(km, await _withoutShopKm(active.id, p.overflowKm) / distanceScale, rules);
         // 도착한 분까지는 여정의 걸음(넘친 거리에 들어 있다)이라 경비는 다음 분부터
         fundedUntil = _nextMinuteMs(to);
       }
@@ -2159,6 +2160,7 @@ class SyncService {
 
   /// 여정을 시작한 뒤 걸은 이동 거리(km)와 실제 거리(km), 둘 다 × 디버그 거리 배수:
   /// 여정 진행 거리(이동 거리)와 액자 기준(실제 거리)을 계산하는 유일한 자리.
+  /// 이동 거리에는 이 여정의 상점 효과(km, 배수 안 곱함)를 더하고, 실제 거리에는 안 더한다.
   /// 경비(여정 없이 걸은 거리)와 하루 요약은 이 값이 아니라 [_travelKmFrom]·분별 나눔 그대로 쓴다
   Future<({double travelKm, double actualKm})> _journeyWalked(
     JourneyRow journey,
@@ -2166,7 +2168,7 @@ class SyncService {
   ) async {
     final t = sumTravel(await _travelFrom(_minuteOf(journey.startUtc), now));
     return (
-      travelKm: t.travelM / 1000 * distanceScale,
+      travelKm: t.travelM / 1000 * distanceScale + await _journeyShopKm(journey.id),
       actualKm: t.actualM / 1000 * distanceScale,
     );
   }

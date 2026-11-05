@@ -135,6 +135,7 @@ class Rules {
     required this.horizonY,
     required this.pathY,
     required this.characterHeightPx,
+    required this.characterCanvasHeightPx,
     required this.characterHeightLandscapePx,
     required this.layers,
     required this.seaHiddenLayers,
@@ -290,6 +291,9 @@ class Rules {
   final double horizonY;
   final double pathY;
   final double characterHeightPx;
+
+  /// 정령·동행 캔버스에서 머리~발 높이 (config character.canvas.heightPx). 배 판 그림과 같은 잣대다
+  final double characterCanvasHeightPx;
 
   /// 가로 화면의 캐릭터 키 (기준 1170px, config character.canvas.screenHeightPx.landscape)
   final double characterHeightLandscapePx;
@@ -513,6 +517,8 @@ class Rules {
       horizonY: _d(scene['horizonY']),
       pathY: _d(scene['pathY']),
       characterHeightPx: _d(scene['characterHeightPx']),
+      characterCanvasHeightPx:
+          _d(((j['character'] as Map<String, dynamic>)['canvas'] as Map<String, dynamic>)['heightPx']),
       characterHeightLandscapePx: _d(((j['character'] as Map<String, dynamic>)['canvas']
           as Map<String, dynamic>)['screenHeightPx']['landscape']),
       layers: layers,

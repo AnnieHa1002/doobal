@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/backup_policy.dart';
 import '../domain/badge.dart' as stamp;
+import '../domain/boat.dart';
 import '../domain/focus_walk.dart';
 import '../domain/notification_policy.dart' show NoticeKind, parseNoticePayload;
 import '../domain/prop.dart';
@@ -15,6 +16,7 @@ import 'background_sync.dart';
 import 'backup_runner.dart';
 import 'notification_service.dart';
 import 'providers.dart';
+import 'shop_providers.dart';
 import 'sync_service.dart';
 
 /// MaterialApp에 달아 두면 어느 화면에서도 토스트를 띄울 수 있다
@@ -65,6 +67,9 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   /// 새로 받은 도장 듣기 (동기화 서비스가 새로 만들어지면 다시 듣는다)
   StreamSubscription<List<stamp.Badge>>? _badgeSub;
 
+  /// 새로 얻은 보상 배 듣기 (동기화 서비스가 새로 만들어지면 다시 듣는다)
+  StreamSubscription<List<Boat>>? _boatSub;
+
   /// 누른 알림 듣기
   StreamSubscription<String>? _tapSub;
 
@@ -91,6 +96,8 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
       _propSub = svc.newProps.listen(_showNewProps);
       _badgeSub?.cancel();
       _badgeSub = svc.newBadges.listen(_showNewBadges);
+      _boatSub?.cancel();
+      _boatSub = svc.newBoats.listen(_showNewBoats);
     }, fireImmediately: true);
     final notices = ref.read(localNotificationsProvider);
     _tapSub = notices.taps.listen(_openNotice);
@@ -107,6 +114,7 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     _aliveTimer?.cancel();
     _propSub?.cancel();
     _badgeSub?.cancel();
+    _boatSub?.cancel();
     _tapSub?.cancel();
     _lifecycle.dispose();
     super.dispose();
@@ -179,6 +187,14 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     final messenger = scaffoldMessengerKey.currentState;
     if (messenger == null || ref.read(walkingActiveProvider) > 0) return;
     queueToastOn(messenger, stamp.newBadgeToast(badges));
+  }
+
+  /// 새로 얻은 보상 배 한 줄 토스트 (소품과 같은 방식). 자동으로 갈아타지 않는다
+  void _showNewBoats(List<Boat> boats) {
+    final messenger = scaffoldMessengerKey.currentState;
+    if (!mounted || messenger == null) return;
+    ref.invalidate(ownedBoatIdsProvider);
+    queueToastOn(messenger, newBoatToast(boats));
   }
 
   /// 앱이 살아 있는 동안 rules.aliveSaveSec마다 살아 있다고 적는다

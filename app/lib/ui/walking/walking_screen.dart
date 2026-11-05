@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/live_walker.dart';
 import '../../app/providers.dart';
+import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
 import '../../data/walk_notice.dart';
 import '../../domain/companion.dart';
@@ -612,6 +613,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             moving: meet == null && summary != null && summary.lastSteps > 0,
             sceneSeed: snap.journey?.dest.id ?? 'home',
             spirit: spirit,
+            boat: ref.watch(sceneBoatProvider).value,
           ),
           // 길 위 만남 동안에는 HUD를 가린다 (상태는 그대로 둔다)
           Offstage(
