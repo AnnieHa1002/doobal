@@ -238,7 +238,7 @@
   },
   "holdSec": {
    "approx": true,
-   "happy": 2,
+   "happy": 1,
    "surprised": 2,
    "teary": 3,
    "angry": 2
