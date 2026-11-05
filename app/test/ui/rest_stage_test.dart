@@ -128,6 +128,22 @@ void main() {
       await end(tester, e);
     });
 
+    testWidgets('화면 크기가 달라도 물건이 화면 안에 있고 끝까지 밀린다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      for (final size in const [Size(320, 568), Size(411, 1005), Size(768, 1024), Size(1024, 768)]) {
+        tester.view.physicalSize = size;
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: '$size');
+        final rect = tester.getRect(_backpack);
+        expect(rect.left, greaterThanOrEqualTo(0), reason: '$size');
+        expect(rect.top, greaterThanOrEqualTo(0), reason: '$size');
+        expect(rect.bottom, lessThanOrEqualTo(size.height), reason: '$size');
+      }
+      await end(tester, e);
+    });
+
     testWidgets('작은 폰(375×667): 물건 자리는 폭 비율, 아래 기준', (tester) async {
       final e = UiEnv();
       await e.seed(tester);

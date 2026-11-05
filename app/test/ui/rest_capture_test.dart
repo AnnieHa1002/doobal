@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 
 import 'package:doobal/ui/rest/prop_wiggle.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
-import 'package:doobal/ui/scene/scene_art.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -68,7 +67,5 @@ void main() {
       await tester.pump();
     }
     await end(tester, e);
-    // 쓰지 않은 값 경고를 막는다
-    expect(sceneArtHash('a', 1), sceneArtHash('a', 1));
   });
 }

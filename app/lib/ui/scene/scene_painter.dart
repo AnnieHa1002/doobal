@@ -20,7 +20,13 @@ enum ScenePass {
   background,
   foreground,
 
-  /// 쉼터 하늘·후경 (밀 때 천천히)
+  /// 쉼터 하늘 (시간이 흘러도 그대로)
+  restSky,
+
+  /// 쉼터 구름·지나가는 것 (시간에 따라 움직인다)
+  restClouds,
+
+  /// 쉼터 후경
   restFar,
 
   /// 쉼터 캠프 뒤판

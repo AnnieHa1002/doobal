@@ -191,6 +191,36 @@ void main() {
       art.dispose();
     });
 
+    testWidgets('들판 회색조 두 장이 생기면 그것을 읽는다', (tester) async {
+      final art = (await tester.runAsync(() => SceneArt.load(
+            _Bundle(extra: {
+              '$_dir/bg_back_meadow_v10_clean.png',
+              '$_dir/bg_back_meadow_grass_v10_clean.png',
+            }),
+            _look(10),
+            false,
+            1 / 3,
+            3,
+          )))!;
+      expect(art.meadowGray, ['bg_back_meadow_v10_clean.png', 'bg_back_meadow_grass_v10_clean.png']);
+      expect(art.images.containsKey('bg_back_meadow_v10_clean.png'), isTrue);
+      expect(art.images.containsKey('bg_back_meadow_autumn_v10_preview.png'), isFalse);
+      final recorder = ui.PictureRecorder();
+      SceneArtPainter(
+        art: art,
+        look: _look(10),
+        mode: SceneMode.walking,
+        distanceM: 100,
+        rules: rules,
+        onSea: false,
+        pass: ScenePass.background,
+        elapsed: 0,
+        seed: 'test',
+      ).paint(Canvas(recorder), const Size(390, 844));
+      recorder.endRecording().dispose();
+      art.dispose();
+    });
+
     testWidgets('가을은 후경이 황갈로 곱해지고, 여름 후경은 그대로다', (tester) async {
       final summer = _look(7);
       final art = (await tester.runAsync(() => SceneArt.load(_Bundle(), summer, false, 1 / 3, 3)))!;

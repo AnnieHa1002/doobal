@@ -71,8 +71,11 @@ class SceneArtPainter extends CustomPainter {
     _time = factor == 0xffffffff ? null : factorMatrix(factor);
     _season = rules.seasonTint[look.season.name];
     switch (pass) {
+      case ScenePass.restSky:
+        _skyStill();
+      case ScenePass.restClouds:
+        _clouds();
       case ScenePass.restFar:
-        _sky();
         _far();
       case ScenePass.restBack:
         _campBack();
@@ -274,7 +277,7 @@ class SceneArtPainter extends CustomPainter {
     final season = look.season.name;
     final meadowSpeed = rules.layers[SceneLayerId.meadow]!.speed;
     final groundSpeed = rules.layers[SceneLayerId.ground]!.speed;
-    final meadow = SceneArt.grassLayers(art.data, 'bg_back_meadow', season, 'v10_clean');
+    final meadow = art.meadowGray;
     if (meadow != null) {
       _tile(meadow[0], _layout.n('meadowY'), meadowSpeed, paint: _layerPaint(SceneLayerId.meadow));
       _tile(meadow[1], _layout.n('meadowY'), meadowSpeed, paint: _grassPaint(layer: SceneLayerId.meadow));
@@ -287,7 +290,7 @@ class SceneArtPainter extends CustomPainter {
       );
     }
     _tile('bg_path_v11_clean.png', _layout.n('groundY'), groundSpeed);
-    final bank = SceneArt.grassLayers(art.data, 'bg_lower_bank', season, 'v11_clean');
+    final bank = art.bankGray;
     if (bank != null) {
       _tile(bank[0], _layout.n('groundY'), groundSpeed);
       _tile(bank[1], _layout.n('groundY'), groundSpeed, paint: _grassPaint());
@@ -487,47 +490,74 @@ class SceneArtPainter extends CustomPainter {
   }
 
   void _sky() {
+    _skyStill();
+    _clouds();
+  }
+
+  /// 시간이 흘러도 그대로인 하늘: 구워 둔 한 장(그라데이션·별·텍스처)과 해·달
+  void _skyStill() {
     final sky = look.sky;
-    paintSky(
+    final c = look.celestial;
+    final s = art.data['sky'] as Map;
+    art.drawSkyBaked(
       _canvas,
       _size,
-      _k,
-      sky: SkyLook(
-        top: sky.top,
-        mid: sky.mid,
-        horizon: sky.horizon,
-        glow: sky.glow,
-        glowStrength: sky.glowStrength,
-        stars: 0,
+      // 해 위치는 빛무리 자리라 천천히 바뀌는 만큼만 다시 굽는다
+      (
+        _size,
+        _layout.size,
+        sky.top,
+        sky.mid,
+        sky.horizon,
+        sky.glow,
+        (sky.glowStrength * 100).round(),
+        (sky.stars * 100).round(),
+        (c.progress * 500).round(),
       ),
-      celestial: Celestial(SkyBody.none, look.celestial.progress),
-      rules: rules,
-    );
-    final s = art.data['sky'] as Map;
-    if (sky.stars > 0) {
-      for (var i = 0; i < (s['starCount'] as num); i++) {
-        final hx = sceneArtHash('stars-x', i) / 0x80000000;
-        final hy = sceneArtHash('stars-y', i) / 0x80000000;
-        final r = (i % 3 + 2) * _k;
-        _draw(
-          'sky_star_dot_v01_clean.png',
-          Rect.fromLTWH(
-            hx * _size.width,
-            hy * _layout.y(rules.horizonY) * .65,
-            r * 2,
-            r * 2,
+      (canvas) {
+        final saved = _canvas;
+        _canvas = canvas;
+        paintSky(
+          canvas,
+          _size,
+          _k,
+          sky: SkyLook(
+            top: sky.top,
+            mid: sky.mid,
+            horizon: sky.horizon,
+            glow: sky.glow,
+            glowStrength: sky.glowStrength,
+            stars: 0,
           ),
-          paint: Paint()..color = Colors.white.withValues(alpha: sky.stars),
+          celestial: Celestial(SkyBody.none, c.progress),
+          rules: rules,
         );
-      }
-    }
-    _textures();
-    final c = look.celestial;
+        if (sky.stars > 0) {
+          for (var i = 0; i < (s['starCount'] as num); i++) {
+            final hx = sceneArtHash('stars-x', i) / 0x80000000;
+            final hy = sceneArtHash('stars-y', i) / 0x80000000;
+            final r = (i % 3 + 2) * _k;
+            _draw(
+              'sky_star_dot_v01_clean.png',
+              Rect.fromLTWH(
+                hx * _layout.size.width,
+                hy * _layout.y(rules.horizonY) * .65,
+                r * 2,
+                r * 2,
+              ),
+              paint: Paint()..color = Colors.white.withValues(alpha: sky.stars),
+            );
+          }
+        }
+        _textures();
+        _canvas = saved;
+      },
+    );
     if (c.body != SkyBody.none) {
       final cx =
           (rules.skyArc.leftX +
               (rules.skyArc.rightX - rules.skyArc.leftX) * c.progress) *
-          _size.width;
+          _layout.size.width;
       final cy = _layout.y(
         rules.horizonY -
             (rules.horizonY - rules.skyArc.peakY) *
@@ -543,6 +573,11 @@ class SceneArtPainter extends CustomPainter {
         Rect.fromCenter(center: Offset(cx, cy), width: width, height: width),
       );
     }
+  }
+
+  /// 시간에 따라 움직이는 하늘: 구름과 가끔 지나가는 것
+  void _clouds() {
+    final s = art.data['sky'] as Map;
     final width = (s['cloudWidth'] as num) * _k;
     final period = 3400 * _k;
     final offset = (_scroll(rules.layers[SceneLayerId.sky]!.speed) + (elapsed * (s['cloudSpeed'] as num))) * _k;
@@ -637,7 +672,7 @@ class SceneArtPainter extends CustomPainter {
 
   /// 쉼터 판은 시간이 흘러도 그대로, 불꽃은 프레임이 바뀔 때만 다시 그린다
   bool _elapsedChanged(SceneArtPainter old) => switch (pass) {
-        ScenePass.restBack || ScenePass.restFront => false,
+        ScenePass.restSky || ScenePass.restFar || ScenePass.restBack || ScenePass.restFront => false,
         ScenePass.restFire when camp != null =>
           (old.elapsed / camp!.campfire.frameSec).floor() != (elapsed / camp!.campfire.frameSec).floor(),
         _ => old.elapsed != elapsed,

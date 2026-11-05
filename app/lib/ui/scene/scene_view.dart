@@ -117,10 +117,13 @@ class SceneView extends StatelessWidget {
           boat: boat,
           camp: camp,
           restFarWidth: stage?.farWidth,
-          builder: (context, art, elapsed) {
+          builder: (context, art, clock) {
             if (stage != null) {
-              return _restStage(stage, art, elapsed, look, pose, speed, tint, painter);
+              return _restStage(stage, art, clock, look, pose, speed, tint, painter);
             }
+            return ValueListenableBuilder<double>(
+              valueListenable: clock,
+              builder: (context, elapsed, _) {
             final artLayout = art == null
                 ? null
                 : SceneArtLayout(art, size, mode, onSea, camp);
@@ -161,6 +164,8 @@ class SceneView extends StatelessWidget {
                 ),
               ],
             );
+              },
+            );
           },
         );
       },
@@ -175,8 +180,8 @@ class SceneView extends StatelessWidget {
       top: foot.dy - 440 * scale,
       width: 600 * scale,
       height: 600 * scale,
-      child: ColorFiltered(
-        colorFilter: ColorFilter.mode(Color(tint), BlendMode.modulate),
+      child: _Tinted(
+        tint: tint,
         child: RepaintBoundary(
           child: DoobalCharacter(
             speed: speed,
@@ -191,11 +196,11 @@ class SceneView extends StatelessWidget {
   }
 
   /// 쉼터 장면: 하늘·후경 한 층(천천히)과 캠프·물건·정령 한 층. 두 층을 옮기고 키우기만 하므로
-  /// 밀거나 확대할 때 다시 그리지 않는다
+  /// 밀거나 확대할 때 다시 그리지 않는다. 시간에 따라 다시 그리는 것은 구름과 불꽃뿐이다
   Widget _restStage(
     RestGeometry stage,
     SceneArt? art,
-    double elapsed,
+    ValueListenable<double> clock,
     SceneLook look,
     DoobalPose pose,
     double speed,
@@ -205,7 +210,7 @@ class SceneView extends StatelessWidget {
     final near = Size(stage.sceneWidth, stage.height);
     final far = Size(stage.farWidth, stage.height);
     final screen = Size(stage.width, stage.height);
-    CustomPainter layer(ScenePass pass) => SceneArtPainter(
+    CustomPainter layer(ScenePass pass, [double elapsed = 0]) => SceneArtPainter(
       art: art!,
       look: look,
       mode: mode,
@@ -222,6 +227,13 @@ class SceneView extends StatelessWidget {
     final foot = layout?.foot ??
         Offset(stage.sx(camp!.character.footX), stage.sy(camp!.character.footY));
     final figureHeight = camp!.character.heightPt * stage.k;
+    // 시계를 들으며 움직이는 층 하나
+    Widget ticking(ScenePass pass, Size size) => RepaintBoundary(
+      child: ValueListenableBuilder<double>(
+        valueListenable: clock,
+        builder: (_, elapsed, _) => CustomPaint(size: size, painter: layer(pass, elapsed)),
+      ),
+    );
     Widget placed(Size size, Matrix4 Function(RestCamera) matrix, Widget child) => Positioned(
       left: 0,
       top: 0,
@@ -242,12 +254,24 @@ class SceneView extends StatelessWidget {
           placed(
             far,
             (c) => _matrix(stage.farX(c), stage.liftY(c), c.zoom),
-            RepaintBoundary(
-              child: CustomPaint(
-                size: far,
-                painter: art == null ? fallback(ScenePass.background) : layer(ScenePass.restFar),
-              ),
-            ),
+            art == null
+                ? RepaintBoundary(
+                    child: CustomPaint(size: far, painter: fallback(ScenePass.background)),
+                  )
+                : SizedBox.fromSize(
+                    size: far,
+                    child: Stack(
+                      children: [
+                        RepaintBoundary(
+                          child: CustomPaint(size: far, painter: layer(ScenePass.restSky)),
+                        ),
+                        ticking(ScenePass.restClouds, far),
+                        RepaintBoundary(
+                          child: CustomPaint(size: far, painter: layer(ScenePass.restFar)),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
           placed(
             near,
@@ -274,11 +298,7 @@ class SceneView extends StatelessWidget {
                       ),
                     ),
                     Positioned.fill(
-                      child: IgnorePointer(
-                        child: RepaintBoundary(
-                          child: CustomPaint(painter: layer(ScenePass.restFire)),
-                        ),
-                      ),
+                      child: IgnorePointer(child: ticking(ScenePass.restFire, near)),
                     ),
                   ] else
                     Positioned.fill(
@@ -295,6 +315,22 @@ class SceneView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 시간대 색을 곱한다. 낮(흰색)에는 층을 만들지 않는다
+class _Tinted extends StatelessWidget {
+  const _Tinted({required this.tint, required this.child});
+
+  final int tint;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => tint == 0xFFFFFFFF
+      ? child
+      : ColorFiltered(
+          colorFilter: ColorFilter.mode(Color(tint), BlendMode.modulate),
+          child: child,
+        );
 }
 
 /// 배율 [zoom]으로 키운 뒤 ([x], [y])만큼 옮기는 행렬

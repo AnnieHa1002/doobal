@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:typed_data' show ByteData;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 import '../../domain/boat.dart';
@@ -15,8 +16,36 @@ import 'scene_painter.dart';
 export '../../domain/scene_plan.dart' show sceneArtHash;
 
 /// 승인된 v10·v11의 파일/배치 목록. 옛 중간 들판 config와 분리한다.
+/// 하늘에 쓰는 그림 (해·달·별 한 점·구름·지나가는 것·텍스처). 나머지 sky_ 파일은 안 읽는다
+const _skyKeys = [
+  'sky_sun_v11_clean.png',
+  'sky_moon_full_v11_clean.png',
+  'sky_star_dot_v01_clean.png',
+  'sky_cloud_01_v11_clean.png',
+  'sky_cloud_02_v11_clean.png',
+  'sky_birds_flock_v11_clean.png',
+  'sky_star_shooting_v11_clean.png',
+  'sky_wash_v01.png',
+  'paper_grain_v01.png',
+];
+
+/// 별 한 점의 가장 큰 지름 (그림 px)
+const starDotMaxPx = 8.0;
+
+/// 하늘 한 장을 구워 둘 때의 배율 (기기 pt 기준). 그라데이션·옅은 결이라 낮아도 된다
+const _skyBakeScale = 1.5;
+
 class SceneArt {
-  SceneArt(this.data, this.images, {this.boat, this.wideCamp, this.plan, this.grass});
+  SceneArt(
+    this.data,
+    this.images, {
+    this.boat,
+    this.wideCamp,
+    this.plan,
+    this.grass,
+    this.bankGray,
+    this.meadowGray,
+  });
   final Map<String, dynamic> data;
   final Map<String, ui.Image> images;
 
@@ -26,6 +55,10 @@ class SceneArt {
   /// 회색조 풀에 입힐 값 (palette.json grass). 없으면 칠하지 않는다
   final GrassPalette? grass;
 
+  /// 아래 둑·들판의 회색조 두 장 (바탕, 풀). 파일이 없으면 null이고 계절 완성 그림을 쓴다
+  final List<String>? bankGray;
+  final List<String>? meadowGray;
+
   /// 그림 파일 이름 → assets 키 (scene.json은 파일 이름으로 적는다)
   late final Map<String, String> _keyOfFile = {
     for (final e in (data['assets'] as Map<String, dynamic>).entries)
@@ -33,6 +66,31 @@ class SceneArt {
   };
 
   String? assetKeyOf(String file) => _keyOfFile[file];
+
+  ui.Image? _skyImage;
+  Object? _skyKey;
+
+  /// 하늘(그라데이션·별·텍스처)을 그림 한 장으로 구워 둔다. 값이 같으면 다시 안 굽는다.
+  /// 텍스처의 softLight 겹치기를 프레임마다 다시 하지 않기 위해서다
+  void drawSkyBaked(Canvas canvas, Size size, Object key, void Function(Canvas) draw) {
+    if (_skyKey != key || _skyImage == null) {
+      final recorder = ui.PictureRecorder();
+      draw(Canvas(recorder)..scale(_skyBakeScale));
+      final picture = recorder.endRecording();
+      final image = picture.toImageSync(
+        (size.width * _skyBakeScale).ceil().clamp(1, 4096),
+        (size.height * _skyBakeScale).ceil().clamp(1, 4096),
+      );
+      picture.dispose();
+      _skyImage?.dispose();
+      _skyImage = image;
+      _skyKey = key;
+    }
+    canvas.save();
+    canvas.scale(1 / _skyBakeScale);
+    canvas.drawImage(_skyImage!, Offset.zero, Paint()..filterQuality = FilterQuality.low);
+    canvas.restore();
+  }
 
   final _placed = <String, List<PlacedPiece>>{};
 
@@ -66,6 +124,7 @@ class SceneArt {
     bool onSea = false,
     BoatArt? boat,
     double? restFarWidthPx,
+    CampTheme? camp,
   }) async {
     final data = jsonDecode(
       await bundle.loadString('assets/data/scene_art.json'),
@@ -90,13 +149,11 @@ class SceneArt {
                   .clamp(1, farParts.length),
             ),
     };
-    keys.addAll(
-      assets.keys.where((k) => k.startsWith('sky_') && !k.contains('balloon')),
-    );
-    keys.addAll(['paper_grain_v01.png']);
+    keys.addAll(_skyKeys);
     WideCampImages? wide;
+    List<String>? bankGray, meadowGray;
     if (rest) {
-      wide = await WideCampImages.load(bundle, scale * pixelRatio, data);
+      wide = await WideCampImages.load(bundle, scene['rest'] as Map, scale * pixelRatio, data);
       // 완성 PNG를 중복 보관하지 않고 본판과 회색 풀에만 계절색을 입힌다.
       keys.addAll([
         if (wide == null) ...[
@@ -111,14 +168,16 @@ class SceneArt {
     } else if (onSea) {
       keys.add('bg_near_water_v11_clean.png');
     } else {
+      final ground = scene['ground'] as Map<String, dynamic>;
+      final bankFiles = [ground['lowerBankBase'] as String, ground['lowerBankGrass'] as String];
+      if (bankFiles.every(assets.containsKey)) bankGray = bankFiles;
+      meadowGray = await _meadowFiles(bundle, scene['meadow'] as Map<String, dynamic>, assets);
       keys.addAll([
         'bg_path_v11_clean.png',
         'bg_front_${look.season.name}_v11_clean.png',
         // 땅·들판은 회색조 풀 + 계절색. 회색조 파일이 없으면 계절별 완성 그림을 쓴다
-        ...SceneArt.grassLayers(data, 'bg_lower_bank', look.season.name, 'v11_clean') ??
-            ['bg_lower_bank_${look.season.name}_v11_clean.png'],
-        ...SceneArt.grassLayers(data, 'bg_back_meadow', look.season.name, 'v10_clean') ??
-            ['bg_back_meadow_${look.season.name}_v10_preview.png'],
+        ...bankGray ?? ['bg_lower_bank_${look.season.name}_v11_clean.png'],
+        ...meadowGray ?? ['bg_back_meadow_${look.season.name}_v10_preview.png'],
       ]);
       // 이 지역·계절에 설 수 있는 조각만 읽는다
       final byFile = <String, String>{
@@ -142,16 +201,18 @@ class SceneArt {
         if (boatImages == null) keys.add('prop_boat_01_v11_clean.png');
       }
       final farFiles = await _farFiles(bundle, scene, region, look.season, farParts);
+      final shrink = _displayRatios(data, plan, region, look.season.name, camp);
       // 순차 디코딩으로 로드 순간의 메모리 급증을 제한한다.
       for (final key in keys) {
         final spec = assets[key] as Map<String, dynamic>;
         final bytes = farFiles[key] ?? await bundle.load(spec['file'] as String);
         final width = (spec['canvas'][0] as num).toDouble();
+        // 화면에 가장 크게 그려지는 크기까지만 푼다
         final target = math
             .min(
               width,
               math.min(
-                (width * scale * pixelRatio).ceilToDouble(),
+                (width * (shrink[key] ?? 1) * scale * pixelRatio).ceilToDouble(),
                 (data['sky']['maxDecodeWidth'] as num).toDouble(),
               ),
             )
@@ -167,7 +228,16 @@ class SceneArt {
           codec.dispose();
         }
       }
-      return SceneArt(data, images, boat: boatImages, wideCamp: wide, plan: plan, grass: grass);
+      return SceneArt(
+        data,
+        images,
+        boat: boatImages,
+        wideCamp: wide,
+        plan: plan,
+        grass: grass,
+        bankGray: bankGray,
+        meadowGray: meadowGray,
+      );
     } catch (_) {
       for (final image in images.values) {
         image.dispose();
@@ -178,13 +248,83 @@ class SceneArt {
     }
   }
 
-  /// [prefix]_base·[prefix]_grass 두 장이 그림 목록에 있으면 그 키, 없으면 null.
-  /// 있으면 그리는 쪽은 바탕 위에 풀만 계절색으로 입힌다
-  static List<String>? grassLayers(Map<String, dynamic> data, String prefix, String season, String tail) {
-    final base = '${prefix}_base_$tail.png';
-    final grass = '${prefix}_grass_$tail.png';
+  /// 그림 키 → 화면에 가장 크게 그려질 때 캔버스의 몇 배인가. 없으면 1배.
+  /// 이보다 크게 풀어 봐야 메모리만 쓴다
+  static Map<String, double> _displayRatios(
+    Map<String, dynamic> data,
+    ScenePlan plan,
+    String region,
+    String season,
+    CampTheme? camp,
+  ) {
     final assets = data['assets'] as Map<String, dynamic>;
-    return assets.containsKey(base) && assets.containsKey(grass) ? [base, grass] : null;
+    final sky = data['sky'] as Map<String, dynamic>;
+    final byFile = {
+      for (final e in assets.entries) ((e.value as Map)['file'] as String).split('/').last: e.key,
+    };
+    double canvasW(String key) => ((assets[key] as Map)['canvas'][0] as num).toDouble();
+    final out = <String, double>{
+      'sky_sun_v11_clean.png': (sky['sunSize'] as num) / canvasW('sky_sun_v11_clean.png'),
+      'sky_moon_full_v11_clean.png': (sky['moonSize'] as num) / canvasW('sky_moon_full_v11_clean.png'),
+      'sky_star_dot_v01_clean.png': starDotMaxPx / canvasW('sky_star_dot_v01_clean.png'),
+    };
+    final farWidth = (data['portrait']['farWidth'] as num).toDouble();
+    final parts = (data['far'][region] as List).cast<String>();
+    for (final key in parts) {
+      out[key] = farWidth / parts.length / canvasW(key);
+    }
+    if (camp != null) {
+      final flameWidth = camp.campfire.box.w * (data['portrait']['width'] as num) / camp.refW;
+      for (final n in const ['01', '02', '03']) {
+        final key = 'fx_campfire_flame_${n}_v11_clean.png';
+        out[key] = flameWidth / canvasW(key);
+      }
+    }
+    for (final piece in plan.eligible(SceneRow.grove, region, season)) {
+      final key = byFile[piece.file];
+      if (key != null) out[key] = (piece.heightPx ?? plan.smallHeight[1]) / _boxHeight(assets, key);
+    }
+    for (final piece in plan.eligible(SceneRow.front, region, season)) {
+      final key = byFile[piece.file];
+      if (key != null) {
+        out[key] = (piece.big ? plan.bigHeight[1] : plan.smallHeight[1]) / _boxHeight(assets, key);
+      }
+    }
+    return out;
+  }
+
+  static double _boxHeight(Map<String, dynamic> assets, String key) =>
+      ((assets[key] as Map)['bbox'][3] as num).toDouble();
+
+  /// 들판 회색조 두 장(scene.json meadow)이 그림 폴더에 있으면 그림 목록에 더하고 그 키를 돌려준다
+  static Future<List<String>?> _meadowFiles(
+    AssetBundle bundle,
+    Map<String, dynamic> meadow,
+    Map<String, dynamic> assets,
+  ) async {
+    final canvas = meadow['canvas'] as List;
+    final names = [meadow['file'] as String, meadow['grass'] as String];
+    for (final name in names) {
+      final path = await _firstExisting(bundle, name);
+      if (path == null) return null;
+      assets[name] = {
+        'file': path,
+        'canvas': canvas,
+        'bbox': [0, 0, canvas[0], canvas[1]],
+      };
+    }
+    return names;
+  }
+
+  /// 그림 폴더에서 [name]을 찾는다. WebP를 먼저 본다
+  static Future<String?> _firstExisting(AssetBundle bundle, String name) async {
+    for (final path in [
+      '${WideCampImages.dir}/${name.replaceAll('.png', '.webp')}',
+      '${WideCampImages.dir}/$name',
+    ]) {
+      if (await _assetOrNull(bundle, path) != null) return path;
+    }
+    return null;
   }
 
   /// 이 지역 후경을 대신할 파일: 겨울이면 겨울판(scene.json winterTiles), 이음새 수정본이 채택됐으면 그것.
@@ -208,11 +348,9 @@ class SceneArt {
     if (files == null || files.length != parts.length) return const {};
     final found = <String, ByteData>{};
     for (var i = 0; i < parts.length; i++) {
-      final name = files[i] as String;
-      final bytes = await _assetOrNull(bundle, '${WideCampImages.dir}/${name.replaceAll('.png', '.webp')}') ??
-          await _assetOrNull(bundle, '${WideCampImages.dir}/$name');
-      if (bytes == null) return const {};
-      found[parts[i]] = bytes;
+      final path = await _firstExisting(bundle, files[i] as String);
+      if (path == null) return const {};
+      found[parts[i]] = await bundle.load(path);
     }
     return found;
   }
@@ -274,6 +412,7 @@ class SceneArt {
     }
     boat?.dispose();
     wideCamp?.dispose();
+    _skyImage?.dispose();
   }
 }
 
@@ -309,19 +448,17 @@ class WideCampImages {
 
   static Future<WideCampImages?> load(
     AssetBundle bundle,
+    Map rest,
     double pixelsPerArtPx,
     Map<String, dynamic> data,
   ) async {
-    final rest = (jsonDecode(await bundle.loadString('assets/data/scene.json')) as Map)['rest'] as Map;
     final files = rest['files'] as Map;
     final widthPx = (rest['widthPx'] as num).toDouble();
     final found = <ByteData>[];
     for (final key in ['back', 'backGrass', 'front', 'frontGrass']) {
-      final name = files[key] as String;
-      final bytes = await SceneArt._assetOrNull(bundle, '$dir/${name.replaceAll('.png', '.webp')}') ??
-          await SceneArt._assetOrNull(bundle, '$dir/$name');
-      if (bytes == null) return null;
-      found.add(bytes);
+      final path = await SceneArt._firstExisting(bundle, files[key] as String);
+      if (path == null) return null;
+      found.add(await bundle.load(path));
     }
     final width = math
         .min(
@@ -467,7 +604,9 @@ class SceneArtHost extends StatefulWidget {
 
   /// 배 구간인가. 바뀌면 배·물 그림과 땅 그림을 바꿔 읽는다
   final bool onSea;
-  final Widget Function(BuildContext, SceneArt?, double) builder;
+
+  /// 그릴 것을 만든다. 시계([ValueListenable], 초)가 흐를 때 다시 부르지 않으므로 움직이는 층만 시계를 듣는다
+  final Widget Function(BuildContext, SceneArt?, ValueListenable<double>) builder;
   @override
   State<SceneArtHost> createState() => _SceneArtHostState();
 }
@@ -476,9 +615,9 @@ class _SceneArtHostState extends State<SceneArtHost> {
   SceneArt? _art;
   Object? _key;
   Object? _loadedKey;
-  Widget Function(BuildContext, SceneArt?, double)? _activeBuilder;
+  Widget Function(BuildContext, SceneArt?, ValueListenable<double>)? _activeBuilder;
   int _generation = 0;
-  double _elapsed = 0;
+  final _clock = ValueNotifier<double>(0);
   Timer? _timer;
   @override
   void didChangeDependencies() {
@@ -526,6 +665,7 @@ class _SceneArtHostState extends State<SceneArtHost> {
       onSea: widget.onSea,
       boat: widget.boat,
       restFarWidthPx: widget.restFarWidth == null ? null : widget.restFarWidth! / scale,
+      camp: theme,
     ).then(
       (art) {
         if (!mounted || generation != _generation) {
@@ -564,20 +704,21 @@ class _SceneArtHostState extends State<SceneArtHost> {
     final enabled = TickerMode.valuesOf(context).enabled && _art != null;
     if (enabled && _timer == null) {
       _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-        if (mounted) setState(() => _elapsed += .1);
+        if (mounted) _clock.value += .1;
       });
     } else if (!enabled) {
       _timer?.cancel();
       _timer = null;
     }
     // 새 이미지가 준비될 때까지 계절·배·자세도 이전 완성 장면과 함께 유지한다.
-    return (_activeBuilder ?? widget.builder)(context, _art, _elapsed);
+    return (_activeBuilder ?? widget.builder)(context, _art, _clock);
   }
 
   @override
   void dispose() {
     _generation++;
     _timer?.cancel();
+    _clock.dispose();
     _art?.dispose();
     super.dispose();
   }
