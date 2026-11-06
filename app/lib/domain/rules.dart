@@ -163,6 +163,9 @@ class Rules {
     required this.coinsPerKm,
     required this.coinsDailyCap,
     required this.coinsWelcomeGift,
+    required this.coinAmountFormat,
+    required this.coinBuyQuestion,
+    required this.coinBuyButton,
     required this.seaFactor,
     required this.earthRadiusKm,
     required this.ports,
@@ -311,6 +314,15 @@ class Rules {
 
   /// 첫 그림(내 동네 스케치) 도착 때 한 번 주는 첫 선물 (config coins.welcomeGift)
   final int coinsWelcomeGift;
+
+  /// 럭 값 표기 '{n} 럭' (config coins.format.amount)
+  final String coinAmountFormat;
+
+  /// 구매 질문 '{item}을(를) {n} 럭에 구매할까요?' (config coins.format.buyQuestion, 조사는 앱이 고른다)
+  final String coinBuyQuestion;
+
+  /// 구매 버튼 글 (config coins.format.buyButton)
+  final String coinBuyButton;
 
   final double seaFactor;
   final double earthRadiusKm;
@@ -554,6 +566,9 @@ class Rules {
       coinsPerKm: _dn(coins['perKm']),
       coinsDailyCap: coins['dailyCap'] as int,
       coinsWelcomeGift: coins['welcomeGift'] as int,
+      coinAmountFormat: (coins['format'] as Map)['amount'] as String,
+      coinBuyQuestion: (coins['format'] as Map)['buyQuestion'] as String,
+      coinBuyButton: (coins['format'] as Map)['buyButton'] as String,
       seaFactor: _d(route['seaFactor']),
       earthRadiusKm: _d(route['earthRadiusKm']),
       ports: (route['ports'] as Map<String, dynamic>)

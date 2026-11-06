@@ -21,20 +21,26 @@ extension ShopSync on SyncService {
   Future<Map<String, int>> shopHeld() async =>
       {for (final r in await db.select(db.shopInventory).get()) r.itemId: r.count};
 
+  /// 지금 [itemId]를 살 수 없는 까닭. 살 수 있으면 null (상점 칸을 누를 때 시트를 열기 전에도 본다)
+  Future<ShopBlock?> whyNotBuy(String itemId) async {
+    final item = shopCatalog?.byId(itemId);
+    if (item == null) return ShopBlock.unknownItem;
+    return buyBlock(
+      item,
+      balance: await coinBalance(),
+      held: await _held(item.id),
+      maxHold: rules.shopMaxHoldPerItem,
+      owned: await _ownsItem(item),
+    );
+  }
+
   /// 상품을 산다. 한 트랜잭션에서 spend 줄과 소유 기록을 함께 쓴다: 여행 효과는 보관함, 소품·꾸밈 효과는
   /// 얻은 소품, 상점 배는 얻은 배. 살 수 없으면 [ShopBlocked]를 던지고 아무것도 바꾸지 않는다
   Future<void> buyItem(String itemId, DateTime now) async {
     final block = await db.transaction<ShopBlock?>(() async {
-      final item = shopCatalog?.byId(itemId);
-      if (item == null) return ShopBlock.unknownItem;
-      final block = buyBlock(
-        item,
-        balance: await coinBalance(),
-        held: await _held(item.id),
-        maxHold: rules.shopMaxHoldPerItem,
-        owned: await _ownsItem(item),
-      );
+      final block = await whyNotBuy(itemId);
       if (block != null) return block;
+      final item = shopCatalog!.byId(itemId)!;
       await db.into(db.coinLedger).insert(CoinLedgerCompanion.insert(
             day: kstDayKey(now),
             kind: CoinKind.spend,

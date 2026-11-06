@@ -1,4 +1,6 @@
+import 'format_int.dart';
 import 'gait.dart';
+import 'notification_policy.dart' show josa;
 import 'rules.dart';
 
 // 럭 상점 상품 (shop.json v4, M4.5): 여행 효과(소모품)·소품·꾸밈 효과·배. 값은 베타 뒤 조정
@@ -142,6 +144,21 @@ class ShopBlocked extends StateError {
 
   final ShopBlock block;
 }
+
+/// 럭 값 글자: '5,000 럭' (config coins.format.amount)
+String coinAmountText(int n, Rules rules) =>
+    rules.coinAmountFormat.replaceAll('{n}', formatInt(n));
+
+/// 구매 질문: '지름길을 50 럭에 구매할까요?' (config coins.format.buyQuestion)
+String buyQuestionText(String item, int price, Rules rules) => rules.coinBuyQuestion
+    .replaceAll('{item}을(를)', '$item${josa(item, '을/를')}')
+    .replaceAll('{n}', formatInt(price));
+
+/// 구매 뒤 토스트: '지름길을 구매했어요' (캔버스 8-1)
+String boughtText(String item) => '$item${josa(item, '을/를')} 구매했어요';
+
+/// 구매 시트의 둘째 줄: '남는 럭 1,190' (캔버스 8-1)
+String coinsLeftText(int left) => '남는 럭 ${formatInt(left)}';
 
 /// 잔액 = 들어온 럭(earn·gift·ad) − 쓴 럭(spend). 다시 계산한 earn이 줄어도 음수로 보이지 않는다
 int coinBalanceOf({required int credited, required int spent}) =>

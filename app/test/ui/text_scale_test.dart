@@ -11,6 +11,7 @@ import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/onboarding.dart';
 import 'package:doobal/domain/rules.dart';
+import 'package:doobal/domain/shop.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/album/album_screen.dart';
@@ -26,6 +27,7 @@ import 'package:doobal/ui/note/note_screen.dart';
 import 'package:doobal/ui/profile/profile_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/settings/settings_screen.dart';
+import 'package:doobal/ui/shop/shop_screen.dart';
 import 'package:doobal/ui/start/home_pick_screen.dart';
 import 'package:doobal/ui/start/me_screen.dart';
 import 'package:doobal/ui/start/permission_screen.dart';
@@ -932,6 +934,36 @@ void main() {
       await transition(tester);
       expect(find.text('저장하지 않고 나갈까요?'), findsOneWidget);
       fit.check('나가기 확인 시트');
+      await end(tester, e);
+    });
+  });
+
+  group('상점', () {
+    _scaleCases('탭 4와 구매 시트', (tester, fit) async {
+      final e = UiEnv();
+      await e.seed(
+        tester,
+        () => e.db
+            .into(e.db.coinLedger)
+            .insert(CoinLedgerCompanion.insert(day: '2026-11-18', kind: CoinKind.gift, amount: 123456)),
+      );
+      await openOnTop(tester, e, const ShopScreen(),
+          width: fit.width,
+          height: fit.height,
+          ready: () => _key('shop-item-fx_shortcut').evaluate().isNotEmpty);
+      await settle(tester, () => false, tries: 6);
+      for (final t in ShopTab.values) {
+        await _tap(tester, _key('shop-tab-${t.name}'));
+        fit.check('탭 ${t.name}');
+      }
+      await _tap(tester, _key('shop-tab-boat'));
+      await tester.ensureVisible(_key('shop-item-boat_cruise'));
+      await tester.pump();
+      await tester.tap(_key('shop-item-boat_cruise'));
+      await settle(tester, () => false, tries: 6);
+      await transition(tester);
+      expect(find.text('구매'), findsOneWidget);
+      fit.check('구매 시트');
       await end(tester, e);
     });
   });
