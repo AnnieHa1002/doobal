@@ -147,7 +147,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
       cells.add(ItemCell(
         key: ValueKey('shop-item-${item.id}'),
         name: item.name,
-        art: boat != null ? BoatShelfArt(boat: boat) : ItemArt(id: item.id, name: item.name),
+        art: boat != null
+            ? BoatShelfArt(boat: boat)
+            : ItemArt(id: item.propId ?? item.id, name: item.name),
         tilt: cells.length,
         state: owned ? _ownedState : coinAmountText(item.price, rules),
         stateColor: owned ? Palette.moss : Palette.terracottaDeep,
