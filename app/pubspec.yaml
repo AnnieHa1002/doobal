@@ -50,6 +50,8 @@ flutter:
     # 명소 풍경화 추천101장 (최종 채택 전 검토본)
     - assets/paintings/
     - assets/items/basic_v02/
+    # 칸 그림(소품·상품 아이콘). 파일만 넣으면 칸이 찾는다 (domain/asset_index.dart)
+    - assets/items/icons/
     # 배 9척 (boats.json assetDir). 동행 Rive 밖 그림(이야기 6장 등)
     - assets/boats/v01fix/
     - assets/companions/
