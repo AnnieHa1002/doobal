@@ -31,11 +31,11 @@ void main() {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          for (final id in BasicItemIcon.ids)
+                          for (final id in ['hat_01', 'hand_01', 'pet_01', 'bag_01', 'cloth_01', 'shoe_01'])
                             SizedBox(
                               width: 60,
                               height: 65,
-                              child: BasicItemIcon(id: id, fallback: '?'),
+                              child: Image.asset('assets/items/basic_v02/item_${id}_icon_v02.png'),
                             ),
                         ],
                       ),
