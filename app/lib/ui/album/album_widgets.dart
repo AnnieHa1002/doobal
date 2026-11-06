@@ -4,8 +4,8 @@ import '../../app/sync_service.dart';
 import '../../domain/prop.dart';
 import '../../domain/sketch.dart';
 import '../common/app_text.dart';
-import '../common/basic_item_art.dart';
 import '../common/framed_painting.dart';
+import '../common/item_cell.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
 
@@ -308,40 +308,41 @@ Widget ownedPaintingCell(
         ? FirstPackCell(key: key, onTap: onTap, isNew: isNew)
         : PaintingCell(key: key, owned: p, onTap: onTap, isNew: isNew);
 
-/// 소품 한 줄: 첫 글자 원 + 이름. 얻은 소품만 나온다 (얻는 방법은 꾸미기의 잠긴 칸에서 본다)
-class PropRow extends StatelessWidget {
-  const PropRow({super.key, required this.prop});
+/// 소품 칸 하나의 얻은 소품 (캔버스 6-1): 칸 이름과 개수, 선반 3열. 얻은 소품만 나온다
+class PropSlotCard extends StatelessWidget {
+  const PropSlotCard({super.key, required this.name, required this.props});
 
-  final Prop prop;
+  final String name;
+  final List<Prop> props;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Palette.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Palette.ink, width: InkLine.panel),
-      ),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(color: Palette.card, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Palette.paper,
-              shape: BoxShape.circle,
-              border: Border.all(color: Palette.ink, width: InkLine.panel),
-            ),
-            child: BasicItemIcon(id: prop.id, fallback: prop.name.substring(0, 1)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(child: Text(name, style: context.display(14))),
+              Text('${props.length}', style: AppText.label),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              prop.name,
-              style: context.display(16),
-            ),
+          const SizedBox(height: 8),
+          ItemShelf(
+            rowGap: 16,
+            cells: [
+              for (final (i, p) in props.indexed)
+                ItemCell(
+                  key: ValueKey('prop-${p.id}'),
+                  name: p.name,
+                  art: ItemArt(id: p.id, name: p.name),
+                  tilt: i,
+                  state: '가짐',
+                ),
+            ],
           ),
         ],
       ),

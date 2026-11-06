@@ -6,11 +6,10 @@ import 'package:doobal/domain/color.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/spirit_look.dart';
-import 'package:doobal/ui/common/basic_item_art.dart';
 import 'package:doobal/ui/common/game_button.dart';
+import 'package:doobal/ui/common/item_cell.dart';
 import 'package:doobal/ui/common/toast.dart';
 import 'package:doobal/ui/decorate/decorate_screen.dart';
-import 'package:doobal/ui/decorate/decorate_widgets.dart';
 import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
@@ -265,7 +264,7 @@ void main() {
       await _open(tester, e);
 
       Finder art(String id) =>
-          find.descendant(of: _key('prop-$id'), matching: find.byType(BasicItemIcon));
+          find.descendant(of: _key('prop-$id'), matching: find.byType(Image));
       expect(art('hat_01'), findsOneWidget);
       expect(art('hat_02'), findsNothing);
       expect(art('none'), findsNothing);
@@ -598,7 +597,7 @@ void main() {
       await _goTab(tester, 'hat');
       final hats = [for (final p in props) if (p.slot == 'hat' && !_isColorVariant(p)) p.id];
       expect(hats, hasLength(4));
-      expect(find.byType(ShelfCell), findsNWidgets(5));
+      expect(find.byType(ItemCell), findsNWidgets(5));
       expect(_key('prop-none'), findsOneWidget);
       final pos = [for (final id in ['none', ...hats]) tester.getTopLeft(_key('prop-$id'))];
       expect(pos.take(3).map((p) => p.dy).toSet(), hasLength(1));
@@ -612,15 +611,42 @@ void main() {
 
       // 옷: 없음 칸이 없다 (5개)
       await _goTab(tester, 'cloth');
-      expect(find.byType(ShelfCell), findsNWidgets(5));
+      expect(find.byType(ItemCell), findsNWidgets(5));
       expect(_key('prop-none'), findsNothing);
 
       // 칸마다 MVP 소품 수 (+ 없음)
       for (final (slot, count) in [('hand', 5), ('bag', 5), ('shoe', 5), ('pet', 5), ('face', 3), ('float', 5), ('effect', 5)]) {
         await _goTab(tester, slot);
-        expect(find.byType(ShelfCell), findsNWidgets(count + 1), reason: slot);
+        expect(find.byType(ItemCell), findsNWidgets(count + 1), reason: slot);
         expect(props.where((p) => p.slot == slot && !_isColorVariant(p)), hasLength(count));
       }
+      await end(tester, e);
+    });
+
+    testWidgets('공용 칸: 파일이 있는 소품은 64×64 그림, 없는 소품은 점선 + 이름, 없음 칸은 빈 점선', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _ownProps(e.db, ['hat_02']));
+      await _open(tester, e);
+      await _goTab(tester, 'hat');
+
+      Finder inCell(String id, Finder f) => find.descendant(of: _key('prop-$id'), matching: f);
+      expect(tester.getSize(inCell('hat_01', find.byType(ItemArt))), const Size(64, 64));
+      final image = tester.widget<Image>(inCell('hat_01', find.byType(Image))).image as ResizeImage;
+      expect(image.width, 192);
+      expect(inCell('hat_01', find.byType(ItemPlaceholder)), findsNothing);
+
+      final name = props.firstWhere((p) => p.id == 'hat_02').name;
+      expect(inCell('hat_02', find.byType(Image)), findsNothing);
+      expect(
+        find.descendant(of: inCell('hat_02', find.byType(ItemPlaceholder)), matching: find.text(name)),
+        findsOneWidget,
+      );
+
+      expect(inCell('none', find.byType(Image)), findsNothing);
+      expect(
+        find.descendant(of: inCell('none', find.byType(ItemPlaceholder)), matching: find.byType(Text)),
+        findsNothing,
+      );
       await end(tester, e);
     });
 
@@ -659,7 +685,7 @@ void main() {
       await _goTab(tester, 'hat');
 
       // 없음 + 기본 hat_01 + 얻은 hat_02
-      expect(find.byType(ShelfCell), findsNWidgets(3));
+      expect(find.byType(ItemCell), findsNWidgets(3));
       for (final id in ['hat_04', 'hat_05', 'hat_10', 'hat_11']) {
         expect(_key('prop-$id'), findsNothing, reason: id);
       }
@@ -675,7 +701,7 @@ void main() {
 
       // 옷은 기본 하나뿐이면 그 칸만 (없음 칸 없음)
       await _goTab(tester, 'cloth');
-      expect(find.byType(ShelfCell), findsOneWidget);
+      expect(find.byType(ItemCell), findsOneWidget);
       expect(_key('prop-cloth_01'), findsOneWidget);
       await end(tester, e);
     });
@@ -692,7 +718,7 @@ void main() {
       ]) {
         await _goTab(tester, slot);
         expect(find.text(text), findsOneWidget, reason: slot);
-        expect(find.byType(ShelfCell), findsNothing, reason: slot);
+        expect(find.byType(ItemCell), findsNothing, reason: slot);
       }
       await end(tester, e);
     });
@@ -704,7 +730,7 @@ void main() {
 
       await _goTab(tester, 'face');
       expect(_key('empty-slot'), findsNothing);
-      expect(find.byType(ShelfCell), findsNWidgets(2)); // 없음 + 안경
+      expect(find.byType(ItemCell), findsNWidgets(2)); // 없음 + 안경
       expect(_state('hat_11', '가짐'), findsOneWidget);
       await _tap(tester, _key('prop-hat_11'));
       expect(_state('hat_11', '입는 중'), findsOneWidget);
@@ -729,7 +755,7 @@ void main() {
         expect(find.text('다음 소품까지 본격 걷기 13km'), findsOneWidget, reason: slot);
         // 줄은 칸들 위에 있다
         expect(tester.getBottomLeft(_key('next-prop')).dy,
-            lessThan(tester.getTopLeft(find.byType(ShelfCell).first).dy));
+            lessThan(tester.getTopLeft(find.byType(ItemCell).first).dy));
       }
       expect(find.textContaining('등산화'), findsNothing);
       await end(tester, e);

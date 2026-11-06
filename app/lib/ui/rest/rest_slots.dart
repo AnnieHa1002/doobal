@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/catalog_providers.dart';
+import '../shop/shop_slots.dart';
+
 /// 쉼터 장면에 끼우는 물건 하나 (행상 수레·불 옆 동행). 자리와 크기는 테마(camp_wide.json)가 정한다
 class RestObjectSlot {
   const RestObjectSlot({required this.art, required this.onTap, this.label, this.notice = false});
@@ -40,4 +43,8 @@ class RestSlots {
   final RestGemSlot gem;
 }
 
-final restSlotsProvider = Provider<RestSlots>((ref) => const RestSlots());
+final restSlotsProvider = Provider<RestSlots>((ref) {
+  // 상품이 없으면 상점 입구를 숨긴다 (스키마 13장)
+  final noShop = ref.watch(shopCatalogProvider).value?.items.isEmpty ?? false;
+  return noShop ? const RestSlots() : RestSlots(cart: shopCartSlot, gem: shopGemSlot);
+});

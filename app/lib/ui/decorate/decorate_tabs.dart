@@ -4,18 +4,12 @@ import '../../domain/look.dart';
 import '../../domain/prop.dart';
 import '../../domain/spirit_palette.dart';
 import '../common/app_text.dart';
-import '../common/basic_item_art.dart';
+import '../common/item_cell.dart';
 import '../common/palette.dart';
 import 'decorate_widgets.dart';
 
-/// 소품 칸을 한 줄에 몇 개씩 놓을지 (캔버스 9-2: 선반 3열)
-const _propColumns = 3;
-
 /// 아직 가진 게 없을 때 안내에 쓰는 칸 이름 (얼굴 소품·둥실·효과). 나머지 칸은 늘 맨 처음 소품이 있다
 const _emptyNames = {'face': '얼굴 소품', 'float': '둥실 소품', 'effect': '효과'};
-
-/// 그림이 없는 소품 칸의 자리표시 색 (카드보다 한 단계 진한 종이색)
-const _placeholder = Color(0xFFE4D6BC);
 
 /// 내 모습 탭: 눈·눈썹·코·입 줄과 몸 색 (견본 10 + 직접 고르기). 정령에는 머리·피부가 없다
 class MeTab extends StatelessWidget {
@@ -100,27 +94,25 @@ class PropTab extends StatelessWidget {
 
     final cells = <Widget>[
       if (!empty && slot != alwaysWornSlot)
-        ShelfCell(
+        ItemCell(
           key: const ValueKey('prop-none'),
           name: slot == 'hand' ? '맨손' : '없음',
-          state: '',
-          selected: current == null,
-          swatch: null,
+          art: const ItemPlaceholder(),
           tilt: 0,
+          selected: current == null,
+          stateColor: Palette.terracotta,
           onTap: () => onPick(null),
         ),
       if (!empty)
         for (final p in props)
-          ShelfCell(
+          ItemCell(
             key: ValueKey('prop-${p.id}'),
             name: p.name,
-            state: current == p.id ? '입는 중' : '가짐',
-            selected: current == p.id,
-            swatch: _placeholder,
-            art: BasicItemIcon.pathFor(p.id) == null
-                ? null
-                : BasicItemIcon(id: p.id, fallback: p.name),
+            art: ItemArt(id: p.id, name: p.name),
             tilt: props.indexOf(p) + 1,
+            state: current == p.id ? '입는 중' : '가짐',
+            stateColor: current == p.id ? Palette.terracotta : Palette.moss,
+            selected: current == p.id,
             onTap: () => onPick(p.id),
           ),
     ];
@@ -153,16 +145,7 @@ class PropTab extends StatelessWidget {
             ),
             const SizedBox(height: 10),
           ],
-          for (var start = 0; start < cells.length; start += _propColumns) ...[
-            if (start > 0) const SizedBox(height: 20),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var i = start; i < start + _propColumns; i++)
-                  Expanded(child: i < cells.length ? cells[i] : const SizedBox.shrink()),
-              ],
-            ),
-          ],
+          ItemShelf(cells: cells),
           const SizedBox(height: 8),
         ],
       ),

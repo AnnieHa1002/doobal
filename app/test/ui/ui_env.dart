@@ -7,6 +7,7 @@ import 'package:doobal/data/notifier.dart';
 import 'package:doobal/data/painting_sharer.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/data/walk_notice.dart';
+import 'package:doobal/domain/asset_index.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
@@ -51,11 +52,13 @@ class UiEnv {
     Rules? appRules,
     List<Landmark>? appLandmarks,
     FakeLiveSteps? live,
+    AssetIndex? assets,
   })  : db = AppDb(NativeDatabase.memory()),
         source = source ?? FakeStepSource(),
         live = live ?? FakeLiveSteps(),
         appRules = appRules ?? rules,
         appLandmarks = appLandmarks ?? landmarks,
+        assets = assets ?? assetIndex,
         now = t1 {
     svc = SyncService(
       db: db,
@@ -77,6 +80,9 @@ class UiEnv {
   final FakeLiveSteps live;
   final Rules appRules;
   final List<Landmark> appLandmarks;
+
+  /// 앱에 든 파일 목록. 주지 않으면 실제 assets 폴더
+  final AssetIndex assets;
   late final SyncService svc;
   DateTime now;
 
@@ -99,6 +105,7 @@ class UiEnv {
         milestonesProvider.overrideWith((ref) => milestones),
         eventCatalogProvider.overrideWith((ref) => eventCatalog),
         badgeCatalogProvider.overrideWith((ref) => badgeCatalog),
+        assetIndexProvider.overrideWith((ref) => assets),
         shopCatalogProvider.overrideWith((ref) => shopCatalog),
         boatCatalogProvider.overrideWith((ref) => boatCatalog),
         companionCatalogProvider.overrideWith((ref) => companionCatalog),

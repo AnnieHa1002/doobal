@@ -41,6 +41,8 @@ class CampObject {
     required this.labelTop,
     this.onlyWhenTicket = false,
     this.art,
+    this.artSourceFile,
+    this.artSourceNight,
   });
 
   final String id;
@@ -56,6 +58,12 @@ class CampObject {
   /// 그림 파일. 없으면 자리표시 (수레·동행은 다른 트랙이 끼운다)
   final CampArt? art;
 
+  /// 납품 파일 이름 (artSource.file). 끼우는 트랙이 파일이 있는지 보고 읽는다 (수레)
+  final String? artSourceFile;
+
+  /// 밤에 얹는 층 파일 이름 (artSource.nightLantern)
+  final String? artSourceNight;
+
   factory CampObject.fromJson(Map<String, dynamic> j, {String? id}) => CampObject(
         id: id ?? j['id'] as String,
         label: j['label'] as String,
@@ -65,6 +73,8 @@ class CampObject {
         labelTop: _d(j['labelTop']),
         onlyWhenTicket: j['onlyWhenTicket'] as bool? ?? false,
         art: j['art'] == null ? null : CampArt.fromJson(j['art'] as Map<String, dynamic>),
+        artSourceFile: (j['artSource'] as Map?)?['file'] as String?,
+        artSourceNight: (j['artSource'] as Map?)?['nightLantern'] as String?,
       );
 }
 

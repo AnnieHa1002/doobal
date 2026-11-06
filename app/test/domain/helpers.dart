@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:doobal/domain/asset_index.dart';
 import 'package:doobal/domain/badge.dart';
 import 'package:doobal/domain/boat.dart';
 import 'package:doobal/domain/bucket.dart';
@@ -69,6 +70,12 @@ final CompanionCatalog companionCatalog = parseCompanions(
 final BadgeCatalog badgeCatalog = BadgeCatalog.fromJson(
   jsonDecode(File('assets/data/badges.json').readAsStringSync()) as Map<String, dynamic>,
 );
+
+/// 실제 assets 폴더의 파일 목록 (앱의 AssetManifest와 같은 모양의 경로)
+final AssetIndex assetIndex = AssetIndex([
+  for (final f in Directory('assets').listSync(recursive: true))
+    if (f is File) f.path,
+]);
 
 /// 실제 themes/camp_wide.json
 final CampTheme campTheme = CampTheme.fromJson(

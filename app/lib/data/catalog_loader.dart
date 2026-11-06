@@ -2,12 +2,17 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import '../domain/asset_index.dart';
 import '../domain/boat.dart';
 import '../domain/companion.dart';
 import '../domain/shop.dart';
 
 Future<Map<String, dynamic>> _json(String file) async =>
     jsonDecode(await rootBundle.loadString('assets/data/$file')) as Map<String, dynamic>;
+
+/// 앱에 든 파일 목록
+Future<AssetIndex> loadAssetIndex() async =>
+    AssetIndex((await AssetManifest.loadFromAssetBundle(rootBundle)).listAssets());
 
 /// 럭 상점 상품 (shop.json)
 Future<ShopCatalog> loadShopCatalog() async => parseShop(await _json('shop.json'));

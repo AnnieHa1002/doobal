@@ -9,6 +9,15 @@ abstract final class Palette {
   static const terracotta = Color(0xFFA4502F);
   static const moss = Color(0xFF56653A);
 
+  /// 상품 값 글자 (캔버스 --terracotta-deep)
+  static const terracottaDeep = Color(0xFF7E3A21);
+
+  /// 옅은 선 (캔버스 --line)
+  static const line = Color(0xFFD9C9AE);
+
+  /// 그림 없는 칸의 점선 (캔버스 --line-dashed)
+  static const lineDashed = Color(0xFFB8A385);
+
   /// 오류·경고와 되돌릴 수 없는 버튼(계정 삭제 등). 항상 아이콘·문구와 함께 (11/3)
   static const danger = Color(0xFF8E2A2E);
   static const dangerBg = Color(0xFFF5DCD6);

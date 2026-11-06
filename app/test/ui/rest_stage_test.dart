@@ -251,7 +251,7 @@ void main() {
     testWidgets('아무도 안 끼우면 수레·동행은 비어 있고 누를 수 없다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
-      await _open(tester, e);
+      await _open(tester, e, more: [restSlotsProvider.overrideWithValue(const RestSlots())]);
       expect(find.byKey(const ValueKey('camp-object-cart')), findsNothing);
       expect(find.byKey(const ValueKey('camp-object-companion')), findsNothing);
       await end(tester, e);
