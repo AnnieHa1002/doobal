@@ -32,6 +32,7 @@ app/                Flutter 앱 (패키지 doobal, 번들 ID com.annieha.doobal)
   assets/data/      정적 데이터 JSON: landmarks·props·events·milestones·config·sigungu·notifications·palette·companions·badges·shop·boats·scene·scene_art·moderation
   assets/data/themes/  쉼터 테마(camp_wide.json: 장면 pt 좌표, 물건·정령·동행·불꽃·누름 순서)
   assets/map/       지도 시도 경계 SVG·위경도 투영 JSON (Drive 05_UI_화면 ui_map_*_v01 사본)
+  assets/items/icons/  칸 그림(파일 이름에 소품·상품 id, 파일만 넣으면 읽음)
   assets/rive/      Rive 시험 파일
 functions/          Firebase Cloud Functions (에뮬레이터 시험까지, 배포·앱 연결 전. 실행법은 functions/README.md)
 data/               명소 CSV, build_static.py, build_events.py, geocode_landmarks.py
