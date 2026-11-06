@@ -6,6 +6,7 @@ import 'package:doobal/domain/color.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/spirit_look.dart';
+import 'package:doobal/ui/common/basic_item_art.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/toast.dart';
 import 'package:doobal/ui/decorate/decorate_screen.dart';
@@ -255,6 +256,34 @@ void main() {
       await _goTab(tester, 'hat');
       await _tap(tester, _key('prop-hat_02'));
       expect(_worn(tester), before);
+      await end(tester, e);
+    });
+
+    testWidgets('소품 칸: 그림이 있는 소품은 그림을, 없는 소품과 없음 칸은 그림 없이 놓는다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _ownProps(e.db, ['hat_02']));
+      await _open(tester, e);
+
+      Finder art(String id) =>
+          find.descendant(of: _key('prop-$id'), matching: find.byType(BasicItemIcon));
+      expect(art('hat_01'), findsOneWidget);
+      expect(art('hat_02'), findsNothing);
+      expect(art('none'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('요약 줄은 미리보기 폭을 다 쓰고, 표정 단추·정령 발과 겹치지 않는다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e, height: 800);
+
+      final preview = tester.getRect(_key('preview'));
+      final summary = tester.getRect(_key('summary'));
+      expect(summary.right, preview.right - 12);
+      expect(tester.getRect(_key('expr-5')).bottom, lessThanOrEqualTo(summary.top));
+      // 정령 캔버스 600 안에서 발바닥은 y440이다
+      final spirit = tester.getRect(find.byType(SpiritCharacter));
+      expect(spirit.top + spirit.height * 440 / 600, lessThanOrEqualTo(summary.top));
       await end(tester, e);
     });
 

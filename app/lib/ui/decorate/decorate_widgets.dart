@@ -303,6 +303,7 @@ class ShelfCell extends StatelessWidget {
     required this.state,
     required this.selected,
     required this.swatch,
+    this.art,
     required this.tilt,
     required this.onTap,
   });
@@ -315,6 +316,9 @@ class ShelfCell extends StatelessWidget {
 
   /// 그림 자리표시 색. null이면 비어 있는 점선 칸 ("없음")
   final Color? swatch;
+
+  /// 소품 그림. 있으면 자리표시 대신 선반 위에 놓는다
+  final Widget? art;
 
   /// 이름표 기울기 방향: 짝수 칸 -2도, 홀수 칸 +2도
   final int tilt;
@@ -356,18 +360,22 @@ class ShelfCell extends StatelessWidget {
                       const Positioned.fill(child: CustomPaint(painter: _DashedRingPainter())),
                     Positioned(
                       bottom: 5,
-                      child: Container(
-                        width: 56,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: swatch ?? Colors.transparent,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: swatch == null ? Palette.ink.withValues(alpha: 0.35) : Palette.ink,
-                            width: InkLine.pill,
-                          ),
-                        ),
-                      ),
+                      child: art != null
+                          ? SizedBox(width: 64, height: 64, child: art)
+                          : Container(
+                              width: 56,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: swatch ?? Colors.transparent,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: swatch == null
+                                      ? Palette.ink.withValues(alpha: 0.35)
+                                      : Palette.ink,
+                                  width: InkLine.pill,
+                                ),
+                              ),
+                            ),
                     ),
                   ],
                 ),

@@ -34,7 +34,7 @@ class BasicItemIcon extends StatelessWidget {
             fit: BoxFit.contain,
             excludeFromSemantics: true,
             filterQuality: FilterQuality.medium,
-            cacheWidth: 128,
+            cacheWidth: 192,
           );
   }
 }

@@ -40,6 +40,8 @@ class SpiritPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 표정 단추 아래에 요약 두 줄 자리를 비운다 (글자를 키우면 같이 넓어진다)
+    final summaryRoom = 20 + MediaQuery.textScalerOf(context).scale(11) * 2.8;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: DecoratedBox(
@@ -61,12 +63,18 @@ class SpiritPreview extends StatelessWidget {
                 ),
               ),
               Positioned.fill(
-                child: SpiritStanding(look: look, expression: expression, tapRules: tapRules),
+                // 발이 요약 줄에 가리지 않게 올려 세운다
+                child: SpiritStanding(
+                  look: look,
+                  footAt: 0.82,
+                  expression: expression,
+                  tapRules: tapRules,
+                ),
               ),
               Positioned(
                 left: 12,
                 bottom: 10,
-                right: 76,
+                right: 12,
                 child: Container(
                   key: const ValueKey('summary'),
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -86,7 +94,7 @@ class SpiritPreview extends StatelessWidget {
               Positioned(
                 right: 8,
                 top: 8,
-                bottom: 8,
+                bottom: summaryRoom,
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.topRight,

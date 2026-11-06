@@ -4,6 +4,7 @@ import '../../domain/look.dart';
 import '../../domain/prop.dart';
 import '../../domain/spirit_palette.dart';
 import '../common/app_text.dart';
+import '../common/basic_item_art.dart';
 import '../common/palette.dart';
 import 'decorate_widgets.dart';
 
@@ -13,7 +14,7 @@ const _propColumns = 3;
 /// 아직 가진 게 없을 때 안내에 쓰는 칸 이름 (얼굴 소품·둥실·효과). 나머지 칸은 늘 맨 처음 소품이 있다
 const _emptyNames = {'face': '얼굴 소품', 'float': '둥실 소품', 'effect': '효과'};
 
-/// 그림이 나오기 전 소품 칸의 자리표시 색 (카드보다 한 단계 진한 종이색)
+/// 그림이 없는 소품 칸의 자리표시 색 (카드보다 한 단계 진한 종이색)
 const _placeholder = Color(0xFFE4D6BC);
 
 /// 내 모습 탭: 눈·눈썹·코·입 줄과 몸 색 (견본 10 + 직접 고르기). 정령에는 머리·피부가 없다
@@ -116,6 +117,9 @@ class PropTab extends StatelessWidget {
             state: current == p.id ? '입는 중' : '가짐',
             selected: current == p.id,
             swatch: _placeholder,
+            art: BasicItemIcon.pathFor(p.id) == null
+                ? null
+                : BasicItemIcon(id: p.id, fallback: p.name),
             tilt: props.indexOf(p) + 1,
             onTap: () => onPick(p.id),
           ),
