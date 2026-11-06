@@ -256,18 +256,9 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
       ];
       if (mine.isEmpty) continue;
       children.add(Padding(
-        padding: const EdgeInsets.only(top: 16, bottom: 8),
-        child: Text(
-          slot.value,
-          style: context.display(16),
-        ),
+        padding: const EdgeInsets.only(top: 10),
+        child: PropSlotCard(name: slot.value, props: mine),
       ));
-      for (final p in mine) {
-        children.add(Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: PropRow(key: ValueKey('prop-${p.id}'), prop: p),
-        ));
-      }
     }
     if (children.isEmpty) {
       children.add(const Padding(

@@ -9,6 +9,7 @@ import 'package:doobal/ui/album/album_widgets.dart';
 import 'package:doobal/ui/album/painting_detail_screen.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/common/framed_painting.dart';
+import 'package:doobal/ui/common/item_cell.dart';
 import 'package:doobal/ui/common/notice_dot.dart';
 import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
@@ -404,7 +405,7 @@ void main() {
 
     /// 지금 화면의 소품 줄 id (위에서 아래로)
     List<String> shownProps(WidgetTester tester) =>
-        [for (final r in tester.widgetList<PropRow>(find.byType(PropRow))) r.prop.id];
+        [for (final c in tester.widgetList<ItemCell>(find.byType(ItemCell))) (c.key! as ValueKey<String>).value.substring('prop-'.length)];
 
     /// 소품 칸 순서(모자·얼굴 소품·옷·신발·손·가방·미니 친구·둥실·효과)와 props.json 순서로, [have]인 소품만
     List<String> expected(bool Function(Prop p) have) => [
@@ -430,7 +431,7 @@ void main() {
       expect(find.textContaining('누적'), findsNothing);
       expect(find.textContaining('동행 이야기'), findsNothing);
       expect(find.text('수도권 0/12'), findsNothing);
-      expect(find.descendant(of: find.byType(PropRow), matching: find.byType(Opacity)),
+      expect(find.descendant(of: find.byType(ItemCell), matching: find.byType(Opacity)),
           findsNothing);
       expect(find.byKey(const ValueKey('album-no-props')), findsNothing);
 
@@ -453,8 +454,12 @@ void main() {
       await openProps(tester, e, ready: _prop('hand_02'));
 
       expect(shownProps(tester), expected((p) => isDefault(p) || p.id == 'hand_02'));
-      expect(find.descendant(of: _prop('hand_02'), matching: find.text('봇짐')), findsOneWidget);
+      // 그림이 없는 봇짐은 점선 칸 + 이름, 그림이 있는 베레모는 꼬리표에만 이름이 있다
+      expect(find.descendant(of: _prop('hand_02'), matching: find.text('봇짐')), findsNWidgets(2));
+      expect(find.descendant(of: _prop('hand_02'), matching: find.byType(ItemPlaceholder)), findsOneWidget);
       expect(find.descendant(of: _prop('hat_01'), matching: find.text('베레모')), findsOneWidget);
+      expect(find.descendant(of: _prop('hat_01'), matching: find.byType(Image)), findsOneWidget);
+      expect(find.descendant(of: _prop('hat_01'), matching: find.text('가짐')), findsOneWidget);
       // 25km에 얻는 모자는 아직 없다
       expect(_prop('hat_02'), findsNothing);
       await end(tester, e);
@@ -468,7 +473,13 @@ void main() {
       });
       await openProps(tester, e, ready: _prop('pet_05'));
       expect(_prop('pet_05'), findsOneWidget);
-      expect(find.text(props.firstWhere((p) => p.id == 'pet_05').name), findsOneWidget);
+      expect(
+        find.descendant(
+          of: _prop('pet_05'),
+          matching: find.text(props.firstWhere((p) => p.id == 'pet_05').name),
+        ),
+        findsWidgets,
+      );
       expect(find.text('울릉 0/1'), findsNothing);
       // 다른 미니 친구는 잠긴 채라 없다
       expect(_prop('pet_02'), findsNothing);
@@ -505,7 +516,7 @@ void main() {
       await openProps(tester, e, ready: find.byKey(const ValueKey('album-no-props')));
 
       expect(find.text(_noPropsLine), findsOneWidget);
-      expect(find.byType(PropRow), findsNothing);
+      expect(find.byType(ItemCell), findsNothing);
       for (final label in propSlotLabels.values) {
         expect(find.text(label), findsNothing, reason: label);
       }
