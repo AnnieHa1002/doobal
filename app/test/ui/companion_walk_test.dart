@@ -167,16 +167,19 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('개발 화면 입구에 점이 뜬다 (쉼터 입구는 T3)', (tester) async {
+    testWidgets('쉼터 불 옆 동행에 점이 뜬다 (개발 화면 입구는 지움)', (tester) async {
       final e = UiEnv();
-      await e.seed(tester, () => met(e, 'bright', walks: 4, chapter: 1));
-      await openOnTop(
-        tester,
-        e,
-        const DebugScreen(),
-        ready: () => find.byKey(const Key('debug-companion-dot')).evaluate().isNotEmpty,
-      );
-      expect(find.byKey(const Key('debug-companion-dot')), findsOneWidget);
+      await e.seed(tester, () async {
+        await met(e, 'bright', walks: 4, chapter: 1);
+        await withCompanion(e, 'bright');
+      });
+      await pumpDoobal(tester, e, const DoobalApp());
+      final dot = find.byKey(const ValueKey('companion-dot'));
+      await settle(tester, () => dot.evaluate().isNotEmpty);
+      expect(dot, findsOneWidget);
+      await openOnTop(tester, e, const DebugScreen());
+      expect(find.text('동행'), findsNothing);
+      expect(find.text('이야기 알림'), findsOneWidget);
       await end(tester, e);
     });
   });

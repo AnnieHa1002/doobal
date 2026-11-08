@@ -303,10 +303,8 @@ class _ChoiceStep extends StatelessWidget {
                             companion.name,
                             style: context.display(25, weight: FontWeight.w600),
                           ),
-                          if (speciesNames[companion.species] case final species?) ...[
-                            const SizedBox(height: 4),
-                            Text(species, style: AppText.label),
-                          ],
+                          const SizedBox(height: 4),
+                          Text(companion.speciesName, style: AppText.label),
                         ],
                       ),
                     ),

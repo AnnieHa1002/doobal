@@ -8,6 +8,7 @@ import 'package:doobal/domain/asset_index.dart';
 import 'package:doobal/domain/color_props.dart';
 import 'package:doobal/domain/shop.dart';
 import 'package:doobal/ui/common/item_cell.dart';
+import 'package:doobal/ui/companion/companion_slot.dart';
 import 'package:doobal/ui/rest/prop_wiggle.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/rest/rest_slots.dart';
@@ -639,6 +640,8 @@ void main() {
         shopCatalogProvider.overrideWith(
           (ref) => ShopCatalog(tabLabels: const {}, defaultBoat: 'boat_raft', items: const []),
         ),
+        // 동행 자리는 동기화 서비스를 읽으므로 비운다 (동행 쪽은 companion_rest_test)
+        companionRestSlotProvider.overrideWithValue(null),
       ]);
       addTearDown(c.dispose);
       final sub = c.listen(restSlotsProvider, (_, _) {});

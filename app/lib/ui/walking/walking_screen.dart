@@ -12,6 +12,7 @@ import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
 import '../../data/walk_notice.dart';
 import '../../domain/companion.dart';
+import '../../domain/companion_pace.dart';
 import '../../domain/focus_walk.dart';
 import '../../domain/follow.dart';
 import '../../domain/badge.dart' as stamp;
@@ -25,6 +26,8 @@ import '../../domain/walk_arrival.dart';
 import '../../domain/walk_record.dart';
 import '../arrival/arrival_screen.dart';
 import '../common/toast.dart';
+import '../companion/companion_pacer.dart';
+import '../companion/companion_walk_layer.dart';
 import '../companion/meet_flow.dart';
 import '../companion/story_lines.dart';
 import '../scene/scene_view.dart';
@@ -48,6 +51,8 @@ import 'walking_hud.dart';
 /// 칸이 이벤트 대신 동행 만남이면(pendingMeeting) HUD를 가리고 길 위 만남(MeetFlow)을 이 화면 위에 띄운다.
 /// 앱이 통째로 끝나서 화면이 정리되지 못한 경우는 다음 실행 때 AutoSync가 마지막으로 살아 있던
 /// 시각에서 닫는다 (appEnded).
+/// 함께 걷는 동행은 장면에서 pace대로 따라온다 (CompanionPacer를 프레임마다 돌리고 장면 층만 다시 잡는다).
+/// 걷기를 마칠 때 뒤처진 거리로 쉼터에 늦게 오는 시간을 넘긴다 (campArrivalProvider, 저장 안 함).
 /// 진행이 100%가 되면(11/4 Annie) 걷기를 자동으로 마치고 도착 화면으로 바꾼다. 도착은 늘 health 동기화가
 /// 정한다: 센서 미리보기가 남은 거리를 넘으면 동기화를 바로 돌려 보고, 도착이 확정되면(pendingArrival)
 /// 넘어간다. 도착 화면을 닫으면 그 걷기의 걷기 기록이 이어진다. 걷는 중 화면이 떠 있는 동안은
@@ -61,6 +66,9 @@ class WalkingScreen extends ConsumerStatefulWidget {
 
 /// 몰려 온 걸음을 화면 숫자가 따라잡는 시간(초)
 const _stepCatchUpSec = 3.0;
+
+/// 동행 걸음에 넣는 프레임 사이 시간의 최대(초). 앱이 뒤에 있어 프레임이 끊긴 틈은 연출에 넣지 않는다
+const _paceMaxDt = 0.25;
 
 /// 센서 미리보기가 100%를 넘은 동안 도착 확인 동기화를 돌리는 최소 간격(초).
 /// config로 옮길 값 (평소 주기 walkingRefreshSec 30초보다 짧게)
@@ -152,6 +160,15 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   var _ending = false;
   DateTime? _probeAt;
 
+  /// 함께 걷는 동행 (혼자면 null, 화면을 지을 때 읽는다)과 그 걸음 연출
+  Companion? _walkingWith;
+  final _pacer = CompanionPacer();
+
+  /// 쉼터 늦은 도착을 넘길 곳 (dispose에서는 ref를 못 쓰므로 미리 담는다), 넘겼는가, 마지막 규칙
+  late final CampArrivalNotifier _arrival;
+  var _arrivalSent = false;
+  Rules? _rules;
+
   @override
   void initState() {
     super.initState();
@@ -159,6 +176,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _service = ref.read(syncServiceProvider.future);
     _notice = ref.read(walkNoticeProvider);
     _active = ref.read(walkingActiveProvider.notifier);
+    _arrival = ref.read(campArrivalProvider.notifier);
     // 위젯을 짓는 중에는 provider를 못 바꾼다
     Future.microtask(() => _setActive(true));
     _start = _now = clock();
@@ -191,6 +209,12 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _live?.dispose();
     _timer?.cancel();
     _ticker.dispose();
+    // 마치기 없이 나가도 쉼터 늦은 도착은 넘긴다 (정리 중에는 provider를 못 바꾼다)
+    if (!_arrivalSent) {
+      final send = _arrivalSender(_clock());
+      Future.microtask(send);
+    }
+    _pacer.dispose();
     super.dispose();
   }
 
@@ -500,6 +524,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _lastTick = elapsed;
     if (rules == null) return;
 
+    _rules = rules;
     final now = ref.read(clockProvider)();
     _checkFocus(rules);
     final summary = _summaryAt(now);
@@ -507,6 +532,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _probeArrival(summary, now);
     _flushEvents(rules, now);
     final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
+    _stepCompanion(summary, walkMps, dt, rules);
     var shown = followDistance(
       _shownM,
       summary?.distanceM ?? 0,
@@ -533,6 +559,40 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     });
   }
 
+  /// 함께 걷는 동행을 프레임 하나만큼 움직인다 (장면과 같은 기준: 걸음이 있으면 걷기, 뛰는 중이면 뛰기,
+  /// 길 위 만남 동안은 장면이 멈춰 있어 서 있기)
+  void _stepCompanion(WalkSummary? summary, double walkMps, double dt, Rules rules) {
+    final companion = _walkingWith;
+    if (companion == null) return;
+    final moving = _meet == null && summary != null && summary.lastSteps > 0;
+    _pacer.step(
+      companion: companion,
+      user: !moving
+          ? PaceMotion.stand
+          : _isRunning(summary)
+          ? PaceMotion.run
+          : PaceMotion.walk,
+      userMps: moving ? walkMps : 0,
+      onSea: ref.read(snapshotProvider).value?.onSea ?? false,
+      dt: math.min(dt, _paceMaxDt),
+      rules: rules,
+    );
+  }
+
+  /// 걷기를 [end]에 마쳤다고 쉼터에 넘기는 일 (한 번만). 뒤처지지 않았으면 늦은 도착 0
+  void Function() _arrivalSender(DateTime end) {
+    _arrivalSent = true;
+    final rules = _rules;
+    final lateSec = rules == null ? 0.0 : lateArrivalSec(_pacer.lagM, rules);
+    return () {
+      try {
+        _arrival.finishWalk(end, lateSec);
+      } catch (_) {
+        // 앱이 통째로 정리되는 중이면 넘길 곳이 없다
+      }
+    };
+  }
+
   /// 센서 미리보기가 남은 거리를 넘으면 동기화를 바로 돌려 도착이 확정됐는지 본다.
   /// 진행 기준은 언제나 health 동기화 값이라 여기서 도착을 정하지는 않는다 (M1)
   void _probeArrival(WalkSummary? summary, DateTime now) {
@@ -556,6 +616,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final rules = ref.read(rulesProvider).value;
     if (rules != null) _flushEvents(rules, end, force: true);
     unawaited(_closeAppWalk(end));
+    if (!_arrivalSent) _arrivalSender(end)();
     return WalkEnd(
       start: _start,
       end: end,
@@ -602,6 +663,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final running = _isRunning(summary);
     final spirit = ref.watch(spiritLookProvider);
     final meet = _meet;
+    final view = ref.watch(companionsViewProvider).value;
+    final companion = _walkingWith = view?.metById(view.walkingWith)?.companion;
 
     return Scaffold(
       body: Stack(
@@ -619,6 +682,14 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             sceneSeed: snap.journey?.dest.id ?? 'home',
             spirit: spirit,
             boat: ref.watch(sceneBoatProvider).value,
+            // 길 위 만남 동안에는 장면에 동행을 두지 않는다 (캔버스 3-4)
+            walkCompanion: companion == null || meet != null
+                ? null
+                : (spot) => WalkCompanionLayer(
+                      companion: companion,
+                      pace: _pacer.frame,
+                      spot: spot,
+                    ),
           ),
           // 길 위 만남 동안에는 HUD를 가린다 (상태는 그대로 둔다)
           Offstage(

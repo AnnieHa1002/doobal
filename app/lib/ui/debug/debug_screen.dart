@@ -8,9 +8,7 @@ import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/companion_engine.dart' show storyNoticeKey;
 import '../../domain/notification_policy.dart';
-import '../common/notice_dot.dart';
 import '../common/palette.dart';
-import '../companion/companion_screen.dart';
 import '../companion/meet_flow.dart';
 import 'rive_preview_screen.dart';
 
@@ -214,22 +212,6 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                   MaterialPageRoute<void>(builder: (_) => const SpiritPreviewScreen()),
                 ),
                 child: const Text('정령 움직임'),
-              ),
-              // 동행 임시 입구 (쉼터 입구는 T3가 연 자리에 끼운다)
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const CompanionScreen()),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('동행'),
-                    if (ref.watch(unreadStoryProvider)) ...const [
-                      SizedBox(width: 6),
-                      NoticeDot(key: Key('debug-companion-dot')),
-                    ],
-                  ],
-                ),
               ),
               OutlinedButton(
                 onPressed: _busy ? null : () => _run('길 위 만남', _meetNext),

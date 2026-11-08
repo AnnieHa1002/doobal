@@ -40,6 +40,7 @@ class SceneView extends StatelessWidget {
     this.sceneBehind = const [],
     this.sceneBeside = const [],
     this.sceneAbove = const [],
+    this.walkCompanion,
   });
 
   final SceneMode mode;
@@ -81,6 +82,9 @@ class SceneView extends StatelessWidget {
   final List<Widget> sceneBehind;
   final List<Widget> sceneBeside;
   final List<Widget> sceneAbove;
+
+  /// 걷는 중 장면의 동행 층 (정령 뒤·앞풀 아래). 장면이 자리를 넘겨 부른다. 없으면 혼자다
+  final Widget Function(SceneCompanionSpot spot)? walkCompanion;
 
   @override
   Widget build(BuildContext context) {
@@ -170,10 +174,19 @@ class SceneView extends StatelessWidget {
         (size.width > size.height
             ? rules.characterHeightLandscapePx * size.height / 1170
             : rules.characterHeightPx * k);
+    final companion = walkCompanion;
     return Stack(
       children: [
         Positioned.fill(
           child: CustomPaint(painter: layer(ScenePass.background)),
+        ),
+        // 동행이 없어도 자리는 둔다 (정령이 다시 만들어지지 않게)
+        Positioned.fill(
+          child: IgnorePointer(
+            child: companion == null
+                ? const SizedBox.shrink()
+                : companion(_companionSpot(size, art, artLayout, foot, figureHeight, tint)),
+          ),
         ),
         _character(foot, figureHeight, speed, pose, tint),
         Positioned.fill(
@@ -185,6 +198,35 @@ class SceneView extends StatelessWidget {
     );
   }
 
+  /// 동행 층에 넘길 자리. 배 위면 배 그림의 동행 발(boat_layers companionFoot)을 정령 발과 같이 흔든다
+  SceneCompanionSpot _companionSpot(
+    Size size,
+    SceneArt? art,
+    SceneArtLayout? layout,
+    Offset foot,
+    double figureHeight,
+    int tint,
+  ) {
+    final boat = onSea ? art?.boat : null;
+    final at = boat == null || layout == null
+        ? null
+        : placeBoat(
+            boat.art,
+            footX: foot.dx,
+            footY: foot.dy,
+            scale: layout.figureHeight / rules.characterCanvasHeightPx,
+          ).companionFoot;
+    return SceneCompanionSpot(
+      size: size,
+      spiritFoot: foot,
+      figureHeight: figureHeight,
+      groundPtPerM: rules.groundPxPerM *
+          (layout == null ? figureHeight / rules.characterHeightPx : layout.scale * layout.groundScale),
+      tint: tint,
+      boatFoot: at == null ? null : Offset(at.x, at.y),
+    );
+  }
+
   /// 정령 (발 [foot], 키 [figureHeight]). 정령의 머리 위 y150~발바닥 y440을 키로 본다
   Widget _character(Offset foot, double figureHeight, double speed, DoobalPose pose, int tint) {
     final scale = figureHeight / (440 - 150);
@@ -193,7 +235,7 @@ class SceneView extends StatelessWidget {
       top: foot.dy - 440 * scale,
       width: 600 * scale,
       height: 600 * scale,
-      child: _Tinted(
+      child: SceneTinted(
         tint: tint,
         child: RepaintBoundary(
           child: DoobalCharacter(
@@ -330,9 +372,38 @@ class SceneView extends StatelessWidget {
   }
 }
 
-/// 시간대 색을 곱한다. 낮(흰색)에는 층을 만들지 않는다
-class _Tinted extends StatelessWidget {
-  const _Tinted({required this.tint, required this.child});
+/// 걷는 중 장면이 동행 층에 주는 자리. 좌표는 장면(화면) pt
+class SceneCompanionSpot {
+  const SceneCompanionSpot({
+    required this.size,
+    required this.spiritFoot,
+    required this.figureHeight,
+    required this.groundPtPerM,
+    required this.tint,
+    this.boatFoot,
+  });
+
+  final Size size;
+
+  /// 정령 발 (배 흔들림 포함)
+  final Offset spiritFoot;
+
+  /// 정령 키. 동행 키는 이것의 비율이다
+  final double figureHeight;
+
+  /// 땅 1m가 화면에서 몇 pt인가 (뒤처진 거리를 화면 거리로)
+  final double groundPtPerM;
+
+  /// 시간대 보정 색 (흰색이면 없음). 동행에도 입힌다 (M2)
+  final int tint;
+
+  /// 배 위 동행 발 (흔들림 포함). 땅 위거나 배 그림이 없으면 null
+  final Offset? boatFoot;
+}
+
+/// 시간대 색을 곱한다. 낮(흰색)에는 층을 만들지 않는다 (정령·동행)
+class SceneTinted extends StatelessWidget {
+  const SceneTinted({super.key, required this.tint, required this.child});
 
   final int tint;
   final Widget child;

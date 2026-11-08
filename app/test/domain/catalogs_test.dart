@@ -147,6 +147,13 @@ void main() {
           ['doctor']);
     });
 
+    test('v3: 종 이름과 층을 숨기는 때를 읽는다', () {
+      expect({for (final c in _companions.companions) c.id: c.speciesName},
+          {'bright': '오리', 'rest': '고양이', 'doctor': '산삼'});
+      expect(_companions.byId('doctor')!.hideLayerWhen, HideLayerWhen.finaleRead);
+      expect(_companions.byId('bright')!.hideLayerWhen, isNull);
+    });
+
     test('모르는 pace나 말하는 이는 FormatException', () {
       Map<String, dynamic> one(String pace, String who) => {
             'companions': [
@@ -154,6 +161,7 @@ void main() {
                 'id': 'x',
                 'name': 'x',
                 'species': 'x',
+                'speciesName': 'x',
                 'terrain': 'city',
                 'pace': pace,
                 'finaleProp': 'p',
@@ -173,6 +181,9 @@ void main() {
       expect(parseCompanions(one('match', 'me')).byId('x'), isNotNull);
       expect(() => parseCompanions(one('fly', 'me')), throwsFormatException);
       expect(() => parseCompanions(one('match', 'cat')), throwsFormatException);
+      final when = one('match', 'me');
+      (when['companions'] as List).first['hideLayerWhen'] = 'chapterOpened';
+      expect(() => parseCompanions(when), throwsFormatException);
     });
   });
 
