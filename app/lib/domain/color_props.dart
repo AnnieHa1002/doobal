@@ -12,6 +12,11 @@ Set<String> havePropIds(List<Prop> props, Set<String> owned) => {
         if (p.kind == PropUnlockKind.initial) p.id,
     };
 
+/// 색 소품 id → 기본 소품 id (spiritLookOf가 색 소품을 기본 소품 그림으로 보이게 쓴다)
+Map<String, String> variantBases(Iterable<Prop> props) => {
+      for (final p in props) p.id: ?p.variantOf,
+    };
+
 /// 보여도 되는 소품인가: 색 소품은 기본 소품을 가졌을 때만 ([have]는 [havePropIds])
 bool baseHeld(Prop p, Set<String> have) => p.variantOf == null || have.contains(p.variantOf);
 

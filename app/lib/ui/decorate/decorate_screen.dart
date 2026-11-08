@@ -175,6 +175,7 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
       look,
       bodyArgb: palette.body.argbOf(look.body),
       bodyBaseArgb: palette.body.baseArgb,
+      baseOf: variantBases(props),
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

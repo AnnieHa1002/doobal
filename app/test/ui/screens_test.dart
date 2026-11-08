@@ -228,11 +228,14 @@ void main() {
             look: Value(jsonEncode(Look.initial
                 .copyWith(eyes: 'cat', mouth: 'smirk')
                 .withSlot('pet', 'pet_05')
+                .withSlot('cloth', 'cloth_02_c1')
                 .toJson())),
           )));
       await _pumpApp(tester, e);
-      // 기본 가방(큰 붓)과 크림 몸 색(palette.json body 견본 1)을 같이 입는다
-      const worn = SpiritLook(eye: 4, mouth: 5, bag: 1, companion: 1, bodyArgb: 0xFFF3E4C4);
+      // 기본 가방(큰 붓)과 크림 몸 색(palette.json body 견본 1)을 같이 입는다.
+      // 별밤 여행복(색 소품)은 기본 여행복 그림(outfit 1)으로 보인다
+      const worn =
+          SpiritLook(eye: 4, mouth: 5, bag: 1, outfit: 1, companion: 1, bodyArgb: 0xFFF3E4C4);
       await _settle(tester, () => tester.widget<SceneView>(find.byType(SceneView)).spirit == worn);
       expect(tester.widget<SceneView>(find.byType(SceneView)).spirit, worn);
 

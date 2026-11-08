@@ -75,20 +75,29 @@ const _outfitStyles = {'cloth_02': 1, 'cloth_05': 2};
 const _companionStyles = {'pet_05': 1};
 
 /// 저장된 모습을 정령 입력값으로 바꾼다. [bodyArgb]는 몸 색(BodyPalette.argbOf)이고,
-/// 팔레트를 읽기 전이면 null (spiritLookProvider가 채운다)
+/// 팔레트를 읽기 전이면 null (spiritLookProvider가 채운다).
+/// [baseOf]는 색 소품 id → 기본 소품 id(props variantOf, `variantBases`). 색 소품은 기본 소품 그림으로
+/// 보인다(색은 컷아웃 연결 T5 때): 별밤 여행복을 입어도 정령이 여행복을 입는다
 SpiritLook spiritLookOf(
   Look look, {
   int? bodyArgb,
   int bodyBaseArgb = defaultBodyBaseArgb,
-}) =>
-    SpiritLook(
-      eye: eyeParts[look.eyes] ?? 0,
-      brow: browParts[look.brows] ?? 1,
-      nose: noseParts[look.nose] ?? 6,
-      mouth: mouthParts[look.mouth] ?? 1,
-      bag: _bagStyles[look.slots['bag']] ?? 0,
-      outfit: _outfitStyles[look.slots['cloth']] ?? 0,
-      companion: _companionStyles[look.slots['pet']] ?? 0,
-      bodyArgb: bodyArgb,
-      bodyBaseArgb: bodyBaseArgb,
-    );
+  Map<String, String> baseOf = const {},
+}) {
+  int style(Map<String, int> styles, String slot) {
+    final id = look.slots[slot];
+    return styles[id] ?? styles[baseOf[id]] ?? 0;
+  }
+
+  return SpiritLook(
+    eye: eyeParts[look.eyes] ?? 0,
+    brow: browParts[look.brows] ?? 1,
+    nose: noseParts[look.nose] ?? 6,
+    mouth: mouthParts[look.mouth] ?? 1,
+    bag: style(_bagStyles, 'bag'),
+    outfit: style(_outfitStyles, 'cloth'),
+    companion: style(_companionStyles, 'pet'),
+    bodyArgb: bodyArgb,
+    bodyBaseArgb: bodyBaseArgb,
+  );
+}

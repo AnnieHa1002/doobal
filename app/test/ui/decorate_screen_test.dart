@@ -1090,7 +1090,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('입으면 같은 칸 기본 소품은 벗겨지고, 저장하면 모습에 남는다. 정령에는 안 그린다', (tester) async {
+    testWidgets('입으면 같은 칸 기본 소품은 벗겨지고, 저장하면 모습에 남는다. 정령은 기본 소품 그림', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => _ownProps(e.db, ['hat_01_c1', 'cloth_02', 'cloth_02_c1']));
       await _open(tester, e);
@@ -1103,14 +1103,19 @@ void main() {
       expect(_summary(tester), startsWith('봄하늘 베레모 · 앞치마'));
       expect(_worn(tester), before);
 
-      // 여행복은 Rive에 붙은 소품이지만 색 소품(별밤 여행복)은 그림이 없어 정령에 안 그린다
+      // 색 소품(별밤 여행복)은 그림이 없어 기본 여행복 그림으로 보인다(색은 T5 때). 맨몸이 되지 않는다
       await _goTab(tester, 'cloth');
       await _tap(tester, _key('prop-cloth_02'));
       expect(_worn(tester).outfit, 1);
       await _tap(tester, _key('prop-cloth_02_c1'));
       expect(_state('cloth_02_c1', '입는 중'), findsOneWidget);
       expect(_state('cloth_02', '가짐'), findsOneWidget);
+      expect(_worn(tester).outfit, 1);
+      // 앞치마로 바꾸면 여행복이 빠진다
+      await _tap(tester, _key('prop-cloth_01'));
       expect(_worn(tester).outfit, 0);
+      await _tap(tester, _key('prop-cloth_02_c1'));
+      expect(_worn(tester).outfit, 1);
 
       await _save(tester);
       final stored = await _stored(tester, e);

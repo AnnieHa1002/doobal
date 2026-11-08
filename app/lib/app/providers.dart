@@ -27,6 +27,7 @@ import '../data/theme_loader.dart';
 import '../data/walk_notice.dart';
 import '../domain/badge.dart';
 import '../domain/camp_theme.dart';
+import '../domain/color_props.dart';
 import '../domain/landmark.dart';
 import '../domain/spirit_look.dart';
 import '../domain/spirit_palette.dart';
@@ -256,15 +257,18 @@ final statsServiceProvider = Provider<StatsService>((ref) => StatsService(ref.wa
 /// 나의 정보의 닉네임·모습. 화면을 열 때마다 다시 읽는다
 final meProvider = FutureProvider.autoDispose<Me>((ref) => ref.watch(profileServiceProvider).me());
 
-/// 쉼터·걷는 중·꾸미기·나의 정보·시작 화면이 같이 쓰는 내 정령 (me + 팔레트). 아직 못 읽었으면 기본 정령
+/// 쉼터·걷는 중·꾸미기·나의 정보·시작 화면이 같이 쓰는 내 정령 (me + 팔레트). 아직 못 읽었으면 기본 정령.
+/// 색 소품은 소품 목록을 읽은 뒤 기본 소품 그림으로 보인다
 final spiritLookProvider = Provider<SpiritLook>((ref) {
   final me = ref.watch(meProvider).value;
   final palette = ref.watch(spiritPaletteProvider).value;
   if (me == null || palette == null) return SpiritLook.base;
+  final props = ref.watch(propsProvider).value;
   return spiritLookOf(
     me.look,
     bodyArgb: palette.body.argbOf(me.look.body),
     bodyBaseArgb: palette.body.baseArgb,
+    baseOf: props == null ? const {} : variantBases(props),
   );
 });
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:doobal/domain/color_props.dart';
 import 'package:doobal/domain/face_parts.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/spirit_look.dart';
@@ -60,6 +61,21 @@ void main() {
       expect(wear('bag', 'bag_02').bag, 0);
       expect(wear('pet', 'pet_05').companion, 1);
       expect(wear('pet', 'pet_02').companion, 0);
+    });
+
+    test('색 소품은 기본 소품 그림으로 보인다 (별밤 여행복 → 여행복, T5 전까지)', () {
+      final bases = variantBases(props);
+      SpiritLook wear(String id) => spiritLookOf(Look.initial.withSlot('cloth', id), baseOf: bases);
+      for (final id in ['cloth_02_c1', 'cloth_02_c2', 'cloth_02_c3']) {
+        expect(bases[id], 'cloth_02');
+        expect(wear(id).outfit, 1, reason: id);
+      }
+      // 앞치마 색은 앞치마처럼 Rive에 없어 그대로 0, 목록 없이 부르면 색 소품도 0
+      expect(wear('cloth_01_c1').outfit, 0);
+      expect(spiritLookOf(Look.initial.withSlot('cloth', 'cloth_02_c1')).outfit, 0);
+      // 기본 소품은 목록이 있어도 그대로
+      expect(wear('cloth_02').outfit, 1);
+      expect(wear('cloth_05').outfit, 2);
     });
 
     test('Rive 소품 id는 모두 props.json의 그 칸 소품이다', () {
