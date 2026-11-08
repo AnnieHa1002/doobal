@@ -57,7 +57,7 @@ class SceneArtPainter extends CustomPainter {
   List<double>? _time;
   SeasonTint? _season;
   double get _k => _layout.scale;
-  double get _groundScale => _layout.size.width > _layout.size.height ? .78 : 1;
+  double get _groundScale => _layout.groundScale;
   Map get _assets => art.data['assets'] as Map;
 
   @override

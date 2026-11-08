@@ -3,6 +3,9 @@
 /// 걷는 중 연출 (companions.json pace): ahead 앞서 뛰어갔다 돌아옴, walkOnly 늘 걷기, match 사용자에 맞춤
 enum CompanionPace { ahead, walkOnly, match }
 
+/// 동행 그림의 층을 숨기는 때 (companions.json hideLayerWhen). finaleRead = 마지막 장을 읽은 뒤
+enum HideLayerWhen { finaleRead }
+
 /// 대사의 말하는 이 (narr는 지문)
 enum StorySpeaker { narr, companion, me }
 
@@ -61,17 +64,22 @@ class Companion {
     required this.id,
     required this.name,
     required this.species,
+    required this.speciesName,
     required this.terrain,
     required this.pace,
     required this.finaleProp,
     required this.faces,
     required this.chapters,
     this.hideLayerOnFinale,
+    this.hideLayerWhen,
   });
 
   final String id;
   final String name;
   final String species;
+
+  /// 종의 화면 이름 (길 위 만남 ‘새 동행을 만났어요’ 아래 줄)
+  final String speciesName;
 
   /// 어울리는 지형 (만남 확률이 오른다). 명소 terrain 값과 같다
   final String terrain;
@@ -82,6 +90,9 @@ class Companion {
 
   /// 완결 장을 읽은 뒤 동행 그림에서 숨기는 층 (심 박사 안경)
   final String? hideLayerOnFinale;
+
+  /// [hideLayerOnFinale]를 숨기는 때. 없으면 숨기지 않는다
+  final HideLayerWhen? hideLayerWhen;
   final List<String> faces;
 
   /// 장 번호 순서
@@ -91,6 +102,7 @@ class Companion {
         id: j['id'] as String,
         name: j['name'] as String,
         species: j['species'] as String,
+        speciesName: j['speciesName'] as String,
         terrain: j['terrain'] as String,
         pace: switch (j['pace']) {
           'ahead' => CompanionPace.ahead,
@@ -100,6 +112,11 @@ class Companion {
         },
         finaleProp: j['finaleProp'] as String,
         hideLayerOnFinale: j['hideLayerOnFinale'] as String?,
+        hideLayerWhen: switch (j['hideLayerWhen']) {
+          null => null,
+          'finaleRead' => HideLayerWhen.finaleRead,
+          final w => throw FormatException('모르는 hideLayerWhen: $w (${j['id']})'),
+        },
         faces: (j['faces'] as List).cast<String>(),
         chapters: [
           for (final c in j['chapters'] as List) StoryChapter.fromJson(c as Map<String, dynamic>),

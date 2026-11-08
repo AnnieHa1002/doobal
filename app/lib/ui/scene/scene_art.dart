@@ -554,6 +554,9 @@ class SceneArtLayout {
   bool get sea => onSea && !rest;
   double get figureHeight =>
       restK != null ? camp!.character.heightPt * restK! : n('figureHeight') * scale;
+
+  /// 땅·길 그림 배율 (가로 화면은 줄인다). 땅 1m의 화면 길이 = groundPxPerM × [scale] × 이것
+  double get groundScale => size.width > size.height ? .78 : 1;
   Offset get foot {
     if (restK != null) {
       final c = camp!.character;

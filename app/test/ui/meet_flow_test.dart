@@ -5,6 +5,7 @@ import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/domain/route.dart';
 import 'package:doobal/main.dart';
+import 'package:doobal/ui/companion/companion_screen.dart';
 import 'package:doobal/ui/companion/meet_flow.dart';
 import 'package:doobal/ui/debug/debug_screen.dart';
 import 'package:doobal/ui/scene/scene_view.dart';
@@ -134,6 +135,27 @@ void main() {
       expect(picks, [true, false]);
     });
 
+    testWidgets('새 동행 카드의 종 이름은 데이터(speciesName)에서 읽는다', (tester) async {
+      final c = _c('rest');
+      final renamed = Companion(
+        id: c.id,
+        name: c.name,
+        species: c.species,
+        speciesName: '시험 종',
+        terrain: c.terrain,
+        pace: c.pace,
+        finaleProp: c.finaleProp,
+        faces: c.faces,
+        chapters: c.chapters,
+      );
+      await pumpFlow(tester, renamed);
+      await tester.tap(_approach());
+      await tester.pump();
+      await throughPrologue(tester, renamed);
+      expect(find.text('시험 종'), findsOneWidget);
+      expect(find.text('고양이'), findsNothing);
+    });
+
     testWidgets('다른 동행과 걷던 중이면 버튼에 두 이름이 나온다', (tester) async {
       final picks = <bool>[];
       await pumpFlow(tester, _c('doctor'), walkingWith: _c('rest'), onChoose: picks.add);
@@ -171,7 +193,7 @@ void main() {
     });
   });
 
-  group('개발 화면 임시 입구', () {
+  group('개발 화면', () {
     testWidgets('길 위 만남을 끝내면 동행 화면에 나오고, 이야기 한 장 더로 다음 장이 열린다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
@@ -192,7 +214,7 @@ void main() {
       await tester.pump();
       await throughPrologue(tester, _c('bright'));
       await tester.tap(_together());
-      await settle(tester, () => find.text('동행').evaluate().isNotEmpty);
+      await settle(tester, () => find.text('이야기 한 장 더').evaluate().isNotEmpty);
       await transition(tester);
       await settle(tester, () => false, tries: 4);
 
@@ -201,9 +223,10 @@ void main() {
       await tester.tap(find.text('이야기 한 장 더'));
       await settle(tester, () => false, tries: 6);
 
-      await tester.ensureVisible(find.text('동행'));
-      await tester.pump();
-      await tester.tap(find.text('동행'));
+      // 동행 화면 입구는 쉼터 불 옆 동행이다 (개발 화면 임시 입구는 지움): 여기서는 바로 연다
+      expect(find.text('동행'), findsNothing);
+      Navigator.of(tester.element(find.byType(DebugScreen)))
+          .push(MaterialPageRoute<void>(builder: (_) => const CompanionScreen()));
       await transition(tester);
       await settle(tester, () => find.byKey(const Key('companion-now')).evaluate().isNotEmpty);
       expect(find.text('지금 함께 걷는 중'), findsOneWidget);

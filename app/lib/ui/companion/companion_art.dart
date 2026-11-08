@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../domain/companion.dart';
@@ -17,14 +19,14 @@ const _bodyColors = {
   'doctor': Color(0xFFE3CFA0),
 };
 
-/// 동행 종의 화면 이름. companions.json에 표시 이름이 없어 여기 둔다
-const speciesNames = {'duck': '오리', 'cat': '고양이', 'ginseng': '산삼'};
-
 /// 장면 기준 화면의 폭(px). 세로 화면은 폭, 가로 화면은 높이를 여기에 맞춰 줄인다 (scene_view와 같다)
 const _sceneBasisPx = 1170;
 
-/// 동행 자리표시 키 ÷ 정령 키 (캔버스 3-4: 90pt ÷ 180pt)
-const _companionToSpirit = 0.5;
+/// 동행 자리표시 키 ÷ 정령 키 (캔버스 3-1·3-4: 90pt ÷ 180pt)
+const companionToSpirit = 0.5;
+
+/// 동행 자리표시 폭 ÷ 키 (캔버스 69pt ÷ 90pt)
+const companionFigureAspect = 0.77;
 
 /// 장면 기준 1px이 [screen]에서 몇 pt인가
 double _sceneUnit(Size screen) =>
@@ -34,7 +36,7 @@ double _sceneUnit(Size screen) =>
 double sceneCompanionHeight(Rules rules, Size screen) =>
     (screen.width > screen.height ? rules.characterHeightLandscapePx : rules.characterHeightPx) *
     _sceneUnit(screen) *
-    _companionToSpirit;
+    companionToSpirit;
 
 /// 길(발)이 화면 아래에서 얼마나 위에 있는가(pt). 장면은 아래 기준이다
 double sceneFootFromBottom(Rules rules, Size screen) =>
@@ -62,7 +64,7 @@ class CompanionFigure extends StatelessWidget {
       image: true,
       label: silhouette ? '길 앞쪽의 실루엣' : companion.name,
       child: SizedBox(
-        width: height * 0.77,
+        width: height * companionFigureAspect,
         height: height,
         child: CustomPaint(
           painter: _FigurePainter(color, outlined: !silhouette),
@@ -119,6 +121,29 @@ class _FigurePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_FigurePainter old) => old.color != color || old.outlined != outlined;
+}
+
+/// 쉼터 불 옆에 앉은 동행 (캔버스 2-2). 받은 상자(테마 artW×artH)의 아래 가운데에 선다.
+/// 앉은 모습·둥실·안경 층은 동행 그림이 오면(T2c)
+class CompanionRestArt extends StatelessWidget {
+  const CompanionRestArt({super.key, required this.companion});
+
+  final Companion companion;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, box) {
+      final h = math.min(box.maxHeight, box.maxWidth / companionFigureAspect);
+      return Align(
+        alignment: Alignment.bottomCenter,
+        child: CompanionFigure(
+          key: const ValueKey('rest-companion-art'),
+          companion: companion,
+          height: h,
+        ),
+      );
+    });
+  }
 }
 
 /// 동그라미 초상 ([companion]이 null이면 빈 동그라미: 혼자 걷는 중)

@@ -273,6 +273,23 @@ void main() {
       expect(hiddenLayerOf(companionCatalog.byId('bright')!, rules.companionChapters, rules), isNull);
     });
 
+    test('숨기는 때(hideLayerWhen)가 없으면 층이 있어도 숨기지 않는다', () {
+      final d = companionCatalog.byId('doctor')!;
+      final noWhen = Companion(
+        id: d.id,
+        name: d.name,
+        species: d.species,
+        speciesName: d.speciesName,
+        terrain: d.terrain,
+        pace: d.pace,
+        finaleProp: d.finaleProp,
+        faces: d.faces,
+        chapters: d.chapters,
+        hideLayerOnFinale: d.hideLayerOnFinale,
+      );
+      expect(hiddenLayerOf(noWhen, rules.companionChapters, rules), isNull);
+    });
+
     test('N3 key는 되돌릴 수 있고, 모양이 다르면 null', () {
       final ref = parseStoryNoticeKey(storyNoticeKey('bright', 3))!;
       expect((ref.companionId, ref.no), ('bright', 3));

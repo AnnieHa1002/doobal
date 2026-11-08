@@ -32,7 +32,8 @@ import 'rest_slots.dart';
 
 /// 쉼터 (홈, 루트 화면). 장면(하늘 → 후경 → 캠프 뒤 → 물건 → 정령 → 동행 → 캠프 앞 → 불꽃)은 화면 폭의
 /// 1.5배이고 좌우로 민다. 프로필·설정·상태 알약·출발하기는 고정이다 (캔버스 2-2).
-/// 물건은 3~6초마다 하나씩 살짝 흔들린다 (알림 점이 있는 물건 우선, 연출 값은 prop_wiggle.dart)
+/// 물건은 3~6초마다 하나씩 살짝 흔들린다 (알림 점이 있는 물건 우선, 연출 값은 prop_wiggle.dart).
+/// 불 옆 동행은 알림 점(안 읽은 장)이 있을 때만 흔들림에 든다 (평소에는 캔버스대로 둥실, 그림 쪽 몫)
 class RestScreen extends ConsumerStatefulWidget {
   const RestScreen({super.key});
 
@@ -81,9 +82,14 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
       return (all: const [], notice: const {});
     }
     final sign = snap.guestbookTicket != null;
+    final companion = ref.read(restSlotsProvider).companion?.notice ?? false;
     return (
-      all: [..._artObjects, if (sign) _guestbookWiggleId],
-      notice: {if (_hasNew(snap)) 'backpack', if (sign) _guestbookWiggleId},
+      all: [..._artObjects, if (sign) _guestbookWiggleId, if (companion) campCompanionId],
+      notice: {
+        if (_hasNew(snap)) 'backpack',
+        if (sign) _guestbookWiggleId,
+        if (companion) campCompanionId,
+      },
     );
   }
 
@@ -312,7 +318,8 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     );
   }
 
-  /// 다른 트랙이 끼운 물건의 그림 (수레·동행). 알림 점까지 여기서 붙인다
+  /// 다른 트랙이 끼운 물건의 그림 (수레·동행). 알림 점까지 여기서 붙인다.
+  /// 흔들림은 [_wigglePool]이 고를 때만 (지금은 알림 점 있는 동행)
   Widget _slotArt(RestGeometry stage, CampObject o, RestObjectSlot slot) {
     final k = stage.k;
     return Positioned(
@@ -321,13 +328,18 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
       width: o.artW * k,
       height: o.artH * k,
       child: IgnorePointer(
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned.fill(child: Builder(builder: slot.art)),
-            if (slot.notice)
-              Positioned(top: 4, right: 4, child: NoticeDot(key: ValueKey('${o.id}-dot'))),
-          ],
+        child: PropWiggle(
+          key: ValueKey('wiggle-${o.id}'),
+          wiggler: _wiggler,
+          id: o.id,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(child: Builder(builder: slot.art)),
+              if (slot.notice)
+                Positioned(top: 4, right: 4, child: NoticeDot(key: ValueKey('${o.id}-dot'))),
+            ],
+          ),
         ),
       ),
     );
