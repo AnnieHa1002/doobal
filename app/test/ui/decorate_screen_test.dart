@@ -1046,6 +1046,96 @@ void main() {
     });
   });
 
+  group('색 소품 (명세 M4.5 D)', () {
+    /// 칸 순서: 위에서 아래, 왼쪽에서 오른쪽
+    List<String> order(WidgetTester tester, List<String> ids) {
+      final pos = {for (final id in ids) id: tester.getTopLeft(_key('prop-$id'))};
+      return [...ids]..sort((a, b) {
+          final dy = pos[a]!.dy.compareTo(pos[b]!.dy);
+          return dy != 0 ? dy : pos[a]!.dx.compareTo(pos[b]!.dx);
+        });
+    }
+
+    testWidgets('산 색 소품은 같은 칸에 기본 소품 바로 뒤 따로 된 칸, 그림이 없으면 그 색 상자', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _ownProps(e.db, ['hat_02_c1', 'hat_02', 'hat_01_c2']));
+      await _open(tester, e);
+      await _goTab(tester, 'hat');
+
+      const ids = ['none', 'hat_01', 'hat_01_c2', 'hat_02', 'hat_02_c1'];
+      expect(find.byType(ItemCell), findsNWidgets(ids.length));
+      expect(order(tester, ids), ids);
+      expect(find.descendant(of: _key('prop-hat_01_c2'), matching: find.text('밤바다 베레모')),
+          findsOneWidget);
+      expect(_state('hat_01_c2', '가짐'), findsOneWidget);
+
+      Finder inCell(String id, Finder f) => find.descendant(of: _key('prop-$id'), matching: f);
+      final hex = props.firstWhere((p) => p.id == 'hat_01_c2').materialArgb!;
+      final box = tester.widget<DecoratedBox>(inCell('hat_01_c2', _key('item-swatch')));
+      expect((box.decoration as BoxDecoration).color, Color(hex));
+      expect(tester.getSize(inCell('hat_01_c2', _key('item-swatch'))), const Size(56, 50));
+      expect(inCell('hat_01_c2', find.byType(ItemPlaceholder)), findsNothing);
+      // 기본 소품은 그대로 (그림 파일 또는 점선)
+      expect(inCell('hat_02', _key('item-swatch')), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('기본 소품이 없으면 색 소품 기록이 있어도 안 보인다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _ownProps(e.db, ['hat_02_c1']));
+      await _open(tester, e);
+      await _goTab(tester, 'hat');
+      expect(_key('prop-hat_02_c1'), findsNothing);
+      expect(find.byType(ItemCell), findsNWidgets(2));
+      await end(tester, e);
+    });
+
+    testWidgets('입으면 같은 칸 기본 소품은 벗겨지고, 저장하면 모습에 남는다. 정령에는 안 그린다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _ownProps(e.db, ['hat_01_c1', 'cloth_02', 'cloth_02_c1']));
+      await _open(tester, e);
+      await _goTab(tester, 'hat');
+      final before = _worn(tester);
+
+      await _tap(tester, _key('prop-hat_01_c1'));
+      expect(_state('hat_01_c1', '입는 중'), findsOneWidget);
+      expect(_state('hat_01', '가짐'), findsOneWidget);
+      expect(_summary(tester), startsWith('봄하늘 베레모 · 앞치마'));
+      expect(_worn(tester), before);
+
+      // 여행복은 Rive에 붙은 소품이지만 색 소품(별밤 여행복)은 그림이 없어 정령에 안 그린다
+      await _goTab(tester, 'cloth');
+      await _tap(tester, _key('prop-cloth_02'));
+      expect(_worn(tester).outfit, 1);
+      await _tap(tester, _key('prop-cloth_02_c1'));
+      expect(_state('cloth_02_c1', '입는 중'), findsOneWidget);
+      expect(_state('cloth_02', '가짐'), findsOneWidget);
+      expect(_worn(tester).outfit, 0);
+
+      await _save(tester);
+      final stored = await _stored(tester, e);
+      expect(stored.slots['hat'], 'hat_01_c1');
+      expect(stored.slots['cloth'], 'cloth_02_c1');
+      await end(tester, e);
+    });
+
+    testWidgets('색 소품을 입은 모습으로 열면 그 칸이 입는 중이다', (tester) async {
+      final e = UiEnv();
+      final look = Look.initial.withSlot('hat', 'hat_01_c3');
+      await e.seed(tester, () async {
+        await _ownProps(e.db, ['hat_01_c3']);
+        await ProfileService(e.db).saveLook(look);
+      });
+      await _open(tester, e);
+      await _goTab(tester, 'hat');
+      expect(_state('hat_01_c3', '입는 중'), findsOneWidget);
+      expect(_state('hat_01', '가짐'), findsOneWidget);
+      expect(_summary(tester), startsWith('이끼숲 베레모'));
+      expect(_enabled(tester, '저장'), isFalse);
+      await end(tester, e);
+    });
+  });
+
   group('화면 크기', () {
     testWidgets('좁고 낮은 화면(320×568)에서도 모든 탭이 넘치지 않는다', (tester) async {
       final e = UiEnv();

@@ -5,7 +5,9 @@ import '../../app/providers.dart';
 import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/boat.dart';
+import '../../domain/color_props.dart';
 import '../../domain/format_int.dart';
+import '../../domain/prop.dart';
 import '../../domain/rules.dart';
 import '../../domain/shop.dart';
 import '../common/app_text.dart';
@@ -22,8 +24,12 @@ const shopTitle = '행상 수레';
 /// 가진 상품의 꼬리표
 const _ownedState = '가짐';
 
+/// 색 소품 묶음 제목 (캔버스 8-1 소품 탭)
+const colorItemsTitle = '색 소품';
+
 /// 행상 수레 (캔버스 8-1): 가진 럭, 탭 4, 선반 3열. 상품을 누르면 구매 시트.
-/// 광고 카드는 T7, 색 소품과 배 색 시트는 T4c에서 붙인다
+/// 소품 탭 아래는 색 소품 묶음(기본 소품을 가진 것만). 광고 카드는 T7,
+/// 배 색 시트는 정령 컷아웃 연결과 묶였다 (16장 11/6)
 class ShopScreen extends ConsumerStatefulWidget {
   const ShopScreen({super.key});
 
@@ -85,6 +91,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     final rules = ref.watch(rulesProvider).value;
     final ownedProps = ref.watch(ownedPropIdsProvider).value;
     final ownedBoats = ref.watch(ownedBoatIdsProvider).value;
+    final props = ref.watch(propsProvider).value;
     final balance = ref.watch(coinBalanceProvider).value;
     return Scaffold(
       body: SafeArea(
@@ -101,13 +108,21 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                   onSelect: (t) => setState(() => _tab = t),
                 ),
               ),
-              if (boats != null && rules != null && ownedProps != null && ownedBoats != null)
+              if (boats != null &&
+                  rules != null &&
+                  ownedProps != null &&
+                  ownedBoats != null &&
+                  props != null)
                 Expanded(
                   child: SingleChildScrollView(
                     key: ValueKey('shop-shelf-${_tab.name}'),
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                    child: ItemShelf(
-                      cells: _cells(shop, boats, rules, ownedProps, ownedBoats),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ItemShelf(cells: _cells(shop, boats, rules, ownedProps, ownedBoats)),
+                        if (_tab == ShopTab.prop) ..._colorSection(props, rules, ownedProps),
+                      ],
                     ),
                   ),
                 ),
@@ -158,6 +173,40 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     }
     return cells;
   }
+
+  /// 소품 탭 아래 색 소품 묶음 (캔버스 8-1): 제목 + 선반. 기본 소품을 가진 색 소품만,
+  /// 기본 소품 순서대로. 하나도 없으면 제목도 없다
+  List<Widget> _colorSection(List<Prop> props, Rules rules, Set<String> ownedProps) {
+    final items = shownColorItems(props, havePropIds(props, ownedProps));
+    if (items.isEmpty) return const [];
+    final byId = {for (final p in props) p.id: p};
+    return [
+      const SizedBox(height: 24),
+      Text(
+        colorItemsTitle,
+        key: const ValueKey('shop-color-title'),
+        style: context.display(15, weight: FontWeight.w600),
+      ),
+      const SizedBox(height: 14),
+      ItemShelf(
+        cells: [
+          for (final (i, item) in items.indexed)
+            _colorCell(item, byId[item.propId]!, i, rules, owned: ownedProps.contains(item.propId)),
+        ],
+      ),
+    ];
+  }
+
+  Widget _colorCell(ShopItem item, Prop prop, int tilt, Rules rules, {required bool owned}) =>
+      ItemCell(
+        key: ValueKey('shop-item-${item.id}'),
+        name: item.name,
+        art: ItemArt.prop(prop),
+        tilt: tilt,
+        state: owned ? _ownedState : coinAmountText(item.price, rules),
+        stateColor: owned ? Palette.moss : Palette.terracottaDeep,
+        onTap: owned ? null : () => _pick(item, rules),
+      );
 }
 
 /// 제목 오른쪽 가진 럭: 보석 + 숫자

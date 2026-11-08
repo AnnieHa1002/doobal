@@ -9,6 +9,7 @@ import '../domain/arrival.dart';
 import '../domain/badge.dart';
 import '../domain/boat.dart';
 import '../domain/bucket.dart';
+import '../domain/color_props.dart';
 import '../domain/companion.dart';
 import '../domain/companion_engine.dart';
 import '../domain/eta.dart';

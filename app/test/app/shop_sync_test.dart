@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:doobal/app/backup_service.dart';
+import 'package:doobal/app/profile_service.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/step_source.dart';
@@ -8,6 +9,7 @@ import 'package:doobal/domain/boat.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
+import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/shop.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
@@ -889,6 +891,112 @@ void main() {
       expect(await other.svc.coinBalance(), 0);
       expect((await other.day()).shopM, 2000);
       expect(await other.progressKm(_at(3)), closeTo(2, 1e-6));
+    });
+  });
+
+  group('색 소품', () {
+    // hat_01 베레모는 처음부터 가진 기본 소품, hat_02 여행 모자는 거리 소품(처음에는 없음)
+    const sky = 'hat_01_c1';
+    const dawn = 'hat_02_c1';
+    final price = props.firstWhere((p) => p.id == sky).price!;
+
+    test('기본 소품을 가졌으면 산다: spend 줄 하나, 얻은 소품, 새 표시, 잔액', () async {
+      final e = await _env();
+      await e.give(price + 30);
+      expect(await e.svc.whyNotBuy(sky), isNull);
+      await e.svc.buyItem(sky, _t1);
+      expect(await e.svc.coinBalance(), 30);
+      expect(await e.svc.ownedPropIds(), contains(sky));
+      final row = await (e.db.select(e.db.propsOwned)..where((t) => t.propId.equals(sky)))
+          .getSingle();
+      expect(row.seen, isFalse);
+      final spends = await (e.db.select(e.db.coinLedger)
+            ..where((t) => t.kind.equalsValue(CoinKind.spend)))
+          .get();
+      expect(spends.map((r) => (r.day, r.amount, r.refId)), [(_day, price, sky)]);
+      expect(await e.svc.shopHeld(), isEmpty);
+    });
+
+    test('처음부터 가진 기본 소품은 기록이 없어도 가진 것이다', () async {
+      final e = _Env();
+      addTearDown(e.db.close);
+      expect(await e.db.select(e.db.propsOwned).get(), isEmpty);
+      await e.give(price);
+      await e.svc.buyItem(sky, _t1);
+      expect(await e.svc.ownedPropIds(), {sky});
+    });
+
+    test('기본 소품이 없으면 막고 아무것도 안 바뀐다. 얻은 뒤에는 산다', () async {
+      final e = await _env();
+      await e.give(1000);
+      final before = await e.dump();
+      expect(await e.svc.whyNotBuy(dawn), ShopBlock.needsBase);
+      await expectLater(e.svc.buyItem(dawn, _t1), _blocked(ShopBlock.needsBase));
+      expect(await e.dump(), before);
+
+      await e.db
+          .into(e.db.propsOwned)
+          .insert(PropsOwnedCompanion.insert(propId: 'hat_02', unlockedUtc: 1));
+      await e.svc.buyItem(dawn, _t1);
+      expect(await e.svc.ownedPropIds(), contains(dawn));
+      expect(await e.svc.coinBalance(), 1000 - price);
+    });
+
+    test('잔액 부족이면 막고 아무것도 안 바뀐다', () async {
+      final e = await _env();
+      await e.give(price - 1);
+      final before = await e.dump();
+      await expectLater(e.svc.buyItem(sky, _t1), _blocked(ShopBlock.notEnoughCoins));
+      expect(await e.dump(), before);
+    });
+
+    test('두 번째는 막는다', () async {
+      final e = await _env();
+      await e.give(price * 2);
+      await e.svc.buyItem(sky, _t1);
+      await expectLater(e.svc.buyItem(sky, _t1), _blocked(ShopBlock.owned));
+      expect(await e.svc.coinBalance(), price);
+    });
+
+    test('기본 소품은 상품이 아니다', () async {
+      final e = await _env();
+      await e.give(1000);
+      await expectLater(e.svc.buyItem('hat_01', _t1), _blocked(ShopBlock.unknownItem));
+    });
+
+    test('같은 기록 동기화 2번에도 산 색 소품과 럭이 그대로다', () async {
+      final e = await _env();
+      await e.give(price);
+      await e.svc.buyItem(sky, _t1);
+      final before = await e.dump();
+      await e.svc.sync(_at(1));
+      await e.svc.sync(_at(2));
+      expect(await e.svc.ownedPropIds(), contains(sky));
+      expect(await e.svc.coinBalance(), 0);
+      expect((await e.dump())[4], before[4]);
+    });
+
+    test('입은 모습과 함께 백업 왕복: 얻은 색 소품·잔액·모습이 그대로다', () async {
+      final e = await _env();
+      await e.give(price * 2 + 7);
+      await e.svc.buyItem(sky, _t1);
+      await e.svc.buyItem('cloth_01_c2', _t1);
+      final look = Look.initial.withSlot('hat', sky).withSlot('cloth', 'cloth_01_c2');
+      await ProfileService(e.db).saveLook(look);
+
+      final text = await BackupService(e.db, rules).exportBackup(_at(1));
+      final other = _Env();
+      addTearDown(other.db.close);
+      await BackupService(other.db, rules).restoreBackup(text);
+      expect(await other.svc.ownedPropIds(), await e.svc.ownedPropIds());
+      expect(await other.svc.ownedPropIds(), containsAll([sky, 'cloth_01_c2']));
+      expect(await other.svc.coinBalance(), 7);
+      expect((await ProfileService(other.db).me()).look, look);
+      // 복원한 기기에서 다시 입어도 (가진 소품 검사를 지나) 저장된다
+      await ProfileService(other.db).saveLook(look.withSlot('hat', 'hat_01'));
+      await ProfileService(other.db).saveLook(look);
+      expect((await ProfileService(other.db).me()).look, look);
+      await expectLater(other.svc.buyItem(sky, _t1), _blocked(ShopBlock.owned));
     });
   });
 }

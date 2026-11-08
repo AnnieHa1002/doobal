@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'color.dart';
 import 'format_int.dart';
 
 /// 소품 해금 조건. props.json의 unlock.kind (default는 예약어라 initial)
@@ -17,6 +18,10 @@ class Prop {
     this.steps,
     this.companion,
     this.price,
+    this.requires,
+    this.variantOf,
+    this.colorName,
+    this.materialArgb,
   });
 
   final String id;
@@ -35,8 +40,27 @@ class Prop {
   /// shop: 상점 값(럭). 사면 얻은 소품에 들어간다
   final int? price;
 
+  /// shop: 먼저 가져야 살 수 있는 소품 id (unlock.requires, 색 소품의 기본 소품)
+  final String? requires;
+
+  /// 색 소품이면 기본 소품 id (props v5 variantOf). 같은 칸에 따로 된 칸으로 뜬다 (16장 11/4)
+  final String? variantOf;
+
+  /// 색 소품의 견본 이름 (color, 몸 색 견본 이름)
+  final String? colorName;
+
+  /// 그림 색 (material.hex, 불투명 ARGB). 그림이 없는 색 소품 칸은 이 색 상자다.
+  /// 정령에 입히는 것(회색조 × 색 ÷ 기준 밝기)은 컷아웃 연결(T5) 몫이다
+  final int? materialArgb;
+
+  bool get isColorVariant => variantOf != null;
+
   factory Prop.fromJson(Map<String, dynamic> j) {
     final u = j['unlock'] as Map<String, dynamic>;
+    final hex = (j['material'] as Map<String, dynamic>?)?['hex'];
+    if (hex != null && (hex is! String || !_hexPattern.hasMatch(hex))) {
+      throw FormatException('material.hex가 #RRGGBB가 아니다: $hex (${j['id']})');
+    }
     return Prop(
       id: j['id'] as String,
       slot: j['slot'] as String,
@@ -55,9 +79,15 @@ class Prop {
       steps: u['steps'] as int?,
       companion: u['companion'] as String?,
       price: u['price'] as int?,
+      requires: u['requires'] as String?,
+      variantOf: j['variantOf'] as String?,
+      colorName: j['color'] as String?,
+      materialArgb: hex == null ? null : argbFromHex(hex as String),
     );
   }
 }
+
+final _hexPattern = RegExp(r'^#[0-9A-Fa-f]{6}$');
 
 /// props.json 전체에서 status가 mvp인 것만. pending(이벤트 소품)은 아직 다루지 않는다
 List<Prop> parseProps(Map<String, dynamic> json) => [
