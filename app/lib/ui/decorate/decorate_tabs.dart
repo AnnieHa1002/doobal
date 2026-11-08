@@ -76,7 +76,7 @@ class PropTab extends StatelessWidget {
   final String slot;
   final Look look;
 
-  /// 그 칸의 가진 소품 (props.json 순서)
+  /// 그 칸의 가진 소품 (props.json 순서, 색 소품은 기본 소품 바로 뒤)
   final List<Prop> props;
 
   /// 다음 거리 소품까지 남은 km ([kmToNextDistanceProp]), 없으면 null
@@ -108,7 +108,7 @@ class PropTab extends StatelessWidget {
           ItemCell(
             key: ValueKey('prop-${p.id}'),
             name: p.name,
-            art: ItemArt(id: p.id, name: p.name),
+            art: ItemArt.prop(p),
             tilt: props.indexOf(p) + 1,
             state: current == p.id ? '입는 중' : '가짐',
             stateColor: current == p.id ? Palette.terracotta : Palette.moss,

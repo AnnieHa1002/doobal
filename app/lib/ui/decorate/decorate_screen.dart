@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../domain/color_props.dart';
 import '../../domain/look.dart';
 import '../../domain/prop.dart';
 import '../../domain/rules.dart';
@@ -100,13 +101,7 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
     final ready = look != null && props != null && owned != null && palette != null;
     final dirty = ready && look != _saved;
     // 기본 소품은 처음부터 가진 것이라, 아직 기록이 없어도 고를 수 있다
-    final have = ready
-        ? {
-            ...owned,
-            for (final p in props)
-              if (p.kind == PropUnlockKind.initial) p.id,
-          }
-        : const <String>{};
+    final have = ready ? havePropIds(props, owned) : const <String>{};
 
     return PopScope(
       canPop: !dirty,
@@ -209,9 +204,11 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
                 : PropTab(
                     slot: _tab,
                     look: look,
+                    // 색 소품은 기본 소품 바로 뒤 따로 된 칸, 기본 소품이 없으면 안 보인다 (명세 M4.5 D).
+                    // 같은 칸이라 입으면 기본 소품은 벗겨진다
                     props: [
-                      for (final p in props)
-                        if (p.slot == _tab && have.contains(p.id)) p,
+                      for (final p in variantsAfterBase(props))
+                        if (p.slot == _tab && have.contains(p.id) && baseHeld(p, have)) p,
                     ],
                     nextKm: nextKm,
                     onPick: (id) => _set(look.withSlot(_tab, id)),

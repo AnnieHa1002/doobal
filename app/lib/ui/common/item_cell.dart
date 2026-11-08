@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/catalog_providers.dart';
+import '../../domain/prop.dart';
 import 'app_text.dart';
 import 'palette.dart';
 
@@ -93,18 +94,54 @@ class ItemPlaceholder extends StatelessWidget {
   }
 }
 
-/// 소품·상품 [id]의 칸 그림: 파일이 있으면 그 그림, 없으면 점선 칸 + [name]
+/// 그림 없는 색 소품 칸: 그 색의 상자 (캔버스 8-1 색 소품, 56×50)
+class ItemSwatch extends StatelessWidget {
+  const ItemSwatch(this.color, {super.key});
+
+  final Color color;
+
+  static const size = Size(56, 50);
+
+  @override
+  Widget build(BuildContext context) => SizedBox.fromSize(
+        size: size,
+        child: DecoratedBox(
+          key: const ValueKey('item-swatch'),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Palette.ink, width: InkLine.pill),
+          ),
+        ),
+      );
+}
+
+/// 소품·상품 [id]의 칸 그림: 파일이 있으면 그 그림, 없으면 [swatch] 색 상자, 그것도 없으면 점선 칸 + [name]
 class ItemArt extends ConsumerWidget {
-  const ItemArt({super.key, required this.id, required this.name, this.size = itemArtSize});
+  const ItemArt({
+    super.key,
+    required this.id,
+    required this.name,
+    this.size = itemArtSize,
+    this.swatch,
+  });
+
+  /// 소품의 칸 그림. 색 소품은 그림이 없으면 material.hex 색 상자다
+  ItemArt.prop(Prop p, {super.key, this.size = itemArtSize})
+      : id = p.id,
+        name = p.name,
+        swatch = p.isColorVariant && p.materialArgb != null ? Color(p.materialArgb!) : null;
 
   final String id;
   final String name;
   final Size size;
+  final Color? swatch;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final path = ref.watch(assetIndexProvider).value?.itemIcon(id);
-    final none = ItemPlaceholder(name: name);
+    final color = swatch;
+    final none = color == null ? ItemPlaceholder(name: name) : ItemSwatch(color);
     return path == null ? none : ItemImage(path, size: size, fallback: none);
   }
 }

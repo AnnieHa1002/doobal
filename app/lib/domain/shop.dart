@@ -48,6 +48,7 @@ class ShopItem {
     this.dailyLimit,
     this.maxHold,
     this.requiresJourney = false,
+    this.requires,
   });
 
   final String id;
@@ -61,6 +62,9 @@ class ShopItem {
   final int? dailyLimit;
   final int? maxHold;
   final bool requiresJourney;
+
+  /// 먼저 가져야 살 수 있는 소품 id. 색 소품의 기본 소품 (props unlock.requires)
+  final String? requires;
 
   factory ShopItem.fromJson(Map<String, dynamic> j) {
     final effect = j['effect'] as Map<String, dynamic>?;
@@ -124,6 +128,7 @@ ShopTab _tabOf(String name) => ShopTab.values.firstWhere(
 /// ('여정 중에만 쓸 수 있어요'만 명세 문구, 나머지는 가안)
 enum ShopBlock {
   unknownItem('살 수 없는 상품이에요'),
+  needsBase('아직 살 수 없어요'),
   owned('이미 가지고 있어요'),
   holdFull('더 보관할 수 없어요'),
   notEnoughCoins('럭이 모자라요'),
@@ -165,17 +170,19 @@ int coinBalanceOf({required int credited, required int spent}) =>
     credited > spent ? credited - spent : 0;
 
 /// 살 수 없는 까닭. 살 수 있으면 null. 여행 효과는 [held]가 [maxHold]보다 적어야 하고,
-/// 소품·배는 한 번만 산다
+/// 소품·배는 한 번만 산다. 색 소품은 기본 소품([ShopItem.requires])을 가져야 산다([hasRequired])
 ShopBlock? buyBlock(
   ShopItem item, {
   required int balance,
   required int held,
   required int maxHold,
   required bool owned,
+  bool hasRequired = true,
 }) {
   if (item.effect == null && item.propId == null && item.boatId == null) {
     return ShopBlock.unknownItem;
   }
+  if (item.requires != null && !hasRequired) return ShopBlock.needsBase;
   if (item.effect != null) {
     if (held >= maxHold) return ShopBlock.holdFull;
   } else if (owned) {

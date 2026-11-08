@@ -5,6 +5,7 @@ import 'package:doobal/app/shop_providers.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/asset_index.dart';
+import 'package:doobal/domain/color_props.dart';
 import 'package:doobal/domain/shop.dart';
 import 'package:doobal/ui/common/item_cell.dart';
 import 'package:doobal/ui/rest/prop_wiggle.dart';
@@ -24,6 +25,9 @@ import 'ui_env.dart';
 // 행상 수레 (캔버스 8-1): 탭별 상품, 구매 시트, 막힘, 구매 뒤 갱신, 쉼터에서 들어가기
 
 const _day = '2026-11-18';
+
+/// 처음부터 보이는 색 소품 (기본 소품 베레모·앞치마·갈색 신발의 색)
+final _firstColorItems = shownColorItems(props, havePropIds(props, const {}));
 
 Finder _key(String k) => find.byKey(ValueKey(k));
 Finder _item(String id) => _key('shop-item-$id');
@@ -121,7 +125,9 @@ void main() {
         await _goTab(tester, t);
         final items = shopCatalog.inTab(t);
         expect(items, isNotEmpty);
-        expect(find.byType(ItemCell), findsNWidgets(items.length), reason: t.name);
+        // 소품 탭은 아래에 처음부터 보이는 색 소품 묶음이 더 있다
+        final colors = t == ShopTab.prop ? _firstColorItems.length : 0;
+        expect(find.byType(ItemCell), findsNWidgets(items.length + colors), reason: t.name);
         var last = -1.0;
         for (final item in items) {
           await tester.ensureVisible(_item(item.id));
@@ -401,6 +407,142 @@ void main() {
       final blocked = await _useBlocked(tester, e, 'fx_shortcut');
       expect(blocked.block, ShopBlock.dailyLimit);
       expect(blocked.message, ShopBlock.dailyLimit.message);
+      await end(tester, e);
+    });
+  });
+
+  group('색 소품 (shop.json colorVariantItems)', () {
+    /// 칸 순서: 위에서 아래, 왼쪽에서 오른쪽
+    List<String> order(WidgetTester tester, Iterable<String> ids) {
+      final pos = {for (final id in ids) id: tester.getTopLeft(_item(id))};
+      return [...ids]..sort((a, b) {
+          final dy = pos[a]!.dy.compareTo(pos[b]!.dy);
+          return dy != 0 ? dy : pos[a]!.dx.compareTo(pos[b]!.dx);
+        });
+    }
+
+    testWidgets('소품 탭 아래 색 소품 묶음: 처음에는 기본 색 9개를 기본 소품 순서로, 색 상자와 값', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      expect(_key('shop-color-title'), findsNothing);
+      await _goTab(tester, ShopTab.prop);
+
+      final ids = [for (final i in _firstColorItems) i.id];
+      expect(ids, [
+        for (final base in ['hat_01', 'cloth_01', 'shoe_01'])
+          for (var n = 1; n <= 3; n++) '${base}_c$n',
+      ]);
+      await tester.ensureVisible(_key('shop-color-title'));
+      await tester.pump();
+      expect(find.text('색 소품'), findsOneWidget);
+      // 소품 상품 아래, 색 소품 위
+      final titleY = tester.getTopLeft(_key('shop-color-title')).dy;
+      final lastProp = shopCatalog.inTab(ShopTab.prop).last.id;
+      expect(titleY, greaterThan(tester.getTopLeft(_item(lastProp)).dy));
+      for (final id in ids) {
+        expect(tester.getTopLeft(_item(id)).dy, greaterThan(titleY), reason: id);
+      }
+      expect(order(tester, ids), ids);
+
+      for (final item in _firstColorItems) {
+        await tester.ensureVisible(_item(item.id));
+        await tester.pump();
+        final p = props.firstWhere((p) => p.id == item.id);
+        expect(_state(item.id, '${p.price} 럭'), findsOneWidget, reason: item.id);
+        expect(find.descendant(of: _item(item.id), matching: find.text(p.name)), findsOneWidget);
+        final box = find.descendant(of: _item(item.id), matching: _key('item-swatch'));
+        expect((tester.widget<DecoratedBox>(box).decoration as BoxDecoration).color,
+            Color(p.materialArgb!), reason: item.id);
+        expect(tester.getSemantics(_item(item.id)).label, '${p.name}, ${p.price} 럭');
+      }
+      // 기본 소품을 아직 못 얻은 색은 없다
+      for (final id in ['hat_02_c1', 'hat_04_c1', 'hat_05_c1', 'cloth_02_c1']) {
+        expect(_item(id), findsNothing, reason: id);
+      }
+      // 기본 소품 자체는 상품이 아니다
+      expect(_item('hat_01'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('기본 소품을 얻으면 그 색이 기본 소품 순서 자리(베레모 색 뒤, 앞치마 색 앞)에 뜬다', (tester) async {
+      final e = UiEnv();
+      await e.seed(
+          tester,
+          () => e.db
+              .into(e.db.propsOwned)
+              .insert(PropsOwnedCompanion.insert(propId: 'hat_04', unlockedUtc: 1)));
+      await _open(tester, e);
+      await _goTab(tester, ShopTab.prop);
+
+      const ids = [
+        'hat_01_c1', 'hat_01_c2', 'hat_01_c3', //
+        'hat_04_c1', 'hat_04_c2', 'hat_04_c3',
+        'cloth_01_c1', 'cloth_01_c2', 'cloth_01_c3',
+        'shoe_01_c1', 'shoe_01_c2', 'shoe_01_c3',
+      ];
+      await tester.ensureVisible(_item(ids.last));
+      await tester.pump();
+      expect(order(tester, ids), ids);
+      expect(_item('hat_02_c1'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('사면 잔액·가짐·토스트, 얻은 소품(새 표시)에 들어가고 다시 눌러도 시트가 없다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _giveCoins(e, 150));
+      await _open(tester, e);
+      await _goTab(tester, ShopTab.prop);
+
+      await _press(tester, 'hat_01_c1');
+      expect(find.text('봄하늘 베레모를 100 럭에 구매할까요?'), findsOneWidget);
+      expect(find.text('남는 럭 50'), findsOneWidget);
+      await _answer(tester, '구매');
+      expect(find.text('봄하늘 베레모를 구매했어요'), findsOneWidget);
+      await settle(tester, () => _state('hat_01_c1', '가짐').evaluate().isNotEmpty);
+      expect(_state('hat_01_c1', '가짐'), findsOneWidget);
+      expect(_balance(tester), '50');
+      expect(await _withSvc(tester, (s) => s.ownedPropIds()), contains('hat_01_c1'));
+      final row = await tester.runAsync(() => (e.db.select(e.db.propsOwned)
+            ..where((t) => t.propId.equals('hat_01_c1')))
+          .getSingle());
+      expect(row!.seen, isFalse);
+
+      await _press(tester, 'hat_01_c1');
+      expect(find.textContaining('구매할까요'), findsNothing);
+      // 다른 색은 그대로 값
+      expect(_state('hat_01_c2', '100 럭'), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('잔액 부족: 시트 없이 까닭만, 아무것도 안 바뀐다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _giveCoins(e, 99));
+      await _open(tester, e);
+      await _goTab(tester, ShopTab.prop);
+
+      await _press(tester, 'shoe_01_c2');
+      expect(find.text(ShopBlock.notEnoughCoins.message), findsOneWidget);
+      expect(find.textContaining('구매할까요'), findsNothing);
+      expect(await _withSvc(tester, (s) => s.coinBalance()), 99);
+      expect(await _withSvc(tester, (s) => s.ownedPropIds()), isNot(contains('shoe_01_c2')));
+      await end(tester, e);
+    });
+
+    testWidgets('기본 소품이 없으면 사는 길도 막혀 있다 (화면에 없는 칸)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => _giveCoins(e, 1000));
+      await _open(tester, e);
+      final blocked = await _withSvc(tester, (s) async {
+        try {
+          await s.buyItem('hat_02_c1', e.now);
+        } on ShopBlocked catch (b) {
+          return b.block;
+        }
+        return null;
+      });
+      expect(blocked, ShopBlock.needsBase);
+      expect(await _withSvc(tester, (s) => s.coinBalance()), 1000);
       await end(tester, e);
     });
   });

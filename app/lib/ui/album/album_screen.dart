@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/badge.dart' as stamp;
+import '../../domain/color_props.dart';
 import '../../domain/landmark.dart';
 import '../../domain/sketch.dart';
 import '../common/app_text.dart';
@@ -250,8 +251,9 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
 
     final children = <Widget>[];
     for (final slot in propSlotLabels.entries) {
+      // 색 소품은 꾸미기처럼 기본 소품 바로 뒤
       final mine = [
-        for (final p in props)
+        for (final p in variantsAfterBase(props))
           if (p.slot == slot.key && ownedProps.contains(p.id)) p,
       ];
       if (mine.isEmpty) continue;

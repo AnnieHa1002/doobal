@@ -338,7 +338,7 @@ class PropSlotCard extends StatelessWidget {
                 ItemCell(
                   key: ValueKey('prop-${p.id}'),
                   name: p.name,
-                  art: ItemArt(id: p.id, name: p.name),
+                  art: ItemArt.prop(p),
                   tilt: i,
                   state: '가짐',
                 ),
