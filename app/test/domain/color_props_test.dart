@@ -121,13 +121,19 @@ void main() {
       expect(_ids(colorShopItems(props)).where(shopIds.contains), isEmpty);
     });
 
-    test('처음에는 기본 색 소품 3종(베레모·앞치마·갈색 신발)의 9개만 보인다', () {
+    test('처음에는 기본 색 소품 3종(베레모·여행복·갈색 신발)의 9개만 보인다', () {
       final have = havePropIds(props, const {});
       expect(have, containsAll(initialPropIds));
       expect(_ids(shownColorItems(props, have)), [
-        for (final base in ['hat_01', 'cloth_01', 'shoe_01'])
+        for (final base in ['hat_01', 'cloth_02', 'shoe_01'])
           for (var n = 1; n <= 3; n++) '${base}_c$n',
       ]);
+    });
+
+    test('앞치마 색 3개는 앞치마(300km 보상)를 얻은 뒤에만 보인다 (16장 11/8)', () {
+      expect(_ids(shownColorItems(props, havePropIds(props, const {}))), isNot(contains('cloth_01_c1')));
+      final ids = _ids(shownColorItems(props, havePropIds(props, {'cloth_01'})));
+      expect(ids, containsAll(['cloth_01_c1', 'cloth_01_c2', 'cloth_01_c3']));
     });
 
     test('기본 소품을 얻으면 그 색 소품이 기본 소품 순서 자리에 끼어든다', () {

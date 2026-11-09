@@ -12,7 +12,7 @@ const alwaysWornSlot = 'cloth';
 const defaultSlots = <String, String?>{
   'hat': 'hat_01',
   'face': null,
-  'cloth': 'cloth_01',
+  'cloth': 'cloth_02',
   'shoe': 'shoe_01',
   'hand': null,
   'bag': 'hand_01',
@@ -22,7 +22,13 @@ const defaultSlots = <String, String?>{
 };
 
 /// 처음부터 가진 소품: props.json에서 unlock.kind가 default인 것 (look_test가 맞는지 본다)
-const initialPropIds = {'hat_01', 'cloth_01', 'shoe_01', 'hand_01', 'bag_01', 'pet_01'};
+const initialPropIds = {'hat_01', 'cloth_02', 'shoe_01', 'hand_01', 'bag_01', 'pet_01'};
+
+/// 11/10 전 기본 옷(앞치마). 지금은 300km 보상이라, 그 전에 저장된 모습에 끼워져 있으면 여행복으로 읽는다
+const _oldDefaultCloth = 'cloth_01';
+
+/// 기본 옷 시작 색 번호의 기본값: props.json 기본 옷 startColors의 첫 색(카키)
+const defaultClothColor = 1;
 
 /// 몸 색 (palette.json body): 견본 번호 | 직접 고른 색.
 /// JSON은 {kind: swatch, i} | {kind: custom, hex}
@@ -79,7 +85,9 @@ class CustomBodyColor extends BodyColor {
 /// 기본 몸 색: 견본 1 (크림)
 const defaultBody = SwatchBodyColor(1);
 
-/// 캐릭터(정령)의 모습 (Profile.look): `{eyes, brows, nose, mouth, body, slots{9칸}}`.
+/// 캐릭터(정령)의 모습 (Profile.look): `{eyes, brows, nose, mouth, body, clothColor, slots{9칸}}`.
+/// clothColor는 기본 옷(여행복)의 시작 색 번호(props.json startColors, 1부터, 16장 11/8)다. 이 키가 없는 JSON은
+/// 11/10 전에 저장된 것이라 옷 칸의 앞치마(그때 기본 옷)를 여행복으로 읽는다.
 /// 얼굴 값은 palette.json customParts의 문자 id다 (Rive 값으로는 domain/spirit_look.dart가 바꾼다).
 /// 옛 사람형 JSON은 [Look.fromJson]이 기본 얼굴·크림으로 읽는다. 소품 색은 직접 고르지 않고
 /// 색마다 따로 된 상점 소품이라(16장 11/4) 옛 JSON의 tints는 읽지 않는다
@@ -90,6 +98,7 @@ class Look {
     this.nose = defaultNose,
     this.mouth = defaultMouth,
     this.body = defaultBody,
+    this.clothColor = defaultClothColor,
     this.slots = defaultSlots,
   });
 
@@ -102,16 +111,27 @@ class Look {
   final String mouth;
   final BodyColor body;
 
+  /// 기본 옷(여행복)의 시작 색 번호, 1부터. 정령 만들기에서 한 번 고른다
+  final int clothColor;
+
   /// 칸 이름([lookSlots]) → 끼운 소품 id. 비운 칸은 null. 아홉 칸을 모두 가진다
   final Map<String, String?> slots;
 
-  Look copyWith({String? eyes, String? brows, String? nose, String? mouth, BodyColor? body}) =>
+  Look copyWith({
+    String? eyes,
+    String? brows,
+    String? nose,
+    String? mouth,
+    BodyColor? body,
+    int? clothColor,
+  }) =>
       Look(
         eyes: eyes ?? this.eyes,
         brows: brows ?? this.brows,
         nose: nose ?? this.nose,
         mouth: mouth ?? this.mouth,
         body: body ?? this.body,
+        clothColor: clothColor ?? this.clothColor,
         slots: slots,
       );
 
@@ -128,6 +148,7 @@ class Look {
       nose: nose,
       mouth: mouth,
       body: body,
+      clothColor: clothColor,
       slots: Map.unmodifiable({
         for (final s in lookSlots) s: s == slot ? propId : slots[s],
       }),
@@ -140,6 +161,7 @@ class Look {
         'nose': nose,
         'mouth': mouth,
         'body': body.toJson(),
+        'clothColor': clothColor,
         'slots': {for (final s in lookSlots) s: slots[s]},
       };
 
@@ -149,15 +171,21 @@ class Look {
   /// FormatException
   factory Look.fromJson(Map<String, dynamic> j) {
     if (j.containsKey('hair') || j['eyes'] is num) {
-      return Look(slots: _legacySlots(j['slots']));
+      return Look(slots: _swapOldDefaultCloth(_legacySlots(j['slots'])));
     }
+    final clothColor = j['clothColor'];
+    if (clothColor != null && (clothColor is! int || clothColor < 1)) {
+      throw FormatException('옷 색 번호가 1 이상의 정수가 아니다: $clothColor');
+    }
+    final slots = _slotsOf(j['slots']);
     return Look(
       eyes: _part(j, 'eyes', eyeParts, defaultEyes),
       brows: _part(j, 'brows', browParts, defaultBrows),
       nose: _part(j, 'nose', noseParts, defaultNose),
       mouth: _part(j, 'mouth', mouthParts, defaultMouth),
       body: j['body'] == null ? defaultBody : BodyColor.fromJson(_map(j['body'], '몸 색')),
-      slots: _slotsOf(j['slots']),
+      clothColor: clothColor as int? ?? defaultClothColor,
+      slots: j.containsKey('clothColor') ? slots : _swapOldDefaultCloth(slots),
     );
   }
 
@@ -169,6 +197,7 @@ class Look {
       other.nose == nose &&
       other.mouth == mouth &&
       other.body == body &&
+      other.clothColor == clothColor &&
       lookSlots.every((s) => other.slots[s] == slots[s]);
 
   @override
@@ -178,12 +207,13 @@ class Look {
         nose,
         mouth,
         body,
+        clothColor,
         Object.hashAll([for (final s in lookSlots) slots[s]]),
       );
 
   @override
   String toString() => 'Look(eyes: $eyes, brows: $brows, nose: $nose, mouth: $mouth, '
-      'body: $body, slots: $slots)';
+      'body: $body, clothColor: $clothColor, slots: $slots)';
 }
 
 /// 얼굴 파츠 id 하나. 없으면 [fallback], 있는데 [parts]에 없으면 FormatException
@@ -217,6 +247,12 @@ Map<String, String?> _slotsOf(dynamic raw) {
   }
   return Map.unmodifiable(out);
 }
+
+/// 11/10 전 모습의 옷 칸: 그때 기본 옷이던 앞치마는 여행복으로 (앞치마는 이제 300km 보상이다)
+Map<String, String?> _swapOldDefaultCloth(Map<String, String?> slots) =>
+    slots[alwaysWornSlot] != _oldDefaultCloth
+        ? slots
+        : Map.unmodifiable({...slots, alwaysWornSlot: defaultSlots[alwaysWornSlot]});
 
 /// 옛 JSON의 slots: 틀린 칸·맵이 아닌 값에도 멈추지 않고 그 칸의 기본 소품으로 둔다
 Map<String, String?> _legacySlots(dynamic raw) {

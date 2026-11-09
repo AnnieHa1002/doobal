@@ -11,6 +11,8 @@
   사용자 색 고르기(tint) 폐기 → 색 소품(11/4 밤 Annie): 색 바꿀 수 있는 기본 소품 7종에 material(Codex materials_v07 catalogId·기본 색),
   색마다 따로 된 상점 소품은 COLOR_VARIANTS 표(디자인 기획이 색을 고르면 채움, id = <기본 id>_c<n>, 이름 = '<색 이름> <기본 이름>', 100 럭).
 - props.json v6(11/6): 손 소품 fit(장갑 wristOverlay·날개 팔 replaceArms, 컷아웃 공정).
+- props.json v7(11/10): 기본 옷을 여행복 cloth_02로, 앞치마 cloth_01을 300km 보상으로 맞바꿈(16장 11/8 Annie, 기획/소품_목록.md v04.4),
+  cloth_02 startColors 4(정령 만들기에서 한 번 고르는 색, 캔버스 1-2 v69: 카키·크림·살구·흙).
 - props.json v4(11/4): 둥실 나침반·큰 팔레트(hand_03·hand_04) → 몽실 구름 float_02(150km)·꼬마 열기구 float_03(200km),
   베레모 hat_01 tint(색 바꾸기, 견본은 palette.json body), cloth_02 이름 '여행복'(화면 글 원칙: '일체형' 같은 설명 없음).
   props.json v3(11/3): 정령 슬롯 9개(hat·face·cloth·shoe·hand·bag·pet·float·effect), 기획/소품_목록.md v04.1.
@@ -73,6 +75,9 @@ COLOR_VARIANTS = {k: [(c, SW[c], w) for c, w in v] for k, v in {
 # 이름 뒷말(기준 문서 11장 그대로): 갈색 신발은 '신발', 나머지는 기본 이름
 VARIANT_STEM = {'shoe_01': '신발'}
 COLOR_VARIANT_PRICE = 100
+# 기본 옷 시작 색(16장 11/8 Annie, 캔버스 1-2 v69): 정령 만들기에서 한 번 고름, 첫 색이 기본.
+# 카키는 Codex v05 기본색(props material.hex #B5A576은 Codex v07 값이라 다름, 개발 기획 확인 대기), 나머지는 몸 색 견본 값
+START_COLORS = {'cloth_02': [('카키', '#C0A475'), ('크림', SW['크림']), ('살구', SW['살구']), ('흙', SW['흙'])]}
 
 
 def dump(name, obj, ascii_ok=False):
@@ -135,8 +140,8 @@ def build_props():
         p('face_01', 'face', '헤드폰', 'shop', price=300),
         p('face_02', 'face', '털 귀마개', 'shop', price=300),
         # 옷 5
-        p('cloth_01', 'cloth', '앞치마 작업복', 'default'),
-        p('cloth_02', 'cloth', '여행복', 'distance', km=300),
+        p('cloth_01', 'cloth', '앞치마 작업복', 'distance', km=300),
+        p('cloth_02', 'cloth', '여행복', 'default'),
         p('cloth_03', 'cloth', '별밤 망토', 'distance', km=700),
         p('cloth_04', 'cloth', '금빛 화가 코트', 'steps', steps=1000000),
         p('cloth_05', 'cloth', '연두 여행 망토', 'shop', price=600),
@@ -203,6 +208,9 @@ def build_props():
         x['name'] = SHORT.get(x['id'], x['name'])
     # 색 소품: 기본 소품과 같은 슬롯, 고정 색, 상점 100 럭, 기본 소품을 가져야 보임
     base = {x['id']: x for x in props}
+    for bid, colors in START_COLORS.items():
+        assert base[bid]['unlock']['kind'] == 'default', f'시작 색은 기본 소품만: {bid}'
+        base[bid]['startColors'] = [{'name': n, 'hex': h} for n, h in colors]
     for bid, colors in COLOR_VARIANTS.items():
         assert bid in MATERIAL, f'색을 바꿀 수 없는 소품: {bid}'
         for n, (cname, hexv, word) in enumerate(colors, 1):
@@ -226,7 +234,7 @@ def build_props():
     assert sorted(x['unlock']['km'] for x in mvp if x['unlock']['kind'] == 'distance') == [10, 25, 50, 100, 150, 200, 300, 500, 700, 1000]
     assert sum(x['status'] == 'pending' for x in props) == 12
     assert all('일체형' not in x['name'] for x in props), '화면 글 원칙: 이름에 설명을 넣지 않음'
-    dump('props.json', {'version': 6, 'slots': SLOTS,
+    dump('props.json', {'version': 7, 'slots': SLOTS,
                         'material': {'neutralReference': 180, 'formula': 'rgb = clamp(neutral.rgb × hex.rgb ÷ 180) 위에 고정 무늬 층',
                                      'source': 'Codex 기본 소품 v07 recolor/materials_v07.json'},
                         'colorVariants': {'price': COLOR_VARIANT_PRICE, 'perBase': 3, 'bases': list(MATERIAL),

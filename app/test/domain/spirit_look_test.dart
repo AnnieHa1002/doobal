@@ -11,8 +11,8 @@ import 'helpers.dart';
 
 void main() {
   group('spiritLookOf', () {
-    test('첫 모습은 Rive 기본 얼굴에 기본 가방 큰 붓', () {
-      expect(spiritLookOf(Look.initial), SpiritLook.base.copyWith(bag: 1));
+    test('첫 모습은 Rive 기본 얼굴에 기본 가방 큰 붓, 기본 옷 여행복 (16장 11/8)', () {
+      expect(spiritLookOf(Look.initial), SpiritLook.base.copyWith(bag: 1, outfit: 1));
       expect(
           (SpiritLook.base.eye, SpiritLook.base.brow, SpiritLook.base.nose, SpiritLook.base.mouth),
           (0, 1, 6, 1));

@@ -980,8 +980,8 @@ void main() {
       final e = await _env();
       await e.give(price * 2 + 7);
       await e.svc.buyItem(sky, _t1);
-      await e.svc.buyItem('cloth_01_c2', _t1);
-      final look = Look.initial.withSlot('hat', sky).withSlot('cloth', 'cloth_01_c2');
+      await e.svc.buyItem('cloth_02_c2', _t1);
+      final look = Look.initial.withSlot('hat', sky).withSlot('cloth', 'cloth_02_c2');
       await ProfileService(e.db).saveLook(look);
 
       final text = await BackupService(e.db, rules).exportBackup(_at(1));
@@ -989,7 +989,7 @@ void main() {
       addTearDown(other.db.close);
       await BackupService(other.db, rules).restoreBackup(text);
       expect(await other.svc.ownedPropIds(), await e.svc.ownedPropIds());
-      expect(await other.svc.ownedPropIds(), containsAll([sky, 'cloth_01_c2']));
+      expect(await other.svc.ownedPropIds(), containsAll([sky, 'cloth_02_c2']));
       expect(await other.svc.coinBalance(), 7);
       expect((await ProfileService(other.db).me()).look, look);
       // 복원한 기기에서 다시 입어도 (가진 소품 검사를 지나) 저장된다

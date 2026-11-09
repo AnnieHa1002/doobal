@@ -81,7 +81,7 @@ void main() {
 
   group('earnedPropIds', () {
     test('아무것도 안 했어도 기본 6개: 첫 동기화부터 가진다', () {
-      expect(_earned(), {'hat_01', 'hand_01', 'pet_01', 'bag_01', 'shoe_01', 'cloth_01'});
+      expect(_earned(), {'hat_01', 'hand_01', 'pet_01', 'bag_01', 'shoe_01', 'cloth_02'});
     });
 
     test('거리 경계: 10km 미만이면 hand_02 없음, 10km면 있음', () {
@@ -214,6 +214,36 @@ void main() {
     test('토스트로 알리는 소품: 거리·걸음만 (권역은 도착 화면, 기본은 처음부터 가짐)', () {
       final kinds = {for (final p in props) if (announcesProp(p)) p.kind};
       expect(kinds, {PropUnlockKind.distance, PropUnlockKind.steps});
+    });
+  });
+
+  group('기본 옷 (16장 11/8: 여행복이 기본, 앞치마는 300km 보상)', () {
+    test('여행복은 처음부터, 앞치마는 300km에 얻는다', () {
+      expect(_earned(km: 299.999), isNot(contains('cloth_01')));
+      expect(_earned(km: 300), contains('cloth_01'));
+      expect(props.firstWhere((p) => p.id == 'cloth_02').kind, PropUnlockKind.initial);
+    });
+
+    test('여행복의 시작 색 4개: 카키·크림·살구·흙, 다른 소품은 없다', () {
+      final vest = props.firstWhere((p) => p.id == 'cloth_02');
+      expect([for (final c in vest.startColors) c.name], ['카키', '크림', '살구', '흙']);
+      expect([for (final c in vest.startColors) c.argb], [0xFFC0A475, 0xFFF3E4C4, 0xFFF5C9A3, 0xFFC4A07C]);
+      expect([for (final p in props) if (p.startColors.isNotEmpty) p.id], ['cloth_02']);
+    });
+
+    test('시작 색 hex가 #RRGGBB가 아니면 FormatException', () {
+      Prop read(Object? hex) => Prop.fromJson({
+            'id': 'cloth_02',
+            'slot': 'cloth',
+            'name': '여행복',
+            'unlock': {'kind': 'default'},
+            'startColors': [
+              {'name': '카키', 'hex': hex},
+            ],
+          });
+      expect(read('#C0A475').startColors.single.argb, 0xFFC0A475);
+      expect(() => read('C0A475'), throwsFormatException);
+      expect(() => read(null), throwsFormatException);
     });
   });
 }

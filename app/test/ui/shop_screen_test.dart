@@ -27,7 +27,7 @@ import 'ui_env.dart';
 
 const _day = '2026-11-18';
 
-/// 처음부터 보이는 색 소품 (기본 소품 베레모·앞치마·갈색 신발의 색)
+/// 처음부터 보이는 색 소품 (기본 소품 베레모·여행복·갈색 신발의 색)
 final _firstColorItems = shownColorItems(props, havePropIds(props, const {}));
 
 Finder _key(String k) => find.byKey(ValueKey(k));
@@ -431,7 +431,7 @@ void main() {
 
       final ids = [for (final i in _firstColorItems) i.id];
       expect(ids, [
-        for (final base in ['hat_01', 'cloth_01', 'shoe_01'])
+        for (final base in ['hat_01', 'cloth_02', 'shoe_01'])
           for (var n = 1; n <= 3; n++) '${base}_c$n',
       ]);
       await tester.ensureVisible(_key('shop-color-title'));
@@ -458,7 +458,7 @@ void main() {
         expect(tester.getSemantics(_item(item.id)).label, '${p.name}, ${p.price} 럭');
       }
       // 기본 소품을 아직 못 얻은 색은 없다
-      for (final id in ['hat_02_c1', 'hat_04_c1', 'hat_05_c1', 'cloth_02_c1']) {
+      for (final id in ['hat_02_c1', 'hat_04_c1', 'hat_05_c1', 'cloth_01_c1']) {
         expect(_item(id), findsNothing, reason: id);
       }
       // 기본 소품 자체는 상품이 아니다
@@ -466,7 +466,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('기본 소품을 얻으면 그 색이 기본 소품 순서 자리(베레모 색 뒤, 앞치마 색 앞)에 뜬다', (tester) async {
+    testWidgets('기본 소품을 얻으면 그 색이 기본 소품 순서 자리(베레모 색 뒤, 여행복 색 앞)에 뜬다', (tester) async {
       final e = UiEnv();
       await e.seed(
           tester,
@@ -479,7 +479,7 @@ void main() {
       const ids = [
         'hat_01_c1', 'hat_01_c2', 'hat_01_c3', //
         'hat_04_c1', 'hat_04_c2', 'hat_04_c3',
-        'cloth_01_c1', 'cloth_01_c2', 'cloth_01_c3',
+        'cloth_02_c1', 'cloth_02_c2', 'cloth_02_c3',
         'shoe_01_c1', 'shoe_01_c2', 'shoe_01_c3',
       ];
       await tester.ensureVisible(_item(ids.last));

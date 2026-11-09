@@ -269,6 +269,12 @@ void main() {
       await tester.enterText(find.byType(TextField), '가나다라마바사아자차');
       await tester.pump();
       fit.check('닉네임 10자');
+      for (final id in ['brows', 'nose', 'mouth', 'cloth', 'body']) {
+        await tester.ensureVisible(_key('tab-$id'));
+        await _tap(tester, _key('tab-$id'));
+        fit.check('$id 탭');
+      }
+      await tester.ensureVisible(_key('body-custom'));
       await _tap(tester, _key('body-custom'));
       fit.check('몸 색 직접 고르기가 열림');
       await end(tester, e);
@@ -891,7 +897,7 @@ void main() {
 
     _scaleCases('모든 탭', (tester, fit) async {
       final e = UiEnv();
-      await e.seed(tester, () => ownProps(e, ['hat_02', 'cloth_02']));
+      await e.seed(tester, () => ownProps(e, ['hat_02', 'cloth_01']));
       await openDecorate(tester, e, fit);
       for (final t in tabs) {
         await _tap(tester, _key('tab-$t'));

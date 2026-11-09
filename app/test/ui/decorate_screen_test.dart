@@ -129,7 +129,7 @@ void main() {
 
       expect(find.text('꾸미기'), findsOneWidget);
       expect(find.byTooltip('뒤로'), findsOneWidget);
-      // 처음부터 가진 소품 6개 (베레모·앞치마·갈색 신발·큰 붓·화구 가방·종이새)
+      // 처음부터 가진 소품 6개 (베레모·여행복·갈색 신발·큰 붓·화구 가방·종이새)
       expect(find.text('가진 소품 6개'), findsOneWidget);
       expect(find.text('내 모습'), findsOneWidget);
       expect(find.text('소품'), findsOneWidget);
@@ -154,7 +154,7 @@ void main() {
 
     testWidgets('가진 소품이 늘면 알약의 수도 는다', (tester) async {
       final e = UiEnv();
-      await e.seed(tester, () => _ownProps(e.db, ['hat_02', 'cloth_02']));
+      await e.seed(tester, () => _ownProps(e.db, ['hat_02', 'cloth_01']));
       await _open(tester, e);
       expect(find.text('가진 소품 8개'), findsOneWidget);
       await end(tester, e);
@@ -167,7 +167,8 @@ void main() {
 
       expect(find.descendant(of: _key('preview'), matching: find.byType(SpiritCharacter)),
           findsOneWidget);
-      expect(_worn(tester), SpiritLook.base.copyWith(bag: 1, bodyArgb: 0xFFF3E4C4));
+      // 기본 옷 여행복은 Rive 옷 1 (16장 11/8)
+      expect(_worn(tester), SpiritLook.base.copyWith(bag: 1, outfit: 1, bodyArgb: 0xFFF3E4C4));
       // 정령은 미리보기 칸 가운데에 선다
       final box = tester.getRect(_key('preview'));
       final spirit = tester.getRect(find.byType(SpiritCharacter));
@@ -186,17 +187,17 @@ void main() {
       await e.seed(tester, () => _ownProps(e.db, ['hat_02']));
       await _open(tester, e);
 
-      expect(_summary(tester), '베레모 · 앞치마 · 갈색 신발 · 큰 붓 · 종이새');
+      expect(_summary(tester), '베레모 · 여행복 · 갈색 신발 · 큰 붓 · 종이새');
       await _tap(tester, _key('prop-hat_02'));
-      expect(_summary(tester), startsWith('여행 모자 · 앞치마'));
+      expect(_summary(tester), startsWith('여행 모자 · 여행복'));
       await _tap(tester, _key('prop-none'));
-      expect(_summary(tester), startsWith('앞치마 · 갈색 신발'));
+      expect(_summary(tester), startsWith('여행복 · 갈색 신발'));
       // 다 비울 수는 없지만(옷) 나머지를 비우면 옷만 남는다
       for (final slot in ['shoe', 'bag', 'pet']) {
         await _goTab(tester, slot);
         await _tap(tester, _key('prop-none'));
       }
-      expect(_summary(tester), '앞치마');
+      expect(_summary(tester), '여행복');
       await end(tester, e);
     });
 
@@ -232,7 +233,7 @@ void main() {
 
     testWidgets('고른 얼굴·몸 색과 Rive에 붙은 소품이 저장 전에도 미리보기 정령에 입혀진다', (tester) async {
       final e = UiEnv();
-      await e.seed(tester, () => _ownProps(e.db, ['cloth_02', 'pet_05', 'hat_02']));
+      await e.seed(tester, () => _ownProps(e.db, ['cloth_01', 'pet_05', 'hat_02']));
       await _open(tester, e);
 
       await _goTab(tester, 'me');
@@ -245,6 +246,9 @@ void main() {
       await _tap(tester, _key('body-swatch-9'));
       expect(_worn(tester).bodyArgb, 0xFFC9775A);
       await _goTab(tester, 'cloth');
+      // 앞치마(300km 보상)는 T5 전까지 Rive 옷 그림이 없다
+      await _tap(tester, _key('prop-cloth_01'));
+      expect(_worn(tester).outfit, 0);
       await _tap(tester, _key('prop-cloth_02'));
       expect(_worn(tester).outfit, 1);
       await _goTab(tester, 'pet');
@@ -312,7 +316,7 @@ void main() {
       });
       await _open(tester, e);
 
-      expect(_summary(tester), startsWith('여행 모자 · 앞치마'));
+      expect(_summary(tester), startsWith('여행 모자 · 여행복'));
       await _goTab(tester, 'me');
       expect(_chosen(tester, 'eyes-dot'), isTrue);
       expect(_swatchCheck('body-swatch-1'), findsOneWidget);
@@ -329,7 +333,7 @@ void main() {
         'me': 'eyes-dot',
         'hat': 'prop-hat_01',
         'face': 'empty-slot',
-        'cloth': 'prop-cloth_01',
+        'cloth': 'prop-cloth_02',
         'shoe': 'prop-shoe_01',
         'hand': 'hand-none',
         'bag': 'prop-bag_01',
@@ -702,7 +706,7 @@ void main() {
       // 옷은 기본 하나뿐이면 그 칸만 (없음 칸 없음)
       await _goTab(tester, 'cloth');
       expect(find.byType(ItemCell), findsOneWidget);
-      expect(_key('prop-cloth_01'), findsOneWidget);
+      expect(_key('prop-cloth_02'), findsOneWidget);
       await end(tester, e);
     });
 
@@ -784,7 +788,7 @@ void main() {
       await _save(tester);
       final look = await _stored(tester, e);
       expect(look.slots['hat'], isNull);
-      expect(look.slots['cloth'], 'cloth_01');
+      expect(look.slots['cloth'], 'cloth_02');
       await end(tester, e);
     });
 
@@ -1092,7 +1096,7 @@ void main() {
 
     testWidgets('입으면 같은 칸 기본 소품은 벗겨지고, 저장하면 모습에 남는다. 정령은 기본 소품 그림', (tester) async {
       final e = UiEnv();
-      await e.seed(tester, () => _ownProps(e.db, ['hat_01_c1', 'cloth_02', 'cloth_02_c1']));
+      await e.seed(tester, () => _ownProps(e.db, ['hat_01_c1', 'cloth_01', 'cloth_02_c1']));
       await _open(tester, e);
       await _goTab(tester, 'hat');
       final before = _worn(tester);
@@ -1100,7 +1104,7 @@ void main() {
       await _tap(tester, _key('prop-hat_01_c1'));
       expect(_state('hat_01_c1', '입는 중'), findsOneWidget);
       expect(_state('hat_01', '가짐'), findsOneWidget);
-      expect(_summary(tester), startsWith('봄하늘 베레모 · 앞치마'));
+      expect(_summary(tester), startsWith('봄하늘 베레모 · 여행복'));
       expect(_worn(tester), before);
 
       // 색 소품(별밤 여행복)은 그림이 없어 기본 여행복 그림으로 보인다(색은 T5 때). 맨몸이 되지 않는다
@@ -1144,7 +1148,7 @@ void main() {
   group('화면 크기', () {
     testWidgets('좁고 낮은 화면(320×568)에서도 모든 탭이 넘치지 않는다', (tester) async {
       final e = UiEnv();
-      await e.seed(tester, () => _ownProps(e.db, ['hat_02', 'cloth_02']));
+      await e.seed(tester, () => _ownProps(e.db, ['hat_02', 'cloth_01']));
       await _open(tester, e, height: 568);
       tester.view.physicalSize = const Size(320, 568);
       await tester.pump();

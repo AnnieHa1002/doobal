@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../domain/look.dart';
 import '../../domain/profile.dart';
+import '../../domain/prop.dart';
 import '../../domain/rules.dart';
 import '../../domain/spirit_look.dart';
+import '../../domain/spirit_palette.dart';
 import '../common/app_text.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
@@ -13,8 +15,9 @@ import '../decorate/decorate_widgets.dart';
 import '../scene/spirit_character.dart';
 import 'start_layout.dart';
 
-/// 시작 ② 나 (캔버스 1-2): 3단계 중 1단계 표시, 제목 `내 정령 만들기`, 정령 미리보기,
-/// 닉네임, 눈 5칸, 몸 색(견본 10 + 직접 고르기). 눈썹·코·입과 소품은 꾸미기에서 바꾼다
+/// 시작 ② 나 (캔버스 1-2 v69): 3단계 중 1단계 표시, 제목 `내 정령 만들기`, 정령 미리보기, 닉네임,
+/// 부위 탭(눈·눈썹·코·입·몸 색·옷 색) 한 화면 (16장 11/5·11/8). 옷 색은 기본 옷(여행복)의 시작 색 중 하나다.
+/// 고른 옷 색은 값만 저장하고 정령에 보이는 것은 정령 새 방식(T5) 뒤다 (지금 Rive 정령은 옷 색을 못 바꾼다)
 class MeScreen extends ConsumerStatefulWidget {
   const MeScreen({super.key, required this.rules});
 
@@ -24,9 +27,20 @@ class MeScreen extends ConsumerStatefulWidget {
   ConsumerState<MeScreen> createState() => _MeScreenState();
 }
 
+/// 부위 탭: (palette faces 키 또는 몸·옷, 탭 이름)
+const _tabs = [
+  ('eyes', '눈'),
+  ('brows', '눈썹'),
+  ('nose', '코'),
+  ('mouth', '입'),
+  ('body', '몸 색'),
+  ('cloth', '옷 색'),
+];
+
 class _MeScreenState extends ConsumerState<MeScreen> {
   final _name = TextEditingController();
   var _look = Look.initial;
+  var _tab = _tabs.first.$1;
 
   @override
   void dispose() {
@@ -34,7 +48,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     super.dispose();
   }
 
-  NicknameCheck get _check => checkNickname(_name.text, widget.rules);
+  /// 금칙어 규칙은 화면을 열 때 받아 둔다. 아직 못 받았으면 글자 수만 본다
+  NicknameCheck get _check =>
+      checkNickname(_name.text, widget.rules, moderation: ref.read(moderationProvider).value);
 
   Future<void> _submit() async {
     final check = _check;
@@ -44,14 +60,22 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     ref.invalidate(onboardingStepProvider);
   }
 
+  void _set(Look look) => setState(() => _look = look);
+
   @override
   Widget build(BuildContext context) {
     final palette = ref.watch(spiritPaletteProvider).value;
-    if (palette == null) return const Scaffold(body: SizedBox.expand());
+    final props = ref.watch(propsProvider).value;
+    ref.watch(moderationProvider);
+    if (palette == null || props == null) return const Scaffold(body: SizedBox.expand());
     final rules = widget.rules;
     final check = _check;
-    final eyes = palette.faces['eyes']!;
-    final eye = eyes.firstWhere((p) => p.id == _look.eyes, orElse: () => eyes.first);
+    // 기본 옷(여행복)과 시작 색
+    final cloth = props.firstWhere((p) => p.id == defaultSlots[alwaysWornSlot]);
+    final colors = cloth.startColors;
+    final clothColor = colors.isEmpty
+        ? null
+        : colors[(_look.clothColor - 1).clamp(0, colors.length - 1)];
 
     return StartLayout(
       top: _Top(
@@ -60,8 +84,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           bodyArgb: palette.body.argbOf(_look.body),
           bodyBaseArgb: palette.body.baseArgb,
         ),
-        // 고른 눈과 몸 색 (캔버스: '점+반짝 눈 · 크림')
-        label: '${FacePartRow.shortName(eye.id, eye.name)} 눈 · ${palette.body.nameOf(_look.body)}',
+        // 고른 몸 색과 옷 색 (캔버스: '크림 · 여행복 카키')
+        label:
+            '${palette.body.nameOf(_look.body)} · ${cloth.name}'
+            '${clothColor == null ? '' : ' ${clothColor.name}'}',
       ),
       children: [
         TextField(
@@ -73,57 +99,254 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           onChanged: (_) => setState(() {}),
           onSubmitted: (_) => _submit(),
         ),
-        // 금칙어 안내도 여기 (M5 금칙어 문서가 나오면). 빨간색 대신 테라코타 글자.
-        // 글자 크기를 키워 줄이 늘면 칸도 같이 늘어난다
+        // 빨간색 대신 테라코타 글자. 글자 크기를 키워 줄이 늘면 칸도 같이 늘어난다
         ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 24),
           child: check.ok
               ? null
               : Padding(
                   padding: const EdgeInsets.only(top: 6, left: 4),
-                  child: Text(
-                    '${rules.nicknameMin}~${rules.nicknameMax}자로 지어 주세요',
-                    style: const TextStyle(fontSize: 13, color: Palette.terracotta),
-                  ),
+                  child: Text(switch (check.problem!) {
+                    NicknameProblem.swear => '닉네임으로 쓸 수 없는 말이 있어요',
+                    _ => '${rules.nicknameMin}~${rules.nicknameMax}자로 지어 주세요',
+                  }, style: const TextStyle(fontSize: 13, color: Palette.terracotta)),
                 ),
         ),
-        const SizedBox(height: 12),
-        Text.rich(
-          TextSpan(children: [
-            const TextSpan(text: '눈 '),
-            TextSpan(text: eye.name, style: context.display(14)),
-          ]),
-          style: const TextStyle(fontSize: 14, color: Palette.ink),
-        ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Row(
           children: [
-            for (final p in eyes)
+            for (final (id, name) in _tabs)
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.only(right: p == eyes.last ? 0 : 6),
-                  child: PartCell(
-                    key: ValueKey('eyes-${p.id}'),
-                    label: p.name,
-                    text: FacePartRow.shortName(p.id, p.name),
-                    selected: _look.eyes == p.id,
-                    onTap: () => setState(() => _look = _look.copyWith(eyes: p.id)),
+                  padding: EdgeInsets.only(right: id == _tabs.last.$1 ? 0 : 4),
+                  child: _TabButton(
+                    key: ValueKey('tab-$id'),
+                    name: name,
+                    selected: _tab == id,
+                    onTap: () => setState(() => _tab = id),
                   ),
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 16),
-        BodyColorSection(
-          palette: palette.body,
-          color: _look.body,
-          onChanged: (c) => setState(() => _look = _look.copyWith(body: c)),
+        const SizedBox(height: 12),
+        // 탭을 바꿔도 아래 버튼이 덜 움직이게 (캔버스 최소 96)
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 96),
+          child: Align(alignment: Alignment.topLeft, child: _panel(palette, cloth)),
         ),
-        const SizedBox(height: 16),
-        const StartNote('눈썹·코·입과 소품은 나중에 꾸미기에서 바꿀 수 있어요'),
         const SizedBox(height: 16),
         GameButton(label: '이 모습으로', onPressed: check.ok ? _submit : null),
       ],
+    );
+  }
+
+  Widget _panel(SpiritPalette palette, Prop cloth) {
+    switch (_tab) {
+      case 'body':
+        return BodyColorSection(
+          palette: palette.body,
+          color: _look.body,
+          onChanged: (c) => _set(_look.copyWith(body: c)),
+        );
+      case 'cloth':
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final (i, c) in cloth.startColors.indexed)
+              _ClothChip(
+                key: ValueKey('cloth-${i + 1}'),
+                label: '${cloth.name} ${c.name}',
+                name: c.name,
+                color: Color(c.argb),
+                selected: _look.clothColor == i + 1,
+                onTap: () => _set(_look.copyWith(clothColor: i + 1)),
+              ),
+          ],
+        );
+      default:
+        final key = _tab;
+        return _PartGrid(
+          keyPrefix: key,
+          title: _tabs.firstWhere((t) => t.$1 == key).$2,
+          parts: palette.faces[key]!,
+          selected: switch (key) {
+            'eyes' => _look.eyes,
+            'brows' => _look.brows,
+            'nose' => _look.nose,
+            _ => _look.mouth,
+          },
+          onPick: (id) => _set(switch (key) {
+            'eyes' => _look.copyWith(eyes: id),
+            'brows' => _look.copyWith(brows: id),
+            'nose' => _look.copyWith(nose: id),
+            _ => _look.copyWith(mouth: id),
+          }),
+        );
+    }
+  }
+}
+
+/// 부위 탭 하나: 고른 탭은 잉크 바탕에 카드색 글자
+class _TabButton extends StatelessWidget {
+  const _TabButton({super.key, required this.name, required this.selected, required this.onTap});
+
+  final String name;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: name,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        // 누르는 자리는 44pt
+        child: SizedBox(
+          height: 44,
+          child: Center(
+            child: Container(
+              height: 40,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: selected ? Palette.ink : Palette.card,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: selected ? Palette.ink : lineColor, width: InkLine.pill),
+              ),
+              // 글자를 키워도 탭 안에서 줄어든다 (탭 6개가 한 줄)
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Palette.card : Palette.ink,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 얼굴 부위 칸: 한 줄에 4칸씩 (캔버스 1-2). 칸의 key는 `'$keyPrefix-파츠id'`
+class _PartGrid extends StatelessWidget {
+  const _PartGrid({
+    required this.keyPrefix,
+    required this.title,
+    required this.parts,
+    required this.selected,
+    required this.onPick,
+  });
+
+  final String keyPrefix;
+  final String title;
+  final List<({String id, String name})> parts;
+  final String selected;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    const gap = 8.0;
+    return LayoutBuilder(
+      builder: (context, box) {
+        final width = (box.maxWidth - gap * 3) / 4;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final p in parts)
+              SizedBox(
+                width: width,
+                child: PartCell(
+                  key: ValueKey('$keyPrefix-${p.id}'),
+                  label: '$title ${p.name}',
+                  text: FacePartRow.shortName(p.id, p.name),
+                  selected: selected == p.id,
+                  onTap: () => onPick(p.id),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 옷 색 칸: 색 동그라미 + 이름. 고른 것은 굵은 테라코타 테두리. [label]은 접근성 이름
+class _ClothChip extends StatelessWidget {
+  const _ClothChip({
+    super.key,
+    required this.label,
+    required this.name,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String name;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.fromLTRB(8, 4, 14, 4),
+          decoration: BoxDecoration(
+            color: Palette.card,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: selected ? Palette.terracotta : lineColor,
+              width: selected ? 3 : InkLine.pill,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Palette.ink, width: InkLine.pill),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Palette.ink,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -51,10 +51,11 @@ void main() {
         'nose': 'shy',
         'mouth': 'omega',
         'body': {'kind': 'swatch', 'i': 1},
+        'clothColor': 1,
         'slots': {
           'hat': 'hat_01',
           'face': null,
-          'cloth': 'cloth_01',
+          'cloth': 'cloth_02',
           'shoe': 'shoe_01',
           'hand': null,
           'bag': 'hand_01',
@@ -144,8 +145,34 @@ void main() {
       expect(look.slots['hat'], 'hat_02');
       // slots 안에서 빠진 칸은 그 칸의 기본 소품
       expect(look.slots['bag'], 'hand_01');
-      expect(look.slots['cloth'], 'cloth_01');
+      expect(look.slots['cloth'], 'cloth_02');
       expect(look.body, defaultBody);
+      expect(look.clothColor, defaultClothColor);
+    });
+
+    test('옷 색 번호: 왕복하고, 칸을 바꿔도 남고, 1보다 작거나 정수가 아니면 FormatException', () {
+      final look = Look.initial.copyWith(clothColor: 3);
+      expect(_roundTrip(look).clothColor, 3);
+      expect(look.withSlot('hat', 'hat_02').clothColor, 3);
+      expect(look.copyWith(eyes: 'cat').clothColor, 3);
+      expect(look == Look.initial, isFalse);
+      expect(() => Look.fromJson({'clothColor': 0}), throwsFormatException);
+      expect(() => Look.fromJson({'clothColor': '2'}), throwsFormatException);
+    });
+
+    test('11/10 전 모습(옷 색 키 없음)의 앞치마는 여행복으로 읽고, 새 모습의 앞치마(300km 보상)는 그대로', () {
+      expect(
+        Look.fromJson({
+          'slots': {'cloth': 'cloth_01', 'hat': 'hat_02'},
+        }).slots,
+        {...defaultSlots, 'hat': 'hat_02'},
+      );
+      expect(Look.fromJson({'clothColor': 2, 'slots': {'cloth': 'cloth_01'}}).slots['cloth'], 'cloth_01');
+      expect(Look.fromJson({'slots': {'cloth': 'cloth_05'}}).slots['cloth'], 'cloth_05');
+      expect(Look.fromJson({'hair': 1, 'slots': {'cloth': 'cloth_01'}}).slots['cloth'], 'cloth_02');
+      // 한 번 다시 적으면 옷 색 키가 생겨서, 그 뒤에 입은 앞치마는 앞치마로 남는다
+      final worn = Look.fromJson({'slots': {'cloth': 'cloth_01'}}).withSlot('cloth', 'cloth_01');
+      expect(_roundTrip(worn).slots['cloth'], 'cloth_01');
     });
 
     test('slots 안의 null은 비운 칸, 빠진 칸은 기본 소품 (옷은 비울 수 없다)', () {
@@ -189,9 +216,9 @@ void main() {
       // 모르는 칸은 무시, 읽을 수 없는 칸(숫자)은 그 칸의 기본 소품
       expect(look.slots.containsKey('wing'), isFalse);
       expect(look.slots['shoe'], 'shoe_01');
-      expect(look.slots['cloth'], 'cloth_01');
+      expect(look.slots['cloth'], 'cloth_02');
       // 다시 적으면 새 모양이 되어 그대로 읽힌다
-      expect(look.toJson().keys, ['eyes', 'brows', 'nose', 'mouth', 'body', 'slots']);
+      expect(look.toJson().keys, ['eyes', 'brows', 'nose', 'mouth', 'body', 'clothColor', 'slots']);
       expect(_roundTrip(look), look);
     });
 

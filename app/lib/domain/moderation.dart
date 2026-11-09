@@ -55,6 +55,13 @@ class Moderation {
   bool isBlocked(String text, {List<String> names = const []}) =>
       check(text, names: names) != null;
 
+  /// 닉네임 검사(11/10 Annie: 아주 명백한 욕설만 막고 그 밖은 검열하지 않음): 욕설 갈래([swearCategory])의
+  /// 원문 규칙만 본다. 닮은꼴 치환·붙여 쓰기 풀기(tight)는 하지 않는다
+  bool isObviousSwear(String text) {
+    final t = _maskAllowed(foldForModeration(text), allowWords);
+    return _raw.any((r) => r.category == swearCategory && r.re.hasMatch(t));
+  }
+
   /// 닮은꼴 치환 → 한글·자모·영문·#만 남김 → 낱자 모아쓰기 → 같은 글자 2번까지 → 늘임 모음 빼기.
   /// 돌려주는 목록은 남은 글자마다 [t]에서의 자리다
   (String, List<int>) _tighten(String t) {
@@ -87,6 +94,9 @@ class Moderation {
     return (out.join(), outIndex);
   }
 }
+
+/// 욕설 갈래 (moderation.json cat A, 기획/방명록_금칙어.md)
+const swearCategory = 'A';
 
 /// 규칙 하나. [tight]면 붙여 쓴 글에, 아니면 가린 원문에 검사한다
 class ModerationRule {

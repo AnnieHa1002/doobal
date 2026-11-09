@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' show Tristate;
 
 import 'package:doobal/app/auto_sync.dart';
 import 'package:doobal/app/profile_service.dart';
@@ -320,62 +321,126 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('3단계 표시, 제목, 눈 5칸과 몸 색 견본 10개 + 직접 고르기, 안내 한 줄', (tester) async {
+    Future<void> tab(WidgetTester tester, String id) async {
+      await tester.ensureVisible(find.byKey(ValueKey('tab-$id')));
+      await tester.pump();
+      await tester.tap(find.byKey(ValueKey('tab-$id')));
+      await tester.pump();
+    }
+
+    testWidgets('3단계 표시, 제목, 부위 탭 6개(눈·눈썹·코·입·몸 색·옷 색), 처음은 눈 탭', (tester) async {
       final e = UiEnv();
       await openMe(tester, e);
 
       expect(find.byKey(const ValueKey('steps')), findsOneWidget);
       expect(find.text('내 정령 만들기'), findsOneWidget);
+      const tabs = [
+        ('eyes', '눈'),
+        ('brows', '눈썹'),
+        ('nose', '코'),
+        ('mouth', '입'),
+        ('body', '몸 색'),
+        ('cloth', '옷 색'),
+      ];
+      for (final (id, name) in tabs) {
+        expect(
+          find.descendant(of: find.byKey(ValueKey('tab-$id')), matching: find.text(name)),
+          findsOneWidget,
+          reason: id,
+        );
+      }
+      final xs = [
+        for (final (id, _) in tabs) tester.getTopLeft(find.byKey(ValueKey('tab-$id'))).dx,
+      ];
+      expect(xs, orderedEquals([...xs]..sort()));
+      // 처음은 눈 탭: 눈 5칸, 한 줄에 4칸
       final eyes = spiritPalette.faces['eyes']!;
       expect(eyes, hasLength(5));
-      for (final p in eyes) {
-        expect(find.byKey(ValueKey('eyes-${p.id}')), findsOneWidget, reason: p.id);
+      final ys = [for (final p in eyes) tester.getTopLeft(find.byKey(ValueKey('eyes-${p.id}'))).dy];
+      expect(ys.take(4).toSet(), hasLength(1));
+      expect(ys[4], greaterThan(ys[0]));
+      expect(find.byKey(const ValueKey('brows-shiba')), findsNothing);
+      expect(find.byKey(const ValueKey('body-custom')), findsNothing);
+      // 눈썹·코·입 탭은 그 부위 칸 전부
+      for (final key in ['brows', 'nose', 'mouth']) {
+        await tab(tester, key);
+        for (final p in spiritPalette.faces[key]!) {
+          expect(find.byKey(ValueKey('$key-${p.id}')), findsOneWidget, reason: '$key ${p.id}');
+        }
+        expect(find.byKey(const ValueKey('eyes-dot')), findsNothing);
       }
-      expect(find.byKey(const ValueKey('eyes-bean')), findsOneWidget);
+      // 몸 색 탭: 견본 10개 + 직접 고르기
+      await tab(tester, 'body');
+      expect(spiritPalette.body.swatches, hasLength(10));
       for (final sw in spiritPalette.body.swatches) {
         expect(find.byKey(ValueKey('body-swatch-${sw.id}')), findsOneWidget);
       }
-      expect(spiritPalette.body.swatches, hasLength(10));
       expect(find.byKey(const ValueKey('body-custom')), findsOneWidget);
-      expect(find.text('눈썹·코·입과 소품은 나중에 꾸미기에서 바꿀 수 있어요'), findsOneWidget);
-      // 예전 사람 그림의 머리 모양·머리색 칸은 없다
+      // 옷 색 탭: 여행복 시작 색 4개 (16장 11/8)
+      await tab(tester, 'cloth');
+      for (final (i, name) in ['카키', '크림', '살구', '흙'].indexed) {
+        expect(
+          find.descendant(of: find.byKey(ValueKey('cloth-${i + 1}')), matching: find.text(name)),
+          findsOneWidget,
+          reason: name,
+        );
+      }
+      // 꾸미기로 미루던 안내 줄과 예전 사람 그림의 칸은 없다
+      expect(find.text('눈썹·코·입과 소품은 나중에 꾸미기에서 바꿀 수 있어요'), findsNothing);
       expect(find.text('머리 모양'), findsNothing);
       expect(find.text('머리색'), findsNothing);
       await end(tester, e);
     });
 
-    testWidgets('미리보기는 정령이고 고른 눈·몸 색을 입으며, 이름 알약도 따라 바뀐다', (tester) async {
+    testWidgets('미리보기는 여행복 입은 정령이고 고른 얼굴·몸 색을 입으며, 이름 알약은 몸 색·옷 색을 따라 바뀐다', (tester) async {
       final e = UiEnv();
       await openMe(tester, e);
 
-      Finder spirit() =>
-          find.descendant(of: find.byKey(const ValueKey('me-preview')), matching: find.byType(SpiritCharacter));
+      Finder spirit() => find.descendant(
+        of: find.byKey(const ValueKey('me-preview')),
+        matching: find.byType(SpiritCharacter),
+      );
       expect(spirit(), findsOneWidget);
-      expect(tester.widget<SpiritCharacter>(spirit()).look,
-          // 첫 모습: 기본 가방(큰 붓)을 메고 크림 몸
-          SpiritLook.base.copyWith(bag: 1, bodyArgb: 0xFFF3E4C4));
-      expect(find.text('점+반짝 눈 · 크림'), findsOneWidget);
+      expect(
+        tester.widget<SpiritCharacter>(spirit()).look,
+        // 첫 모습: 기본 가방(큰 붓)을 메고 기본 옷 여행복, 크림 몸
+        SpiritLook.base.copyWith(bag: 1, outfit: 1, bodyArgb: 0xFFF3E4C4),
+      );
+      expect(find.text('크림 · 여행복 카키'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('eyes-cat')));
+      await tab(tester, 'mouth');
+      await tester.tap(find.byKey(const ValueKey('mouth-smirk')));
+      await tab(tester, 'body');
       await tester.tap(find.byKey(const ValueKey('body-swatch-9')));
+      await tab(tester, 'cloth');
+      await tester.tap(find.byKey(const ValueKey('cloth-3')));
       await tester.pump();
       final look = tester.widget<SpiritCharacter>(spirit()).look;
-      expect((look.eye, look.bodyArgb, look.bodyBaseArgb), (4, 0xFFC9775A, 0xFFFFF5E2));
-      expect(find.text('고양이 눈 · 테라코타'), findsOneWidget);
+      expect(
+        (look.eye, look.mouth, look.bodyArgb, look.bodyBaseArgb),
+        (4, 5, 0xFFC9775A, 0xFFFFF5E2),
+      );
+      // 옷 색은 정령 새 방식(T5) 뒤에 보인다. 지금은 여행복 그림 그대로
+      expect(look.outfit, 1);
+      expect(find.text('테라코타 · 여행복 살구'), findsOneWidget);
       await end(tester, e);
     });
 
-    testWidgets('견본 이름이 접근성 label이고 고른 견본에는 체크가 붙는다', (tester) async {
+    testWidgets('견본·옷 색 이름이 접근성 label이고 고른 것이 표시된다', (tester) async {
       final handle = tester.ensureSemantics();
       final e = UiEnv();
       await openMe(tester, e);
+      await tab(tester, 'body');
 
       for (final sw in spiritPalette.body.swatches) {
         expect(find.bySemanticsLabel(sw.name), findsOneWidget, reason: sw.name);
       }
       expect(find.bySemanticsLabel('직접 고르기'), findsOneWidget);
       Finder check(int id) => find.descendant(
-          of: find.byKey(ValueKey('body-swatch-$id')), matching: find.byIcon(Icons.check));
+        of: find.byKey(ValueKey('body-swatch-$id')),
+        matching: find.byIcon(Icons.check),
+      );
       // 처음에는 견본 1 (크림)
       expect(check(1), findsOneWidget);
       expect(check(7), findsNothing);
@@ -384,14 +449,33 @@ void main() {
       await tester.pump();
       expect(check(7), findsOneWidget);
       expect(check(1), findsNothing);
+
+      await tab(tester, 'cloth');
+      for (final name in ['카키', '크림', '살구', '흙']) {
+        expect(find.bySemanticsLabel('여행복 $name'), findsOneWidget, reason: name);
+      }
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('cloth-1'))).flagsCollection.isSelected,
+        Tristate.isTrue,
+      );
+      await tester.tap(find.byKey(const ValueKey('cloth-4')));
+      await tester.pump();
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('cloth-4'))).flagsCollection.isSelected,
+        Tristate.isTrue,
+      );
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('cloth-1'))).flagsCollection.isSelected,
+        Tristate.isFalse,
+      );
       handle.dispose();
       await end(tester, e);
     });
 
-    testWidgets('+를 누르면 색상환·밝기 막대(제한 없음, 채도 막대 없음)가 열리고 몸 색이 직접 고른 색이 된다',
-        (tester) async {
+    testWidgets('+를 누르면 색상환·밝기 막대(제한 없음, 채도 막대 없음)가 열리고 몸 색이 직접 고른 색이 된다', (tester) async {
       final e = UiEnv();
       await openMe(tester, e);
+      await tab(tester, 'body');
 
       expect(find.byKey(const ValueKey('picker')), findsNothing);
       await tester.tap(find.byKey(const ValueKey('body-custom')));
@@ -403,27 +487,62 @@ void main() {
       expect(find.text('몸 색 직접 고르기'), findsOneWidget);
 
       // 견본을 다시 누르면 막대가 닫힌다
+      await tester.ensureVisible(find.byKey(const ValueKey('body-swatch-3')));
       await tester.tap(find.byKey(const ValueKey('body-swatch-3')));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('picker')), findsNothing);
       await end(tester, e);
     });
 
-    testWidgets('"이 모습으로"를 누르면 닉네임(공백 자름)과 look JSON이 저장되고 → 출발 동네', (tester) async {
+    testWidgets('명백한 욕설 닉네임은 버튼이 꺼지고 안내가 나온다. 그 밖의 말은 막지 않는다 (11/10 Annie)', (tester) async {
+      final e = UiEnv();
+      await openMe(tester, e);
+
+      await tester.enterText(find.byType(TextField), '개새끼');
+      await tester.pump();
+      expect(_enabled(tester, '이 모습으로'), isFalse);
+      expect(find.text('닉네임으로 쓸 수 없는 말이 있어요'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '걷는화가');
+      await tester.pump();
+      expect(_enabled(tester, '이 모습으로'), isTrue);
+      expect(find.text('닉네임으로 쓸 수 없는 말이 있어요'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('"이 모습으로"를 누르면 닉네임(공백 자름)과 look JSON(얼굴 넷·몸 색·옷 색)이 저장되고 → 출발 동네', (tester) async {
       final e = UiEnv();
       await openMe(tester, e);
 
       await tester.enterText(find.byType(TextField), ' 화가 ');
       await tester.tap(find.byKey(const ValueKey('eyes-sleepy')));
+      await tab(tester, 'brows');
+      await tester.tap(find.byKey(const ValueKey('brows-thin')));
+      await tab(tester, 'nose');
+      await tester.tap(find.byKey(const ValueKey('nose-dot')));
+      await tab(tester, 'mouth');
+      await tester.tap(find.byKey(const ValueKey('mouth-flat')));
+      await tab(tester, 'body');
       await tester.tap(find.byKey(const ValueKey('body-swatch-7')));
+      await tab(tester, 'cloth');
+      await tester.tap(find.byKey(const ValueKey('cloth-2')));
       await tester.pump();
       await _tapButton(tester, '이 모습으로');
       await _arrive(tester, HomePickScreen);
 
       final r = await _profile(tester, e);
       expect(r.nickname, '화가');
-      expect(Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>),
-          const Look(eyes: 'sleepy', body: SwatchBodyColor(7)));
+      expect(
+        Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>),
+        const Look(
+          eyes: 'sleepy',
+          brows: 'thin',
+          nose: 'dot',
+          mouth: 'flat',
+          body: SwatchBodyColor(7),
+          clothColor: 2,
+        ),
+      );
       // 앞 단계 기록은 그대로
       expect((r.ageConfirmedAt, r.installId), (t0.millisecondsSinceEpoch, '1' * 32));
       await end(tester, e);
@@ -457,6 +576,16 @@ void main() {
     testWidgets('작은 화면(높이 568)에서도, 키보드(300)가 올라와도 넘치지 않는다', (tester) async {
       final e = UiEnv();
       await openMe(tester, e, height: 568);
+      expect(tester.takeException(), isNull);
+      // 탭마다 (몸 색 직접 고르기를 열어도)
+      for (final id in ['eyes', 'brows', 'nose', 'mouth', 'body', 'cloth']) {
+        await tab(tester, id);
+        expect(tester.takeException(), isNull, reason: id);
+      }
+      await tab(tester, 'body');
+      await tester.ensureVisible(find.byKey(const ValueKey('body-custom')));
+      await tester.tap(find.byKey(const ValueKey('body-custom')));
+      await tester.pump();
       expect(tester.takeException(), isNull);
 
       tester.view.viewInsets = const FakeViewPadding(bottom: 300);
@@ -1087,6 +1216,8 @@ void main() {
 
       await tester.enterText(find.byType(TextField), '나그네');
       await tester.tap(find.byKey(const ValueKey('eyes-bean')));
+      await tester.tap(find.byKey(const ValueKey('tab-body')));
+      await tester.pump();
       await tester.tap(find.byKey(const ValueKey('body-swatch-5')));
       await tester.pump();
       await _tapButton(tester, '이 모습으로');

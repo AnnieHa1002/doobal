@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
+import 'package:doobal/domain/moderation.dart';
 import 'package:doobal/domain/profile.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -83,6 +86,29 @@ void main() {
       expect(check('a').ok, isFalse);
       expect(check('abcde12345').ok, isTrue);
       expect(check('abcde123456').problem, NicknameProblem.tooLong);
+    });
+  });
+
+  group('checkNickname 욕설 (11/10 Annie: 아주 명백한 욕설만 막고 그 밖은 검열하지 않음)', () {
+    final moderation = Moderation.fromJson(
+        jsonDecode(File('assets/data/moderation.json').readAsStringSync()) as Map<String, dynamic>);
+    NicknameCheck check(String s) => checkNickname(s, rules, moderation: moderation);
+
+    test('명백한 욕설은 막는다', () {
+      for (final s in ['시발', '개새끼', '씨발놈아']) {
+        expect(check(s).problem, NicknameProblem.swear, reason: s);
+      }
+    });
+
+    test('욕설이 아닌 갈래(혐오·성적·연락처·주소)와 허용 낱말은 막지 않는다', () {
+      for (final s in ['김치녀', '야동', '0101234567', 'www.a.com', '시발점', '미친', '걷는정령']) {
+        expect(check(s).ok, isTrue, reason: s);
+      }
+    });
+
+    test('글자 수 검사가 먼저, 규칙이 없으면 글자 수만 본다', () {
+      expect(check('시').problem, NicknameProblem.tooShort);
+      expect(checkNickname('시발', rules).ok, isTrue);
     });
   });
 

@@ -22,6 +22,7 @@ class Prop {
     this.variantOf,
     this.colorName,
     this.materialArgb,
+    this.startColors = const [],
   });
 
   final String id;
@@ -53,6 +54,10 @@ class Prop {
   /// 정령에 입히는 것(회색조 × 색 ÷ 기준 밝기)은 컷아웃 연결(T5) 몫이다
   final int? materialArgb;
 
+  /// 기본 옷(여행복)의 시작 색: 정령 만들기에서 한 번 고르는 색, 첫 색이 기본 (props v7 startColors, 16장 11/8).
+  /// 그 밖의 소품은 비어 있다
+  final List<PropColor> startColors;
+
   bool get isColorVariant => variantOf != null;
 
   factory Prop.fromJson(Map<String, dynamic> j) {
@@ -83,7 +88,29 @@ class Prop {
       variantOf: j['variantOf'] as String?,
       colorName: j['color'] as String?,
       materialArgb: hex == null ? null : argbFromHex(hex as String),
+      startColors: [
+        for (final c in (j['startColors'] as List?) ?? const [])
+          PropColor.fromJson(c as Map<String, dynamic>, j['id'] as String),
+      ],
     );
+  }
+}
+
+/// 이름 있는 색 하나 (startColors의 한 칸)
+class PropColor {
+  const PropColor(this.name, this.argb);
+
+  final String name;
+
+  /// 불투명 ARGB
+  final int argb;
+
+  factory PropColor.fromJson(Map<String, dynamic> j, String propId) {
+    final hex = j['hex'];
+    if (hex is! String || !_hexPattern.hasMatch(hex)) {
+      throw FormatException('startColors hex가 #RRGGBB가 아니다: $hex ($propId)');
+    }
+    return PropColor(j['name'] as String, argbFromHex(hex));
   }
 }
 

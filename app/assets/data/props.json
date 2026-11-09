@@ -1,5 +1,5 @@
 {
- "version": 6,
+ "version": 7,
  "slots": [
   "hat",
   "face",
@@ -126,7 +126,8 @@
    "slot": "cloth",
    "name": "앞치마",
    "unlock": {
-    "kind": "default"
+    "kind": "distance",
+    "km": 300
    },
    "status": "mvp",
    "material": {
@@ -139,14 +140,31 @@
    "slot": "cloth",
    "name": "여행복",
    "unlock": {
-    "kind": "distance",
-    "km": 300
+    "kind": "default"
    },
    "status": "mvp",
    "material": {
     "catalogId": "travel_vest",
     "hex": "#B5A576"
-   }
+   },
+   "startColors": [
+    {
+     "name": "카키",
+     "hex": "#C0A475"
+    },
+    {
+     "name": "크림",
+     "hex": "#F3E4C4"
+    },
+    {
+     "name": "살구",
+     "hex": "#F5C9A3"
+    },
+    {
+     "name": "흙",
+     "hex": "#C4A07C"
+    }
+   ]
   },
   {
    "id": "cloth_03",
