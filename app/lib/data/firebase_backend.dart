@@ -53,8 +53,9 @@ Future<ServerBackend?> startServer() async {
   if (!emulator && !real) return null;
   try {
     final options = emulator
+        // 가짜 값. 꼴만 맞춘다 (함수 SDK가 Firebase Installations로 API 키 꼴 AIza…·39자를 검사한다)
         ? const FirebaseOptions(
-            apiKey: 'demo-api-key',
+            apiKey: 'AIzaSyDemoKeyForFirebaseEmulatorOnly000',
             appId: '1:1234567890:android:0000000000000000',
             messagingSenderId: '1234567890',
             projectId: _emulatorProject,
@@ -77,7 +78,9 @@ Future<ServerBackend?> startServer() async {
       functions.useFunctionsEmulator(host, 5001, automaticHostMapping: mapped);
       label = '에뮬레이터 ${mapped && defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : host}';
     }
-    await _startAppCheck(app);
+    // 에뮬레이터는 App Check를 보지 않는다. 가짜 API 키로 켜면 토큰을 받다 실패해서 함수·Firestore 호출이
+    // 모두 막히므로(손 확인 11/9) 실제 프로젝트에서만 켠다
+    if (real) await _startAppCheck(app);
     final fake = emulator && _fakeLoginId.isNotEmpty;
     return ServerBackend(
       auth: FirebaseAuthGateway(auth, fakeLoginId: fake ? _fakeLoginId : null),
@@ -94,7 +97,7 @@ Future<ServerBackend?> startServer() async {
 }
 
 /// App Check: 디버그 빌드는 디버그 제공자(로그에 나오는 토큰을 콘솔에 등록해야 통과), 출시 빌드는
-/// Play Integrity·App Attest. 강제는 서버(함수 enforceAppCheck)와 콘솔이 정한다. 에뮬레이터는 보지 않는다.
+/// Play Integrity·App Attest. 강제는 서버(함수 enforceAppCheck)와 콘솔이 정한다. 에뮬레이터에서는 켜지 않는다.
 /// 실패해도 앱은 돈다 (토큰 없이 부르면 강제하는 곳에서만 거절된다)
 Future<void> _startAppCheck(FirebaseApp app) async {
   try {

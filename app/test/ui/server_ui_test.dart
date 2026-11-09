@@ -213,12 +213,12 @@ void main() {
           ready: () => find.text('내 글').evaluate().isNotEmpty);
       // 노트는 로그인을 기다리지 않는다. 로그인하면 하트를 다시 읽는다
       await tester.runAsync(() => s.auth.signInAnonymously());
-      await settle(tester, () => find.text('♥ 7').evaluate().isNotEmpty);
-      expect(
-        find.descendant(
-            of: find.byKey(const ValueKey('post-a:j1')), matching: find.text('♥ 7')),
-        findsOneWidget,
-      );
+      final hearts = find.byKey(const ValueKey('hearts-a:j1'));
+      await settle(tester, () => hearts.evaluate().isNotEmpty);
+      expect(find.descendant(of: find.byKey(const ValueKey('post-a:j1')), matching: hearts),
+          findsOneWidget);
+      expect(find.descendant(of: hearts, matching: find.text('7')), findsOneWidget);
+      expect(find.descendant(of: hearts, matching: find.byIcon(Icons.favorite)), findsOneWidget);
       await end(tester, e);
     });
   });

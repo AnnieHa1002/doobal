@@ -95,6 +95,24 @@ void main() {
       expect(e.server.store.pushes, 2);
     });
 
+    test('동시에 불러도 차례로 한 번만 올린다 (둘이 함께 만들면 두 번째가 규칙에 막힌다)', () async {
+      final e = _Env();
+      await e.ready();
+      await e.account.ensureSignedIn();
+      await Future.wait([e.account.pushProfile(), e.account.pushProfile(), e.account.pushProfile()]);
+      expect(e.server.store.pushes, 1);
+    });
+
+    test('실패해도 다음 올리기는 막히지 않는다', () async {
+      final e = _Env();
+      await e.ready();
+      await e.account.ensureSignedIn();
+      e.server.store.failTimes = 1;
+      await expectLater(e.account.pushProfile(), throwsA(isA<ServerError>()));
+      await e.account.pushProfile();
+      expect(e.server.store.pushes, 1);
+    });
+
     test('로그인 전이거나 닉네임이 없으면 올리지 않는다', () async {
       final e = _Env(nickname: null);
       await e.ready();

@@ -129,8 +129,18 @@ class AccountService {
   }
 
   /// users/{uid}에 닉네임과 누적 걸음을 올린다. 닉네임이 없거나 로그인 전이면 하지 않고,
-  /// 지난번과 같은 값이면 다시 올리지 않는다. 실패하면 ServerError (부른 쪽이 넘긴다)
-  Future<void> pushProfile({bool force = false}) async {
+  /// 지난번과 같은 값이면 다시 올리지 않는다. 실패하면 ServerError (부른 쪽이 넘긴다).
+  /// 여러 곳에서 동시에 불러도 하나씩 차례로 한다: 둘이 함께 '없음'을 보고 만들면 두 번째는 createdAt을
+  /// 고치는 쓰기가 되어 규칙에 막힌다 (손 확인 11/9)
+  Future<void> pushProfile({bool force = false}) {
+    final next = _pushQueue.then((_) => _pushProfile(force));
+    _pushQueue = next.then((_) {}, onError: (_) {});
+    return next;
+  }
+
+  Future<void> _pushQueue = Future.value();
+
+  Future<void> _pushProfile(bool force) async {
     final user = _auth.current;
     final nickname = (await _profile())?.nickname;
     if (user == null || nickname == null || nickname.isEmpty) return;

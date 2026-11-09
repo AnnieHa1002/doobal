@@ -172,10 +172,21 @@ class _PostCard extends StatelessWidget {
                     Text(formatMonthDay(kstDateTime(post.createdAt)), style: AppText.label),
                     if (hearts != null) ...[
                       const SizedBox(width: 8),
-                      Text(
-                        '♥ ${formatInt(hearts)}',
-                        key: ValueKey('hearts-${post.ticketId}'),
-                        style: context.display(14, color: Palette.terracotta),
+                      // ♥ 글자는 기기에 따라 빨간 이모지로 그려져서 아이콘으로 그린다 (손 확인 11/9)
+                      Semantics(
+                        label: '받은 하트 ${formatInt(hearts)}',
+                        child: Row(
+                          key: ValueKey('hearts-${post.ticketId}'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.favorite, size: 14, color: Palette.terracotta),
+                            const SizedBox(width: 2),
+                            Text(
+                              formatInt(hearts),
+                              style: context.display(14, color: Palette.terracotta),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ],
