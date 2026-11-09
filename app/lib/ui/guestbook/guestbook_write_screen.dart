@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../app/guestbook_server.dart';
 import '../../domain/guestbook.dart';
+import '../../domain/time_kst.dart';
 import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
@@ -19,7 +21,9 @@ import 'guestbook_tag.dart';
 /// 쓰는 중에 금칙어에 걸리면 입력 칸 아래에 테라코타 글자로 안내하고 "남기기"를 끈다 (어떤 단어인지는
 /// 알리지 않는다). 글이 유효할 때만 버튼이 켜지고, 누르면 이 기기에 저장하고 닫는다.
 /// 남기면 방명록 읽기(5-2)로 이어진다 (이 화면을 바꿔서, 읽기에서 뒤로 가면 들어온 곳).
-/// 서버로 보내는 건 M5에서 한다 (서버도 한 번 더 검사한다)
+/// 연결돼 있으면 서버에 먼저 올린다 (GuestbookServer). 서버가 금칙어로 막으면 이 기기에도 남기지 않고
+/// 초안을 그대로 두어 고치게 하고, 작성 제한 중이면 그때까지 쓸 수 없다고 알린다. 연결이 안 되면 이 기기에만
+/// 남기고 연결되면 올라간다. 금칙어 문서는 화면을 열 때 서버에서 다시 받는다
 class GuestbookWriteScreen extends ConsumerStatefulWidget {
   const GuestbookWriteScreen({super.key, required this.ticketId});
 
@@ -36,38 +40,67 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
   /// 처음 읽은 기회. 글을 쓰고 기회를 다시 읽으면 null이 되는데, 그동안 화면이 바뀌지 않게 남겨 둔다
   GuestbookTicket? _ticket;
 
+  /// 서버가 막은 까닭 (금칙어·작성 제한). 글을 고치면 지운다
+  String? _serverBlock;
+
+  @override
+  void initState() {
+    super.initState();
+    // 방명록을 열 때 금칙어 문서를 다시 받는다 (M5). 서버가 없으면 앱에 든 것 그대로
+    if (ref.read(serverBackendProvider) != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.invalidate(moderationProvider);
+      });
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  /// 저장하고 방명록 읽기로 바꾼다. 그새 기회가 끝났으면(StateError) 그 사유를 토스트로 알리고 닫는다.
-  /// 어느 쪽이든 쉼터 표지판·도착 화면 버튼·노트의 내 방명록이 새로 읽는다
+  /// 남기고 방명록 읽기로 바꾼다. 그새 기회가 끝났으면 그 사유를 토스트로 알리고 닫는다. 서버가 막으면
+  /// 초안을 두고 입력 칸 아래에 알린다. 남기거나 닫으면 쉼터 표지판·도착 화면 버튼·노트의 내 방명록이 새로 읽는다
   Future<void> _save(GuestbookTicket ticket) async {
     if (_busy) return;
     setState(() => _busy = true);
-    var message = '방명록을 남겼어요';
-    var saved = false;
-    try {
-      final svc = await ref.read(syncServiceProvider.future);
-      await svc.writeGuestbook(ticket.id, _controller.text, ref.read(clockProvider)());
-      saved = true;
-    } on StateError catch (e) {
-      message = e.message;
-    }
+    final gb = await ref.read(guestbookServerProvider.future);
+    final outcome = await gb.send(ticket.id, _controller.text);
     if (!mounted) return;
+    switch (outcome) {
+      case SendBlocked(:final message):
+        setState(() {
+          _busy = false;
+          _serverBlock = message;
+        });
+        return;
+      case SendBanned(:final until):
+        final text = '${formatMonthDay(kstDate(until))}까지 방명록을 쓸 수 없어요';
+        setState(() {
+          _busy = false;
+          _serverBlock = text;
+        });
+        showToast(context, text);
+        return;
+      case SendClosed(:final message):
+        _refresh();
+        showToast(context, message);
+        Navigator.of(context).pop();
+        return;
+      case SendDone() || SendQueued():
+        _refresh();
+        showToast(context, '방명록을 남겼어요');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(builder: (_) => GuestbookReadScreen(ticketId: ticket.id)),
+        );
+    }
+  }
+
+  void _refresh() {
     ref.invalidate(snapshotProvider);
     ref.invalidate(guestbookTicketProvider);
     ref.invalidate(myPostsProvider);
-    showToast(context, message);
-    if (!saved) {
-      Navigator.of(context).pop();
-      return;
-    }
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => GuestbookReadScreen(ticketId: ticket.id)),
-    );
   }
 
   @override
@@ -123,7 +156,9 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
     // 규칙을 읽는 동안에는 막지 않는다 (서버가 다시 검사한다, M5)
     final moderation = ref.watch(moderationProvider).value;
     final names = ref.watch(moderationNamesProvider);
-    final blocked = moderation?.isBlocked(_controller.text, names: names) ?? false;
+    final blockedHere = moderation?.isBlocked(_controller.text, names: names) ?? false;
+    final blockMessage = blockedHere ? moderation!.message : _serverBlock;
+    final blocked = blockMessage != null;
     final valid = cleanPost(_controller.text, maxChars) != null && !blocked;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -166,7 +201,7 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
                   inputFormatters: [_RuneLimit(maxChars)],
                   style: const TextStyle(fontSize: 16, color: Palette.ink),
                   decoration: _inputDecoration('한마디를 남겨 보세요'),
-                  onChanged: (_) => setState(() {}),
+                  onChanged: (_) => setState(() => _serverBlock = null),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -177,7 +212,7 @@ class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
                           ? Padding(
                               padding: EdgeInsets.only(left: 4),
                               child: Text(
-                                moderation!.message,
+                                blockMessage,
                                 key: ValueKey('guestbook-blocked'),
                                 style: TextStyle(fontSize: 13, color: Palette.terracotta),
                               ),
