@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:drift_flutter/drift_flutter.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/app_settings_opener.dart';
@@ -48,10 +48,12 @@ import 'backup_service.dart';
 import 'catalog_providers.dart';
 import 'notification_service.dart';
 import 'profile_service.dart';
+import 'server_providers.dart';
 import 'stats_service.dart';
 import 'sync_service.dart';
 
 export 'catalog_providers.dart';
+export 'server_providers.dart';
 
 final rulesProvider = FutureProvider<Rules>((ref) => loadRules());
 
@@ -141,9 +143,20 @@ final stepFixOpensSettingsProvider = Provider<bool>((ref) => Platform.isIOS);
 final paintingSharerProvider =
     Provider<PaintingSharer>((ref) => const SharePlusPaintingSharer());
 
-/// 방명록 금칙어 규칙 (assets/data/moderation.json).
-/// TODO(M5): Firestore config/moderation에서 받은 문서로 바꾼다
-final moderationProvider = FutureProvider<Moderation>((ref) => loadModeration());
+/// 방명록 금칙어 규칙: 서버 config/moderation (오프라인이면 기기에 남은 마지막 값), 그것도 없거나
+/// 읽을 수 없으면 앱에 넣은 assets/data/moderation.json. 쓰기 화면을 열 때 invalidate 해서 다시 받는다
+final moderationProvider = FutureProvider<Moderation>((ref) async {
+  final store = ref.watch(serverBackendProvider)?.store;
+  if (store != null) {
+    try {
+      final doc = await store.moderationDoc();
+      if (doc != null) return Moderation.fromJson(doc);
+    } catch (e) {
+      debugPrint('서버 금칙어 문서를 쓰지 못해 앱에 든 것을 씀: $e');
+    }
+  }
+  return loadModeration();
+});
 
 /// 금칙어 검사에서 빼는 이름: 명소와 시·군·구 (오탐 방지). 읽는 동안에는 비어 있다
 final moderationNamesProvider = Provider<List<String>>((ref) => [
@@ -218,14 +231,17 @@ final noticeSettingsProvider = FutureProvider.autoDispose<NoticeSettings>((ref) 
   return (await ref.watch(notificationServiceProvider.future)).settings();
 });
 
-/// 백업 문자열을 서버에 두고 받아 오는 곳. M5에서 Firestore(users/{uid}/backup/state)로 바꾼다
-/// (지금은 메모리에만 두는 자리표시)
-final backupStoreProvider = Provider<BackupStore>((ref) => PlaceholderBackupStore());
+/// 백업 문자열을 서버에 두고 받아 오는 곳: Firestore users/{uid}/backup/state (server_providers.dart).
+/// 서버가 없는 빌드·시험은 메모리에만 두는 자리표시
+final backupStoreProvider = Provider<BackupStore>(
+    (ref) => ref.watch(serverBackendProvider)?.backup ?? PlaceholderBackupStore());
 
-/// 계정을 연결한 사용자의 uid. 연결하지 않았으면 null. 백업은 계정을 연결한 사용자만 한다
-/// (익명 uid는 앱을 지우면 다시 찾을 수 없다). M5에서 Firebase Auth로 바꾼다.
-/// 계정 연결이 아직 없어서 늘 null이고, 그래서 자동 백업은 일어나지 않는다
-final backupUidProvider = Provider<String?>((ref) => null);
+/// 계정을 연결한 사용자의 uid (Firebase Auth). 연결하지 않았으면(익명·로그인 전·서버 없음) null.
+/// 백업은 계정을 연결한 사용자만 한다 (익명 uid는 앱을 지우면 다시 찾을 수 없다)
+final backupUidProvider = Provider<String?>((ref) {
+  final state = ref.watch(accountStateProvider).value;
+  return state?.linked == null ? null : state?.user?.uid;
+});
 
 /// 로컬 DB ↔ 백업 문자열
 final backupServiceProvider = FutureProvider<BackupService>((ref) async {

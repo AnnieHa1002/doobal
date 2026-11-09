@@ -13,10 +13,11 @@ import '../common/toast.dart';
 import '../debug/backup_debug_screen.dart';
 import '../debug/debug_screen.dart';
 import 'settings_about_screen.dart';
+import 'settings_account.dart';
 import 'settings_notice_screen.dart';
 import 'settings_rows.dart';
 
-/// 설정 (캔버스 10-1): 계정 연결(M5), 걸음 데이터, 알림 ›, 광고 동의 다시 고르기(M4.5), 앱 정보 ›,
+/// 설정 (캔버스 10-1): 계정 연결(M5, settings_account.dart), 걸음 데이터, 알림 ›, 광고 동의 다시 고르기(M4.5), 앱 정보 ›,
 /// 계정 삭제. 개발자 화면은 출시 빌드에 나오지 않는다
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -43,13 +44,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showToast(context, ok ? '걸음 기록을 읽을 수 있어요' : '걸음 권한을 열지 못했어요. 건강 앱 설정에서 켜 주세요');
   }
 
-  /// 두 번 확인한 뒤 이 기기의 기록을 모두 지우고 시작 흐름 첫 화면으로 돌아간다.
-  /// 예약해 둔 알림은 기록을 지우기 전에 취소한다.
-  /// TODO(M5·M6): 서버의 계정·방명록 삭제는 서버가 생기면 여기서 이어 부른다
+  /// 두 번 확인한 뒤 서버의 계정(로그인했으면)과 이 기기의 기록을 모두 지우고 시작 흐름 첫 화면으로
+  /// 돌아간다. 서버 계정을 지우지 못하면(오프라인) 이 기기 기록도 그대로 두고 알린다
+  /// (먼저 지우면 서버 기록을 찾아 지울 길이 없어진다). 예약해 둔 알림은 기록을 지우기 전에 취소한다
   Future<void> _deleteAccount() async {
+    final account = ref.read(accountServiceProvider);
     final first = await _confirm(
       title: '계정을 삭제할까요?',
-      message: '이 기기의 기록이 모두 지워져요',
+      // 서버가 있는 빌드의 문구는 가안 (캔버스에 문구 없음)
+      message: account == null ? '이 기기의 기록이 모두 지워져요' : '이 기기와 서버의 기록(방명록 포함)이 모두 지워져요',
       confirmLabel: '계속',
     );
     if (!first || !mounted) return;
@@ -61,6 +64,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
     if (!second || !mounted) return;
 
+    final serverError = await account?.deleteServerAccount();
+    if (!mounted) return;
+    if (serverError != null) {
+      showToast(context, serverError);
+      return;
+    }
     try {
       final notices = await ref.read(notificationServiceProvider.future);
       await notices.cancelAllPending(ref.read(clockProvider)());
@@ -75,6 +84,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.invalidate(onboardingStepProvider);
     ref.invalidate(snapshotProvider);
     ref.invalidate(mapDataProvider);
+    ref.invalidate(accountStateProvider);
     Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
@@ -115,11 +125,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
                   const SettingsLabel('계정 연결'),
-                  const SettingsGroup([
-                    SettingsRow('구글', note: '준비 중'),
-                    SettingsRow('애플', note: '준비 중'),
-                    SettingsRow('카카오', note: '준비 중'),
-                  ]),
+                  // 서버가 없는 빌드는 연결할 곳이 없다
+                  if (ref.watch(serverBackendProvider) == null)
+                    const SettingsGroup([
+                      SettingsRow('구글', note: '준비 중'),
+                      SettingsRow('애플', note: '준비 중'),
+                      SettingsRow('카카오', note: '준비 중'),
+                    ])
+                  else
+                    const SettingsAccount(),
                   const SizedBox(height: 20),
                   const SettingsLabel('걸음 데이터'),
                   SettingsGroup([

@@ -102,14 +102,16 @@ class _Tab extends StatelessWidget {
   }
 }
 
-/// 내 방명록: 내가 쓴 글을 최신순으로. 카드마다 장소·숫자 태그, 본문, 날짜, 서버에 못 올린 글이면 안내.
-/// TODO(M5): 받은 하트를 카드에 붙인다 (지금은 서버가 없어서 표시하지 않는다)
+/// 내 방명록: 내가 쓴 글을 최신순으로. 카드마다 장소·숫자 태그, 날짜, 받은 하트, 본문,
+/// 서버에 못 올린 글이면 안내. 하트는 서버의 내 글(guestbook where uid == 나)에서 읽고,
+/// 연결이 안 되면 기기에 남은 마지막 값, 그것도 없으면 하트 없이 보인다
 class _GuestbookTab extends ConsumerWidget {
   const _GuestbookTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final posts = ref.watch(myPostsProvider).value;
+    final hearts = ref.watch(myHeartsProvider).value ?? const <String, int>{};
     if (posts == null) return const SizedBox();
     if (posts.isEmpty) {
       return const Center(child: Text('아직 남긴 방명록이 없어요', style: AppText.bodySub));
@@ -117,27 +119,32 @@ class _GuestbookTab extends ConsumerWidget {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       itemCount: posts.length,
-      itemBuilder: (context, i) => _PostCard(posts[i]),
+      itemBuilder: (context, i) => _PostCard(posts[i], hearts[posts[i].ticketId]),
     );
   }
 }
 
-/// 서버에 아직 못 올린 글 밑에 붙는 한 줄. 올린 글(sent)·거절된 글(rejected)은 M5에서 정한다
-/// TODO(M5): 문구는 가안
+/// 서버에 올리지 못한 글 밑에 붙는 한 줄. 올린 글(sent)은 없다.
+/// 문구는 가안: rejected는 서버가 받지 않은 글(올린 뒤 금칙어 문서가 바뀌었을 때 등)이라 고쳐 쓰는 곳이 아직 없다
 String? _statusLine(PostStatus status) => switch (status) {
       PostStatus.pending => '연결되면 올라가요',
-      PostStatus.sent || PostStatus.rejected => null,
+      PostStatus.rejected => '올리지 못했어요',
+      PostStatus.sent => null,
     };
 
-/// 내가 쓴 글 하나: 위에 태그와 날짜, 본문, 아래에 상태 한 줄
+/// 내가 쓴 글 하나: 위에 태그와 날짜(오른쪽에 받은 하트), 본문, 아래에 상태 한 줄
 class _PostCard extends StatelessWidget {
-  const _PostCard(this.post);
+  const _PostCard(this.post, this.hearts);
 
   final GuestbookPostView post;
+
+  /// 받은 하트. 모르면 null (서버에 없는 글·오프라인)
+  final int? hearts;
 
   @override
   Widget build(BuildContext context) {
     final status = _statusLine(post.status);
+    final hearts = this.hearts;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
@@ -159,7 +166,31 @@ class _PostCard extends StatelessWidget {
               runSpacing: 4,
               children: [
                 GuestbookTagPill(guestbookPostTag(post), color: Palette.paper),
-                Text(formatMonthDay(kstDateTime(post.createdAt)), style: AppText.label),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(formatMonthDay(kstDateTime(post.createdAt)), style: AppText.label),
+                    if (hearts != null) ...[
+                      const SizedBox(width: 8),
+                      // ♥ 글자는 기기에 따라 빨간 이모지로 그려져서 아이콘으로 그린다 (손 확인 11/9)
+                      Semantics(
+                        label: '받은 하트 ${formatInt(hearts)}',
+                        child: Row(
+                          key: ValueKey('hearts-${post.ticketId}'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.favorite, size: 14, color: Palette.terracotta),
+                            const SizedBox(width: 2),
+                            Text(
+                              formatInt(hearts),
+                              style: context.display(14, color: Palette.terracotta),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 12),
