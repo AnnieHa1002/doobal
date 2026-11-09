@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('글꼴 라이선스: 네 글꼴(개구·동글·고운 바탕·고운 돋움)이 저작권·OFL 고지와 함께 등록된다', () async {
+  test('글꼴 라이선스: Pretendard가 저작권 줄과 OFL 1.1 전문으로 등록된다', () async {
     registerFontLicenses();
     final entries = await LicenseRegistry.licenses.toList();
     expect(fontLicenses.keys, ['Pretendard']);
@@ -14,6 +14,10 @@ void main() {
       final text = e.paragraphs.map((p) => p.text).join('\n');
       expect(text, contains('Kil Hyung-jin'));
       expect(text, contains('SIL Open Font License, Version 1.1'));
+      // 고지 한 줄이 아니라 전문 (머리말·조건·끝 면책까지)
+      expect(text, contains('PREAMBLE'));
+      expect(text, contains('CONDITIONS'));
+      expect(text, contains('OTHER DEALINGS IN THE FONT SOFTWARE.'));
     }
   });
 

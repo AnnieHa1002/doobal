@@ -88,9 +88,10 @@ abstract final class HudMetrics {
   static const bottomGap = 16.0;
   static const collapseAfter = Duration(seconds: 8);
 
-  /// 이정표 카드가 떠 있는 시간과 새 도장 줄이 떠 있는 시간 (몇 초 뒤 사라진다)
-  static var eventCardFor = const Duration(seconds: 7);
-  static var badgeLineFor = const Duration(seconds: 4);
+  /// 시험에서만: 이정표 카드·새 도장 줄이 떠 있는 시간을 바꾼다.
+  /// null이면 config 값(hud.eventCardSec·stampLineSec)
+  static Duration? eventCardOverride;
+  static Duration? badgeLineOverride;
 }
 
 class _WalkingHudState extends State<WalkingHud> {

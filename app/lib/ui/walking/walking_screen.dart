@@ -70,10 +70,6 @@ const _stepCatchUpSec = 3.0;
 /// 동행 걸음에 넣는 프레임 사이 시간의 최대(초). 앱이 뒤에 있어 프레임이 끊긴 틈은 연출에 넣지 않는다
 const _paceMaxDt = 0.25;
 
-/// 센서 미리보기가 100%를 넘은 동안 도착 확인 동기화를 돌리는 최소 간격(초).
-/// config로 옮길 값 (평소 주기 walkingRefreshSec 30초보다 짧게)
-const _arrivalProbeSec = 5;
-
 class _WalkingScreenState extends ConsumerState<WalkingScreen>
     with SingleTickerProviderStateMixin {
   late final DateTime _start;
@@ -223,7 +219,9 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     if (!mounted) return;
     _badgeTimer?.cancel();
     setState(() => _badgeLine = stamp.newBadgeToast(badges));
-    _badgeTimer = Timer(HudMetrics.badgeLineFor, () {
+    final shownFor = HudMetrics.badgeLineOverride ??
+        _seconds(ref.read(rulesProvider).requireValue.stampLineSec);
+    _badgeTimer = Timer(shownFor, () {
       if (mounted) setState(() => _badgeLine = null);
     });
   }
@@ -270,7 +268,9 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
       if (made.isNotEmpty && mounted) {
         _eventTimer?.cancel();
         setState(() => _event = made.last);
-        _eventTimer = Timer(HudMetrics.eventCardFor, () {
+        final shownFor = HudMetrics.eventCardOverride ??
+            _seconds(ref.read(rulesProvider).requireValue.eventCardSec);
+        _eventTimer = Timer(shownFor, () {
           if (mounted) setState(() => _event = null);
         });
       }
@@ -601,7 +601,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     if (j == null) return;
     final extraM = summary.distanceM - (_record?.summary.distanceM ?? 0);
     if (!previewReachesDest(remainingKm: j.progress.remainingKm, extraM: extraM)) return;
-    if (!arrivalProbeDue(_probeAt, now, _arrivalProbeSec)) return;
+    final probeSec = ref.read(rulesProvider).requireValue.arrivalProbeSec;
+    if (!arrivalProbeDue(_probeAt, now, probeSec)) return;
     _probeAt = now;
     _refresh();
   }
@@ -742,3 +743,6 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     return next == null ? null : next - snap.totalSteps;
   }
 }
+
+/// config의 초(소수 가능) → Duration
+Duration _seconds(double sec) => Duration(milliseconds: (sec * 1000).round());
