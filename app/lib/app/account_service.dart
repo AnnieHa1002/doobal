@@ -218,12 +218,30 @@ class AccountService {
 
   /// "그 계정의 기록으로 바꿀까요?"에 예를 누른 뒤: 그 계정으로 들어가고, 백업이 있으면 이 기기 기록을
   /// 그 백업으로 바꾼다. 백업이 없으면 이 기기 기록을 그대로 둔다 (그 계정의 다음 백업이 된다).
-  /// 실패하면 ServerError·그 밖의 예외를 그대로 던진다 (지금 계정이 그대로 남는 쪽에서 실패한다)
+  /// 구글·애플로 바꿀 때는 먼저 이 기기의 익명 계정을 서버에서 지운다(11/10 Annie): 바꾼 뒤에는 찾을 수 없는
+  /// 기록이라서다(방명록 글·하트·백업도 같이, 화면 문구 ‘이 기기의 기록은 사라져요’). 카카오는 서버가 합친다.
+  /// 실패하면 ServerError·그 밖의 예외를 그대로 던진다. 지우기에서 실패하면 지금 계정이 그대로 남고, 지운 뒤
+  /// 들어가기에서 실패하면 로그아웃해 둔다 (기기 기록은 그대로, 다음 연결 때 새 익명 계정)
   Future<SwitchResult> confirmSwitch(LinkNeedsConfirm c) async {
     final AuthUser user;
     final conflict = c.conflict;
     if (conflict != null) {
-      user = await _auth.signInWithConflict(conflict);
+      final before = _auth.current;
+      final anonymous = before != null && before.idpLinks.isEmpty && !before.customToken;
+      if (anonymous) await server.api.deleteAccount();
+      try {
+        user = await _auth.signInWithConflict(conflict);
+      } catch (_) {
+        if (anonymous) {
+          _pushedKey = null;
+          try {
+            await _auth.signOut();
+          } catch (e) {
+            debugPrint('로그아웃 실패: $e');
+          }
+        }
+        rethrow;
+      }
     } else {
       final r = await server.api.kakaoSignIn(c.kakaoToken!, confirmSwitch: true);
       final token = switch (r) {

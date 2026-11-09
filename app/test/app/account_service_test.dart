@@ -187,8 +187,13 @@ void main() {
       // 묻는 동안에는 아무것도 바뀌지 않는다
       expect(e.server.auth.user!.uid, 'anon1');
 
+      e.server.backup.texts['anon1'] = 'anon1 백업';
       expect(await e.account.confirmSwitch(r), SwitchResult.restored);
       expect(e.server.auth.user!.uid, 'g-owner');
+      // 바꾸기 전에 이 기기의 익명 계정(anon1)을 서버에서 지웠다 (11/10 Annie)
+      expect(e.server.api.calls, contains('deleteAccount'));
+      expect(e.server.backup.texts.containsKey('anon1'), isFalse);
+      expect(e.server.auth.calls.last, 'switch:google');
       expect((await e.account.state()).linked, LinkProvider.google);
       final days = await e.db.select(e.db.daySummaries).get();
       expect(days.map((d) => (d.day, d.steps)), [('2026-11-10', 4321)]);
@@ -208,6 +213,31 @@ void main() {
       final r = await e.account.link(LinkProvider.apple) as LinkNeedsConfirm;
       expect(await e.account.confirmSwitch(r), SwitchResult.kept);
       expect(e.server.auth.user!.uid, 'a-owner');
+      expect((await e.db.select(e.db.daySummaries).get()).single.steps, 7);
+      expect(e.server.api.calls, contains('deleteAccount'));
+    });
+
+    test('익명 계정을 지우지 못하면(오프라인) 바꾸지 않고 지금 계정 그대로', () async {
+      final e = _Env();
+      await e.ready();
+      e.server.auth.conflicts[LinkProvider.google] = 'g-owner';
+      final r = await e.account.link(LinkProvider.google) as LinkNeedsConfirm;
+      e.server.api.failNext.add(const ServerError.offline());
+      await expectLater(e.account.confirmSwitch(r), throwsA(isA<ServerError>()));
+      expect(e.server.auth.user!.uid, 'anon1');
+      expect(e.server.auth.calls, isNot(contains('switch:google')));
+    });
+
+    test('지운 뒤 그 계정으로 들어가지 못하면 로그아웃해 두고, 기기 기록은 그대로', () async {
+      final e = _Env();
+      await e.ready();
+      await e.addDay('2026-11-18', 7);
+      e.server.auth.conflicts[LinkProvider.apple] = 'a-owner';
+      final r = await e.account.link(LinkProvider.apple) as LinkNeedsConfirm;
+      e.server.auth.failSwitch = StateError('창이 닫힘');
+      await expectLater(e.account.confirmSwitch(r), throwsStateError);
+      expect(e.server.auth.user, isNull);
+      expect(e.server.auth.calls.last, 'signOut');
       expect((await e.db.select(e.db.daySummaries).get()).single.steps, 7);
     });
   });

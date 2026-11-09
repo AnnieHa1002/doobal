@@ -39,6 +39,9 @@ class FakeAuth implements AuthGateway {
   /// 연결 창을 닫는다
   var cancel = false;
 
+  /// 다른 계정으로 들어가기(signInWithConflict)를 실패시킨다
+  Object? failSwitch;
+
   /// 커스텀 토큰 → uid (kakaoSignIn이 만든다)
   final tokens = <String, String>{};
 
@@ -86,6 +89,8 @@ class FakeAuth implements AuthGateway {
   @override
   Future<AuthUser> signInWithConflict(LinkConflict conflict) async {
     calls.add('switch:${conflict.provider.name}');
+    final e = failSwitch;
+    if (e != null) throw e;
     _set(AuthUser(uid: conflict.payload as String, idpLinks: {conflict.provider}));
     return user!;
   }
