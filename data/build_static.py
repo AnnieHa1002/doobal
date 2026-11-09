@@ -13,6 +13,7 @@
 - props.json v6(11/6): 손 소품 fit(장갑 wristOverlay·날개 팔 replaceArms, 컷아웃 공정).
 - props.json v7(11/10): 기본 옷을 여행복 cloth_02로, 앞치마 cloth_01을 300km 보상으로 맞바꿈(16장 11/8 Annie, 기획/소품_목록.md v04.4),
   cloth_02 startColors 4(정령 만들기에서 한 번 고르는 색, 캔버스 1-2 v69: 카키·크림·살구·흙).
+  같은 v7 안 고침(11/10 개발 기획): cloth_02 material.hex #B5A576 → #C0A475(startColors 첫 색 = 둥둥 정령 v06 기본색). 시작 색은 palette가 아니라 props에 둔다.
 - props.json v4(11/4): 둥실 나침반·큰 팔레트(hand_03·hand_04) → 몽실 구름 float_02(150km)·꼬마 열기구 float_03(200km),
   베레모 hat_01 tint(색 바꾸기, 견본은 palette.json body), cloth_02 이름 '여행복'(화면 글 원칙: '일체형' 같은 설명 없음).
   props.json v3(11/3): 정령 슬롯 9개(hat·face·cloth·shoe·hand·bag·pet·float·effect), 기획/소품_목록.md v04.1.
@@ -53,7 +54,7 @@ MATERIAL = {
     'hat_04': ('bamboo_hat', '#E4AE5D'),
     'hat_05': ('silla_crown', '#D6A24C'),
     'cloth_01': ('work_apron', '#B79B78'),
-    'cloth_02': ('travel_vest', '#B5A576'),
+    'cloth_02': ('travel_vest', '#C0A475'),  # 11/10 개발 기획: 시작 색 카키(Codex v05·v06 기본색)와 같게, v07 #B5A576 대신
     'shoe_01': ('brown_shoes', '#B18B67'),
 }
 # 소품별로 따로 납품된 회색조(11/4 Codex 베레모 회색조 v07): 기준 밝기 192, 갈색 선은 가중치 혼합으로 지킴(식은 layout_v07.json)
@@ -76,7 +77,7 @@ COLOR_VARIANTS = {k: [(c, SW[c], w) for c, w in v] for k, v in {
 VARIANT_STEM = {'shoe_01': '신발'}
 COLOR_VARIANT_PRICE = 100
 # 기본 옷 시작 색(16장 11/8 Annie, 캔버스 1-2 v69): 정령 만들기에서 한 번 고름, 첫 색이 기본.
-# 카키는 Codex v05 기본색(props material.hex #B5A576은 Codex v07 값이라 다름, 개발 기획 확인 대기), 나머지는 몸 색 견본 값
+# 카키는 Codex v05·v06 기본색이고 material.hex도 같은 값(11/10 개발 기획), 나머지는 몸 색 견본 값
 START_COLORS = {'cloth_02': [('카키', '#C0A475'), ('크림', SW['크림']), ('살구', SW['살구']), ('흙', SW['흙'])]}
 
 
@@ -211,6 +212,7 @@ def build_props():
     for bid, colors in START_COLORS.items():
         assert base[bid]['unlock']['kind'] == 'default', f'시작 색은 기본 소품만: {bid}'
         base[bid]['startColors'] = [{'name': n, 'hex': h} for n, h in colors]
+        assert base[bid]['material']['hex'] == colors[0][1], f'기본 색(material.hex) = 시작 첫 색: {bid}'
     for bid, colors in COLOR_VARIANTS.items():
         assert bid in MATERIAL, f'색을 바꿀 수 없는 소품: {bid}'
         for n, (cname, hexv, word) in enumerate(colors, 1):
