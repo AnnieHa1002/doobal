@@ -30,7 +30,7 @@ const _photoShare = 0.55;
 
 /// 화집 그림 탭의 일기 (UI 명세 10장, 16장 11/2): 얻은 그림을 최신순으로 붙인 여행 일기장.
 /// 달이 바뀌면 머리줄, 항목 하나 = 사진 + 메모, 사진과 메모는 항목마다 좌우를 번갈아 둔다.
-/// 재방문도 그날 새 항목이다. 항목을 누르면 [onOpen](그림 상세, 명소 id)
+/// 재방문도 그날 새 항목이다. 항목을 누르면 [onOpen](그림 크게 보기, 명소 id)
 List<Widget> diarySlivers(
   BuildContext context,
   List<DiaryEntry> entries, {

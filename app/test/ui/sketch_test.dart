@@ -4,7 +4,7 @@ import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/album/album_widgets.dart';
-import 'package:doobal/ui/album/painting_detail_screen.dart';
+import 'package:doobal/ui/album/painting_viewer.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/common/frame_style.dart';
@@ -418,7 +418,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('눌러서 상세: 큰 그림, "첫 그림 · 첫 여행 짐 꾸러미", 받은 날짜만', (tester) async {
+    testWidgets('누르면 크게 보기: 나무 액자의 첫 그림, 화면 글 없음, 닫으면 화집', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.arriveAtSketch);
       await _openAlbum(tester, e);
@@ -426,27 +426,19 @@ void main() {
 
       await tester.tap(_cell(sketchId));
       await transition(tester);
-      await settle(
-          tester, () => find.byKey(const ValueKey('detail-first-pack')).evaluate().isNotEmpty);
+      await settle(tester, () => find.byType(PaintingViewer).evaluate().isNotEmpty);
 
-      expect(find.byType(PaintingDetailScreen), findsOneWidget);
-      final detail = find.byKey(const ValueKey('detail-first-pack'));
-      expect(detail, findsOneWidget);
-      expect(_packIn(detail), findsOneWidget);
-      final framed = tester.widget<FramedPainting>(detail);
+      final big = find.byKey(const ValueKey('viewer-painting-$sketchId'));
+      expect(big, findsOneWidget);
+      expect(_packIn(big), findsOneWidget);
+      final framed = tester.widget<FramedPainting>(find.descendant(of: big, matching: find.byType(FramedPainting)));
       expect((framed.firstPack, framed.frame, framed.thickness), (true, Frame.wood, 12));
-      expect(find.text('첫 그림 · 첫 여행 짐 꾸러미'), findsOneWidget);
-      expect(find.text('11월 18일'), findsOneWidget);
-      expect(find.byKey(const ValueKey('detail-painting')), findsNothing);
-      for (final f in Frame.values) {
-        expect(find.text(frameLabel(f)), findsNothing);
-      }
+      expect(find.text('첫 그림 · 첫 여행 짐 꾸러미'), findsNothing);
       expect(find.textContaining('번째 방문'), findsNothing);
-      expect(find.textContaining('km'), findsNothing);
 
-      await tester.tap(find.byTooltip('뒤로'));
+      await tester.tap(find.byTooltip('닫기'));
       await transition(tester);
-      expect(find.byType(PaintingDetailScreen), findsNothing);
+      expect(find.byType(PaintingViewer), findsNothing);
       await end(tester, e);
     });
 

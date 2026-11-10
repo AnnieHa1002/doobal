@@ -6,7 +6,7 @@ import 'package:doobal/main.dart';
 import 'package:doobal/ui/album/album_diary.dart';
 import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/album/album_widgets.dart';
-import 'package:doobal/ui/album/painting_detail_screen.dart';
+import 'package:doobal/ui/album/painting_viewer.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/common/framed_painting.dart';
 import 'package:doobal/ui/common/item_cell.dart';
@@ -171,16 +171,18 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('항목을 누르면 그 명소의 그림 상세', (tester) async {
+    testWidgets('항목을 누르면 그 명소의 그림 크게 보기: 일기 순서로 넘기고, 다시 간 명소는 한 번만', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => seedDiary(e));
       await _openAlbum(tester, e, height: 3000, all: false);
 
       await tester.tap(entry('j-c'));
       await transition(tester);
-      await settle(tester, () => find.byType(PaintingDetailScreen).evaluate().isNotEmpty);
-      expect(tester.widget<PaintingDetailScreen>(find.byType(PaintingDetailScreen)).landmarkId,
-          'kr002');
+      await settle(tester, () => find.byType(PaintingViewer).evaluate().isNotEmpty);
+      final viewer = tester.widget<PaintingViewer>(find.byType(PaintingViewer));
+      final ids = [for (final b in viewer.items) b.landmark.id];
+      expect(ids[viewer.initialIndex], 'kr002');
+      expect(ids.toSet(), hasLength(ids.length));
       await end(tester, e);
     });
 
@@ -339,10 +341,9 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('얻은 그림을 누르면 그림 상세: 이름, 시도 시군구 · 지형, 액자, 방문 기록', (tester) async {
+    testWidgets('얻은 그림을 누르면 그 그림의 크게 보기(지금 액자): 격자 순서로 넘기고, 닫으면 화집', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
-        // UTC 11-17 16:00 = 한국 11-18 01:00
         await e.insertArrival('j1', 'kr001', DateTime.utc(2026, 11, 17, 16), km: 12.34);
         await e.insertArrival('j2', 'kr001', DateTime.utc(2026, 11, 25, 3),
             visitNo: 2, prevFrame: Frame.wood, frame: Frame.gold, km: 61.5);
@@ -350,25 +351,22 @@ void main() {
       });
       await _openAlbum(tester, e);
       await settle(tester, () => _cell('kr001').evaluate().isNotEmpty);
+      final cells = _cellIds(tester);
+      expect(cells, ['kr001', 'kr002']);
 
       await tester.tap(_cell('kr001'));
       await transition(tester);
-      await settle(tester, () => find.text('1번째 방문 · 12.3 km · 11월 18일').evaluate().isNotEmpty);
+      await settle(tester, () => find.byType(PaintingViewer).evaluate().isNotEmpty);
+      final viewer = tester.widget<PaintingViewer>(find.byType(PaintingViewer));
+      expect([for (final b in viewer.items) b.landmark.id], cells);
+      expect(viewer.items[viewer.initialIndex].landmark.id, 'kr001');
+      expect(viewer.items[viewer.initialIndex].frame, Frame.gold);
+      // 화면 글 없음: 방문 기록·이름 줄은 없다 (16장 11/10, 상세 화면을 뺐다)
+      expect(find.textContaining('번째 방문'), findsNothing);
 
-      expect(find.byType(PaintingDetailScreen), findsOneWidget);
-      expect(find.text('경복궁'), findsOneWidget);
-      expect(find.text('서울특별시 종로구 · 도시'), findsOneWidget);
-      expect(find.text('금 액자'), findsOneWidget);
-      expect(find.text('1번째 방문 · 12.3 km · 11월 18일'), findsOneWidget);
-      expect(find.text('2번째 방문 · 61.5 km · 11월 25일'), findsOneWidget);
-      // 다른 명소의 방문은 섞이지 않는다
-      expect(find.textContaining('3.0 km'), findsNothing);
-      final big = tester.widget<FramedPainting>(find.byKey(const ValueKey('detail-painting')));
-      expect((big.landmark!.id, big.frame, big.thickness), ('kr001', Frame.gold, 12));
-
-      await tester.tap(find.byTooltip('뒤로'));
+      await tester.tap(find.byTooltip('닫기'));
       await transition(tester);
-      expect(find.byType(PaintingDetailScreen), findsNothing);
+      expect(find.byType(PaintingViewer), findsNothing);
       expect(find.byType(AlbumScreen), findsOneWidget);
       await end(tester, e);
     });

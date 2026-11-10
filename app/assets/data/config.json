@@ -492,6 +492,12 @@
   "maxChars": 1000000
  },
  "ui": {
+  "bigView": {
+   "approx": true,
+   "maxZoom": 2,
+   "savedToastSec": 1.5,
+   "note": "그림 크게 보기(16장 11/10): 두 손가락 확대 상한(2배 가안), 저장 뒤 ‘저장했어요’ 시간"
+  },
   "fontPt": {
    "min": 11,
    "body": 15,

@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 예약한 알림(N5 등)이 휴대폰을 껐다 켠 뒤에도 남게 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- 그림 크게 보기의 저장(gal): 안드로이드 10 이하에서만 필요 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
 
     <application
         android:label="두발"

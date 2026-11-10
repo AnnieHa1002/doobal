@@ -14,7 +14,7 @@ import '../common/palette.dart';
 import 'album_diary.dart';
 import 'album_stamps.dart';
 import 'album_widgets.dart';
-import 'painting_detail_screen.dart';
+import 'painting_viewer.dart';
 
 /// 그림 탭에 얻은 그림이 첫 그림뿐이거나 없을 때 격자 아래에 붙이는 한 줄
 const albumFirstOnlyHint = '걸어서 명소에 닿으면 여기에 걸려요';
@@ -151,7 +151,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
           SliverToBoxAdapter(
             child: _ViewSwitch(diary: _diary, onSelect: (d) => setState(() => _diary = d)),
           ),
-          if (_diary) ..._diarySlivers() else ..._paintingSlivers(owned, landmarks),
+          if (_diary) ..._diarySlivers(owned) else ..._paintingSlivers(owned, landmarks),
         ] else if (_tab == 1)
           _propSliver()
         else
@@ -174,14 +174,21 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     );
   }
 
-  void _openDetail(String id) => Navigator.of(context)
-      .push(MaterialPageRoute<void>(builder: (_) => PaintingDetailScreen(landmarkId: id)));
+  /// 그림 크게 보기 (16장 11/10): 지금 보기(일기·전체)의 순서로 넘긴다. [order]는 그 순서의 명소 id
+  void _openViewer(Map<String, OwnedPaintingView> owned, List<String> order, String id) {
+    final ids = [for (final i in {...order}) if (owned.containsKey(i)) i];
+    final at = ids.indexOf(id);
+    if (at < 0) return;
+    openPaintingViewer(context, [for (final i in ids) BigPainting.owned(owned[i]!)], at);
+  }
 
-  /// 그림 탭의 일기: 도착마다 한 항목, 최근이 위 (읽는 동안은 비워 둔다)
-  List<Widget> _diarySlivers() {
+  /// 그림 탭의 일기: 도착마다 한 항목, 최근이 위 (읽는 동안은 비워 둔다). 크게 보기는 다시 간 명소를
+  /// 한 번만 (처음 나온 자리에서) 넘긴다
+  List<Widget> _diarySlivers(Map<String, OwnedPaintingView> owned) {
     final entries = ref.watch(diaryProvider).value;
     if (entries == null) return const [SliverToBoxAdapter()];
-    return diarySlivers(context, entries, onOpen: _openDetail);
+    final order = [for (final e in entries) e.dest.id];
+    return diarySlivers(context, entries, onOpen: (id) => _openViewer(owned, order, id));
   }
 
   /// 그림 탭의 전체: 권역 칩과 얻은 그림 3열 (첫 그림이 맨 앞, 명소는 landmarks.json 순서).
@@ -221,7 +228,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
               p,
               key: ValueKey('cell-$id'),
               isNew: _newIds.contains(id),
-              onTap: () => _openDetail(id),
+              onTap: () => _openViewer(owned, [for (final c in cells) c.landmark.id], id),
             );
           },
         ),

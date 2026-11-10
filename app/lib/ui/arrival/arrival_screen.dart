@@ -14,6 +14,7 @@ import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/frame_style.dart';
+import '../album/painting_viewer.dart';
 import '../common/framed_painting.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
@@ -240,6 +241,24 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
     );
   }
 
+  /// 그림을 누르면 그림 크게 보기 (16장 11/10, 도착은 한 장만)
+  Widget _openBigOnTap(ArrivalView v, Widget painting) => Semantics(
+        button: true,
+        label: '그림 크게 보기',
+        child: GestureDetector(
+          key: const ValueKey('arrival-open-big'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => openPaintingViewer(context, [
+            BigPainting(
+              landmark: v.dest,
+              frame: v.isFirstPack ? Frame.wood : v.newFrame,
+              isFirstPack: v.isFirstPack,
+            ),
+          ], 0),
+          child: painting,
+        ),
+      );
+
   /// 그림은 번지며 나타나고(투명 → 불투명, 흐림 → 또렷), 끝나면 액자와 이름이 나타난다
   Widget _paintingAndFrame(ArrivalView v) {
     final firstPack = v.isFirstPack;
@@ -260,7 +279,7 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 300),
-                child: AspectRatio(
+                child: _openBigOnTap(v, AspectRatio(
                   aspectRatio: 4 / 3,
                   child: Stack(
                     fit: StackFit.expand,
@@ -293,7 +312,7 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
                         ),
                     ],
                   ),
-                ),
+                )),
               ),
             ),
             if (!firstPack) ...[

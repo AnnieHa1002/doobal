@@ -52,10 +52,13 @@ class FrameBorder extends StatelessWidget {
 /// 명소 수채화. [label]이 있으면 아래에 이름을 붙인다.
 /// 부모를 꽉 채운다
 class PaintingFace extends StatelessWidget {
-  const PaintingFace({super.key, required this.landmark, this.label});
+  const PaintingFace({super.key, required this.landmark, this.label, this.fullSize = false});
 
   final Landmark landmark;
   final String? label;
+
+  /// 원본 크기(1536)로 읽는다. 크게 보기에서 확대해도 덜 흐리게. 아니면 화면에 그리는 크기만큼만 읽는다
+  final bool fullSize;
 
   @override
   Widget build(BuildContext context) {
@@ -80,8 +83,9 @@ class PaintingFace extends StatelessWidget {
                   child: Image.asset(
                     'assets/paintings/${landmark.painting}.webp',
                     fit: BoxFit.contain,
-                    cacheWidth:
-                        (box.maxWidth * MediaQuery.devicePixelRatioOf(context))
+                    cacheWidth: fullSize
+                        ? 1536
+                        : (box.maxWidth * MediaQuery.devicePixelRatioOf(context))
                             .ceil()
                             .clamp(1, 1536),
                     semanticLabel: landmark.note == null
@@ -156,12 +160,14 @@ class FramedPainting extends StatelessWidget {
     required Frame this.frame,
     this.thickness = 6,
     this.label,
+    this.fullSize = false,
   }) : firstPack = false;
 
   const FramedPainting.empty({super.key, this.thickness = 6})
     : landmark = null,
       frame = null,
       label = null,
+      fullSize = false,
       firstPack = false;
 
   /// 첫 그림은 등급이 없어서 늘 나무 액자다
@@ -169,6 +175,7 @@ class FramedPainting extends StatelessWidget {
     : landmark = null,
       frame = Frame.wood,
       label = null,
+      fullSize = false,
       firstPack = true;
 
   final Landmark? landmark;
@@ -176,6 +183,9 @@ class FramedPainting extends StatelessWidget {
   final double thickness;
   final String? label;
   final bool firstPack;
+
+  /// 그림을 원본 크기로 읽는다 ([PaintingFace.fullSize])
+  final bool fullSize;
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +200,7 @@ class FramedPainting extends StatelessWidget {
               ? const FirstPackFace()
               : l == null
               ? const ColoredBox(color: Palette.paper)
-              : PaintingFace(landmark: l, label: label),
+              : PaintingFace(landmark: l, label: label, fullSize: fullSize),
         ),
         FrameBorder(
           color: f == null ? Palette.card : frameColors[f]!,

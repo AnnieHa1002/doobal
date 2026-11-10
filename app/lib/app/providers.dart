@@ -139,7 +139,7 @@ final appSettingsOpenerProvider =
 /// 그 창은 요청을 다시 부르면 (두 번 거부하기 전까지) 다시 뜬다
 final stepFixOpensSettingsProvider = Provider<bool>((ref) => Platform.isIOS);
 
-/// 그림 공유 시트 (share_plus)
+/// 그림 공유 시트 (share_plus). 11/10 그림 상세 화면을 빼서 지금은 부르는 곳이 없다 (공유를 둘지 기획 답 대기)
 final paintingSharerProvider =
     Provider<PaintingSharer>((ref) => const SharePlusPaintingSharer());
 
@@ -402,13 +402,6 @@ final ownedBadgesProvider = FutureProvider.autoDispose<Map<String, DateTime>>((r
   return svc.ownedBadges();
 });
 
-/// 그림 하나의 방문 기록 (그림 상세)
-final visitsProvider =
-    FutureProvider.autoDispose.family<List<VisitView>, String>((ref, landmarkId) async {
-  final svc = await ref.watch(syncServiceProvider.future);
-  await ref.watch(snapshotProvider.future);
-  return svc.visits(landmarkId);
-});
 
 /// 방명록 기회 하나 (쓰기 화면, 도착 화면의 방명록 쓰기 버튼). 열려 있지 않으면 null.
 /// 글을 쓴 뒤에는 invalidate 해서 다시 읽는다

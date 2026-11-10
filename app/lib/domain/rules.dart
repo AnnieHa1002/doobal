@@ -220,6 +220,8 @@ class Rules {
     required this.arrivalProbeSec,
     required this.mapFirstViewMinLandmarks,
     required this.mapFirstViewMargin,
+    required this.bigViewMaxZoom,
+    required this.bigViewSavedToastSec,
     required this.backupMinIntervalMin,
     required this.backupMaxChars,
     required this.allowedSourcesIos,
@@ -451,6 +453,11 @@ class Rules {
   final int mapFirstViewMinLandmarks;
   final double mapFirstViewMargin;
 
+  /// 그림 크게 보기(16장 11/10): 두 손가락 확대 상한 배율(config ui.bigView.maxZoom, 가안 2)과
+  /// 저장 뒤 ‘저장했어요’가 떠 있는 시간(초, ui.bigView.savedToastSec)
+  final double bigViewMaxZoom;
+  final double bigViewSavedToastSec;
+
   /// 자동 백업은 마지막 백업 뒤 이 시간(분) 안에는 다시 하지 않는다 (config backup.minIntervalMin).
   /// 백업 문자열(base64)의 글자 수 상한은 서버 문서 한도(1MiB)에서 필드 이름 같은 여유를 뺀 값이다
   /// (config backup.maxChars)
@@ -497,6 +504,7 @@ class Rules {
     final events = j['events'] as Map<String, dynamic>;
     final firstView = (j['map'] as Map<String, dynamic>)['firstView'] as Map<String, dynamic>;
     final hud = j['hud'] as Map<String, dynamic>;
+    final bigView = (j['ui'] as Map<String, dynamic>)['bigView'] as Map<String, dynamic>;
     final walk = j['walk'] as Map<String, dynamic>;
     final sources = j['allowedSources'] as Map<String, dynamic>;
     final companions = j['companions'] as Map<String, dynamic>;
@@ -687,6 +695,8 @@ class Rules {
       arrivalProbeSec: walk['arrivalProbeSec'] as int,
       mapFirstViewMinLandmarks: firstView['minLandmarks'] as int,
       mapFirstViewMargin: _d(firstView['margin']),
+      bigViewMaxZoom: _d(bigView['maxZoom']),
+      bigViewSavedToastSec: _d(bigView['savedToastSec']),
       backupMinIntervalMin: backup['minIntervalMin'] as int,
       backupMaxChars: backup['maxChars'] as int,
       allowedSourcesIos: (sources['ios'] as List).cast<String>(),

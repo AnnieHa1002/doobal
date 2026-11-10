@@ -17,11 +17,13 @@ String paintingShareText(OwnedPaintingView p) => p.isFirstPack
 
 final _badFileChars = RegExp(r'[\\/:*?"<>|]');
 
-/// 공유할 파일 이름: 명소 이름, 첫 그림은 `첫 그림`. 파일 이름에 못 쓰는 글자는 `_`로 바꾼다
-String paintingShareFileName(OwnedPaintingView p) {
-  final name = p.isFirstPack ? firstPackLabel : p.landmark.name;
-  return '${name.replaceAll(_badFileChars, '_')}.png';
-}
+/// 그림 파일 이름(확장자 없이): 명소 이름, 첫 그림은 `첫 그림`. 파일 이름에 못 쓰는 글자는 `_`로 바꾼다
+String paintingFileStem({required bool isFirstPack, required String landmarkName}) =>
+    (isFirstPack ? firstPackLabel : landmarkName).replaceAll(_badFileChars, '_');
+
+/// 공유할 파일 이름: [paintingFileStem] + `.png`
+String paintingShareFileName(OwnedPaintingView p) =>
+    '${paintingFileStem(isFirstPack: p.isFirstPack, landmarkName: p.landmark.name)}.png';
 
 /// [key]를 단 RepaintBoundary가 그린 것을 PNG 바이트로 만든다. 아직 그려지지 않았으면 null
 Future<Uint8List?> capturePng(GlobalKey key, {double pixelRatio = sharePixelRatio}) async {

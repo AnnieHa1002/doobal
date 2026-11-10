@@ -3,6 +3,7 @@ import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/route.dart';
 import 'package:doobal/main.dart';
+import 'package:doobal/ui/album/painting_viewer.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/common/framed_painting.dart';
@@ -200,6 +201,27 @@ void main() {
       expect(find.text('경복궁'), findsNWidgets(2));
       expect(find.descendant(of: find.byType(PaintingFace), matching: find.text('경복궁')),
           findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('그림을 누르면 그 그림 한 장만 크게 보기 (지금 액자), 닫으면 도착 화면 (16장 11/10)', (tester) async {
+      final handle = tester.ensureSemantics();
+      final e = UiEnv();
+      await e.seed(tester, () => e.insertArrival('j1', 'kr001', _day, frame: Frame.silver));
+      await _openArrival(tester, e, 'j1');
+      await _afterAnimation(tester);
+      // 단추 이름 + 그림 이름(경복궁)
+      expect(find.bySemanticsLabel(RegExp('^그림 크게 보기')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('arrival-open-big')));
+      await settle(tester, () => find.byType(PaintingViewer).evaluate().isNotEmpty);
+      final viewer = tester.widget<PaintingViewer>(find.byType(PaintingViewer));
+      expect(viewer.items.map((b) => (b.landmark.id, b.frame, b.isFirstPack)), [('kr001', Frame.silver, false)]);
+
+      await tester.tap(find.byKey(const ValueKey('viewer-close')));
+      await settle(tester, () => find.byType(PaintingViewer).evaluate().isEmpty);
+      expect(find.byType(ArrivalScreen), findsOneWidget);
+      handle.dispose();
       await end(tester, e);
     });
 

@@ -1,9 +1,11 @@
+import 'package:doobal/app/painting_saver_provider.dart';
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/app_settings_opener.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/live_steps.dart';
 import 'package:doobal/data/notifier.dart';
+import 'package:doobal/data/painting_saver.dart';
 import 'package:doobal/data/painting_sharer.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/data/walk_notice.dart';
@@ -98,6 +100,9 @@ class UiEnv {
   /// 앱이 공유 시트에 올린 그림 (실제로는 열지 않는다)
   final sharer = FakePaintingSharer();
 
+  /// 크게 보기에서 사진첩에 저장한 그림 (실제로는 저장하지 않는다)
+  final saver = FakePaintingSaver();
+
   List<Override> get overrides => [
         rulesProvider.overrideWith((ref) => appRules),
         landmarksProvider.overrideWith((ref) => appLandmarks),
@@ -113,6 +118,7 @@ class UiEnv {
         systemNotifierProvider.overrideWithValue(notifier),
         appSettingsOpenerProvider.overrideWithValue(appSettings),
         paintingSharerProvider.overrideWithValue(sharer),
+        paintingSaverProvider.overrideWithValue(saver),
         campThemeProvider.overrideWith((ref) => campTheme),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),

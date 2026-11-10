@@ -15,7 +15,7 @@ import 'package:doobal/domain/shop.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/album/album_screen.dart';
-import 'package:doobal/ui/album/painting_detail_screen.dart';
+import 'package:doobal/ui/album/painting_viewer.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/common/confirm_sheet.dart';
 import 'package:doobal/ui/common/toast.dart';
@@ -495,33 +495,25 @@ void main() {
       await end(tester, e);
     });
 
-    _scaleCases('그림 상세', (tester, fit) async {
+    _scaleCases('그림 크게 보기', (tester, fit) async {
       final e = UiEnv();
-      await e.seed(tester, () async {
-        await e.insertArrival('j1', 'kr002', DateTime.utc(2026, 11, 10), km: 5);
-        await e.insertArrival('j2', 'kr002', DateTime.utc(2026, 11, 12),
-            visitNo: 2, prevFrame: Frame.wood, frame: Frame.silver, km: 25);
-        await e.insertArrival('j3', 'kr002', DateTime.utc(2026, 11, 14),
-            visitNo: 3, prevFrame: Frame.silver, frame: Frame.gold, km: 1234.5);
-      });
-      await openOnTop(tester, e, const PaintingDetailScreen(landmarkId: 'kr002'),
+      await e.seed(tester);
+      final kr002 = landmarks.firstWhere((l) => l.id == 'kr002');
+      await openOnTop(
+          tester,
+          e,
+          PaintingViewer(items: [
+            BigPainting(landmark: kr002, frame: Frame.gold),
+            const BigPainting(landmark: firstPackLandmark, frame: Frame.wood, isFirstPack: true),
+          ]),
           width: fit.width,
           height: fit.height,
-          ready: () => _key('detail-painting').evaluate().isNotEmpty);
+          ready: () => _key('viewer-painting-kr002').evaluate().isNotEmpty);
       await settle(tester, () => false, tries: 6);
-      fit.check('그림 상세');
-      await end(tester, e);
-    });
-
-    _scaleCases('첫 그림 상세', (tester, fit) async {
-      final e = UiEnv();
-      await e.seed(tester, e.arriveAtSketch);
-      await openOnTop(tester, e, const PaintingDetailScreen(landmarkId: sketchId),
-          width: fit.width,
-          height: fit.height,
-          ready: () => _key('detail-first-pack').evaluate().isNotEmpty);
-      await settle(tester, () => false, tries: 6);
-      fit.check('첫 그림 상세');
+      fit.check('그림 크게 보기');
+      await tester.tap(_key('viewer-save'));
+      await settle(tester, () => _key('viewer-toast').evaluate().isNotEmpty, tries: 80);
+      fit.check('저장했어요');
       await end(tester, e);
     });
   });
