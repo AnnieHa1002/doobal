@@ -145,7 +145,7 @@
    "status": "mvp",
    "material": {
     "catalogId": "travel_vest",
-    "hex": "#B5A576"
+    "hex": "#C0A475"
    },
    "startColors": [
     {
@@ -161,8 +161,8 @@
      "hex": "#F5C9A3"
     },
     {
-     "name": "흙",
-     "hex": "#C4A07C"
+     "name": "라벤더",
+     "hex": "#D3C6E6"
     }
    ]
   },
