@@ -36,7 +36,7 @@ app/                Flutter 앱 (패키지 doobal, 번들 ID com.annieha.doobal)
   assets/rive/      Rive 시험 파일
 functions/          Firebase Cloud Functions (에뮬레이터 시험까지, 앱은 에뮬레이터로 연결(11/9), 실제 프로젝트 doobal-47236 배포 전. 실행법은 functions/README.md)
 data/               명소 CSV, build_static.py, build_events.py, geocode_landmarks.py
-tools/              clean_assets.py (에셋 정리)
+tools/              clean_assets.py (에셋 정리), check_secrets.py (키·토큰 검사)
 ```
 
 ## 기술 스택 (확정)
@@ -57,6 +57,15 @@ tools/              clean_assets.py (에셋 정리)
 - 숫자(거리·걸음·일정)는 계산해서 말하고, 추정이면 추정이라고 밝힌다.
 - 화면 이름은 프로토타입 이름을 쓴다: 쉼터, 걷는 중, 걷기 기록, 길 위 만남, 지도, 도착, 방명록, 화집, 나의 정보, 꾸미기.
 - 답과 주석은 한국어, 짧게, 결론 먼저.
+
+## 비밀 값 (키·토큰·인증서): 어떤 경우에도 리포에 올리지 않는다 (11/11 Annie)
+
+- 올리지 않는 것: 실제 Firebase 설정(`firebase_options.dart`·`google-services.json`·`GoogleService-Info.plist`), API 키(Google·카카오·AdMob 등), 서비스 계정 JSON, 서명 키·인증서(`*.jks`·`key.properties`·`*.p8`·`*.p12`), `.env`·`functions/.env.<프로젝트 id>`, 토큰·비밀번호. 리포가 private이어도, 앱에 들어가는 공개용 키여도 같다. 이 파일들은 `.gitignore`에 있다.
+- 넣는 법: 앱은 빌드 때 `--dart-define-from-file=app/secrets.json`(무시 목록)으로 받고, 안드로이드·iOS 설정에 들어갈 키는 `local.properties`·`Secrets.xcconfig`(무시 목록)에서 읽는다. 함수 비밀은 Firebase Secret Manager(`firebase functions:secrets:set`)나 `functions/.env.<프로젝트 id>`(무시 목록). 원본은 Annie의 비밀번호 관리자에 두고 Drive·문서·채팅에 적지 않는다.
+- 가짜 값: 에뮬레이터·시험용만 리포에 둔다. 값에 `Demo`·`Fake`·`EmulatorOnly` 같은 말을 넣고 `tools/check_secrets.py`의 `FAKE`에 적는다.
+- 검사: 커밋 전 `python3 tools/check_secrets.py`, push 전 `python3 tools/check_secrets.py --range origin/main..HEAD`. 1로 끝나면 커밋·push하지 않고 Annie에게 알린다. 무시 목록을 줄이거나 검사 규칙·`FAKE`를 느슨하게 하려면 먼저 묻는다.
+- 키 값은 채팅·커밋 메시지·문서·로그에 적지 않는다. 보여야 하면 앞 몇 글자만.
+- 새어 나갔으면: 바로 Annie에게 알린다. 폐기·재발급은 콘솔에서 Annie가 하고, 기록 정리(force push)는 Annie와 정한 뒤에만 한다.
 
 ## 정적 데이터
 

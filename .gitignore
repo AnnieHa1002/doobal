@@ -26,10 +26,14 @@ app/android/key.properties
 firebase-debug.log*
 functions/node_modules/
 functions/lib/
-# 앱 설정 파일은 공개 리포로 바꿀 때 다시 판단 (지금은 private 기준으로 커밋해도 됨)
-# app/lib/firebase_options.dart
-# app/ios/Runner/GoogleService-Info.plist
-# app/android/app/google-services.json
+# 실제 프로젝트 설정은 키가 들어 있어 어떤 경우에도 올리지 않는다 (11/11 Annie, CLAUDE.md '비밀 값')
+firebase_options.dart
+GoogleService-Info.plist
+google-services.json
+.runtimeconfig.json
+*service-account*.json
+*service_account*.json
+*adminsdk*.json
 
 # Python (data/, tools/)
 __pycache__/
@@ -38,9 +42,21 @@ __pycache__/
 data/*_new.csv
 geocode_report.txt
 
-# 비밀 값
+# 비밀 값 (키·토큰·인증서). 에뮬레이터 가짜 값 파일만 예외
 .env
 *.env
+.env.*
+!functions/.env.demo-doobal
+secrets.json
+secrets.*.json
+*.secrets.json
+Secrets.xcconfig
+secrets.properties
+*.p8
+*.p12
+*.pem
+*.mobileprovision
+*.cer
 
 # 세션 워크트리
 .claude/worktrees/
