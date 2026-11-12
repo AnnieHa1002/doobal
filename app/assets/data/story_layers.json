@@ -226,5 +226,10 @@
    "effects": [],
    "giftInBackplate": true
   }
- ]
+ ],
+ "playerResize": {
+  "pending": true,
+  "rule": "11/10 개발 기획(계약 v0.3): 둥둥 정령은 동행 키의 0.75. 장면마다 정령 scale = (그 장면 동행 보이는 키 × 0.75) ÷ 768, 발 자리(foot)는 그림자 자리로 그대로 두고 몸은 floatHeight 0.15만큼 위. 장면별 동행 키는 이야기 그림 v02 backplate에서 재야 함(디자인 기획·Codex). 그전까지 scale·bodyVisibleHeight는 v2 값 그대로",
+  "view": "back(뒷면 떠 있기 = float_back 1키)"
+ }
 }

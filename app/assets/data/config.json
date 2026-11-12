@@ -1,6 +1,6 @@
 {
- "version": 11,
- "changes": "v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
+ "version": 12,
+ "changes": "v12 (11/10 개발 기획): character.facing fall·sit 삭제(둥둥 정령), character.float 새로(정령 키 = 동행 × 0.75·떠 있는 높이 0.15·화면 키 가안 344/259px, T5 전까지 pending), anim.file spirit_float.json, album.bigView 새로(그림 크게 보기 2배·저장 토스트 1.5초). v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
  "gait": {
   "walkMaxSpm": 130,
   "runMinSpm": 140,
@@ -412,11 +412,10 @@
    "arrival": "front",
    "walking": "side",
    "running": "side",
-   "fall": "side",
-   "sit": "side",
    "departMoment": "back",
    "splash": "back",
-   "viewScenery": "back"
+   "viewScenery": "back",
+   "note": "11/10 둥둥 정령(16장 11/9): 넘어지기·앉기 뺌(fall·sit 키 삭제). walking·running은 같은 이동 옆(move_side), 밤 쉼터 자기는 정면(sleep_front)"
   },
   "canvas": {
    "sizePx": [
@@ -454,14 +453,35 @@
     "taps": 5,
     "holdSec": 2
    },
-   "note": "쉼터·꾸미기에서 정령 몸을 누르면 행복(머리·배 누르기 동작 그대로), 3초 안에 5번이면 2초 화남 뒤 기본. 화면 글 없음 / 11/5 캔버스: 누르면 기쁨 1초",
+   "note": "쉼터·꾸미기에서 정령 몸을 누르면 행복(머리·배 누르기 동작 그대로), 3초 안에 5번이면 2초 화남 뒤 기본. 화면 글 없음 / 11/5 캔버스: 누르면 기쁨 1초 / 11/10 둥둥 정령: 머리 누르기 → press_head, 배 누르기 → press_belly, 화남 → angry_front, 기쁨 1초는 joy_front",
    "happySec": 1
   },
   "anim": {
    "mode": "cutout",
-   "file": "spirit_cutout.json",
+   "file": "spirit_float.json",
    "pending": true,
-   "note": "11/6 컷아웃: 조각(머리·몸통·팔·다리·옷) + 클립 14개, 소품 조각은 기준점에. 계약은 개발기획/정령_시트_계약.md v0.2. spirit_cutout.json 납품·성능 확인 전까지 앱은 Rive v25 그대로"
+   "note": "11/9 둥둥 정령: 조각 12(head·torso(발 포함)·팔 2 × 3방향) + 자기 그림 1, 클립 10. 계약 개발기획/정령_시트_계약.md v0.3. Codex v06 납품·Annie 동작별 승인 전까지 앱은 Rive v25 그대로. (이전 11/6 컷아웃 18조각·클립 14는 대체됨)"
+  },
+  "float": {
+   "approx": true,
+   "pending": true,
+   "file": "spirit_float.json",
+   "scaleToCompanion": 0.75,
+   "floatHeight": 0.15,
+   "companionCanvasHeightPx": 653,
+   "screenHeightPx": {
+    "portrait": 344,
+    "landscape": 259
+   },
+   "liftPx": {
+    "portrait": 52,
+    "landscape": 39
+   },
+   "shadow": {
+    "file": null,
+    "from": "spirit_float.json shadow(가로 폭·세로 폭·떠 있을 때 크기 비), 앱이 타원으로 그림"
+   },
+   "note": "11/10 개발 기획, 계약 v0.3. 정령 키 = 동행 키 × 0.75(16장 11/9), 동행 그림은 그대로. 동행 키는 1024 캔버스 약 653(= 768 × 0.85, boats 규칙 80~90%의 가운데, 추정) → Codex v06 qa/with_companions.png로 다시 잼. 화면 키 = 540 × 0.85 × 0.75 ≈ 344px(약 115pt), 가로 406 × 0.85 × 0.75 ≈ 259px. 떠 있는 높이 = 화면 키 × 0.15(그림자는 땅 = 지금 발 자리). T5에서 이 값으로 바꿀 때 canvas.screenHeightPx·scene.characterHeightPx·camp_wide character를 같이 옮기고 이 블록의 pending을 뺌. 그전까지 Rive v25는 canvas 값 그대로"
   }
  },
  "notifications": {
@@ -580,5 +600,16 @@
   "stampLineSec": 4,
   "approx": true,
   "note": "이정표 카드·도장 줄 보이는 시간(리포 HudMetrics 임시값)"
+ },
+ "album": {
+  "bigView": {
+   "approx": true,
+   "maxZoom": 2.0,
+   "pageInAlbumOnly": true,
+   "closeSwipeDown": true,
+   "landscape": false,
+   "savedToastSec": 1.5,
+   "note": "16장 11/10 그림 크게 보기·저장: 화집(일기·전체)·도착에서 그림을 누르면 액자째 화면 가득, 글 없음. 두 손가락 1~2배(2배 가안), 좌우 넘기기는 화집 안에서만(같은 보기 순서), 도착은 한 장. 아래로 밀거나 뒤로 가면 닫힘. 왼쪽 위 저장 아이콘 → 기기 사진에 저장 + 토스트 ‘저장했어요’ 1.5초. 화집 그림 상세 시트는 없음(16장 11/10)"
+  }
  }
 }

@@ -194,6 +194,24 @@ for obj in camp_doc['objects']:
 if camp_doc['drag']['farParallax'] != config['rest']['drag']['farParallax']:
     err("farParallax: camp_wide.json ≠ config")
 
+# 둥둥 정령(계약 v0.3, 16장 11/9): 넘어지기·앉기 방향 키 없음, 키 = 동행 × 0.75, 화면 키·lift가 식과 맞음
+fl = config['character'].get('float')
+for k in ('fall', 'sit'):
+    if k in config['character']['facing']:
+        err(f"character.facing {k}: 둥둥 정령에서 뺀 동작")
+if fl:
+    if not 0.6 <= fl['scaleToCompanion'] <= 0.9:
+        err(f"character.float scaleToCompanion {fl['scaleToCompanion']}가 0.6~0.9 밖")
+    for o, base in (('portrait', 540), ('landscape', 406)):
+        want = round(base * fl['companionCanvasHeightPx'] / config['character']['canvas']['heightPx'] * fl['scaleToCompanion'])
+        if abs(fl['screenHeightPx'][o] - want) > 1:
+            err(f"character.float screenHeightPx.{o} {fl['screenHeightPx'][o]} ≠ 동행 키 × 비율 {want}")
+        if abs(fl['liftPx'][o] - round(fl['screenHeightPx'][o] * fl['floatHeight'])) > 1:
+            err(f"character.float liftPx.{o}가 화면 키 × floatHeight와 다름")
+    cf = load('themes/camp_wide.json').get('characterFloat')
+    if cf and abs(cf['footY'] - (camp_doc['character']['y'] + camp_doc['character']['heightPt'])) > 0.5:
+        err("camp_wide characterFloat.footY가 지금 정령 발 자리와 다름(그림자는 땅 그대로)")
+
 for w in warns:
     print('경고:', w)
 for e in errors:
