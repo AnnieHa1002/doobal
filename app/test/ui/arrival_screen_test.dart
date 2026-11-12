@@ -225,6 +225,21 @@ void main() {
       await end(tester, e);
     });
 
+    testWidgets('카드 맨 아래에 AI 표기 ‘AI 그림 · 손 보정’ (명소·첫 그림 모두, 캔버스 3-2)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.insertArrival('j1', 'kr001', _day));
+      await _openArrival(tester, e, 'j1');
+      await _afterAnimation(tester);
+      final note = find.byKey(const ValueKey('arrival-ai-note'));
+      expect(find.descendant(of: find.byKey(const ValueKey('arrival-card')), matching: note), findsOneWidget);
+      expect(tester.widget<Text>(note).data, 'AI 그림 · 손 보정');
+      expect(tester.widget<Text>(note).style!.fontSize, 11);
+      // 카드 안 맨 아래 줄
+      final card = tester.getRect(find.byKey(const ValueKey('arrival-card')));
+      expect(card.bottom - tester.getRect(note).bottom, lessThan(24));
+      await end(tester, e);
+    });
+
     testWidgets('값을 못 읽으면 안내 한 줄', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
