@@ -3,22 +3,11 @@ import 'package:flutter/foundation.dart';
 /// 앱에 넣은 글꼴의 저작권 고지와 SIL OFL 1.1 전문.
 /// 설정 → 오픈소스 라이선스(showLicensePage)에 패키지 라이선스와 함께 나온다.
 const fontLicenses = {
-  'Pretendard': _pretendardLicense,
+  'Noto Sans KR': _notoSansKrLicense,
 };
 
-/// Pretendard 1.3.x 배포본의 LICENSE 그대로 (github.com/orioncactus/pretendard, 저작권 줄 + OFL 1.1 전문)
-const _pretendardLicense = r'''Copyright (c) 2021, Kil Hyung-jin (https://github.com/orioncactus/pretendard),
-with Reserved Font Name 'Pretendard'.
-
-Copyright 2014-2021 Adobe (http://www.adobe.com/),
-with Reserved Font Name 'Source'.
-Source is a trademark of Adobe in the United States and/or other countries.
-
-Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter),
-with Reserved Font Name 'Inter'.
-
-Copyright 2021 The M+ FONTS Project Authors (https://github.com/coz-m/MPLUS_FONTS),
-with Reserved Font Name 'M PLUS 1'.
+/// Noto Sans KR 배포본의 OFL.txt 그대로 (google/fonts ofl/notosanskr, 저작권 줄 + OFL 1.1 전문)
+const _notoSansKrLicense = r'''Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
