@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'palette.dart';
 
-/// 앱 글꼴 (11/4 Pretendard 하나): 제목·숫자·버튼·딱지·이름표·본문 모두. 굵기는 400·600·700
-const bodyFont = 'Pretendard';
+/// 앱 글꼴 (11/12 Noto Sans KR 하나, 이전 Pretendard): 제목·숫자·버튼·딱지·이름표·본문 모두. 굵기는 400·600·700
+const bodyFont = 'Noto Sans KR';
 
 /// 동그라미 안 첫 글자처럼 칸 크기가 정해져 글자를 따라 커질 수 없는 곳의 글자 배율 상한.
 /// 휴대폰 글자 크기를 키워도 이런 자리의 글자만 1.3배에서 멈춘다 (그 밖의 글자에는 상한이 없다)

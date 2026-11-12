@@ -1,10 +1,12 @@
-"""앱 글꼴(Pretendard 3굵기)을 자주 쓰는 글자만 남겨 줄인다.
+"""앱 글꼴(Noto Sans KR 3굵기)을 가변 글꼴에서 굵기별로 뽑고, 자주 쓰는 글자만 남겨 줄인다.
 
     python -m venv .venv && .venv/bin/pip install fonttools
     .venv/bin/python tools/subset_fonts.py <원본 폴더> app/assets/fonts
 
-- 원본 TTF: Drive Assets/05_UI_화면/fonts(Pretendard-Regular·SemiBold·Bold).
-  원본 폴더에 없는 글꼴은 건너뛴다 (일부만 다시 만들 때).
+- 원본: google/fonts 리포 ofl/notosanskr의 NotoSansKR[wght].ttf (가변 글꼴, OFL 1.1).
+  굵기 400·600·700을 고정 글꼴로 뽑아 NotoSansKR-Regular·SemiBold·Bold.ttf로 쓴다.
+- 이름은 'Noto Sans KR' 그대로 둔다. 이 글꼴의 예약 이름(Reserved Font Name)은 'Source'라
+  줄인 판에 Noto Sans KR 이름을 써도 된다 (OFL.txt 첫 줄).
 - 남기는 글자: 영문·숫자·기호, 자주 쓰는 한글 2,350자(KS X 1001), 한글 자모,
   그리고 앱 코드(app/lib)와 데이터(app/assets/data)에 실제로 쓰인 글자 전부.
   빠진 글자(드문 한글 등)는 휴대폰 기본 글꼴로 보인다.
@@ -16,10 +18,13 @@ import sys
 
 from fontTools import subset
 from fontTools.ttLib import TTFont
+from fontTools.varLib import instancer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.normpath(os.path.join(HERE, '..', 'app'))
-FONTS = ['Pretendard-Regular.ttf', 'Pretendard-SemiBold.ttf', 'Pretendard-Bold.ttf']
+SOURCE = 'NotoSansKR[wght].ttf'
+# 출력 파일 이름 → 굵기(wght)
+FONTS = {'NotoSansKR-Regular.ttf': 400, 'NotoSansKR-SemiBold.ttf': 600, 'NotoSansKR-Bold.ttf': 700}
 
 # 영문·숫자·기호, 라틴-1 기호(· × 등), 일반 문장 부호(… ‘’ “” 등), 화살표, 한중일 기호(「」 등), 한글 자모
 RANGES = [(0x20, 0x7E), (0xA0, 0xFF), (0x2010, 0x2027), (0x2030, 0x203B), (0x2190, 0x2199),
@@ -57,11 +62,9 @@ def main(src, dst):
     for lo, hi in RANGES:
         codepoints.update(range(lo, hi + 1))
     os.makedirs(dst, exist_ok=True)
-    for name in FONTS:
-        if not os.path.exists(os.path.join(src, name)):
-            print(f'{name}: 원본 폴더에 없어 건너뜀')
-            continue
-        font = TTFont(os.path.join(src, name))
+    for name, weight in FONTS.items():
+        font = instancer.instantiateVariableFont(
+            TTFont(os.path.join(src, SOURCE)), {'wght': weight}, updateFontNames=True)
         have = set(font.getBestCmap())
         opts = subset.Options()
         opts.layout_features = ['*']
