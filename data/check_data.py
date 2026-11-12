@@ -194,23 +194,42 @@ for obj in camp_doc['objects']:
 if camp_doc['drag']['farParallax'] != config['rest']['drag']['farParallax']:
     err("farParallax: camp_wide.json ≠ config")
 
-# 둥둥 정령(계약 v0.3, 16장 11/9): 넘어지기·앉기 방향 키 없음, 키 = 동행 × 0.75, 화면 키·lift가 식과 맞음
+# Rive 정령(계약 v0.4, 16장 11/11·11/13): 자세 번호 0~6, 화면별 자세가 표 안에 있음, 얼굴 번호 범위, 키 = 동행 × 0.75
+rv = config['character'].get('rive')
+if rv:
+    poses = rv['poses']
+    if sorted(poses.values()) != list(range(7)):
+        err("character.rive.poses가 0~6 일곱 개가 아님")
+    for scr, pose in rv['screens'].items():
+        if pose != 'restSwap' and pose not in poses:
+            err(f"character.rive.screens {scr}: 모르는 자세 {pose}")
+    for pose in rv['restSwap']['poses'] + [rv['restSwap']['night']]:
+        if pose not in poses:
+            err(f"character.rive.restSwap: 모르는 자세 {pose}")
+    if set(rv['triggers'].values()) != {'greet', 'joy', 'tapHead', 'tapBelly', 'angry', 'resetMotion'}:
+        err("character.rive.triggers가 v32 트리거 6개와 다름")
 fl = config['character'].get('float')
-for k in ('fall', 'sit'):
-    if k in config['character']['facing']:
-        err(f"character.facing {k}: 둥둥 정령에서 뺀 동작")
-if fl:
-    if not 0.6 <= fl['scaleToCompanion'] <= 0.9:
-        err(f"character.float scaleToCompanion {fl['scaleToCompanion']}가 0.6~0.9 밖")
-    for o, base in (('portrait', 540), ('landscape', 406)):
-        want = round(base * fl['companionCanvasHeightPx'] / config['character']['canvas']['heightPx'] * fl['scaleToCompanion'])
-        if abs(fl['screenHeightPx'][o] - want) > 1:
-            err(f"character.float screenHeightPx.{o} {fl['screenHeightPx'][o]} ≠ 동행 키 × 비율 {want}")
-        if abs(fl['liftPx'][o] - round(fl['screenHeightPx'][o] * fl['floatHeight'])) > 1:
-            err(f"character.float liftPx.{o}가 화면 키 × floatHeight와 다름")
-    cf = load('themes/camp_wide.json').get('characterFloat')
-    if cf and abs(cf['footY'] - (camp_doc['character']['y'] + camp_doc['character']['heightPt'])) > 0.5:
-        err("camp_wide characterFloat.footY가 지금 정령 발 자리와 다름(그림자는 땅 그대로)")
+if fl and not 0.6 <= fl['scaleToCompanion'] <= 0.9:
+    err(f"character.float scaleToCompanion {fl['scaleToCompanion']}가 0.6~0.9 밖")
+pal = load('palette.json').get('customPartsV33')
+if pal:
+    want = {'eyes': (1, 6), 'brows': (0, 6), 'nose': (0, 7), 'mouth': (1, 8)}
+    for part, (lo, hi) in want.items():
+        nums = [x['rive'] for x in pal[part]]
+        if nums != list(range(lo, hi + 1)):
+            err(f"palette customPartsV33 {part}: rive 번호 {nums} ≠ {lo}~{hi}")
+    for part, pid in pal['defaultFace'].items():
+        if pid not in {x['id'] for x in pal[part]}:
+            err(f"palette customPartsV33 defaultFace {part} {pid} 없음")
+    if [x['rive'] for x in pal['expressions']] != list(range(6)):
+        err("palette customPartsV33 expressions가 0~5가 아님")
+riv_props = [x for x in props_doc['props'] if 'rive' in x]
+seen = {}
+for x in riv_props:
+    key = (x['rive']['choice'], x['rive']['n'])
+    base = x.get('variantOf', x['id'])
+    if seen.setdefault(key, base) != base:
+        err(f"props {x['id']}: Rive 번호 {key}가 {seen[key]}와 겹침")
 
 for w in warns:
     print('경고:', w)

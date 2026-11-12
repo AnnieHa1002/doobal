@@ -1,5 +1,5 @@
 {
- "version": 7,
+ "version": 8,
  "source": "v7(11/6 개발 기획): 사용자 소품 색 고르기(tintProps) 폐기 → 색 소품은 props.json material·colorVariants(고정 색). 배 색은 boats.json recolor가 body 견본을 씀. body.baseHex #FFF5E2는 리포 개발 실측(11/4, 회색조 몸 납품 전까지). v6(11/4 개발 기획): 몸 색 견본 10 확정(11/4 Annie, 수채 파스텔 6 + 자연색 4, 기본 크림), 기준 밝기 가안 200(v21 회색조 몸 실측 뒤 고침), 채도 막대 없음. 베레모는 기본 #A4502F + 같은 10색. v5(11/4 개발 기획): 얼굴을 Codex 리그 v24 승인본으로 — 눈 5·눈썹 5(없음 포함)·코 7(없음 포함)·입 6, 표정 6(기본·행복·울먹임·놀람·졸림·화남) + 자동 깜빡임. 저장값은 문자 id, Rive View model에는 rive 정수로 넘김(README 'Doobal_Spirit_Face_Rig_v24', noseStyle은 0 고리·3 없음 순서 주의). 베레모 색 바꾸기 tintProps. v4(11/03): 얼굴 5종·표정 4. v3(11/03): 몸 색 1채널, hair·skin은 legacy",
  "formula": "출력 RGB = 견본 RGB × L ÷ base, L = 0.299R + 0.587G + 0.114B, 알파 그대로",
  "rive": {
@@ -430,5 +430,203 @@
    "camp_back_grass",
    "camp_front_grass"
   ]
+ },
+ "customPartsV33": {
+  "pending": true,
+  "note": "16장 11/13 얼굴·잠들기 Rive v32 확정, 계약 v0.4 4장. 저장값 = 이 id, Rive 뷰 모델 WardrobeColors의 eye·brow·nose·mouth에는 rive 번호. T5에서 customParts(v24)를 이것으로 바꾸고 옛 모습의 얼굴 값은 기본 얼굴로 초기화(출시 전). 칸 이름은 화면에 안 씀(그림만)",
+  "eyes": [
+   {
+    "id": "e1",
+    "rive": 1
+   },
+   {
+    "id": "e2",
+    "rive": 2
+   },
+   {
+    "id": "e3",
+    "rive": 3
+   },
+   {
+    "id": "e4",
+    "rive": 4
+   },
+   {
+    "id": "e5",
+    "rive": 5
+   },
+   {
+    "id": "e6",
+    "rive": 6
+   }
+  ],
+  "brows": [
+   {
+    "id": "none",
+    "rive": 0
+   },
+   {
+    "id": "b1",
+    "rive": 1
+   },
+   {
+    "id": "b2",
+    "rive": 2
+   },
+   {
+    "id": "b3",
+    "rive": 3
+   },
+   {
+    "id": "b4",
+    "rive": 4
+   },
+   {
+    "id": "b5",
+    "rive": 5
+   },
+   {
+    "id": "b6",
+    "rive": 6
+   }
+  ],
+  "nose": [
+   {
+    "id": "none",
+    "rive": 0
+   },
+   {
+    "id": "n1",
+    "rive": 1
+   },
+   {
+    "id": "n2",
+    "rive": 2
+   },
+   {
+    "id": "n3",
+    "rive": 3
+   },
+   {
+    "id": "n4",
+    "rive": 4
+   },
+   {
+    "id": "n5",
+    "rive": 5
+   },
+   {
+    "id": "n6",
+    "rive": 6
+   },
+   {
+    "id": "n7",
+    "rive": 7
+   }
+  ],
+  "mouth": [
+   {
+    "id": "m1",
+    "rive": 1
+   },
+   {
+    "id": "m2",
+    "rive": 2
+   },
+   {
+    "id": "m3",
+    "rive": 3
+   },
+   {
+    "id": "m4",
+    "rive": 4
+   },
+   {
+    "id": "m5",
+    "rive": 5
+   },
+   {
+    "id": "m6",
+    "rive": 6
+   },
+   {
+    "id": "m7",
+    "rive": 7
+   },
+   {
+    "id": "m8",
+    "rive": 8
+   }
+  ],
+  "defaultFace": {
+   "eyes": "e1",
+   "brows": "b1",
+   "nose": "n7",
+   "mouth": "m7"
+  },
+  "expressions": [
+   {
+    "id": "default",
+    "name": "기본",
+    "rive": 0
+   },
+   {
+    "id": "happy",
+    "name": "행복",
+    "rive": 1
+   },
+   {
+    "id": "surprised",
+    "name": "놀람",
+    "rive": 2
+   },
+   {
+    "id": "teary",
+    "name": "울먹임",
+    "rive": 3
+   },
+   {
+    "id": "sleepy",
+    "name": "졸림",
+    "rive": 4
+   },
+   {
+    "id": "angry",
+    "name": "화남",
+    "rive": 5
+   }
+  ],
+  "expressionNote": "v24와 번호가 다름: 놀람 2·울먹임 3(v24는 울먹임 2·놀람 3). 졸림을 끝낼 때 expr 0. 화남 빠직·잠들기 자는 눈은 riv가 그림",
+  "expressionTriggers": {
+   "happy": [
+    "arrival",
+    "paintingGet",
+    "tap",
+    "praise"
+   ],
+   "surprised": [
+    "companionMeet",
+    "newProp",
+    "regionComplete"
+   ],
+   "teary": [
+    "storyMoving",
+    "returnAfterLongRest"
+   ],
+   "sleepy": [
+    "nightRest",
+    "sleep"
+   ],
+   "angry": [
+    "rapidTap"
+   ]
+  },
+  "holdSec": {
+   "approx": true,
+   "happy": 1,
+   "surprised": 2,
+   "teary": 3,
+   "angry": 2
+  }
  }
 }

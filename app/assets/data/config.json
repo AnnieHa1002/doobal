@@ -1,6 +1,6 @@
 {
- "version": 13,
- "changes": "v13 (11/13 개발 기획): album.bigView share false·saveWith gal(공유 보류). 글꼴 Noto Sans KR은 PR #2가 ui.font를 바꿈. v12 (11/10 개발 기획): character.facing fall·sit 삭제(둥둥 정령), character.float 새로(정령 키 = 동행 × 0.75·떠 있는 높이 0.15·화면 키 가안 344/259px, T5 전까지 pending), anim.file spirit_float.json, album.bigView 새로(그림 크게 보기 2배·저장 토스트 1.5초). v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
+ "version": 14,
+ "changes": "v14 (11/13 개발 기획): character.rive 새로(spirit_v33.riv·Spirit·WardrobeController·WardrobeColors, 자세 7, 화면별 자세, 쉼터 떠 있기↔앉기 20~40초·밤 잠들기, 트리거 6, 누름 가안), anim mode rive, float는 키 규칙만. v13 (11/13 개발 기획): album.bigView share false·saveWith gal(공유 보류). 글꼴 Noto Sans KR은 PR #2가 ui.font를 바꿈. v12 (11/10 개발 기획): character.facing fall·sit 삭제(둥둥 정령), character.float 새로(정령 키 = 동행 × 0.75·떠 있는 높이 0.15·화면 키 가안 344/259px, T5 전까지 pending), anim.file spirit_float.json, album.bigView 새로(그림 크게 보기 2배·저장 토스트 1.5초). v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
  "gait": {
   "walkMaxSpm": 130,
   "runMinSpm": 140,
@@ -415,7 +415,7 @@
    "departMoment": "back",
    "splash": "back",
    "viewScenery": "back",
-   "note": "11/10 둥둥 정령(16장 11/9): 넘어지기·앉기 뺌(fall·sit 키 삭제). walking·running은 같은 이동 옆(move_side), 밤 쉼터 자기는 정면(sleep_front)"
+   "note": "11/13: Rive 정령은 character.rive.screens(자세 번호)를 씀. 이 표는 T5 전 Rive v25용"
   },
   "canvas": {
    "sizePx": [
@@ -453,35 +453,101 @@
     "taps": 5,
     "holdSec": 2
    },
-   "note": "쉼터·꾸미기에서 정령 몸을 누르면 행복(머리·배 누르기 동작 그대로), 3초 안에 5번이면 2초 화남 뒤 기본. 화면 글 없음 / 11/5 캔버스: 누르면 기쁨 1초 / 11/10 둥둥 정령: 머리 누르기 → press_head, 배 누르기 → press_belly, 화남 → angry_front, 기쁨 1초는 joy_front",
+   "note": "쉼터·꾸미기에서 정령 몸을 누르면 행복(머리·배 누르기 동작 그대로), 3초 안에 5번이면 2초 화남 뒤 기본. 화면 글 없음 / 11/5 캔버스: 누르면 기쁨 1초 / 11/10 둥둥 정령: 머리 누르기 → press_head, 배 누르기 → press_belly, 화남 → angry_front, 기쁨 1초는 joy_front / 11/13 v33: 머리 tapHead·배 tapBelly 트리거, 연타 angry, 행복 1초는 expr 1",
    "happySec": 1
   },
   "anim": {
-   "mode": "cutout",
-   "file": "spirit_float.json",
+   "mode": "rive",
+   "file": "spirit_v33.riv",
    "pending": true,
-   "note": "11/9 둥둥 정령: 조각 12(head·torso(발 포함)·팔 2 × 3방향) + 자기 그림 1, 클립 10. 계약 개발기획/정령_시트_계약.md v0.3. Codex v06 납품·Annie 동작별 승인 전까지 앱은 Rive v25 그대로. (이전 11/6 컷아웃 18조각·클립 14는 대체됨)"
+   "note": "11/11 정령 움직임 = Rive(컷아웃·조각 + json 대체). 값은 character.rive"
   },
   "float": {
    "approx": true,
    "pending": true,
-   "file": "spirit_float.json",
    "scaleToCompanion": 0.75,
-   "floatHeight": 0.15,
    "companionCanvasHeightPx": 653,
    "screenHeightPx": {
     "portrait": 344,
     "landscape": 259
    },
-   "liftPx": {
-    "portrait": 52,
-    "landscape": 39
+   "note": "11/13 개발 기획(계약 v0.4): 떠 있기·그림자는 riv가 그림. 남은 것은 키 규칙 — 정령 키 = 동행 × 0.75(16장 11/9). 화면 키는 v33 아트보드 안 정령 키를 재서 다시 정함(지금 344/259px는 v0.3 추정값). T5 전까지 pending"
+  },
+  "rive": {
+   "pending": true,
+   "file": "spirit_v33.riv",
+   "artboard": "Spirit",
+   "artboardPx": [
+    502,
+    600
+   ],
+   "stateMachine": "WardrobeController",
+   "viewModel": "WardrobeColors",
+   "fallback": {
+    "file": "두발_표정입크기_코입간격_v32.riv",
+    "artboard": "SelectableFaceWardrobe",
+    "crop": [
+     60,
+     235,
+     502,
+     600
+    ],
+    "note": "v33 납품 전 시험용. 시험 버튼이 같은 아트보드에 있어 정령 영역만 잘라 그림"
    },
-   "shadow": {
-    "file": null,
-    "from": "spirit_float.json shadow(가로 폭·세로 폭·떠 있을 때 크기 비), 앱이 타원으로 그림"
+   "poses": {
+    "floatFront": 0,
+    "floatSide": 1,
+    "sitFront": 2,
+    "sitSide": 3,
+    "sleep": 4,
+    "floatBack": 5,
+    "moveSide": 6
    },
-   "note": "11/10 개발 기획, 계약 v0.3. 정령 키 = 동행 키 × 0.75(16장 11/9), 동행 그림은 그대로. 동행 키는 1024 캔버스 약 653(= 768 × 0.85, boats 규칙 80~90%의 가운데, 추정) → Codex v06 qa/with_companions.png로 다시 잼. 화면 키 = 540 × 0.85 × 0.75 ≈ 344px(약 115pt), 가로 406 × 0.85 × 0.75 ≈ 259px. 떠 있는 높이 = 화면 키 × 0.15(그림자는 땅 = 지금 발 자리). T5에서 이 값으로 바꿀 때 canvas.screenHeightPx·scene.characterHeightPx·camp_wide character를 같이 옮기고 이 블록의 pending을 뺌. 그전까지 Rive v25는 canvas 값 그대로"
+   "screens": {
+    "rest": "restSwap",
+    "restNight": "sleep",
+    "walking": "moveSide",
+    "walkingIdle": "floatSide",
+    "arrival": "floatFront",
+    "customize": "floatFront",
+    "maker": "floatFront",
+    "profile": "floatFront",
+    "departMoment": "floatBack",
+    "splash": "floatBack",
+    "viewScenery": "floatBack",
+    "story": "floatBack"
+   },
+   "restSwap": {
+    "approx": true,
+    "poses": [
+     "floatFront",
+     "sitFront",
+     "sitSide"
+    ],
+    "minSec": 20,
+    "maxSec": 40,
+    "noRepeat": true,
+    "night": "sleep"
+   },
+   "sideFacesLeft": true,
+   "flipSideOn": [
+    "walking",
+    "walkingIdle"
+   ],
+   "triggers": {
+    "greet": "greet",
+    "joy": "joy",
+    "tapHead": "tapHead",
+    "tapBelly": "tapBelly",
+    "angry": "angry",
+    "reset": "resetMotion"
+   },
+   "hit": {
+    "approx": true,
+    "headTopRatio": 0.45,
+    "note": "아트보드 위에서 45% 안을 누르면 tapHead, 그 아래 정령 몸은 tapBelly(가안, 폰에서 확인). 자세별 실측이 오면 바꿈"
+   },
+   "note": "계약 v0.4(16장 11/11 Rive·11/13 v32). 입력은 모두 뷰 모델 속성. 자세는 poseChoice만 바꾸면 riv가 전환(겹쳐 흐리기 금지, 같은 인스턴스 유지). T5 전까지 앱은 Rive v25 그대로"
   }
  },
  "notifications": {

@@ -11,6 +11,11 @@
   "float",
   "effect"
  ],
+ "rive": {
+  "viewModel": "WardrobeColors",
+  "riveVerified": false,
+  "note": "계약 v0.4 5장. choice 0 = 안 입음, 색 소품은 같은 번호 + 그 색 hex를 color 속성에. 효과는 Rive 밖(앱 입자)"
+ },
  "material": {
   "neutralReference": 180,
   "formula": "rgb = clamp(neutral.rgb × hex.rgb ÷ 180) 위에 고정 무늬 층",
@@ -48,7 +53,12 @@
     "blend": "weighted",
     "layout": "beret_grayscale_v07/layout_v07.json"
    },
-   "icon": "item_beret_v01"
+   "icon": "item_beret_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 1,
+    "color": "beretColor"
+   }
   },
   {
    "id": "hat_02",
@@ -63,7 +73,12 @@
     "catalogId": "feather_hat",
     "hex": "#B2815D"
    },
-   "icon": "item_feather_hat_v01"
+   "icon": "item_feather_hat_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 2,
+    "color": "featherHatColor"
+   }
   },
   {
    "id": "hat_04",
@@ -78,7 +93,12 @@
     "catalogId": "bamboo_hat",
     "hex": "#E4AE5D"
    },
-   "icon": "item_bamboo_hat_v01"
+   "icon": "item_bamboo_hat_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 3,
+    "color": "bambooHatColor"
+   }
   },
   {
    "id": "hat_05",
@@ -93,7 +113,12 @@
     "catalogId": "silla_crown",
     "hex": "#D6A24C"
    },
-   "icon": "item_silla_crown_v01"
+   "icon": "item_silla_crown_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 4,
+    "color": "sillaCrownColor"
+   }
   },
   {
    "id": "hat_11",
@@ -104,7 +129,12 @@
     "companion": "doctor"
    },
    "status": "mvp",
-   "icon": "item_round_glasses_v01"
+   "icon": "item_round_glasses_v01",
+   "rive": {
+    "choice": "faceChoice",
+    "n": 1,
+    "color": "roundGlassesColor"
+   }
   },
   {
    "id": "face_01",
@@ -115,7 +145,12 @@
     "price": 300
    },
    "status": "mvp",
-   "icon": "item_headphones_v01"
+   "icon": "item_headphones_v01",
+   "rive": {
+    "choice": "faceChoice",
+    "n": 2,
+    "color": "headphonesColor"
+   }
   },
   {
    "id": "face_02",
@@ -126,7 +161,12 @@
     "price": 300
    },
    "status": "mvp",
-   "icon": "item_earmuffs_v01"
+   "icon": "item_earmuffs_v01",
+   "rive": {
+    "choice": "faceChoice",
+    "n": 3,
+    "color": "earmuffsColor"
+   }
   },
   {
    "id": "cloth_01",
@@ -141,7 +181,12 @@
     "catalogId": "work_apron",
     "hex": "#B79B78"
    },
-   "icon": "item_work_apron_v01"
+   "icon": "item_work_apron_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 3,
+    "color": "workApronColor"
+   }
   },
   {
    "id": "cloth_02",
@@ -173,7 +218,12 @@
      "hex": "#D3C6E6"
     }
    ],
-   "icon": "item_travel_vest_khaki_v01"
+   "icon": "item_travel_vest_khaki_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 4,
+    "color": "travelVestColor"
+   }
   },
   {
    "id": "cloth_03",
@@ -184,7 +234,12 @@
     "km": 700
    },
    "status": "mvp",
-   "icon": "item_starry_cape_v01"
+   "icon": "item_starry_cape_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 2,
+    "color": "starryCapeColor"
+   }
   },
   {
    "id": "cloth_04",
@@ -195,7 +250,12 @@
     "steps": 1000000
    },
    "status": "mvp",
-   "icon": "item_gold_artist_coat_v01"
+   "icon": "item_gold_artist_coat_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 5,
+    "color": "goldArtistCoatColor"
+   }
   },
   {
    "id": "cloth_05",
@@ -206,7 +266,12 @@
     "price": 600
    },
    "status": "mvp",
-   "icon": "item_travel_cape_v01"
+   "icon": "item_travel_cape_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 1,
+    "color": "travelCapeColor"
+   }
   },
   {
    "id": "shoe_01",
@@ -220,7 +285,12 @@
     "catalogId": "brown_shoes",
     "hex": "#B18B67"
    },
-   "icon": "item_brown_shoes_v01"
+   "icon": "item_brown_shoes_v01",
+   "rive": {
+    "choice": "shoeChoice",
+    "n": 4,
+    "color": "brownShoesColor"
+   }
   },
   {
    "id": "shoe_02",
@@ -231,7 +301,12 @@
     "km": 100
    },
    "status": "mvp",
-   "icon": "item_hiking_boots_v01"
+   "icon": "item_hiking_boots_v01",
+   "rive": {
+    "choice": "shoeChoice",
+    "n": 5,
+    "color": "hikingBootsColor"
+   }
   },
   {
    "id": "shoe_04",
@@ -242,7 +317,12 @@
     "price": 300
    },
    "status": "mvp",
-   "icon": "item_green_boots_v01"
+   "icon": "item_green_boots_v01",
+   "rive": {
+    "choice": "shoeChoice",
+    "n": 1,
+    "color": "greenBootsColor"
+   }
   },
   {
    "id": "shoe_05",
@@ -253,7 +333,12 @@
     "price": 300
    },
    "status": "mvp",
-   "icon": "item_cat_slippers_v01"
+   "icon": "item_cat_slippers_v01",
+   "rive": {
+    "choice": "shoeChoice",
+    "n": 2,
+    "color": "catSlippersColor"
+   }
   },
   {
    "id": "shoe_06",
@@ -264,7 +349,12 @@
     "price": 300
    },
    "status": "mvp",
-   "icon": "item_straw_sandals_v01"
+   "icon": "item_straw_sandals_v01",
+   "rive": {
+    "choice": "shoeChoice",
+    "n": 3,
+    "color": "strawSandalsColor"
+   }
   },
   {
    "id": "hand_09",
@@ -276,7 +366,12 @@
    },
    "status": "mvp",
    "fit": "wristOverlay",
-   "icon": "item_cat_paw_mittens_v01"
+   "icon": "item_cat_paw_mittens_v01",
+   "rive": {
+    "choice": "handChoice",
+    "n": 4,
+    "color": "catPawMittensColor"
+   }
   },
   {
    "id": "hand_10",
@@ -288,7 +383,12 @@
    },
    "status": "mvp",
    "fit": "replaceArms",
-   "icon": "item_gold_wing_arms_v01"
+   "icon": "item_gold_wing_arms_v01",
+   "rive": {
+    "choice": "handChoice",
+    "n": 5,
+    "color": "goldWingArmsColor"
+   }
   },
   {
    "id": "hand_11",
@@ -300,7 +400,12 @@
    },
    "status": "mvp",
    "fit": "wristOverlay",
-   "icon": "item_wool_mittens_v01"
+   "icon": "item_wool_mittens_v01",
+   "rive": {
+    "choice": "handChoice",
+    "n": 1,
+    "color": "woolMittensColor"
+   }
   },
   {
    "id": "hand_12",
@@ -312,7 +417,12 @@
    },
    "status": "mvp",
    "fit": "replaceArms",
-   "icon": "item_bird_wings_v01"
+   "icon": "item_bird_wings_v01",
+   "rive": {
+    "choice": "handChoice",
+    "n": 2,
+    "color": "birdWingsColor"
+   }
   },
   {
    "id": "hand_13",
@@ -324,7 +434,12 @@
    },
    "status": "mvp",
    "fit": "wristOverlay",
-   "icon": "item_leaf_gloves_v01"
+   "icon": "item_leaf_gloves_v01",
+   "rive": {
+    "choice": "handChoice",
+    "n": 3,
+    "color": "leafGlovesColor"
+   }
   },
   {
    "id": "hand_01",
@@ -334,7 +449,12 @@
     "kind": "default"
    },
    "status": "mvp",
-   "icon": "item_brush_bag_v01"
+   "icon": "item_brush_bag_v01",
+   "rive": {
+    "choice": "bagChoice",
+    "n": 1,
+    "color": "brushBagColor"
+   }
   },
   {
    "id": "bag_01",
@@ -344,7 +464,12 @@
     "kind": "default"
    },
    "status": "mvp",
-   "icon": "item_art_satchel_v01"
+   "icon": "item_art_satchel_v01",
+   "rive": {
+    "choice": "bagChoice",
+    "n": 2,
+    "color": "artSatchelColor"
+   }
   },
   {
    "id": "hand_02",
@@ -355,7 +480,12 @@
     "km": 10
    },
    "status": "mvp",
-   "icon": "item_walking_stick_pack_v01"
+   "icon": "item_walking_stick_pack_v01",
+   "rive": {
+    "choice": "bagChoice",
+    "n": 5,
+    "color": "walkingStickPackColor"
+   }
   },
   {
    "id": "bag_02",
@@ -366,7 +496,12 @@
     "km": 50
    },
    "status": "mvp",
-   "icon": "item_easel_backpack_v01"
+   "icon": "item_easel_backpack_v01",
+   "rive": {
+    "choice": "bagChoice",
+    "n": 3,
+    "color": "easelBackpackColor"
+   }
   },
   {
    "id": "bag_03",
@@ -377,7 +512,12 @@
     "km": 500
    },
    "status": "mvp",
-   "icon": "item_scroll_case_v01"
+   "icon": "item_scroll_case_v01",
+   "rive": {
+    "choice": "bagChoice",
+    "n": 4,
+    "color": "scrollCaseColor"
+   }
   },
   {
    "id": "pet_01",
@@ -387,7 +527,12 @@
     "kind": "default"
    },
    "status": "mvp",
-   "icon": "item_paper_bird_v01"
+   "icon": "item_paper_bird_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 1,
+    "color": "paperBirdColor"
+   }
   },
   {
    "id": "pet_02",
@@ -398,7 +543,12 @@
     "region": "capital"
    },
    "status": "mvp",
-   "icon": "item_haechi_friend_v01"
+   "icon": "item_haechi_friend_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 2,
+    "color": "haechiFriendColor"
+   }
   },
   {
    "id": "pet_03",
@@ -409,7 +559,12 @@
     "region": "gangwon"
    },
    "status": "mvp",
-   "icon": "item_lamb_friend_v01"
+   "icon": "item_lamb_friend_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 3,
+    "color": "lambFriendColor"
+   }
   },
   {
    "id": "pet_04",
@@ -420,7 +575,12 @@
     "region": "jeju"
    },
    "status": "mvp",
-   "icon": "item_dolhareubang_friend_v01"
+   "icon": "item_dolhareubang_friend_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 4,
+    "color": "dolhareubangFriendColor"
+   }
   },
   {
    "id": "pet_05",
@@ -431,7 +591,12 @@
     "region": "ulleung"
    },
    "status": "mvp",
-   "icon": "item_gull_friend_v01"
+   "icon": "item_gull_friend_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 5,
+    "color": "gullFriendColor"
+   }
   },
   {
    "id": "hand_05",
@@ -442,7 +607,12 @@
     "region": "chungcheong"
    },
    "status": "mvp",
-   "icon": "item_lotus_leaf_float_v01"
+   "icon": "item_lotus_leaf_float_v01",
+   "rive": {
+    "choice": "floatChoice",
+    "n": 2,
+    "color": "lotusLeafFloatColor"
+   }
   },
   {
    "id": "float_02",
@@ -453,7 +623,12 @@
     "km": 150
    },
    "status": "mvp",
-   "icon": "item_float_cloud_v01"
+   "icon": "item_float_cloud_v01",
+   "rive": {
+    "choice": "floatChoice",
+    "n": 4,
+    "color": "floatCloudColor"
+   }
   },
   {
    "id": "float_03",
@@ -464,7 +639,12 @@
     "km": 200
    },
    "status": "mvp",
-   "icon": "item_float_balloon_v01"
+   "icon": "item_float_balloon_v01",
+   "rive": {
+    "choice": "floatChoice",
+    "n": 5,
+    "color": "floatBalloonColor"
+   }
   },
   {
    "id": "hat_10",
@@ -475,7 +655,12 @@
     "companion": "bright"
    },
    "status": "mvp",
-   "icon": "item_small_moon_float_v01"
+   "icon": "item_small_moon_float_v01",
+   "rive": {
+    "choice": "floatChoice",
+    "n": 3,
+    "color": "smallMoonFloatColor"
+   }
   },
   {
    "id": "float_01",
@@ -486,7 +671,12 @@
     "price": 500
    },
    "status": "mvp",
-   "icon": "item_star_lantern_v01"
+   "icon": "item_star_lantern_v01",
+   "rive": {
+    "choice": "floatChoice",
+    "n": 1,
+    "color": "starLanternColor"
+   }
   },
   {
    "id": "effect_01",
@@ -698,7 +888,12 @@
     "blend": "weighted",
     "layout": "beret_grayscale_v07/layout_v07.json"
    },
-   "icon": "item_color_beret_spring_sky_v01"
+   "icon": "item_color_beret_spring_sky_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 1,
+    "color": "beretColor"
+   }
   },
   {
    "id": "hat_01_c2",
@@ -720,7 +915,12 @@
     "blend": "weighted",
     "layout": "beret_grayscale_v07/layout_v07.json"
    },
-   "icon": "item_color_beret_night_sea_v01"
+   "icon": "item_color_beret_night_sea_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 1,
+    "color": "beretColor"
+   }
   },
   {
    "id": "hat_01_c3",
@@ -742,7 +942,12 @@
     "blend": "weighted",
     "layout": "beret_grayscale_v07/layout_v07.json"
    },
-   "icon": "item_color_beret_moss_forest_v01"
+   "icon": "item_color_beret_moss_forest_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 1,
+    "color": "beretColor"
+   }
   },
   {
    "id": "hat_02_c1",
@@ -760,7 +965,12 @@
     "catalogId": "feather_hat",
     "hex": "#7F8DB3"
    },
-   "icon": "item_color_feather_hat_dawn_v01"
+   "icon": "item_color_feather_hat_dawn_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 2,
+    "color": "featherHatColor"
+   }
   },
   {
    "id": "hat_02_c2",
@@ -778,7 +988,12 @@
     "catalogId": "feather_hat",
     "hex": "#9FAE7E"
    },
-   "icon": "item_color_feather_hat_meadow_v01"
+   "icon": "item_color_feather_hat_meadow_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 2,
+    "color": "featherHatColor"
+   }
   },
   {
    "id": "hat_02_c3",
@@ -796,7 +1011,12 @@
     "catalogId": "feather_hat",
     "hex": "#C9775A"
    },
-   "icon": "item_color_feather_hat_sunset_v01"
+   "icon": "item_color_feather_hat_sunset_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 2,
+    "color": "featherHatColor"
+   }
   },
   {
    "id": "hat_04_c1",
@@ -814,7 +1034,12 @@
     "catalogId": "bamboo_hat",
     "hex": "#C4A07C"
    },
-   "icon": "item_color_bamboo_hat_dirt_road_v01"
+   "icon": "item_color_bamboo_hat_dirt_road_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 3,
+    "color": "bambooHatColor"
+   }
   },
   {
    "id": "hat_04_c2",
@@ -832,7 +1057,12 @@
     "catalogId": "bamboo_hat",
     "hex": "#9FAE7E"
    },
-   "icon": "item_color_bamboo_hat_bamboo_v01"
+   "icon": "item_color_bamboo_hat_bamboo_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 3,
+    "color": "bambooHatColor"
+   }
   },
   {
    "id": "hat_04_c3",
@@ -850,7 +1080,12 @@
     "catalogId": "bamboo_hat",
     "hex": "#7F8DB3"
    },
-   "icon": "item_color_bamboo_hat_night_rain_v01"
+   "icon": "item_color_bamboo_hat_night_rain_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 3,
+    "color": "bambooHatColor"
+   }
   },
   {
    "id": "hat_05_c1",
@@ -868,7 +1103,12 @@
     "catalogId": "silla_crown",
     "hex": "#EFC0BE"
    },
-   "icon": "item_color_silla_crown_cherry_v01"
+   "icon": "item_color_silla_crown_cherry_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 4,
+    "color": "sillaCrownColor"
+   }
   },
   {
    "id": "hat_05_c2",
@@ -886,7 +1126,12 @@
     "catalogId": "silla_crown",
     "hex": "#BCD9E8"
    },
-   "icon": "item_color_silla_crown_frost_v01"
+   "icon": "item_color_silla_crown_frost_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 4,
+    "color": "sillaCrownColor"
+   }
   },
   {
    "id": "hat_05_c3",
@@ -904,7 +1149,12 @@
     "catalogId": "silla_crown",
     "hex": "#D3C6E6"
    },
-   "icon": "item_color_silla_crown_lilac_v01"
+   "icon": "item_color_silla_crown_lilac_v01",
+   "rive": {
+    "choice": "hatChoice",
+    "n": 4,
+    "color": "sillaCrownColor"
+   }
   },
   {
    "id": "cloth_01_c1",
@@ -922,7 +1172,12 @@
     "catalogId": "work_apron",
     "hex": "#BCD9E8"
    },
-   "icon": "item_color_work_apron_water_v01"
+   "icon": "item_color_work_apron_water_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 3,
+    "color": "workApronColor"
+   }
   },
   {
    "id": "cloth_01_c2",
@@ -940,7 +1195,12 @@
     "catalogId": "work_apron",
     "hex": "#EFC0BE"
    },
-   "icon": "item_color_work_apron_peach_v01"
+   "icon": "item_color_work_apron_peach_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 3,
+    "color": "workApronColor"
+   }
   },
   {
    "id": "cloth_01_c3",
@@ -958,7 +1218,12 @@
     "catalogId": "work_apron",
     "hex": "#CDE0AC"
    },
-   "icon": "item_color_work_apron_sprout_v01"
+   "icon": "item_color_work_apron_sprout_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 3,
+    "color": "workApronColor"
+   }
   },
   {
    "id": "cloth_02_c1",
@@ -976,7 +1241,12 @@
     "catalogId": "travel_vest",
     "hex": "#7F8DB3"
    },
-   "icon": "item_color_travel_vest_starry_night_v01"
+   "icon": "item_color_travel_vest_starry_night_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 4,
+    "color": "travelVestColor"
+   }
   },
   {
    "id": "cloth_02_c2",
@@ -994,7 +1264,12 @@
     "catalogId": "travel_vest",
     "hex": "#C9775A"
    },
-   "icon": "item_color_travel_vest_brick_road_v01"
+   "icon": "item_color_travel_vest_brick_road_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 4,
+    "color": "travelVestColor"
+   }
   },
   {
    "id": "cloth_02_c3",
@@ -1012,7 +1287,12 @@
     "catalogId": "travel_vest",
     "hex": "#9FAE7E"
    },
-   "icon": "item_color_travel_vest_forest_path_v01"
+   "icon": "item_color_travel_vest_forest_path_v01",
+   "rive": {
+    "choice": "clothChoice",
+    "n": 4,
+    "color": "travelVestColor"
+   }
   },
   {
    "id": "shoe_01_c1",
@@ -1030,7 +1310,12 @@
     "catalogId": "brown_shoes",
     "hex": "#C9775A"
    },
-   "icon": "item_color_brown_shoes_autumn_v01"
+   "icon": "item_color_brown_shoes_autumn_v01",
+   "rive": {
+    "choice": "shoeChoice",
+    "n": 4,
+    "color": "brownShoesColor"
+   }
   },
   {
    "id": "shoe_01_c2",
@@ -1048,7 +1333,12 @@
     "catalogId": "brown_shoes",
     "hex": "#7F8DB3"
    },
-   "icon": "item_color_brown_shoes_night_road_v01"
+   "icon": "item_color_brown_shoes_night_road_v01",
+   "rive": {
+    "choice": "shoeChoice",
+    "n": 4,
+    "color": "brownShoesColor"
+   }
   },
   {
    "id": "shoe_01_c3",
@@ -1066,7 +1356,12 @@
     "catalogId": "brown_shoes",
     "hex": "#9FAE7E"
    },
-   "icon": "item_color_brown_shoes_wild_grass_v01"
+   "icon": "item_color_brown_shoes_wild_grass_v01",
+   "rive": {
+    "choice": "shoeChoice",
+    "n": 4,
+    "color": "brownShoesColor"
+   }
   }
  ]
 }

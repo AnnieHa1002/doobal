@@ -148,6 +148,23 @@ VARIANT_ICON_WORDS = {
     'shoe_01': ['autumn', 'night_road', 'wild_grass'],
 }
 
+# Rive 정령(16장 11/11·11/13, 계약 v0.4): 소품 = 뷰 모델 WardrobeColors의 <slot>Choice 번호 + 색 속성.
+# 번호는 소품 아이콘 README 순서(v32에서 Choice를 1부터 차례로 입혀 뽑음, clothChoice 4 = 여행복이 인계 문서와 맞음).
+# 색 속성 이름은 영어 이름의 camelCase + Color(인계 문서 예 beretColor·travelVestColor). 둘 다 v33 inputs.md로 확인 대기(riveVerified false)
+RIVE_ORDER = {
+    'hat': ['hat_01', 'hat_02', 'hat_04', 'hat_05'],
+    'face': ['hat_11', 'face_01', 'face_02'],
+    'cloth': ['cloth_05', 'cloth_03', 'cloth_01', 'cloth_02', 'cloth_04'],
+    'shoe': ['shoe_04', 'shoe_05', 'shoe_06', 'shoe_01', 'shoe_02'],
+    'hand': ['hand_11', 'hand_12', 'hand_13', 'hand_09', 'hand_10'],
+    'bag': ['hand_01', 'bag_01', 'bag_02', 'bag_03', 'hand_02'],
+    'pet': ['pet_01', 'pet_02', 'pet_03', 'pet_04', 'pet_05'],
+    'float': ['float_01', 'hand_05', 'hat_10', 'float_02', 'float_03'],
+}
+def _camel(stem):
+    a = stem.split('_')
+    return a[0] + ''.join(w[:1].upper() + w[1:] for w in a[1:])
+
 def build_props():
     props = [
         # 모자 4 (베레모는 색 바꾸기, 11/4)
@@ -246,6 +263,16 @@ def build_props():
             b = x['variantOf']; n = int(x['id'].rsplit('_c', 1)[1])
             x['icon'] = f"item_color_{ICONS[b].replace('_khaki', '')}_{VARIANT_ICON_WORDS[b][n - 1]}_v01"
     assert all('icon' in x for x in props if x['status'] == 'mvp' and x['slot'] != 'effect'), '칸 그림 없는 소품'
+    rive = {pid: (slot, n) for slot, ids in RIVE_ORDER.items() for n, pid in enumerate(ids, 1)}
+    for x in props:
+        b = x.get('variantOf', x['id'])
+        if b in rive:
+            slot, n = rive[b]
+            assert x['slot'] == slot, f'Rive 슬롯이 다름: {x["id"]}'
+            x['rive'] = {'choice': f'{slot}Choice', 'n': n, 'color': _camel(ICONS[b].replace('_khaki', '')) + 'Color'}
+    assert len(rive) == 37 and all('rive' in x for x in props if x['status'] == 'mvp' and x['slot'] != 'effect'), 'Rive 번호 없는 소품'
+    assert rive['cloth_02'] == ('cloth', 4), '인계 문서: 여행복 = clothChoice 4'
+
     assert len({x['icon'] for x in props if 'icon' in x}) == 37 + 21, '칸 그림 이름 중복'
     ids = [x['id'] for x in props]
     assert len(ids) == len(set(ids)), 'id 중복'
@@ -263,7 +290,7 @@ def build_props():
     assert sorted(x['unlock']['km'] for x in mvp if x['unlock']['kind'] == 'distance') == [10, 25, 50, 100, 150, 200, 300, 500, 700, 1000]
     assert sum(x['status'] == 'pending' for x in props) == 12
     assert all('일체형' not in x['name'] for x in props), '화면 글 원칙: 이름에 설명을 넣지 않음'
-    dump('props.json', {'version': 8, 'slots': SLOTS,
+    dump('props.json', {'version': 8, 'slots': SLOTS, 'rive': {'viewModel': 'WardrobeColors', 'riveVerified': False, 'note': '계약 v0.4 5장. choice 0 = 안 입음, 색 소품은 같은 번호 + 그 색 hex를 color 속성에. 효과는 Rive 밖(앱 입자)'},
                         'material': {'neutralReference': 180, 'formula': 'rgb = clamp(neutral.rgb × hex.rgb ÷ 180) 위에 고정 무늬 층',
                                      'source': 'Codex 기본 소품 v07 recolor/materials_v07.json'},
                         'colorVariants': {'price': COLOR_VARIANT_PRICE, 'perBase': 3, 'bases': list(MATERIAL),
