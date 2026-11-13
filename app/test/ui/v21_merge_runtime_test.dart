@@ -64,52 +64,6 @@ void main() {
     tick(c, 160);
     expect(c.poseChoice, 6);
   });
-  test('시선은 정면·옆·앉기·이동과 반응에 유지, 잠들기에는 적용 안 함', () async {
-    final (f, c) = await load();
-    addTearDown(() {
-      c.dispose();
-      f.dispose();
-    });
-    c.wear(
-      spiritLookOf(
-        Look.initial.copyWith(
-          eyes: 'mischievous',
-          brows: 'none',
-          nose: 'none',
-          mouth: 'fangs',
-        ),
-      ),
-    );
-    c.setLook(1, -1);
-    tick(c, 1);
-    for (final n in [
-      'Gaze_Front_2',
-      'Gaze_Side_2',
-      'Gaze_Move_2',
-      'Gaze_Joy_2',
-      'Gaze_Angry_2',
-    ]) {
-      final g = c.artboard.component(n)!;
-      expect(g.x, 3);
-      expect(g.y, -2);
-      g.dispose();
-    }
-    for (final t in ['greet', 'joy', 'tapHead', 'tapBelly', 'angry']) {
-      c.instance.trigger(t)!.trigger();
-      tick(c, 180);
-      expect(
-        [
-          for (final n in ['eye', 'brow', 'nose', 'mouth'])
-            c.instance.number(n)!.value,
-        ],
-        [3, 0, 0, 3],
-      );
-    }
-    c.play(SpiritMotion.sleep);
-    tick(c, 60);
-    c.play(SpiritMotion.idle);
-    tick(c, 10);
-    expect(c.instance.number('eye')!.value, 3);
-    expect(c.instance.number('lookX')!.value, 1);
-  });
+  // 시선(Gaze_* 층)은 v21 통합본에만 있었다. v33(16장 11/13)에는 없어서 그 시험은 뺐다
+  // (setLook이 아무것도 하지 않는 것은 face_gaze_runtime_test가 본다)
 }
