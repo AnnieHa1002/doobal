@@ -135,25 +135,18 @@ SpiritLook spiritLookOf(
   final colors = <String, int>{
     for (final p in unifiedProps) p.colorField: p.argb,
   };
-  for (final p in unifiedProps) {
-    final hex = look.propColors[p.id];
-    if (hex != null)
-      colors[p.colorField] = int.parse('FF${hex.substring(1)}', radix: 16);
-  }
   for (final e in look.slots.entries) {
     final id = e.value;
     final base = baseOf[id] ?? id;
     final p = unifiedProp(base);
     if (p == null) continue;
     choices[p.slot] = p.choice;
-    if (!look.propColors.containsKey(p.id)) {
-      final color = id != base
-          ? variantColors[id]
-          : p.id == 'cloth_02'
-          ? initialClothArgb
-          : null;
-      if (color != null) colors[p.colorField] = color;
-    }
+    final color = id != base
+        ? variantColors[id]
+        : p.id == 'cloth_02'
+        ? initialClothArgb
+        : null;
+    if (color != null) colors[p.colorField] = color;
   }
   return SpiritLook(
     choices: Map.unmodifiable(choices),

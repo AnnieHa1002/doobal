@@ -826,26 +826,28 @@ void main() {
     });
   });
 
-  test('Look에 소품 색이 없다: 옛 tints 키는 읽지 않고 저장하지도 않는다', () {
+  test('Look에 소품 색이 없다: 옛 tints·propColors 키는 읽지 않고 저장하지도 않는다', () {
     final look = Look.fromJson({
       ...Look.initial.toJson(),
       'tints': {'hat_01': {'kind': 'swatch', 'i': 4}},
+      'propColors': {'hat_01': '#D276A0'},
     });
     expect(look, Look.initial);
     expect(look.toJson().containsKey('tints'), isFalse);
+    expect(look.toJson().containsKey('propColors'), isFalse);
   });
 
   group('저장 · 되돌리기', () {
-    testWidgets('소품 색 선택은 몸 색과 독립이며 저장 뒤 프로필에 남는다',(tester)async{
-      final e=UiEnv();await e.seed(tester);await _open(tester,e);
-      final oldBody=_worn(tester).bodyArgb;
-      await _tap(tester,_key('prop-color-swatch-9'));
-      expect(_worn(tester).bodyArgb,oldBody);
-      expect(_worn(tester).colors['beretColor'],0xFFC9775A);
-      await _tap(tester,find.text('저장'));await tester.pump(const Duration(milliseconds:200));
-      final saved=await tester.runAsync(()=>ProfileService(e.db).me());
-      expect(saved!.look.propColors['hat_01'],'#C9775A');
-      await end(tester,e);
+    testWidgets('소품 칸에는 색 고르기가 없다 (색은 상점 색 소품, 16장 11/4·11/13 Annie)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      for (final t in ['hat', 'cloth', 'shoe', 'bag', 'pet']) {
+        await _goTab(tester, t);
+        expect(find.text('소품 색'), findsNothing, reason: t);
+        expect(_key('prop-color-custom'), findsNothing, reason: t);
+      }
+      await end(tester, e);
     });
 
     testWidgets('저장하면 Profile.look에 JSON으로 남고 단추가 다시 꺼진다', (tester) async {

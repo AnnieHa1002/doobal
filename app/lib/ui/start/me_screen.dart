@@ -70,8 +70,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final palette = ref.watch(spiritPaletteProvider).value;
     final props = ref.watch(propsProvider).value;
     ref.watch(moderationProvider);
-    if (palette == null || props == null)
+    if (palette == null || props == null) {
       return const Scaffold(body: SizedBox.expand());
+    }
     final rules = widget.rules;
     final check = _check;
     // 기본 옷(여행복)과 시작 색

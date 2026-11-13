@@ -172,8 +172,9 @@ bool announcesProp(Prop p) =>
 /// 시작할 때 고른 여행복 색. 소품별 직접 색이 있으면 그 색이 우선이다.
 int? initialClothColor(List<Prop> props, int choice) {
   for (final p in props) {
-    if (p.id == 'cloth_02' && choice >= 1 && choice <= p.startColors.length)
+    if (p.id == 'cloth_02' && choice >= 1 && choice <= p.startColors.length) {
       return p.startColors[choice - 1].argb;
+    }
   }
   return null;
 }

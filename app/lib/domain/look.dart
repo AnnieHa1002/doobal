@@ -1,5 +1,4 @@
 import 'face_parts.dart';
-import 'unified_wardrobe.dart';
 
 export 'face_parts.dart'
     show defaultBrows, defaultEyes, defaultMouth, defaultNose;
@@ -109,8 +108,8 @@ const defaultBody = SwatchBodyColor(1);
 /// clothColor는 기본 옷(여행복)의 시작 색 번호(props.json startColors, 1부터, 16장 11/8)다. 이 키가 없는 JSON은
 /// 11/10 전에 저장된 것이라 옷 칸의 앞치마(그때 기본 옷)를 여행복으로 읽는다.
 /// 얼굴 값은 palette.json customParts의 문자 id다 (Rive 값으로는 domain/spirit_look.dart가 바꾼다).
-/// 옛 사람형 JSON은 기본 얼굴·크림으로 읽는다. 소품별 직접 색은 propColors에 추가하며,
-/// 이 키가 없는 기존 저장도 그대로 읽는다. 이전의 별개 tints 키는 읽지 않는다.
+/// 옛 사람형 JSON은 기본 얼굴·크림으로 읽는다. 소품 색은 직접 고르지 않고 색마다 따로 된 상점 소품이라
+/// (16장 11/4, 11/13 Annie: 소품 색 고르기는 빼고 합침) 옛 JSON의 tints·propColors는 읽지 않는다.
 class Look {
   const Look({
     this.eyes = defaultEyes,
@@ -120,14 +119,10 @@ class Look {
     this.body = defaultBody,
     this.clothColor = defaultClothColor,
     this.slots = defaultSlots,
-    this.propColors = const {},
   });
 
   /// 첫 실행의 기본 모습: 기본 얼굴, 크림 몸, 칸마다 기본 소품
   static const initial = Look();
-
-  /// 기본 소품 id → 직접 고른 #RRGGBB. 옛 프로필에는 없으며 기존 값은 그대로 읽는다.
-  final Map<String, String> propColors;
 
   final String eyes;
   final String brows;
@@ -148,7 +143,6 @@ class Look {
     String? mouth,
     BodyColor? body,
     int? clothColor,
-    Map<String, String>? propColors,
   }) => Look(
     eyes: canonicalFacePart('eyes', eyes ?? this.eyes),
     brows: canonicalFacePart('brows', brows ?? this.brows),
@@ -157,14 +151,14 @@ class Look {
     body: body ?? this.body,
     clothColor: clothColor ?? this.clothColor,
     slots: slots,
-    propColors: propColors ?? this.propColors,
   );
 
   /// [slot] 칸에 [propId]를 끼운 모습 (null이면 비운다). 칸 이름과 옷 비우기만 막고,
   /// 가진 소품인지는 ProfileService.saveLook이 본다
   Look withSlot(String slot, String? propId) {
-    if (!lookSlots.contains(slot))
+    if (!lookSlots.contains(slot)) {
       throw ArgumentError.value(slot, 'slot', '모르는 소품 칸');
+    }
     if (propId == null && slot == alwaysWornSlot) {
       throw ArgumentError.value(slot, 'slot', '옷은 비울 수 없다');
     }
@@ -175,20 +169,8 @@ class Look {
       mouth: mouth,
       body: body,
       clothColor: clothColor,
-      propColors: propColors,
       slots: Map.unmodifiable({
         for (final s in lookSlots) s: s == slot ? propId : slots[s],
-      }),
-    );
-  }
-
-  Look withPropColor(String id, String hex) {
-    if (unifiedProp(id) == null)
-      throw ArgumentError.value(id, 'id', '연결되지 않은 소품');
-    return copyWith(
-      propColors: Map.unmodifiable({
-        ...propColors,
-        id: checkedHex(hex).toUpperCase(),
       }),
     );
   }
@@ -200,7 +182,6 @@ class Look {
     'mouth': canonicalFacePart('mouth', mouth),
     'body': body.toJson(),
     'clothColor': clothColor,
-    if (propColors.isNotEmpty) 'propColors': propColors,
     'slots': {for (final s in lookSlots) s: slots[s]},
   };
 
@@ -226,7 +207,6 @@ class Look {
           ? defaultBody
           : BodyColor.fromJson(_map(j['body'], '몸 색')),
       clothColor: clothColor as int? ?? defaultClothColor,
-      propColors: _propColors(j['propColors']),
       slots: j.containsKey('clothColor') ? slots : _swapOldDefaultCloth(slots),
     );
   }
@@ -244,8 +224,6 @@ class Look {
           canonicalFacePart('mouth', mouth) &&
       other.body == body &&
       other.clothColor == clothColor &&
-      other.propColors.length == propColors.length &&
-      propColors.entries.every((e) => other.propColors[e.key] == e.value) &&
       lookSlots.every((s) => other.slots[s] == slots[s]);
 
   @override
@@ -256,9 +234,6 @@ class Look {
     canonicalFacePart('mouth',mouth),
     body,
     clothColor,
-    Object.hashAllUnordered(
-      propColors.entries.map((e) => Object.hash(e.key, e.value)),
-    ),
     Object.hashAll([for (final s in lookSlots) slots[s]]),
   );
 
@@ -277,8 +252,9 @@ String _part(
 ) {
   final v = j[key];
   if (v == null) return fallback;
-  if (v is! String || !parts.containsKey(canonicalFacePart(key, v)))
+  if (v is! String || !parts.containsKey(canonicalFacePart(key, v))) {
     throw FormatException('모르는 $key: $v');
+  }
   return canonicalFacePart(key, v);
 }
 
@@ -343,14 +319,3 @@ String checkedHex(dynamic v) => v is String && _hexPattern.hasMatch(v)
     ? v
     : throw FormatException('#RRGGBB가 아니다: $v');
 
-Map<String, String> _propColors(dynamic raw) {
-  if (raw is! Map) return const {};
-  return Map.unmodifiable({
-    for (final e in raw.entries)
-      if (e.key is String &&
-          unifiedProp(e.key) != null &&
-          e.value is String &&
-          _hexPattern.hasMatch(e.value))
-        e.key as String: (e.value as String).toUpperCase(),
-  });
-}

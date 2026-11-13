@@ -242,8 +242,6 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
                     ],
                     nextKm: nextKm,
                     onPick: (id) => _set(look.withSlot(_tab, id)),
-                    onColor: _set,
-                    palette: palette,
                   ),
           ),
         ),

@@ -80,13 +80,14 @@ final class SpiritController extends rive.RiveWidgetController {
       var choice = look.choices[slot] ?? 0;
       // 이전 디버그 미리보기 호출도 같은 확정 소품으로 대응한다.
       if (look.choices.isEmpty) {
-        if (slot == 'bag')
+        if (slot == 'bag') {
           choice = look.bag == 1
               ? 1
               : look.bag == 2
               ? 5
               : 0;
-        if (slot == 'cloth')
+        }
+        if (slot == 'cloth') {
           choice = look.outfit == 1
               ? 4
               : look.outfit == 2
@@ -94,6 +95,7 @@ final class SpiritController extends rive.RiveWidgetController {
               : _cape
               ? 1
               : 0;
+        }
         if (slot == 'pet') choice = look.companion == 1 ? 5 : 0;
       }
       instance.number('${slot}Choice')!.value = choice.toDouble();
@@ -206,9 +208,13 @@ final class SpiritController extends rive.RiveWidgetController {
   }
 
   /// 시선은 눈 파츠 안의 작은 이동에만 연결한다. NaN·무한대는 중앙으로 복귀한다.
+  /// v32·v33(16장 11/13)에는 시선 입력이 없어서, 파일에 없으면 아무것도 하지 않는다
   void setLook(double x, double y) {
-    instance.number('lookX')!.value = x.isFinite ? x.clamp(-1.0, 1.0) : 0;
-    instance.number('lookY')!.value = y.isFinite ? y.clamp(-1.0, 1.0) : 0;
+    final lookX = instance.number('lookX');
+    final lookY = instance.number('lookY');
+    if (lookX == null || lookY == null) return;
+    lookX.value = x.isFinite ? x.clamp(-1.0, 1.0) : 0;
+    lookY.value = y.isFinite ? y.clamp(-1.0, 1.0) : 0;
     scheduleRepaint();
   }
 

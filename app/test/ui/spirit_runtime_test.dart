@@ -75,27 +75,33 @@ void main() {
     tick(c, 150);
     expect(c.poseChoice, 6);
   });
-  test('몸과 소품 색은 각자 입력에 적용하고 반응·자세 변경 후 유지된다', () async {
+  test('몸 색과 색 소품의 색은 각자 입력에 적용하고 반응·자세 변경 후 유지된다 (소품 색은 직접 고르지 않음, 16장 11/4)', () async {
     final (f, c) = await load();
     addTearDown(() {
       c.dispose();
       f.dispose();
     });
+    // 봄하늘 베레모(하늘)와 단풍 신발(테라코타)은 기본 소품 그림에 색만 바꾼다
     final look = Look.initial
         .copyWith(body: const CustomBodyColor('#8CBBD0'))
-        .withPropColor('hat_01', '#D276A0')
-        .withSlot('shoe', 'shoe_05')
-        .withPropColor('shoe_05', '#A17CBA');
-    c.wear(spiritLookOf(look, bodyArgb: 0xff8cbbd0));
-    expect(c.instance.number('shoeChoice')!.value, 2);
-    expect(c.instance.color('beretColor')!.value.toARGB32(), 0xffd276a0);
+        .withSlot('hat', 'hat_01_c1')
+        .withSlot('shoe', 'shoe_01_c1');
+    c.wear(spiritLookOf(
+      look,
+      bodyArgb: 0xff8cbbd0,
+      baseOf: const {'hat_01_c1': 'hat_01', 'shoe_01_c1': 'shoe_01'},
+      variantColors: const {'hat_01_c1': 0xffbcd9e8, 'shoe_01_c1': 0xffc9775a},
+    ));
+    expect(c.instance.number('hatChoice')!.value, 1);
+    expect(c.instance.number('shoeChoice')!.value, 4);
+    expect(c.instance.color('beretColor')!.value.toARGB32(), 0xffbcd9e8);
     expect(c.instance.color('bodyColor')!.value.toARGB32(), 0xff8cbbd0);
     c.press(SpiritPress.belly);
     tick(c, 80);
     c.play(SpiritMotion.sleep);
     tick(c, 80);
-    expect(c.instance.color('catSlippersColor')!.value.toARGB32(), 0xffa17cba);
-    expect(c.instance.color('beretColor')!.value.toARGB32(), 0xffd276a0);
+    expect(c.instance.color('brownShoesColor')!.value.toARGB32(), 0xffc9775a);
+    expect(c.instance.color('beretColor')!.value.toARGB32(), 0xffbcd9e8);
   });
   test('꾸미기 동작 버튼은 같은 인사도 다시 재생하고 잠들기에서 기본으로 돌아간다', () async {
     final (f, c) = await load();

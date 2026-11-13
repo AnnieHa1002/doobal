@@ -1,4 +1,3 @@
-import 'dart:ui';
 
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/spirit_look.dart';
@@ -18,7 +17,9 @@ Future<(rive.File, SpiritController)> load() async {
 }
 
 void tick(SpiritController c, int n) {
-  for (var i = 0; i < n; i++) c.advance(1 / 60);
+  for (var i = 0; i < n; i++) {
+    c.advance(1 / 60);
+  }
 }
 
 void main() {
@@ -45,15 +46,14 @@ void main() {
       f.dispose();
     });
     for (final p in unifiedProps) {
-      final l = Look.initial
-          .withSlot(p.slot, p.id)
-          .withPropColor(p.id, '#D276A0');
+      final l = Look.initial.withSlot(p.slot, p.id);
       c.wear(spiritLookOf(l));
       for (final pose in [0, 1, 2, 3, 4, 5, 6]) {
         c.instance.number('poseChoice')!.value = pose.toDouble();
         tick(c, 1);
         expect(c.instance.number('${p.slot}Choice')!.value, p.choice);
-        expect(c.instance.color(p.colorField)!.value, const Color(0xffd276a0));
+        // 소품 색은 직접 고르지 않아서 Rive에 넣는 기본색 그대로 (16장 11/4)
+        expect(c.instance.color(p.colorField)!.value.toARGB32(), p.argb);
       }
     }
     c.play(SpiritMotion.idle, direction: 2);

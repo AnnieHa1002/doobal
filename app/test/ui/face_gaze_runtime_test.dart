@@ -31,8 +31,7 @@ void main() {
       f.dispose();
     });
     final l = Look.initial
-        .copyWith(eyes: 'sparkle', brows: 'none', nose: 'none', mouth: 'fangs')
-        .withPropColor('hat_01', '#D276A0');
+        .copyWith(eyes: 'sparkle', brows: 'none', nose: 'none', mouth: 'fangs');
     c.wear(spiritLookOf(l));
     expect(
       [
