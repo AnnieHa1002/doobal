@@ -1,7 +1,7 @@
 {
- "version": 5,
- "asOf": "2026-11-06",
- "source": "v5(11/6 개발 기획): 짧은 이름(11/4 Annie, 럭_상점.md v2.3), 색 소품은 props.json colorVariants에서 빌드(색 정해지면 tab prop, 100 럭), 상점 배 6척 산 뒤 색 바꾸기(boats.json recolor, 무료). v4(11/4 개발 기획): 배 9척(11/3 Annie) — 상점 배 6(5,000·5,000·5,000·8,000·8,000·12,000럭, 값은 베타 뒤 조정), 나룻배 800·작은 돛단배 1,200 상품 없앰. 보상 배 3은 상품이 아니라 boats.json unlock. 탭 화면 이름 tabLabels(UI 명세 15장). v3(11/3): 상품 19개, 기획/럭_상점.md v2.1·소품_목록.md v04.1",
+ "version": 6,
+ "asOf": "2026-11-13",
+ "source": "v6(11/13 개발 기획, 16장 11/13 Annie): 여행 효과 2종에 desc(상점 칸 이름 아래 한 줄, 소품·배·꾸밈 효과에는 없음), 순풍은 물감 길 기준. v5(11/6 개발 기획): 짧은 이름(11/4 Annie, 럭_상점.md v2.3), 색 소품은 props.json colorVariants에서 빌드(색 정해지면 tab prop, 100 럭), 상점 배 6척 산 뒤 색 바꾸기(boats.json recolor, 무료). v4(11/4 개발 기획): 배 9척(11/3 Annie) — 상점 배 6(5,000·5,000·5,000·8,000·8,000·12,000럭, 값은 베타 뒤 조정), 나룻배 800·작은 돛단배 1,200 상품 없앰. 보상 배 3은 상품이 아니라 boats.json unlock. 탭 화면 이름 tabLabels(UI 명세 15장). v3(11/3): 상품 19개, 기획/럭_상점.md v2.1·소품_목록.md v04.1",
  "currencyName": "럭",
  "priceFormat": "{n} 럭",
  "tabs": [
@@ -32,7 +32,8 @@
    },
    "dailyLimit": 2,
    "maxHold": 9,
-   "requiresJourney": true
+   "requiresJourney": true,
+   "desc": "목적지와의 거리가 1km 줄어요"
   },
   {
    "id": "fx_tailwind",
@@ -46,7 +47,8 @@
    },
    "dailyLimit": 1,
    "maxHold": 9,
-   "requiresJourney": true
+   "requiresJourney": true,
+   "desc": "이번 물감 길에서 20% 더 멀리 가요"
   },
   {
    "id": "face_01",
@@ -242,5 +244,6 @@
   "from": "props.json colorVariants",
   "tab": "prop",
   "note": "props.json에 variantOf가 있는 소품을 상점 소품 탭에 '기본 소품 바로 뒤' 순서로 띄움. 기본 소품(requires)을 아직 못 얻었으면 숨김. shop.json에는 따로 적지 않음(값은 props unlock.price 하나)"
- }
+ },
+ "descNote": "desc는 여행 효과만(16장 11/13 Annie, 14장 설명 글 없음 원칙의 예외). 숫자는 effect 값과 같아야 함(check_data)"
 }

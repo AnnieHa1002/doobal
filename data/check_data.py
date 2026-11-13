@@ -231,6 +231,26 @@ for x in riv_props:
     if seen.setdefault(key, base) != base:
         err(f"props {x['id']}: Rive 번호 {key}가 {seen[key]}와 겹침")
 
+# 같은 값이 두 파일에 있는 곳(개발 계획 7장, 11/13 개발 기획: 하나로 합치지 않고 같은지만 본다. 앱이 읽는 쪽은 config)
+if shop.get('priceFormat') != config['coins']['format']['amount']:
+    err(f"shop priceFormat {shop.get('priceFormat')} ≠ config coins.format.amount")
+for it in shop['items']:
+    if it.get('effect') and it.get('maxHold') != config['shop']['maxHoldPerItem']:
+        err(f"shop {it['id']}: maxHold {it.get('maxHold')} ≠ config shop.maxHoldPerItem")
+    if it.get('desc') and not it.get('effect'):
+        err(f"shop {it['id']}: 설명 줄(desc)은 여행 효과만(16장 11/13)")
+    if it.get('effect') and not it.get('desc'):
+        err(f"shop {it['id']}: 여행 효과인데 설명 줄(desc) 없음")
+    ef = it.get('effect') or {}
+    if ef.get('km') is not None and f"{ef['km']:g}km" not in it.get('desc', ''):
+        err(f"shop {it['id']}: desc에 {ef['km']:g}km가 없음")
+    if ef.get('ratio') is not None and f"{round(ef['ratio'] * 100)}%" not in it.get('desc', ''):
+        err(f"shop {it['id']}: desc에 {round(ef['ratio'] * 100)}%가 없음")
+art_doc = load('scene_art.json')
+for o in ('portrait', 'landscape'):
+    if art_doc[o].get('figureHeight') != config['character']['canvas']['screenHeightPx'][o]:
+        err(f"정령 화면 키: scene_art {o}.figureHeight ≠ config character.canvas.screenHeightPx.{o}")
+
 for w in warns:
     print('경고:', w)
 for e in errors:
