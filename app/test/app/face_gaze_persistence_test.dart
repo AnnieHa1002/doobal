@@ -33,7 +33,7 @@ void main() {
     var db = AppDb(NativeDatabase(file));
     var svc = ProfileService(db);
     final look = Look.initial.copyWith(
-        eyes: 'sparkle', brows: 'handsome', nose: 'none', mouth: 'fangs', body: const CustomBodyColor('#8CBBD0'));
+        eyes: 'e6', brows: 'b6', nose: 'none', mouth: 'm3', body: const CustomBodyColor('#8CBBD0'));
     await svc.saveMe('원래 이름', Look.initial);
     await svc.saveLook(look);
     await db.close();

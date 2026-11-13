@@ -358,7 +358,7 @@ void main() {
       final ys = [for (final p in eyes) tester.getTopLeft(find.byKey(ValueKey('eyes-${p.id}'))).dy];
       expect(ys.take(4).toSet(), hasLength(1));
       expect(ys[4], greaterThan(ys[0]));
-      expect(find.byKey(const ValueKey('brows-gentle')), findsNothing);
+      expect(find.byKey(const ValueKey('brows-b1')), findsNothing);
       expect(find.byKey(const ValueKey('body-custom')), findsNothing);
       // 눈썹·코·입 탭은 그 부위 칸 전부
       for (final key in ['brows', 'nose', 'mouth']) {
@@ -366,7 +366,7 @@ void main() {
         for (final p in spiritPalette.faces[key]!) {
           expect(find.byKey(ValueKey('$key-${p.id}')), findsOneWidget, reason: '$key ${p.id}');
         }
-        expect(find.byKey(const ValueKey('eyes-default_drop')), findsNothing);
+        expect(find.byKey(const ValueKey('eyes-e1')), findsNothing);
       }
       // 몸 색 탭: 견본 10개 + 직접 고르기
       await tab(tester, 'body');
@@ -405,9 +405,9 @@ void main() {
       expect(initialSpirit.choices['bag'],1);expect(initialSpirit.choices['cloth'],4);
       expect(find.text('크림 · 여행복 카키'), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('eyes-mischievous')));
+      await tester.tap(find.byKey(const ValueKey('eyes-e3')));
       await tab(tester, 'mouth');
-      await tester.tap(find.byKey(const ValueKey('mouth-long_smile')));
+      await tester.tap(find.byKey(const ValueKey('mouth-m6')));
       await tab(tester, 'body');
       await tester.tap(find.byKey(const ValueKey('body-swatch-9')));
       await tab(tester, 'cloth');
@@ -512,13 +512,13 @@ void main() {
       await openMe(tester, e);
 
       await tester.enterText(find.byType(TextField), ' 화가 ');
-      await tester.tap(find.byKey(const ValueKey('eyes-sleepy')));
+      await tester.tap(find.byKey(const ValueKey('eyes-e4')));
       await tab(tester, 'brows');
-      await tester.tap(find.byKey(const ValueKey('brows-short')));
+      await tester.tap(find.byKey(const ValueKey('brows-b2')));
       await tab(tester, 'nose');
-      await tester.tap(find.byKey(const ValueKey('nose-round')));
+      await tester.tap(find.byKey(const ValueKey('nose-n7')));
       await tab(tester, 'mouth');
-      await tester.tap(find.byKey(const ValueKey('mouth-soft_smile')));
+      await tester.tap(find.byKey(const ValueKey('mouth-m7')));
       await tab(tester, 'body');
       await tester.tap(find.byKey(const ValueKey('body-swatch-7')));
       await tab(tester, 'cloth');
@@ -532,7 +532,7 @@ void main() {
       expect(
         Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>),
         const Look(
-          eyes: 'sleepy',
+          eyes: 'e4',
           brows: 'thin',
           nose: 'dot',
           mouth: 'flat',
@@ -1212,7 +1212,7 @@ void main() {
       noAsking();
 
       await tester.enterText(find.byType(TextField), '나그네');
-      await tester.tap(find.byKey(const ValueKey('eyes-soft')));
+      await tester.tap(find.byKey(const ValueKey('eyes-e2')));
       await tester.tap(find.byKey(const ValueKey('tab-body')));
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('body-swatch-5')));

@@ -31,7 +31,7 @@ void main() {
       f.dispose();
     });
     final l = Look.initial
-        .copyWith(eyes: 'sparkle', brows: 'none', nose: 'none', mouth: 'fangs');
+        .copyWith(eyes: 'e6', brows: 'none', nose: 'none', mouth: 'm3');
     c.wear(spiritLookOf(l));
     expect(
       [

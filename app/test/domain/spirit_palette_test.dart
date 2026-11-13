@@ -46,8 +46,8 @@ void main() {
       final f = spiritPalette.faces;
       expect(
           f.map((k, v) => MapEntry(k, v.length)), {'eyes': 6, 'brows': 7, 'nose': 8, 'mouth': 8});
-      expect(f['eyes']!.first, (id: 'default_drop', name: '기본'));
-      expect(f['nose']!.last, (id: 'round', name: '동글'));
+      expect(f['eyes']!.first, (id: 'e1', name: '기본'));
+      expect(f['nose']!.last, (id: 'n7', name: '동글'));
     });
 
     test('모양이 틀리면 FormatException (모르는 파츠 id, 기본 견본 없음, 기준 밝기 0)', () {
