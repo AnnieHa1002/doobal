@@ -432,8 +432,8 @@
   ]
  },
  "customPartsV33": {
-  "pending": true,
-  "note": "16장 11/13 얼굴·잠들기 Rive v32 확정, 계약 v0.4 4장. 저장값 = 이 id, Rive 뷰 모델 WardrobeColors의 eye·brow·nose·mouth에는 rive 번호. T5에서 customParts(v24)를 이것으로 바꾸고 옛 모습의 얼굴 값은 기본 얼굴로 초기화(출시 전). 칸 이름은 화면에 안 씀(그림만)",
+  "pending": false,
+  "note": "16장 11/13 얼굴·잠들기 Rive v32 확정, 계약 v0.4 4장. 저장값 = 이 id, Rive 뷰 모델 WardrobeColors의 eye·brow·nose·mouth에는 rive 번호. T5에서 customParts(v24)를 이것으로 바꾸고 옛 모습의 얼굴 값은 기본 얼굴로 초기화(출시 전). 칸 이름은 화면에 안 씀(그림만) / 11/13 v33 납품: riv는 eye·mouth도 0 = 없음을 받지만 앱은 칸을 안 둠(눈썹·코만 없음)",
   "eyes": [
    {
     "id": "e1",

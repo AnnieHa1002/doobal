@@ -13,8 +13,8 @@
  ],
  "rive": {
   "viewModel": "WardrobeColors",
-  "riveVerified": false,
-  "note": "계약 v0.4 5장. choice 0 = 안 입음, 색 소품은 같은 번호 + 그 색 hex를 color 속성에. 효과는 Rive 밖(앱 입자)"
+  "riveVerified": true,
+  "note": "계약 v0.5 5장. 11/13 v33 색 속성 38개 이름·슬롯별 순서 대조 끝(그림 확인은 개발 T5). choice 0 = 안 입음, 색 소품은 같은 번호 + 그 색 hex를 color 속성에. 효과는 Rive 밖(앱 입자)"
  },
  "material": {
   "neutralReference": 180,
