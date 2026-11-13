@@ -147,7 +147,8 @@
   "propChance": 0.0,
   "propChanceAfterLaunch": 0.1,
   "distanceBasis": "paintTrailActual",
-  "note": "11/13: 물감 길 실제 거리 2km마다(상점 효과 미포함). 화면이 꺼진 동안 넘은 칸은 다시 켤 때 카드 1장으로(가안)"
+  "note": "11/13: 물감 길 실제 거리 2km마다(상점 효과 미포함). 화면이 꺼진 동안 넘은 칸은 모두 기록하고, 다시 켤 때 마지막 칸 카드 1장만(11/13 Annie 확정, 거리 요약 카드 없음)",
+  "offScreenCards": 1
  },
  "seasons": {
   "spring": [
