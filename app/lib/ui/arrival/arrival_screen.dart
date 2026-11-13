@@ -23,6 +23,9 @@ import '../map/map_screen.dart';
 import '../walk_record/walk_record_screen.dart';
 
 /// 그림이 번지는 시간, 그다음 액자가 나타나는 시간
+/// 도착 카드 맨 아래 AI 표기 (캔버스 3-2 문구 그대로)
+const arrivalAiNote = 'AI 그림 · 손 보정';
+
 const _paintingDuration = Duration(milliseconds: 1500);
 const _frameDuration = Duration(milliseconds: 400);
 
@@ -371,6 +374,13 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
               style: context.display(14, color: v.frameUp ? Palette.terracotta : Palette.subInk),
             ),
           ],
+          // 그림이 AI로 그린 뒤 손으로 고친 것임을 알린다 (캔버스 3-2 카드 맨 아래, 11pt 보조 잉크)
+          const SizedBox(height: 8),
+          Text(
+            arrivalAiNote,
+            key: const ValueKey('arrival-ai-note'),
+            style: const TextStyle(fontSize: 11, color: Palette.subInk),
+          ),
         ],
       ),
     );

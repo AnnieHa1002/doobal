@@ -624,14 +624,14 @@
    "note": "네이티브 스플래시는 종이색 + 로고 한 장(계절 바꾸기 불가), 앱 첫 화면에서 계절 스플래시를 이어 보여 줌(브랜드 v02)"
   },
   "font": {
-   "family": "Pretendard",
+   "family": "Noto Sans KR",
    "weights": [
     400,
     600,
     700
    ],
    "subset": true,
-   "note": "11/4 Annie: 제목·숫자·버튼·본문 모두 Pretendard 하나. 설정 글꼴 고르기·배율 없음(리포 DB v14에서 뺌), OFL 고지"
+   "note": "11/12 Annie: 제목·숫자·버튼·본문 모두 Noto Sans KR 하나(이전 11/4 Pretendard, 줄인 판에 예약 이름을 쓰는 문제로 바꿈). 설정 글꼴 고르기·배율 없음(리포 DB v14에서 뺌), OFL 전문 고지"
   }
  },
  "rest": {

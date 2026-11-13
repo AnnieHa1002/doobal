@@ -378,7 +378,7 @@ void main() {
       expect(find.byKey(const ValueKey('body-custom')), findsOneWidget);
       // 옷 색 탭: 여행복 시작 색 4개 (16장 11/8)
       await tab(tester, 'cloth');
-      for (final (i, name) in ['카키', '크림', '살구', '흙'].indexed) {
+      for (final (i, name) in ['카키', '크림', '살구', '라벤더'].indexed) {
         expect(
           find.descendant(of: find.byKey(ValueKey('cloth-${i + 1}')), matching: find.text(name)),
           findsOneWidget,
@@ -451,7 +451,7 @@ void main() {
       expect(check(1), findsNothing);
 
       await tab(tester, 'cloth');
-      for (final name in ['카키', '크림', '살구', '흙']) {
+      for (final name in ['카키', '크림', '살구', '라벤더']) {
         expect(find.bySemanticsLabel('여행복 $name'), findsOneWidget, reason: name);
       }
       expect(

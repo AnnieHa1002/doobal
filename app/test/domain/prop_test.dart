@@ -224,10 +224,11 @@ void main() {
       expect(props.firstWhere((p) => p.id == 'cloth_02').kind, PropUnlockKind.initial);
     });
 
-    test('여행복의 시작 색 4개: 카키·크림·살구·흙, 다른 소품은 없다', () {
+    test('여행복의 시작 색 4개: 카키(여행복 기본색)·크림·살구·라벤더, 다른 소품은 없다 (16장 11/10)', () {
       final vest = props.firstWhere((p) => p.id == 'cloth_02');
-      expect([for (final c in vest.startColors) c.name], ['카키', '크림', '살구', '흙']);
-      expect([for (final c in vest.startColors) c.argb], [0xFFC0A475, 0xFFF3E4C4, 0xFFF5C9A3, 0xFFC4A07C]);
+      expect([for (final c in vest.startColors) c.name], ['카키', '크림', '살구', '라벤더']);
+      expect([for (final c in vest.startColors) c.argb], [0xFFC0A475, 0xFFF3E4C4, 0xFFF5C9A3, 0xFFD3C6E6]);
+      expect(vest.materialArgb, 0xFFC0A475);
       expect([for (final p in props) if (p.startColors.isNotEmpty) p.id], ['cloth_02']);
     });
 

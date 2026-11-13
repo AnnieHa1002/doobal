@@ -55,7 +55,7 @@ MATERIAL = {
     'hat_04': ('bamboo_hat', '#E4AE5D'),
     'hat_05': ('silla_crown', '#D6A24C'),
     'cloth_01': ('work_apron', '#B79B78'),
-    'cloth_02': ('travel_vest', '#C0A475'),  # 11/10 개발 기획: 시작 색 카키(Codex v05·v06 기본색)와 같게, v07 #B5A576 대신
+    'cloth_02': ('travel_vest', '#C0A475'),  # 16장 11/10: 카키는 Codex 납품 #C0A475 하나로 (v07 미리보기 #B5A576 대신)
     'shoe_01': ('brown_shoes', '#B18B67'),
 }
 # 소품별로 따로 납품된 회색조(11/4 Codex 베레모 회색조 v07): 기준 밝기 192, 갈색 선은 가중치 혼합으로 지킴(식은 layout_v07.json)
@@ -77,9 +77,9 @@ COLOR_VARIANTS = {k: [(c, SW[c], w) for c, w in v] for k, v in {
 # 이름 뒷말(기준 문서 11장 그대로): 갈색 신발은 '신발', 나머지는 기본 이름
 VARIANT_STEM = {'shoe_01': '신발'}
 COLOR_VARIANT_PRICE = 100
-# 기본 옷 시작 색(16장 11/8 Annie, 캔버스 1-2 v69): 정령 만들기에서 한 번 고름, 첫 색이 기본.
-# 카키는 Codex v05·v06 기본색이고 material.hex도 같은 값(11/10 개발 기획), 나머지는 몸 색 견본 값
-START_COLORS = {'cloth_02': [('카키', '#C0A475'), ('크림', SW['크림']), ('살구', SW['살구']), ('라벤더', SW['라벤더'])]}  # 11/10 흙 → 라벤더(카키와 색 차이 6.4)
+# 기본 옷 시작 색(16장 11/8·11/10 Annie): 정령 만들기에서 한 번 고름, 첫 색이 기본.
+# 카키는 여행복 기본색(material.hex)과 같은 값, 나머지는 몸 색 견본 값. 흙은 카키와 구분이 어려워 라벤더로 바꿈(11/10)
+START_COLORS = {'cloth_02': [('카키', MATERIAL['cloth_02'][1]), ('크림', SW['크림']), ('살구', SW['살구']), ('라벤더', SW['라벤더'])]}
 
 
 def dump(name, obj, ascii_ok=False):

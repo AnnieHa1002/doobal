@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/shop.dart';
+import 'package:doobal/ui/common/app_text.dart';
 import 'package:doobal/ui/shop/shop_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
@@ -23,10 +24,10 @@ void main() {
     await tester.runAsync(() async {
       Future<ByteData> font(String name) async =>
           ByteData.sublistView(await File('assets/fonts/$name.ttf').readAsBytes());
-      await (FontLoader('Pretendard')
-            ..addFont(font('Pretendard-Regular'))
-            ..addFont(font('Pretendard-SemiBold'))
-            ..addFont(font('Pretendard-Bold')))
+      await (FontLoader(bodyFont)
+            ..addFont(font('NotoSansKR-Regular'))
+            ..addFont(font('NotoSansKR-SemiBold'))
+            ..addFont(font('NotoSansKR-Bold')))
           .load();
     });
     tester.view.devicePixelRatio = 2;
@@ -66,7 +67,7 @@ void main() {
           overrides: e.overrides,
           child: MaterialApp(
             theme: ThemeData(
-              fontFamily: 'Pretendard',
+              fontFamily: bodyFont,
               scaffoldBackgroundColor: const Color(0xFFF2E8D5),
             ),
             home: const ShopScreen(),

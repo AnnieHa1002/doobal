@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_text.dart';
 import 'palette.dart';
 
-/// 앱 테마: 종이 바탕, Pretendard
+/// 앱 테마: 종이 바탕, Noto Sans KR
 ThemeData doobalTheme() => ThemeData(
       fontFamily: bodyFont,
       colorScheme: ColorScheme.fromSeed(

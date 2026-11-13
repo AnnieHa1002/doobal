@@ -64,15 +64,14 @@ flutter:
     - assets/companions/
     - assets/ui/
 
-  # 표시 글꼴(제목·숫자·버튼·굵은 글자, 설정에서 고름) 개구·동글·고운바탕 Bold, 본문 고운돋움. 모두 SIL OFL 1.1.
-  # 모두 자주 쓰는 글자만 남긴 판이다 (tools/subset_fonts.py). 원본은 고운 글꼴 Drive Assets/05_UI_화면/fonts,
-  # 개구·동글 Google Fonts(google/fonts ofl/gaegu·ofl/dongle)
+  # 앱 글꼴 Noto Sans KR 하나(11/12 Annie, SIL OFL 1.1). 가변 글꼴에서 굵기 3종을 뽑아 자주 쓰는 글자만
+  # 남긴 판이다 (tools/subset_fonts.py). 원본은 Google Fonts(google/fonts ofl/notosanskr)
   fonts:
-    - family: Pretendard
+    - family: Noto Sans KR
       fonts:
-        - asset: assets/fonts/Pretendard-Regular.ttf
+        - asset: assets/fonts/NotoSansKR-Regular.ttf
           weight: 400
-        - asset: assets/fonts/Pretendard-SemiBold.ttf
+        - asset: assets/fonts/NotoSansKR-SemiBold.ttf
           weight: 600
-        - asset: assets/fonts/Pretendard-Bold.ttf
+        - asset: assets/fonts/NotoSansKR-Bold.ttf
           weight: 700
