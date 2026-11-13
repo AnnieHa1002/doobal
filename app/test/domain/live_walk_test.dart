@@ -28,7 +28,7 @@ void main() {
     expect(rules.liveNoticeUpdateSec, 60);
   });
 
-  test('config의 도착 확인 간격은 5초, 이정표 카드 7초·도장 줄 4초, 지도 첫 보기 3곳·여백 0.15', () {
+  test('config의 도착 확인 간격은 5초, 이정표 카드 8초·도장 줄 4초, 지도 첫 보기 3곳·여백 0.15', () {
     expect(rules.arrivalProbeSec, 5);
     expect(rules.arrivalProbeSec, lessThan(rules.walkingRefreshSec));
     expect(rules.eventCardSec, 8);
