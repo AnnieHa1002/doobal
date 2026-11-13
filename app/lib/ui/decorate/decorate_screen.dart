@@ -18,6 +18,7 @@ import '../common/toast.dart';
 import 'decorate_tabs.dart';
 import 'decorate_widgets.dart';
 import 'figure_preview.dart';
+import '../scene/spirit_controller.dart';
 
 /// 탭 줄 글자 배율 상한
 const _tabMaxTextScale = 1.5;
@@ -46,6 +47,7 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
 
   /// 표정 미리보기 번호 (저장하지 않는다)
   var _expression = 0;
+  SpiritController? _previewController;
   var _saving = false;
 
   @override
@@ -85,7 +87,12 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
 
   /// 저장하지 않고 나가려 할 때: 나가기면 그대로 닫는다
   Future<void> _confirmLeave() async {
-    final leave = await showConfirmSheet(context, '저장하지 않고 나갈까요?', '나가기', '계속 꾸미기');
+    final leave = await showConfirmSheet(
+      context,
+      '저장하지 않고 나갈까요?',
+      '나가기',
+      '계속 꾸미기',
+    );
     if (leave == true && mounted) Navigator.of(context).pop();
   }
 
@@ -98,7 +105,8 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
     // 다음 거리 소품까지 남은 거리: 거리 소품은 앱 걷기 이동 거리로 센다 (Snapshot.walkTravelKm)
     final snap = ref.watch(snapshotProvider).value;
     final look = _look;
-    final ready = look != null && props != null && owned != null && palette != null;
+    final ready =
+        look != null && props != null && owned != null && palette != null;
     final dirty = ready && look != _saved;
     // 기본 소품은 처음부터 가진 것이라, 아직 기록이 없어도 고를 수 있다
     final have = ready ? havePropIds(props, owned) : const <String>{};
@@ -118,14 +126,20 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
                 trailing: ready
                     ? Container(
                         key: const ValueKey('own-count'),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: Palette.card,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           '가진 소품 ${have.length}개',
-                          style: const TextStyle(fontSize: 12, color: Palette.ink),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Palette.ink,
+                          ),
                         ),
                       )
                     : null,
@@ -176,6 +190,11 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
       bodyArgb: palette.body.argbOf(look.body),
       bodyBaseArgb: palette.body.baseArgb,
       baseOf: variantBases(props),
+      variantColors: {
+        for (final p in props)
+          if (p.materialArgb != null) p.id: p.materialArgb!,
+      },
+      initialClothArgb: initialClothColor(props, look.clothColor),
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -185,7 +204,11 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
             look: spirit,
             summary: _summary(look, props),
             expression: _expression,
-            onExpression: (v) => setState(() => _expression = v),
+            onReady: (c) => _previewController = c,
+            onExpression: (v) {
+              setState(() => _expression = v);
+              _previewController?.setExpression(v, force: true);
+            },
             tapRules: rules,
           ),
         ),
@@ -193,7 +216,10 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
         // 미리보기·소품 칸·버튼 자리가 남게 (11/3 표시 글꼴)
         MediaQuery.withClampedTextScaling(
           maxScaleFactor: _tabMaxTextScale,
-          child: _TabStrip(selected: _tab, onSelect: (id) => setState(() => _tab = id)),
+          child: _TabStrip(
+            selected: _tab,
+            onSelect: (id) => setState(() => _tab = id),
+          ),
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -209,10 +235,15 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
                     // 같은 칸이라 입으면 기본 소품은 벗겨진다
                     props: [
                       for (final p in variantsAfterBase(props))
-                        if (p.slot == _tab && have.contains(p.id) && baseHeld(p, have)) p,
+                        if (p.slot == _tab &&
+                            have.contains(p.id) &&
+                            baseHeld(p, have))
+                          p,
                     ],
                     nextKm: nextKm,
                     onPick: (id) => _set(look.withSlot(_tab, id)),
+                    onColor: _set,
+                    palette: palette,
                   ),
           ),
         ),
@@ -228,13 +259,18 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
                 child: GameButton(
                   label: '되돌리기',
                   kind: GameButtonKind.secondary,
-                  onPressed: dirty ? () => setState(() => _look = _saved) : null,
+                  onPressed: dirty
+                      ? () => setState(() => _look = _saved)
+                      : null,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 flex: 3,
-                child: GameButton(label: '저장', onPressed: dirty && !_saving ? _save : null),
+                child: GameButton(
+                  label: '저장',
+                  onPressed: dirty && !_saving ? _save : null,
+                ),
               ),
             ],
           ),
@@ -270,7 +306,10 @@ class _TabStrip extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 8),
             color: lineColor,
           ),
-          const Text('소품', style: TextStyle(fontSize: 12, color: Palette.subInk)),
+          const Text(
+            '소품',
+            style: TextStyle(fontSize: 12, color: Palette.subInk),
+          ),
           for (final e in propSlotLabels.entries) ...[
             const SizedBox(width: 6),
             _TabChip(
@@ -287,7 +326,12 @@ class _TabStrip extends StatelessWidget {
 }
 
 class _TabChip extends StatelessWidget {
-  const _TabChip({super.key, required this.label, required this.selected, required this.onTap});
+  const _TabChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;
@@ -329,7 +373,10 @@ class _TabChip extends StatelessWidget {
               ),
               child: Text(
                 label,
-                style: context.display(14, color: selected ? Palette.card : Palette.ink),
+                style: context.display(
+                  14,
+                  color: selected ? Palette.card : Palette.ink,
+                ),
               ),
             ),
           ),

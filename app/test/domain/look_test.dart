@@ -15,7 +15,7 @@ void main() {
   group('Look', () {
     test('기본값은 기본 얼굴(점·시바·쑥스러움·ω), 크림 몸, 칸마다 기본 소품', () {
       final l = Look.initial;
-      expect([l.eyes, l.brows, l.nose, l.mouth], ['dot', 'shiba', 'shy', 'omega']);
+      expect([l.eyes, l.brows, l.nose, l.mouth], ['default_drop', 'gentle', 'round', 'soft_smile']);
       expect(l.body, const SwatchBodyColor(1));
       expect(l.slots, defaultSlots);
     });
@@ -46,10 +46,10 @@ void main() {
 
     test('JSON 왕복: 기본 모습의 모양', () {
       expect(Look.initial.toJson(), {
-        'eyes': 'dot',
-        'brows': 'shiba',
-        'nose': 'shy',
-        'mouth': 'omega',
+        'eyes': 'default_drop',
+        'brows': 'gentle',
+        'nose': 'round',
+        'mouth': 'soft_smile',
         'body': {'kind': 'swatch', 'i': 1},
         'clothColor': 1,
         'slots': {
@@ -91,7 +91,7 @@ void main() {
       expect(back.slots['hand'], isNull);
       // 칸을 빠뜨린 slots도 읽을 때 기본 소품으로 채워지므로 같은 모습으로 돌아온다
       expect(back, _roundTrip(back));
-      expect(back.eyes, 'cat');
+      expect(back.eyes, 'mischievous');
       expect(back.body, look.body);
     });
 
@@ -111,7 +111,7 @@ void main() {
     test('copyWith는 준 것만 바꾸고 소품 칸을 그대로 가져간다', () {
       final base = Look.initial.withSlot('hat', 'hat_02');
       final a = base.copyWith(eyes: 'bean', body: const SwatchBodyColor(5));
-      expect((a.eyes, a.brows, a.nose, a.mouth), ('bean', 'shiba', 'shy', 'omega'));
+      expect((a.eyes, a.brows, a.nose, a.mouth), ('soft', 'gentle', 'round', 'soft_smile'));
       expect(a.body, const SwatchBodyColor(5));
       expect(a.slots, base.slots);
     });
@@ -132,7 +132,7 @@ void main() {
   });
 
   group('Look 읽기', () {
-    Map<String, dynamic> face(String key, Object? v) => {'mouth': 'omega', key: v};
+    Map<String, dynamic> face(String key, Object? v) => {'mouth': 'soft_smile', key: v};
 
     test('빠진 키는 기본값, 일부만 있어도 빠진 키만 기본값', () {
       expect(Look.fromJson(<String, dynamic>{}), Look.initial);
@@ -141,7 +141,7 @@ void main() {
         'mouth': 'flat',
         'slots': {'hat': 'hat_02'},
       });
-      expect((look.eyes, look.mouth, look.nose, look.brows), ('cat', 'flat', 'shy', 'shiba'));
+      expect((look.eyes, look.mouth, look.nose, look.brows), ('mischievous', 'soft_smile', 'round', 'gentle'));
       expect(look.slots['hat'], 'hat_02');
       // slots 안에서 빠진 칸은 그 칸의 기본 소품
       expect(look.slots['bag'], 'hand_01');
@@ -208,7 +208,7 @@ void main() {
           'shoe': 5,
         },
       });
-      expect([look.eyes, look.brows, look.nose, look.mouth], ['dot', 'shiba', 'shy', 'omega']);
+      expect([look.eyes, look.brows, look.nose, look.mouth], ['default_drop', 'gentle', 'round', 'soft_smile']);
       expect(look.body, const SwatchBodyColor(1));
       expect(look.slots['hat'], 'hat_02');
       expect(look.slots['hand'], isNull);

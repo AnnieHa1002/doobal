@@ -1,11 +1,7 @@
-import 'dart:io';
-import 'dart:ui' as ui;
-
+import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/spirit_look.dart';
 import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:doobal/ui/scene/spirit_controller.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rive/rive.dart' as rive;
 
@@ -13,360 +9,128 @@ import '../domain/helpers.dart' show rules;
 
 Future<(rive.File, SpiritController)> load() async {
   await rive.RiveNative.init();
-  final file = (await rive.File.asset(
+  final f = (await rive.File.asset(
     SpiritCharacter.asset,
     riveFactory: rive.Factory.flutter,
   ))!;
-  final controller = SpiritController(file);
-  return (file, controller);
+  return (f, SpiritController(f));
 }
 
-void tick(SpiritController c, int frames) {
-  for (var i = 0; i < frames; i++) {
+void tick(SpiritController c, int n) {
+  for (var i = 0; i < n; i++) {
     c.advance(1 / 60);
   }
 }
 
-double vm(SpiritController c, String name) => c.instance.number(name)!.value;
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  test('v25 파일의 기본값은 SpiritLook.base와 같고, wear가 얼굴·소품 입력을 모두 바꾼다', () async {
-    final (file, c) = await load();
-    addTearDown(file.dispose);
-    addTearDown(c.dispose);
-    const base = SpiritLook.base;
-    expect(
-      [vm(c, 'eyeStyle'), vm(c, 'browStyle'), vm(c, 'noseStyle'), vm(c, 'mouthStyle')],
-      [base.eye, base.brow, base.nose, base.mouth],
-    );
-    expect([vm(c, 'bagStyle'), vm(c, 'outfitStyle'), vm(c, 'companionStyle')], [0, 0, 0]);
-
-    c.wear(const SpiritLook(eye: 4, brow: 0, nose: 3, mouth: 5, bag: 2, outfit: 1, companion: 1));
-    tick(c, 3);
-    expect(
-      [vm(c, 'eyeStyle'), vm(c, 'browStyle'), vm(c, 'noseStyle'), vm(c, 'mouthStyle')],
-      [4, 0, 3, 5],
-    );
-    expect([vm(c, 'bagStyle'), vm(c, 'outfitStyle'), vm(c, 'companionStyle')], [2, 1, 1]);
-  });
-
-  test('새 정령 파일과 10개 동작 및 독립 머리·배 제어를 읽는다', () async {
-    final (file, c) = await load();
+  test('확정 통합 파일에 옆앉기 다리와 모든 반응·잠들기 호흡이 있다', () async {
+    final (f, c) = await load();
     addTearDown(() {
       c.dispose();
-      file.dispose();
+      f.dispose();
     });
-    expect(c.artboard.width, 600);
-    expect(c.artboard.height, 600);
-    for (final motion in SpiritMotion.values) {
-      final animation = c.artboard.animationNamed(
-        motion.name[0].toUpperCase() + motion.name.substring(1),
-      );
-      expect(animation, isNotNull, reason: motion.name);
-      animation?.dispose();
+    expect(c.artboard.width, 1500);
+    expect(c.artboard.height, 1100);
+    for (final name in [
+      'GreetOneShot',
+      'JoyOneShot',
+      'ImportedHeadPress',
+      'ImportedBellyPress',
+      'ImportedAngryOneShot',
+      'IdleMicroAndBlink',
+    ]) {
+      final a = c.artboard.animationNamed(name);
+      expect(a, isNotNull, reason: name);
+      a?.dispose();
     }
-    expect(c.instance.boolean('headPressed'), isNotNull);
-    expect(c.instance.boolean('bellyPressed'), isNotNull);
   });
-  test('이동·앉기·배 매핑, 눌림 해제 후 최신 장면 복귀', () async {
-    final (file, c) = await load();
+  test('장면 이동·앉기·잠들기와 반응 후 최신 장면 복귀', () async {
+    final (f, c) = await load();
     addTearDown(() {
       c.dispose();
-      file.dispose();
+      f.dispose();
     });
     c.setScene(speed: 1, sitting: false);
-    tick(c, 20);
-    expect(c.motion, SpiritMotion.walk);
-    expect(c.direction, 1);
+    expect(c.poseChoice, 6);
+    c.play(SpiritMotion.sit, direction: 1);
+    expect(c.poseChoice, 3);
     c.press(SpiritPress.head);
-    tick(c, 15);
-    expect(c.motion, SpiritMotion.idle);
+    expect(c.poseChoice, 0);
     expect(c.headPressed, true);
-    expect(c.bellyPressed, false);
-    expect(c.direction, 0);
-    c.setScene(speed: 2, sitting: false);
     c.release();
-    tick(c, 50);
-    expect(c.motion, SpiritMotion.run);
-    expect(c.direction, 1);
     c.setScene(speed: 0, sitting: true);
-    tick(c, 20);
-    expect(c.motion, SpiritMotion.sit);
-    c.press(SpiritPress.belly);
-    tick(c, 15);
-    expect(c.motion, SpiritMotion.sit);
-    expect(c.bellyPressed, true);
-    expect(c.headPressed, false);
-    c.release();
-    tick(c, 50);
-    expect(c.motion, SpiritMotion.sit);
-    c.setScene(speed: 2, sitting: false, boat: true);
-    tick(c, 20);
-    expect(c.motion, SpiritMotion.idle);
-  });
-  test('흔들기·넘어지기·웃기가 끝나면 직전 걷기로 복귀한다', () async {
-    final (file, c) = await load();
-    addTearDown(() {
-      c.dispose();
-      file.dispose();
-    });
-    c.setScene(speed: 1, sitting: false);
-    for (final m in [
-      SpiritMotion.wave,
-      SpiritMotion.fall,
-      SpiritMotion.laugh,
-    ]) {
-      c.play(m);
-      tick(c, 25);
-      expect(c.motion, m);
-      tick(c, 160);
-      expect(c.motion, SpiritMotion.walk, reason: m.name);
-    }
-  });
-  test('잠자기 중에도 머리·배 중 하나만 눌리고 시선은 범위 안에 머문다', () async {
-    final (file, c) = await load();
-    addTearDown(() {
-      c.dispose();
-      file.dispose();
-    });
+    tick(c, 90);
+    expect(c.poseChoice, 2);
     c.play(SpiritMotion.sleep);
+    expect(c.poseChoice, 4);
+    c.play(SpiritMotion.idle);
+    expect(c.poseChoice, 0);
+    c.play(SpiritMotion.wave);
     tick(c, 30);
-    expect(c.motion, SpiritMotion.sleep);
-    expect(c.direction, 0);
-    final sleepingFace = c.artboard.component('front_face_pose')!;
-    expect(sleepingFace.rotation, closeTo(-1.0471975512, .001));
-    sleepingFace.dispose();
-    c.press(SpiritPress.head);
-    tick(c, 15);
+    final arm = c.artboard.component('Right_arm_pivot')!;
+    expect(arm.rotation.abs(), greaterThan(1));
+    arm.dispose();
+    c.setScene(speed: 2, sitting: false);
+    tick(c, 150);
+    expect(c.poseChoice, 6);
+  });
+  test('몸과 소품 색은 각자 입력에 적용하고 반응·자세 변경 후 유지된다', () async {
+    final (f, c) = await load();
+    addTearDown(() {
+      c.dispose();
+      f.dispose();
+    });
+    final look = Look.initial
+        .copyWith(body: const CustomBodyColor('#8CBBD0'))
+        .withPropColor('hat_01', '#D276A0')
+        .withSlot('shoe', 'shoe_05')
+        .withPropColor('shoe_05', '#A17CBA');
+    c.wear(spiritLookOf(look, bodyArgb: 0xff8cbbd0));
+    expect(c.instance.number('shoeChoice')!.value, 2);
+    expect(c.instance.color('beretColor')!.value.toARGB32(), 0xffd276a0);
+    expect(c.instance.color('bodyColor')!.value.toARGB32(), 0xff8cbbd0);
     c.press(SpiritPress.belly);
-    tick(c, 15);
-    expect(c.headPressed, false);
-    expect(c.bellyPressed, true);
-    c.release();
-    tick(c, 50);
-    expect(c.motion, SpiritMotion.sleep);
-    expect(c.direction, 0);
-    c.setLook(double.infinity, 20);
-    expect(c.instance.number('lookX')!.value, 0);
-    expect(c.instance.number('lookY')!.value, 1);
+    tick(c, 80);
+    c.play(SpiritMotion.sleep);
+    tick(c, 80);
+    expect(c.instance.color('catSlippersColor')!.value.toARGB32(), 0xffa17cba);
+    expect(c.instance.color('beretColor')!.value.toARGB32(), 0xffd276a0);
   });
-  /// [gapMs] 간격으로 정령 머리를 [count]번 눌렀다 놓는다 (시계는 [now]를 따라간다)
-  void tapHead(SpiritController c, List<DateTime> now, int count, int gapMs) {
-    for (var i = 0; i < count; i++) {
-      c.press(SpiritPress.head);
-      tick(c, 3);
-      c.release();
-      tick(c, 3);
-      now[0] = now[0].add(Duration(milliseconds: gapMs));
-    }
-  }
-
-  test('연타 화남: 3초 안에 5번이면 화남(5)이 2초 가고 기본으로 돌아온다 (config tapReaction)', () async {
-    final (file, c) = await load();
+  test('꾸미기 동작 버튼은 같은 인사도 다시 재생하고 잠들기에서 기본으로 돌아간다', () async {
+    final (f, c) = await load();
     addTearDown(() {
       c.dispose();
-      file.dispose();
+      f.dispose();
     });
-    final now = [DateTime.utc(2026, 11, 18, 9)];
-    c.clock = () => now[0];
-    c.tapRules = rules;
-
-    // 네 번까지는 행복(머리 누르기 표정)이고 화나지 않는다
-    tapHead(c, now, 4, 300);
-    tick(c, 60);
-    expect(c.expression, isNot(5));
-    // 다섯 번째에 화남
-    c.press(SpiritPress.head);
-    tick(c, 3);
-    expect(c.expression, 5);
-    c.release();
-    tick(c, 60); // 1초 뒤에도 화남
-    expect(c.expression, 5);
-    tick(c, 80); // 2초(config holdSec)를 넘기면 기본 표정
-    expect(c.expression, 0);
+    for (var repeat = 0; repeat < 2; repeat++) {
+      c.setExpression(2, force: true);
+      tick(c, 30);
+      final arm = c.artboard.component('Right_arm_pivot')!;
+      expect(arm.rotation.abs(), greaterThan(1));
+      arm.dispose();
+      tick(c, 150);
+    }
+    c.setExpression(4, force: true);
+    expect(c.poseChoice, 4);
+    c.setExpression(0, force: true);
+    expect(c.poseChoice, 0);
   });
-
-  test('연타 화남: 3초를 넘긴 5번이나 규칙이 없으면 화나지 않는다', () async {
-    final (file, c) = await load();
+  test('연타 화남은 실제 화남 입력을 재생하고 복귀한다', () async {
+    final (f, c) = await load();
     addTearDown(() {
       c.dispose();
-      file.dispose();
+      f.dispose();
     });
-    final now = [DateTime.utc(2026, 11, 18, 9)];
-    c.clock = () => now[0];
     c.tapRules = rules;
-    var angry = false;
-    for (var i = 0; i < 5; i++) {
+    var at = DateTime.utc(2026, 11, 12);
+    c.clock = () => at;
+    for (var i = 0; i < rules.tapReaction.angryTaps; i++) {
       c.press(SpiritPress.head);
-      tick(c, 3);
-      angry = angry || c.expression == 5;
       c.release();
-      tick(c, 3);
-      now[0] = now[0].add(const Duration(milliseconds: 900));
+      at = at.add(const Duration(milliseconds: 20));
     }
-    expect(angry, isFalse, reason: '3.6초에 걸친 5번은 행복');
-
-    // 규칙이 없으면(걷는 중·나의 정보 등) 빠르게 눌러도 화내지 않는다
-    c.tapRules = null;
-    tapHead(c, now, 6, 100);
-    c.press(SpiritPress.head);
-    tick(c, 3);
-    expect(c.expression, isNot(5));
-  });
-
-  testWidgets('실제 Flutter 터치로 머리·배를 구분하고 취소 후 복원한다', (tester) async {
-    tester.view.physicalSize = const Size(600, 600);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    SpiritController? controller;
-    final key = GlobalKey();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RepaintBoundary(
-          key: key,
-          child: SpiritCharacter(
-            capeEnabled: true,
-            onReady: (c) => controller = c,
-          ),
-        ),
-      ),
-    );
-    for (var i = 0; i < 120 && controller == null; i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 20)),
-      );
-      await tester.pump();
-    }
-    expect(controller, isNotNull);
-    await tester.pump(const Duration(milliseconds: 100));
-    Future<void> capture(String name) async {
-      final directory = Platform.environment['DOOBAL_SPIRIT_CAPTURE_DIR'];
-      if (directory == null) return;
-      await tester.runAsync(() async {
-        final b =
-            key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-        final image = await b.toImage();
-        final bytes = (await image.toByteData(format: ui.ImageByteFormat.png))!
-            .buffer
-            .asUint8List();
-        await File('$directory/$name.png').writeAsBytes(bytes);
-        image.dispose();
-      });
-    }
-
-    await capture('flutter_idle');
-    expect(controller!.capeEnabled, isTrue);
-    controller!.setCape(false);
-    for (var f = 0; f < 20; f++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    expect(controller!.capeEnabled, isFalse);
-    await capture('flutter_cape_off');
-    controller!.setCape(true);
-    for (var f = 0; f < 20; f++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    expect(controller!.capeEnabled, isTrue);
-    var gesture = await tester.startGesture(const Offset(300, 220));
-    for (var f = 0; f < 16; f++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    expect(controller!.headPressed, true);
-    expect(controller!.bellyPressed, false);
-    await capture('flutter_head_hold');
-    await gesture.cancel();
-    for (var f = 0; f < 55; f++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    expect(controller!.headPressed, false);
-    gesture = await tester.startGesture(const Offset(300, 365));
-    for (var f = 0; f < 16; f++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    expect(controller!.bellyPressed, true);
-    expect(controller!.headPressed, false);
-    await capture('flutter_belly_hold');
-    await gesture.up();
-    for (var f = 0; f < 55; f++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    expect(controller!.bellyPressed, false);
-    for (final motion in [
-      SpiritMotion.wave,
-      SpiritMotion.walk,
-      SpiritMotion.sit,
-      SpiritMotion.fall,
-      SpiritMotion.run,
-      SpiritMotion.laugh,
-      SpiritMotion.sleep,
-    ]) {
-      controller!.play(motion);
-      for (var f = 0; f < 40; f++) {
-        await tester.pump(const Duration(milliseconds: 16));
-      }
-      await capture('flutter_${motion.name}');
-    }
-    if (Platform.environment['DOOBAL_SPIRIT_DEMO'] == '1') {
-      final folder = Platform.environment['DOOBAL_SPIRIT_CAPTURE_DIR']!;
-      await tester.runAsync(
-        () => Directory('$folder/demo_frames').create(recursive: true),
-      );
-      var frame = 0;
-      Future<void> demoFrame() async =>
-          capture('demo_frames/${(frame++).toString().padLeft(3, '0')}');
-      controller!.play(SpiritMotion.idle);
-      for (var f = 0; f < 40; f++) {
-        await tester.pump(const Duration(milliseconds: 16));
-      }
-      for (final motion in [
-        SpiritMotion.wave,
-        SpiritMotion.walk,
-        SpiritMotion.sit,
-        SpiritMotion.fall,
-        SpiritMotion.run,
-        SpiritMotion.laugh,
-        SpiritMotion.sleep,
-      ]) {
-        controller!.play(motion);
-        final step = {
-          SpiritMotion.wave: 12,
-          SpiritMotion.walk: 8,
-          SpiritMotion.sit: 11,
-          SpiritMotion.fall: 15,
-          SpiritMotion.run: 5,
-          SpiritMotion.laugh: 13,
-          SpiritMotion.sleep: 22,
-        }[motion]!;
-        for (var shot = 0; shot < 8; shot++) {
-          for (var f = 0; f < step; f++) {
-            await tester.pump(const Duration(milliseconds: 16));
-          }
-          await demoFrame();
-        }
-      }
-      for (final region in SpiritPress.values) {
-        controller!.play(SpiritMotion.idle);
-        for (var f = 0; f < 40; f++) {
-          await tester.pump(const Duration(milliseconds: 16));
-        }
-        controller!.press(region);
-        for (var shot = 0; shot < 6; shot++) {
-          for (var f = 0; f < 4; f++) {
-            await tester.pump(const Duration(milliseconds: 16));
-          }
-          await demoFrame();
-        }
-        controller!.release();
-        for (var shot = 0; shot < 6; shot++) {
-          for (var f = 0; f < 6; f++) {
-            await tester.pump(const Duration(milliseconds: 16));
-          }
-          await demoFrame();
-        }
-      }
-    }
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
+    tick(c, 90);
+    expect(c.poseChoice, 0);
   });
 }

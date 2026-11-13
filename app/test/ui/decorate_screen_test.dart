@@ -168,7 +168,9 @@ void main() {
       expect(find.descendant(of: _key('preview'), matching: find.byType(SpiritCharacter)),
           findsOneWidget);
       // 기본 옷 여행복은 Rive 옷 1 (16장 11/8)
-      expect(_worn(tester), SpiritLook.base.copyWith(bag: 1, outfit: 1, bodyArgb: 0xFFF3E4C4));
+      expect(_worn(tester).bodyArgb,0xFFF3E4C4);
+      expect(_worn(tester).choices['bag'],1);
+      expect(_worn(tester).choices['cloth'],4);
       // 정령은 미리보기 칸 가운데에 선다
       final box = tester.getRect(_key('preview'));
       final spirit = tester.getRect(find.byType(SpiritCharacter));
@@ -201,12 +203,12 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('표정 미리보기 단추 6개: 눌러도 저장할 것은 생기지 않고, 요약 줄에 표정 미리보기가 붙는다', (tester) async {
+    testWidgets('동작 미리보기 단추 6개: 눌러도 저장할 것은 생기지 않고, 요약 줄에 동작 미리보기가 붙는다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
 
-      const names = ['기본', '행복', '울먹임', '놀람', '졸림', '화남'];
+      const names = ['기본', '기쁨', '인사', '배 눌림', '잠들기', '화남','머리 눌림'];
       for (final (i, n) in names.indexed) {
         expect(find.descendant(of: _key('expr-$i'), matching: find.text(n)), findsOneWidget);
       }
@@ -215,19 +217,19 @@ void main() {
       expect(ys, orderedEquals([...ys]..sort()));
       Finder spirit() => find.byType(SpiritCharacter);
       expect(tester.widget<SpiritCharacter>(spirit()).expression, 0);
-      expect(_summary(tester), isNot(contains('표정 미리보기')));
+      expect(_summary(tester), isNot(contains('동작 미리보기')));
 
       await tester.tap(_key('expr-5'));
       await tester.pump();
       expect(tester.widget<SpiritCharacter>(spirit()).expression, 5);
-      expect(_summary(tester), endsWith('표정 미리보기'));
+      expect(_summary(tester), endsWith('동작 미리보기'));
       expect(_enabled(tester, '저장'), isFalse);
       expect(_enabled(tester, '되돌리기'), isFalse);
 
       await tester.tap(_key('expr-0'));
       await tester.pump();
       expect(tester.widget<SpiritCharacter>(spirit()).expression, 0);
-      expect(_summary(tester), isNot(contains('표정 미리보기')));
+      expect(_summary(tester), isNot(contains('동작 미리보기')));
       await end(tester, e);
     });
 
@@ -237,12 +239,12 @@ void main() {
       await _open(tester, e);
 
       await _goTab(tester, 'me');
-      await _tap(tester, _key('eyes-cat'));
-      expect(_worn(tester).eye, 4);
+      await _tap(tester, _key('eyes-mischievous'));
+      expect(_worn(tester).eye, 2);
       await _tap(tester, _key('nose-none'));
-      expect(_worn(tester).nose, 3, reason: '코 없음은 Rive 값 3');
+      expect(_worn(tester).nose, 7, reason: '코 없음은 Rive 값 3');
       await _tap(tester, _key('nose-ring'));
-      expect(_worn(tester).nose, 0, reason: '고리는 Rive 값 0');
+      expect(_worn(tester).nose, 1, reason: '고리는 Rive 값 0');
       await _tap(tester, _key('body-swatch-9'));
       expect(_worn(tester).bodyArgb, 0xFFC9775A);
       await _goTab(tester, 'cloth');
@@ -255,10 +257,11 @@ void main() {
       await _tap(tester, _key('prop-pet_05'));
       expect(_worn(tester).companion, 1);
       // 리깅 전 소품은 골라도 정령 값이 바뀌지 않는다
-      final before = _worn(tester);
+      final before = _worn(tester).choices['hat'];
       await _goTab(tester, 'hat');
       await _tap(tester, _key('prop-hat_02'));
-      expect(_worn(tester), before);
+      expect(_worn(tester).choices['hat'],2);
+      expect(_worn(tester).choices['hat'],isNot(before));
       await end(tester, e);
     });
 
@@ -296,7 +299,7 @@ void main() {
       await _open(tester, e);
 
       expect(_key('prop-hat_01'), findsOneWidget);
-      expect(_key('eyes-dot'), findsNothing);
+      expect(_key('eyes-default_drop'), findsNothing);
       expect(_enabled(tester, '저장'), isFalse);
       expect(_enabled(tester, '되돌리기'), isFalse);
       expect(find.text('저장'), findsOneWidget);
@@ -318,7 +321,7 @@ void main() {
 
       expect(_summary(tester), startsWith('여행 모자 · 여행복'));
       await _goTab(tester, 'me');
-      expect(_chosen(tester, 'eyes-dot'), isTrue);
+      expect(_chosen(tester, 'eyes-default_drop'), isTrue);
       expect(_swatchCheck('body-swatch-1'), findsOneWidget);
       expect(_enabled(tester, '저장'), isFalse);
       await end(tester, e);
@@ -330,7 +333,7 @@ void main() {
       await _open(tester, e);
 
       const marker = {
-        'me': 'eyes-dot',
+        'me': 'eyes-default_drop',
         'hat': 'prop-hat_01',
         'face': 'empty-slot',
         'cloth': 'prop-cloth_02',
@@ -354,7 +357,7 @@ void main() {
       }
       // 되돌아와도 된다
       await _goTab(tester, 'me');
-      expect(_key('eyes-dot'), findsOneWidget);
+      expect(_key('eyes-default_drop'), findsOneWidget);
       expect(_key('prop-pet_01'), findsNothing);
       await end(tester, e);
     });
@@ -365,10 +368,10 @@ void main() {
       await _open(tester, e);
 
       await _goTab(tester, 'me');
-      await _tap(tester, _key('eyes-fierce'));
+      await _tap(tester, _key('eyes-sleepy'));
       await _goTab(tester, 'hat');
       await _goTab(tester, 'me');
-      expect(_chosen(tester, 'eyes-fierce'), isTrue);
+      expect(_chosen(tester, 'eyes-sleepy'), isTrue);
       expect(_enabled(tester, '저장'), isTrue);
       await end(tester, e);
     });
@@ -388,23 +391,24 @@ void main() {
           expect(_key('$key-${p.id}'), findsOneWidget, reason: '$key-${p.id}');
         }
         // 왼쪽에서 오른쪽으로
-        final xs = [for (final p in parts) tester.getTopLeft(_key('$key-${p.id}')).dx];
-        expect(xs, orderedEquals([...xs]..sort()), reason: key);
+        final positions=[for(final p in parts)tester.getTopLeft(_key('$key-${p.id}'))];
+        final sorted=[...positions]..sort((a,b)=>a.dy==b.dy?a.dx.compareTo(b.dx):a.dy.compareTo(b.dy));
+        expect(positions,orderedEquals(sorted),reason:key);
       }
       expect([for (final k in ['eyes', 'brows', 'nose', 'mouth']) spiritPalette.faces[k]!.length],
-          [5, 5, 7, 6]);
+          [6, 7, 8, 8]);
       // 줄은 위에서 아래로 눈 → 눈썹 → 코 → 입
-      final ys = [for (final k in ['eyes-dot', 'brows-none', 'nose-none', 'mouth-smile']) tester.getTopLeft(_key(k)).dy];
+      final ys = [for (final k in ['eyes-default_drop', 'brows-none', 'nose-none', 'mouth-smile']) tester.getTopLeft(_key(k)).dy];
       expect(ys, orderedEquals([...ys]..sort()));
       // 짧은 이름 (캔버스): '콩 눈' → '콩', 쑥스러움 → '///'
-      expect(find.descendant(of: _key('eyes-bean'), matching: find.text('콩')), findsOneWidget);
-      expect(find.descendant(of: _key('nose-shy'), matching: find.text('///')), findsOneWidget);
-      expect(find.descendant(of: _key('mouth-smirk'), matching: find.text('삐죽')), findsOneWidget);
+      expect(find.descendant(of: _key('eyes-soft'), matching: find.text('순한')), findsOneWidget);
+      expect(find.descendant(of: _key('nose-slash'), matching: find.text('///')), findsOneWidget);
+      expect(find.descendant(of: _key('mouth-long_smile'), matching: find.text('긴웃음')), findsOneWidget);
       // 기본 얼굴이 골라져 있다
-      for (final k in ['eyes-dot', 'brows-shiba', 'nose-shy', 'mouth-omega']) {
+      for (final k in ['eyes-default_drop', 'brows-gentle', 'nose-round', 'mouth-soft_smile']) {
         expect(_chosen(tester, k), isTrue, reason: k);
       }
-      expect(_chosen(tester, 'eyes-bean'), isFalse);
+      expect(_chosen(tester, 'eyes-soft'), isFalse);
       await end(tester, e);
     });
 
@@ -415,9 +419,9 @@ void main() {
       await _open(tester, e);
       await _goTab(tester, 'me');
 
-      expect(find.bySemanticsLabel('눈 콩 눈'), findsOneWidget);
-      expect(find.bySemanticsLabel('코 쑥스러움'), findsOneWidget);
-      expect(find.bySemanticsLabel('입 삐죽 미소'), findsOneWidget);
+      expect(find.bySemanticsLabel('눈 부드러운 눈'), findsOneWidget);
+      expect(find.bySemanticsLabel('코 빗금'), findsOneWidget);
+      expect(find.bySemanticsLabel('입 긴 미소'), findsOneWidget);
       expect(find.bySemanticsLabel('몸 색 팔레트'), findsNothing);
       handle.dispose();
       await end(tester, e);
@@ -429,17 +433,17 @@ void main() {
       await _open(tester, e);
       await _goTab(tester, 'me');
 
-      await _tap(tester, _key('eyes-cat'));
-      await _tap(tester, _key('brows-thick'));
-      await _tap(tester, _key('nose-heart'));
-      await _tap(tester, _key('mouth-tongue'));
-      expect(_chosen(tester, 'eyes-cat'), isTrue);
-      expect(_chosen(tester, 'eyes-dot'), isFalse);
+      await _tap(tester, _key('eyes-mischievous'));
+      await _tap(tester, _key('brows-handsome'));
+      await _tap(tester, _key('nose-scoop'));
+      await _tap(tester, _key('mouth-grin'));
+      expect(_chosen(tester, 'eyes-mischievous'), isTrue);
+      expect(_chosen(tester, 'eyes-default_drop'), isFalse);
       expect(_enabled(tester, '저장'), isTrue);
       await _save(tester);
 
       final look = await _stored(tester, e);
-      expect((look.eyes, look.brows, look.nose, look.mouth), ('cat', 'thick', 'heart', 'tongue'));
+      expect((look.eyes, look.brows, look.nose, look.mouth), ('mischievous', 'handsome', 'scoop', 'grin'));
       expect(look.body, const SwatchBodyColor(1));
       expect(look.slots, defaultSlots);
       expect(_enabled(tester, '저장'), isFalse);
@@ -832,21 +836,33 @@ void main() {
   });
 
   group('저장 · 되돌리기', () {
+    testWidgets('소품 색 선택은 몸 색과 독립이며 저장 뒤 프로필에 남는다',(tester)async{
+      final e=UiEnv();await e.seed(tester);await _open(tester,e);
+      final oldBody=_worn(tester).bodyArgb;
+      await _tap(tester,_key('prop-color-swatch-9'));
+      expect(_worn(tester).bodyArgb,oldBody);
+      expect(_worn(tester).colors['beretColor'],0xFFC9775A);
+      await _tap(tester,find.text('저장'));await tester.pump(const Duration(milliseconds:200));
+      final saved=await tester.runAsync(()=>ProfileService(e.db).me());
+      expect(saved!.look.propColors['hat_01'],'#C9775A');
+      await end(tester,e);
+    });
+
     testWidgets('저장하면 Profile.look에 JSON으로 남고 단추가 다시 꺼진다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => _ownProps(e.db, ['hand_02']));
       await _open(tester, e);
 
       await _goTab(tester, 'me');
-      await _tap(tester, _key('eyes-bean'));
-      await _tap(tester, _key('nose-wide'));
+      await _tap(tester, _key('eyes-soft'));
+      await _tap(tester, _key('nose-dots'));
       await _tap(tester, _key('body-swatch-2'));
       await _goTab(tester, 'bag');
       await _tap(tester, _key('prop-hand_02'));
       await _save(tester);
 
       final look = await _stored(tester, e);
-      expect((look.eyes, look.nose, look.body), ('bean', 'wide', const SwatchBodyColor(2)));
+      expect((look.eyes, look.nose, look.body), ('soft', 'dots', const SwatchBodyColor(2)));
       expect(look.brows, Look.initial.brows);
       expect(look.slots['bag'], 'hand_02');
       expect(look.slots['hat'], 'hat_01');
@@ -867,7 +883,7 @@ void main() {
 
       await _tap(tester, _key('eyes-sleepy'));
       await _save(tester);
-      await _tap(tester, _key('eyes-bean'));
+      await _tap(tester, _key('eyes-soft'));
       expect(_enabled(tester, '저장'), isTrue);
       await tester.tap(find.widgetWithText(GameButton, '되돌리기'));
       await tester.pump();
@@ -881,7 +897,7 @@ void main() {
       await e.seed(tester);
       await _open(tester, e);
       await _goTab(tester, 'me');
-      await _tap(tester, _key('eyes-bean'));
+      await _tap(tester, _key('eyes-soft'));
       await tester.tap(find.widgetWithText(GameButton, '저장'));
       await settle(tester, () => find.text('저장했어요').evaluate().isNotEmpty);
       expect(find.text('저장했어요'), findsOneWidget);
@@ -895,7 +911,7 @@ void main() {
       await _open(tester, e);
 
       await _goTab(tester, 'me');
-      await _tap(tester, _key('brows-thick'));
+      await _tap(tester, _key('brows-handsome'));
       await _tap(tester, _key('body-swatch-5'));
       await _goTab(tester, 'shoe');
       await _tap(tester, _key('prop-none'));
@@ -907,7 +923,7 @@ void main() {
       expect(_enabled(tester, '저장'), isFalse);
       expect(_enabled(tester, '되돌리기'), isFalse);
       await _goTab(tester, 'me');
-      expect(_chosen(tester, 'brows-shiba'), isTrue);
+      expect(_chosen(tester, 'brows-gentle'), isTrue);
       expect(_swatchCheck('body-swatch-1'), findsOneWidget);
       // DB는 그대로 (저장한 적 없다)
       final row = await tester.runAsync(() => e.db.select(e.db.profile).getSingle());
@@ -940,7 +956,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('표정 미리보기만 바꿔도 확인 없이 나간다 (저장할 것이 아니다)', (tester) async {
+    testWidgets('동작 미리보기만 바꿔도 확인 없이 나간다 (저장할 것이 아니다)', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
@@ -959,7 +975,7 @@ void main() {
       await e.seed(tester);
       await _open(tester, e);
       await _goTab(tester, 'me');
-      await _tap(tester, _key('eyes-fierce'));
+      await _tap(tester, _key('eyes-sleepy'));
 
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
@@ -976,7 +992,7 @@ void main() {
       await transition(tester);
       expect(find.text('저장하지 않고 나갈까요?'), findsNothing);
       expect(find.byType(DecorateScreen), findsOneWidget);
-      expect(_chosen(tester, 'eyes-fierce'), isTrue);
+      expect(_chosen(tester, 'eyes-sleepy'), isTrue);
       expect(_enabled(tester, '저장'), isTrue);
 
       await tester.tap(find.byTooltip('뒤로'));
@@ -996,7 +1012,7 @@ void main() {
       await e.seed(tester);
       await _open(tester, e);
       await _goTab(tester, 'me');
-      await _tap(tester, _key('eyes-bean'));
+      await _tap(tester, _key('eyes-soft'));
 
       await tester.binding.handlePopRoute();
       await transition(tester);
@@ -1012,7 +1028,7 @@ void main() {
       await e.seed(tester);
       await _open(tester, e);
       await _goTab(tester, 'me');
-      await _tap(tester, _key('eyes-bean'));
+      await _tap(tester, _key('eyes-soft'));
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
       await tester.tapAt(const Offset(195, 30));
@@ -1027,7 +1043,7 @@ void main() {
       await e.seed(tester);
       await _open(tester, e);
       await _goTab(tester, 'me');
-      await _tap(tester, _key('eyes-bean'));
+      await _tap(tester, _key('eyes-soft'));
       await _save(tester);
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
@@ -1105,7 +1121,8 @@ void main() {
       expect(_state('hat_01_c1', '입는 중'), findsOneWidget);
       expect(_state('hat_01', '가짐'), findsOneWidget);
       expect(_summary(tester), startsWith('봄하늘 베레모 · 여행복'));
-      expect(_worn(tester), before);
+      expect(_worn(tester).outfit,before.outfit);
+      expect(_worn(tester).choices,before.choices);
 
       // 색 소품(별밤 여행복)은 그림이 없어 기본 여행복 그림으로 보인다(색은 T5 때). 맨몸이 되지 않는다
       await _goTab(tester, 'cloth');

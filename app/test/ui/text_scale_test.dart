@@ -903,7 +903,7 @@ void main() {
       await e.seed(tester);
       await openDecorate(tester, e, fit);
       await _tap(tester, _key('tab-me'));
-      await _tap(tester, _key('eyes-cat'));
+      await _tap(tester, _key('eyes-mischievous'));
       fit.check('눈을 고름');
       await _tap(tester, _key('body-custom'));
       fit.check('몸 색 직접 고르기가 열림');
@@ -927,7 +927,7 @@ void main() {
       await e.seed(tester);
       await openDecorate(tester, e, fit);
       await _tap(tester, _key('tab-me'));
-      await _tap(tester, _key('eyes-cat'));
+      await _tap(tester, _key('eyes-mischievous'));
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
       expect(find.text('저장하지 않고 나갈까요?'), findsOneWidget);

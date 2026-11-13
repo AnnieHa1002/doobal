@@ -14,7 +14,6 @@ import 'package:doobal/domain/onboarding.dart';
 import 'package:doobal/domain/sigungu.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/domain/sky.dart';
-import 'package:doobal/domain/spirit_look.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/palette.dart';
@@ -355,11 +354,11 @@ void main() {
       expect(xs, orderedEquals([...xs]..sort()));
       // 처음은 눈 탭: 눈 5칸, 한 줄에 4칸
       final eyes = spiritPalette.faces['eyes']!;
-      expect(eyes, hasLength(5));
+      expect(eyes, hasLength(6));
       final ys = [for (final p in eyes) tester.getTopLeft(find.byKey(ValueKey('eyes-${p.id}'))).dy];
       expect(ys.take(4).toSet(), hasLength(1));
       expect(ys[4], greaterThan(ys[0]));
-      expect(find.byKey(const ValueKey('brows-shiba')), findsNothing);
+      expect(find.byKey(const ValueKey('brows-gentle')), findsNothing);
       expect(find.byKey(const ValueKey('body-custom')), findsNothing);
       // 눈썹·코·입 탭은 그 부위 칸 전부
       for (final key in ['brows', 'nose', 'mouth']) {
@@ -367,7 +366,7 @@ void main() {
         for (final p in spiritPalette.faces[key]!) {
           expect(find.byKey(ValueKey('$key-${p.id}')), findsOneWidget, reason: '$key ${p.id}');
         }
-        expect(find.byKey(const ValueKey('eyes-dot')), findsNothing);
+        expect(find.byKey(const ValueKey('eyes-default_drop')), findsNothing);
       }
       // 몸 색 탭: 견본 10개 + 직접 고르기
       await tab(tester, 'body');
@@ -401,16 +400,14 @@ void main() {
         matching: find.byType(SpiritCharacter),
       );
       expect(spirit(), findsOneWidget);
-      expect(
-        tester.widget<SpiritCharacter>(spirit()).look,
-        // 첫 모습: 기본 가방(큰 붓)을 메고 기본 옷 여행복, 크림 몸
-        SpiritLook.base.copyWith(bag: 1, outfit: 1, bodyArgb: 0xFFF3E4C4),
-      );
+      final initialSpirit=tester.widget<SpiritCharacter>(spirit()).look;
+      expect(initialSpirit.bodyArgb,0xFFF3E4C4);
+      expect(initialSpirit.choices['bag'],1);expect(initialSpirit.choices['cloth'],4);
       expect(find.text('크림 · 여행복 카키'), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('eyes-cat')));
+      await tester.tap(find.byKey(const ValueKey('eyes-mischievous')));
       await tab(tester, 'mouth');
-      await tester.tap(find.byKey(const ValueKey('mouth-smirk')));
+      await tester.tap(find.byKey(const ValueKey('mouth-long_smile')));
       await tab(tester, 'body');
       await tester.tap(find.byKey(const ValueKey('body-swatch-9')));
       await tab(tester, 'cloth');
@@ -419,7 +416,7 @@ void main() {
       final look = tester.widget<SpiritCharacter>(spirit()).look;
       expect(
         (look.eye, look.mouth, look.bodyArgb, look.bodyBaseArgb),
-        (4, 5, 0xFFC9775A, 0xFFFFF5E2),
+        (2, 5, 0xFFC9775A, 0xFFFFF5E2),
       );
       // 옷 색은 정령 새 방식(T5) 뒤에 보인다. 지금은 여행복 그림 그대로
       expect(look.outfit, 1);
@@ -517,11 +514,11 @@ void main() {
       await tester.enterText(find.byType(TextField), ' 화가 ');
       await tester.tap(find.byKey(const ValueKey('eyes-sleepy')));
       await tab(tester, 'brows');
-      await tester.tap(find.byKey(const ValueKey('brows-thin')));
+      await tester.tap(find.byKey(const ValueKey('brows-short')));
       await tab(tester, 'nose');
-      await tester.tap(find.byKey(const ValueKey('nose-dot')));
+      await tester.tap(find.byKey(const ValueKey('nose-round')));
       await tab(tester, 'mouth');
-      await tester.tap(find.byKey(const ValueKey('mouth-flat')));
+      await tester.tap(find.byKey(const ValueKey('mouth-soft_smile')));
       await tab(tester, 'body');
       await tester.tap(find.byKey(const ValueKey('body-swatch-7')));
       await tab(tester, 'cloth');
@@ -1215,7 +1212,7 @@ void main() {
       noAsking();
 
       await tester.enterText(find.byType(TextField), '나그네');
-      await tester.tap(find.byKey(const ValueKey('eyes-bean')));
+      await tester.tap(find.byKey(const ValueKey('eyes-soft')));
       await tester.tap(find.byKey(const ValueKey('tab-body')));
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('body-swatch-5')));
