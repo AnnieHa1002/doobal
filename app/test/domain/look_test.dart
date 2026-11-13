@@ -69,10 +69,10 @@ void main() {
 
     test('JSON 왕복: 모든 칸을 바꾼 모습 (비운 칸은 null로 남는다)', () {
       const look = Look(
-        eyes: 'cat',
+        eyes: 'e3',
         brows: 'none',
-        nose: 'heart',
-        mouth: 'smirk',
+        nose: 'n4',
+        mouth: 'm5',
         body: CustomBodyColor('#A1B2C3'),
         slots: {
           'hat': 'hat_01',
@@ -103,14 +103,14 @@ void main() {
       expect(a, Look.initial.withSlot('hat', 'hat_02'));
       expect(a.hashCode, Look.initial.withSlot('hat', 'hat_02').hashCode);
       expect(a == Look.initial, isFalse);
-      expect(Look.initial == Look.initial.copyWith(nose: 'heart'), isFalse);
+      expect(Look.initial == Look.initial.copyWith(nose: 'n4'), isFalse);
       expect(Look.initial == Look.initial.copyWith(body: const SwatchBodyColor(2)), isFalse);
       expect(Look.initial == Look.initial.withSlot('hat', 'hat_02'), isFalse);
     });
 
     test('copyWith는 준 것만 바꾸고 소품 칸을 그대로 가져간다', () {
       final base = Look.initial.withSlot('hat', 'hat_02');
-      final a = base.copyWith(eyes: 'bean', body: const SwatchBodyColor(5));
+      final a = base.copyWith(eyes: 'e2', body: const SwatchBodyColor(5));
       expect((a.eyes, a.brows, a.nose, a.mouth), ('e2', 'b1', 'n7', 'm7'));
       expect(a.body, const SwatchBodyColor(5));
       expect(a.slots, base.slots);
@@ -137,7 +137,7 @@ void main() {
     test('빠진 키는 기본값, 일부만 있어도 빠진 키만 기본값', () {
       expect(Look.fromJson(<String, dynamic>{}), Look.initial);
       final look = Look.fromJson({
-        'eyes': 'cat',
+        'eyes': 'e3',
         'mouth': 'flat',
         'slots': {'hat': 'hat_02'},
       });
@@ -148,6 +148,14 @@ void main() {
       expect(look.slots['cloth'], 'cloth_02');
       expect(look.body, defaultBody);
       expect(look.clothColor, defaultClothColor);
+    });
+
+    test('옛 얼굴 id (계약 v0.5): PSD 이름은 같은 번호로 옮기고, v24 id는 기본 얼굴로', () {
+      final psd = Look.fromJson({'eyes': 'soft', 'brows': 'angry', 'nose': 'arch', 'mouth': 'grin'});
+      expect((psd.eyes, psd.brows, psd.nose, psd.mouth), ('e2', 'b3', 'n3', 'm5'));
+      final v24 = Look.fromJson({'eyes': 'cat', 'brows': 'shiba', 'nose': 'heart', 'mouth': 'smirk'});
+      expect((v24.eyes, v24.brows, v24.nose), ('e1', 'b1', 'n7'));
+      expect(Look.initial.copyWith(eyes: 'bean').eyes, 'e1');
     });
 
     test('옷 색 번호: 왕복하고, 칸을 바꿔도 남고, 1보다 작거나 정수가 아니면 FormatException', () {

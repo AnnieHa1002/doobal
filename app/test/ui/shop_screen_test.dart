@@ -217,7 +217,7 @@ void main() {
       await settle(tester, () => _balance(tester) == '1,240');
 
       await _press(tester, 'fx_shortcut');
-      expect(find.text('지름길을 50 럭에 구매할까요?'), findsOneWidget);
+      expect(find.text('구매하시겠습니까?'), findsOneWidget);
       expect(find.text('남는 럭 1,190'), findsOneWidget);
       expect(find.text('구매'), findsOneWidget);
       expect(find.text('취소'), findsOneWidget);
@@ -243,7 +243,7 @@ void main() {
       await _open(tester, e);
 
       await _press(tester, 'fx_tailwind');
-      expect(find.text('순풍을 40 럭에 구매할까요?'), findsOneWidget);
+      expect(find.text('구매하시겠습니까?'), findsOneWidget);
       await _answer(tester, '취소');
       await _press(tester, 'fx_tailwind');
       await tester.tapAt(const Offset(195, 40));
@@ -263,7 +263,7 @@ void main() {
       await _goTab(tester, ShopTab.prop);
 
       await _press(tester, 'face_02');
-      expect(find.text('귀마개를 300 럭에 구매할까요?'), findsOneWidget);
+      expect(find.text('구매하시겠습니까?'), findsOneWidget);
       await _answer(tester, '구매');
       expect(find.text('귀마개를 구매했어요'), findsOneWidget);
       await settle(tester, () => _state('face_02', '가짐').evaluate().isNotEmpty);
@@ -279,7 +279,7 @@ void main() {
 
       // 가진 칸은 눌러도 시트가 없다
       await _press(tester, 'face_02');
-      expect(find.textContaining('구매할까요'), findsNothing);
+      expect(find.textContaining('구매하시겠습니까'), findsNothing);
       await end(tester, e);
     });
 
@@ -290,7 +290,7 @@ void main() {
       await _goTab(tester, ShopTab.effect);
 
       await _press(tester, 'effect_01');
-      expect(find.text('나뭇잎을 200 럭에 구매할까요?'), findsOneWidget);
+      expect(find.text('구매하시겠습니까?'), findsOneWidget);
       expect(find.text('남는 럭 0'), findsOneWidget);
       await _answer(tester, '구매');
       await settle(tester, () => _state('effect_01', '가짐').evaluate().isNotEmpty);
@@ -306,10 +306,10 @@ void main() {
       await _goTab(tester, ShopTab.boat);
 
       await _press(tester, 'boat_raft');
-      expect(find.textContaining('구매할까요'), findsNothing);
+      expect(find.textContaining('구매하시겠습니까'), findsNothing);
 
       await _press(tester, 'boat_cruise');
-      expect(find.text('유람선을 5,000 럭에 구매할까요?'), findsOneWidget);
+      expect(find.text('구매하시겠습니까?'), findsOneWidget);
       await _answer(tester, '구매');
       await settle(tester, () => _state('boat_cruise', '가짐').evaluate().isNotEmpty);
       expect(_state('boat_cruise', '가짐'), findsOneWidget);
@@ -327,7 +327,7 @@ void main() {
 
       await _press(tester, 'fx_shortcut');
       expect(find.text(ShopBlock.notEnoughCoins.message), findsOneWidget);
-      expect(find.textContaining('구매할까요'), findsNothing);
+      expect(find.textContaining('구매하시겠습니까'), findsNothing);
       expect(await _withSvc(tester, (s) => s.coinBalance()), 49);
       expect(await _withSvc(tester, (s) => s.shopHeld()), isEmpty);
       await end(tester, e);
@@ -345,12 +345,12 @@ void main() {
 
       await _press(tester, 'fx_shortcut');
       expect(find.text(ShopBlock.holdFull.message), findsOneWidget);
-      expect(find.textContaining('구매할까요'), findsNothing);
+      expect(find.textContaining('구매하시겠습니까'), findsNothing);
       expect(await _withSvc(tester, (s) => s.coinBalance()), 1000);
       // 다른 효과는 살 수 있다
       await tester.pump(const Duration(seconds: 3));
       await _press(tester, 'fx_tailwind');
-      expect(find.textContaining('구매할까요'), findsOneWidget);
+      expect(find.textContaining('구매하시겠습니까'), findsOneWidget);
       await end(tester, e);
     });
 
@@ -401,7 +401,7 @@ void main() {
 
       // 오늘 2장을 다 썼어도 더 사서 보관할 수 있다
       await _press(tester, 'fx_shortcut');
-      expect(find.text('지름길을 50 럭에 구매할까요?'), findsOneWidget);
+      expect(find.text('구매하시겠습니까?'), findsOneWidget);
       await _answer(tester, '구매');
       expect(await _withSvc(tester, (s) => s.shopHeld()), {'fx_shortcut': 1});
 
@@ -496,7 +496,7 @@ void main() {
       await _goTab(tester, ShopTab.prop);
 
       await _press(tester, 'hat_01_c1');
-      expect(find.text('봄하늘 베레모를 100 럭에 구매할까요?'), findsOneWidget);
+      expect(find.text('구매하시겠습니까?'), findsOneWidget);
       expect(find.text('남는 럭 50'), findsOneWidget);
       await _answer(tester, '구매');
       expect(find.text('봄하늘 베레모를 구매했어요'), findsOneWidget);
@@ -510,7 +510,7 @@ void main() {
       expect(row!.seen, isFalse);
 
       await _press(tester, 'hat_01_c1');
-      expect(find.textContaining('구매할까요'), findsNothing);
+      expect(find.textContaining('구매하시겠습니까'), findsNothing);
       // 다른 색은 그대로 값
       expect(_state('hat_01_c2', '100 럭'), findsOneWidget);
       await end(tester, e);
@@ -524,7 +524,7 @@ void main() {
 
       await _press(tester, 'shoe_01_c2');
       expect(find.text(ShopBlock.notEnoughCoins.message), findsOneWidget);
-      expect(find.textContaining('구매할까요'), findsNothing);
+      expect(find.textContaining('구매하시겠습니까'), findsNothing);
       expect(await _withSvc(tester, (s) => s.coinBalance()), 99);
       expect(await _withSvc(tester, (s) => s.ownedPropIds()), isNot(contains('shoe_01_c2')));
       await end(tester, e);

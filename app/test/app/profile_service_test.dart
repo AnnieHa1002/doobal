@@ -139,8 +139,8 @@ void main() {
     });
 
     test('프로필 행이 아직 없어도 적는다', () async {
-      await svc.saveLook(Look.initial.copyWith(eyes: 'sleepy'));
-      expect((await stored()).eyes, 'sleepy');
+      await svc.saveLook(Look.initial.copyWith(eyes: 'e4'));
+      expect((await stored()).eyes, 'e4');
     });
 
     test('다시 저장하면 바뀐다', () async {

@@ -153,7 +153,7 @@ void main() {
       await e.db.into(e.db.profile).insertOnConflictUpdate(ProfileCompanion(
             id: const Value(1),
             nickname: const Value('나그네'),
-            look: const Value('{"eyes":"fierce","mouth":"tongue","body":{"kind":"swatch","i":9}}'),
+            look: const Value('{"eyes":"e4","mouth":"m5","body":{"kind":"swatch","i":9}}'),
           ));
     });
     await _open(tester, e);

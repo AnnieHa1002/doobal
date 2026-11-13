@@ -303,7 +303,8 @@ void main() {
       await tester.pump();
       expect(_blocked, findsOneWidget);
       final note = tester.widget<Text>(_blocked);
-      expect(note.data, '이 표현은 방명록에 남길 수 없어요');
+      // moderation.json v2 안내 (16장 11/13)
+      expect(note.data, '금칙어가 포함되어 있어요');
       // 빨간색이 아니라 테라코타, 어떤 단어인지는 말하지 않는다
       expect(note.style!.color, Palette.terracotta);
       expect(find.textContaining('시발'), findsOneWidget); // 입력한 글뿐
