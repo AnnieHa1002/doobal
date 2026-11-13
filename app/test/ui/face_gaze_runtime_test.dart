@@ -1,6 +1,6 @@
-import 'dart:ui';
 
 import 'package:doobal/domain/look.dart';
+import 'package:doobal/domain/unified_wardrobe.dart';
 import 'package:doobal/domain/spirit_look.dart';
 import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:doobal/ui/scene/spirit_controller.dart';
@@ -58,36 +58,21 @@ void main() {
       ],
       [6, 0, 0, 3],
     );
-    expect(c.instance.color('beretColor')!.value, const Color(0xffd276a0));
+    // 소품 색은 직접 고르지 않아서 Rive에 넣는 기본색 그대로 (16장 11/4)
+    expect(c.instance.color('beretColor')!.value.toARGB32(), unifiedProp('hat_01')!.argb);
   });
-  test('시선은 제한된 눈 이동에만 적용되고 머리·몸·옷은 움직이지 않는다', () async {
+  test('v33에는 시선 입력이 없어서 setLook은 아무것도 바꾸지 않고 멈추지도 않는다 (11/13)', () async {
     final (f, c) = await load();
     addTearDown(() {
       c.dispose();
       f.dispose();
     });
-    c.setLook(0, 0);
-    tick(c, 1);
-    final eye = c.artboard.component('Gaze_Front_0')!;
-    final head = c.artboard.component('Character_Float_front')!;
-    final oldX = head.x;
+    expect(c.instance.number('lookX'), isNull);
+    final before = c.instance.number('eye')!.value;
     c.setLook(100, -100);
-    tick(c, 1);
-    expect(eye.x, closeTo(4, .001));
-    expect(eye.y, closeTo(-3, .001));
-    expect(head.x, oldX);
-    c.instance.number('eye')!.value = 2;
-    tick(c, 1);
-    final soft = c.artboard.component('Gaze_Front_1')!;
-    expect(soft.x, 4);
-    expect(soft.y, -3);
-    soft.dispose();
     c.setLook(double.nan, double.infinity);
     tick(c, 1);
-    expect(eye.x, 0);
-    expect(eye.y, 0);
-    eye.dispose();
-    head.dispose();
+    expect(c.instance.number('eye')!.value, before);
   });
   test('기존 게임 얼굴 호출도 새 PSD 선택으로 변환된다', () {
     final s = spiritLookOf(

@@ -30,8 +30,10 @@ void main() {
       c.dispose();
       f.dispose();
     });
-    expect(c.artboard.width, 1500);
-    expect(c.artboard.height, 1100);
+    // 앱용 v33: 정령 전용 아트보드 Spirit 502×600 (11/13)
+    expect(c.artboard.name, 'Spirit');
+    expect(c.artboard.width, 502);
+    expect(c.artboard.height, 600);
     for (final name in [
       'GreetOneShot',
       'JoyOneShot',

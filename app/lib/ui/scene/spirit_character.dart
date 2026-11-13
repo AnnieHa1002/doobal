@@ -21,7 +21,8 @@ class SpiritCharacter extends StatefulWidget {
     this.expression = 0,
     this.onReady,
   });
-  static const asset = 'assets/rive/doobal_unified.riv';
+  /// 앱용 정령 Rive v33 (16장 11/13, 아트보드 `Spirit` 502×600, 바탕 투명, 입력은 v32 inputs.md와 같다)
+  static const asset = 'assets/rive/spirit_v33.riv';
   @visibleForTesting
   static rive.Factory renderer = rive.Factory.rive;
   final double speed, lookX, lookY;
@@ -39,6 +40,9 @@ class SpiritCharacter extends StatefulWidget {
   @override
   State<SpiritCharacter> createState() => _SpiritCharacterState();
 }
+
+/// 600 캔버스에서 Rive 그림 1px의 크기 (11/12 통합본이 잘라 쓰던 배율 328.16 / 560)
+const _scale = 328.16 / 560;
 
 class _SpiritCharacterState extends State<SpiritCharacter>
     with WidgetsBindingObserver {
@@ -130,46 +134,24 @@ class _SpiritCharacterState extends State<SpiritCharacter>
   Widget build(BuildContext context) {
     final controller = _controller;
     if (controller == null) return const SizedBox.expand();
-    // 통합 조작판은 게임 안에 노출하지 않고, 그림 영역만 기존600좌표 장면에 맞춘다.
-    final view = LayoutBuilder(
-      builder: (context, box) => FittedBox(
-        fit: BoxFit.contain,
-        child: SizedBox(
-          width: 600,
-          height: 600,
-          child: Stack(
-            children: [
-              Positioned(
-                left: 133,
-                top: 68,
-                width: 328.16,
-                height: 436.57,
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: SizedBox(
-                    width: 560,
-                    height: 745,
-                    child: ClipRect(
-                      child: OverflowBox(
-                        alignment: Alignment.topLeft,
-                        minWidth: 1500,
-                        maxWidth: 1500,
-                        minHeight: 1100,
-                        maxHeight: 1100,
-                        child: Transform.translate(
-                          offset: const Offset(0, -180),
-                          child: rive.RiveWidget(
-                            controller: controller,
-                            fit: rive.Fit.contain,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+    // v33 `Spirit` 아트보드(502×600)를 기존 600 캔버스(머리 위 y150~발 y440 잣대)에 놓는다.
+    // 자리는 11/12 통합본(v32와 같은 1500×1100 시험 판에서 잘라 쓰던 것)과 픽셀까지 같게 맞췄다(11/13 그려서 대조):
+    // 잘라 쓰던 배율 0.586, v33 원점은 v32 판의 (44, 252)
+    final view = FittedBox(
+      fit: BoxFit.contain,
+      child: SizedBox(
+        width: 600,
+        height: 600,
+        child: Stack(
+          children: [
+            Positioned(
+              left: 133 + 44 * _scale,
+              top: 68 + (252 - 180) * _scale,
+              width: 502 * _scale,
+              height: 600 * _scale,
+              child: rive.RiveWidget(controller: controller, fit: rive.Fit.contain),
+            ),
+          ],
         ),
       ),
     );
