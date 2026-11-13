@@ -7,7 +7,6 @@ import 'package:doobal/data/step_source.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
-import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/domain/paint_trail.dart';
 import 'package:doobal/domain/route.dart';
 import 'package:doobal/domain/rules.dart';
@@ -16,7 +15,6 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../domain/helpers.dart';
-import 'helpers.dart';
 
 // 물감 길 엔진의 동기화 쪽 (M1 명세 v0.5 ①~⑤·⑦): 물감 길 기록, 거리 1종, 하루 요약 trailM, 럭, 거리 소품,
 // 앱이 끝난 물감 길 닫기, 걷기 기록, 지도 물감 구간.

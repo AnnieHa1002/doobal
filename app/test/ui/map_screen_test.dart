@@ -468,23 +468,23 @@ void main() {
     Finder inSheet(String text) =>
         find.descendant(of: find.byKey(const ValueKey('dest-sheet')), matching: find.text(text));
 
-    testWidgets('출발하기: 경비가 0이면 시트 없이 바로 출발하고 걷는 중으로 간다', (tester) async {
+    testWidgets('출발하기: 경비가 0이면 시트 없이 여정만 정하고 쉼터(첫 화면)로 (11/13)', (tester) async {
       final e = _Env();
       await e.seed(tester);
       await _openMap(tester, e);
       await _searchAndPick(tester, '경복궁', 'kr001');
 
       await tester.tap(find.text('출발하기'));
-      await _settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      await _settle(tester, () => find.byType(MapScreen).evaluate().isEmpty, tries: 80);
       await _transition(tester);
       expect(find.byKey(const ValueKey('dest-sheet')), findsNothing);
 
       final rows = await e.journeys(tester);
       expect(rows.where((r) => r.status == JourneyStatus.active).single.destId, 'kr001');
-      // 지도 자리를 걷는 중이 대신한다
-      expect(find.byType(WalkingScreen), findsOneWidget);
+      // 걷는 중은 열지 않는다 (걸으면 저절로 열린다)
+      expect(find.byType(WalkingScreen), findsNothing);
       expect(find.byType(MapScreen), findsNothing);
-      expect(find.text('걷기 마치기'), findsOneWidget);
+      expect(find.text('열기'), findsOneWidget);
       await _end(tester, e);
     });
 
@@ -527,7 +527,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('dest-sheet-fund')));
       await tester.pump();
       await tester.tap(inSheet('출발하기'));
-      await _settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      await _settle(tester, () => find.byType(MapScreen).evaluate().isEmpty, tries: 80);
       await _transition(tester);
 
       final rows = await e.journeys(tester);
@@ -548,7 +548,7 @@ void main() {
       await tester.tap(find.text('출발하기'));
       await _transition(tester);
       await tester.tap(inSheet('출발하기'));
-      await _settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      await _settle(tester, () => find.byType(MapScreen).evaluate().isEmpty, tries: 80);
       await _transition(tester);
 
       final rows = await e.journeys(tester);
@@ -599,16 +599,17 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('여정이 있으면 `출발하기`는 걷는 중으로 간다 (여정은 그대로)', (tester) async {
+    testWidgets('여정이 있으면 `출발하기`는 쉼터로 돌아간다 (여정은 그대로)', (tester) async {
       final e = _Env();
       await e.seed(tester, () async => e.svc.startJourney('kr003', _t1, useFund: false));
       await _openMap(tester, e);
 
       await tester.tap(find.text('출발하기'));
-      await _settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      await _settle(tester, () => find.byType(MapScreen).evaluate().isEmpty, tries: 80);
       await _transition(tester);
-      expect(find.byType(WalkingScreen), findsOneWidget);
+      expect(find.byType(WalkingScreen), findsNothing);
       expect(find.byType(MapScreen), findsNothing);
+      expect(find.text('열기'), findsOneWidget);
       final rows = await e.journeys(tester);
       expect(rows.single.destId, 'kr003');
       expect(rows.single.status, JourneyStatus.active);
@@ -750,16 +751,17 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('`출발하기`는 걷는 중으로 가고, 첫 여정은 그대로다', (tester) async {
+    testWidgets('`출발하기`는 쉼터로 돌아가고, 첫 여정은 그대로다', (tester) async {
       final e = _Env();
       await e.seed(tester, () => startSketch(e));
       await _openMap(tester, e);
       await _searchAndPick(tester, '경복궁', 'kr001');
 
       await tester.tap(find.text('출발하기'));
-      await _settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      await _settle(tester, () => find.byType(MapScreen).evaluate().isEmpty, tries: 80);
       await _transition(tester);
-      expect(find.byType(WalkingScreen), findsOneWidget);
+      expect(find.byType(WalkingScreen), findsNothing);
+      expect(find.text('열기'), findsOneWidget);
       final rows = await e.journeys(tester);
       expect(rows, hasLength(1));
       expect((rows.single.destId, rows.single.status), (sketchId, JourneyStatus.active));
@@ -889,7 +891,7 @@ void main() {
       final stopped = await kr003(tester, e);
       expect(stopped.status, JourneyStatus.stopped);
       await tester.tap(find.text('출발하기'));
-      await _settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      await _settle(tester, () => find.byType(MapScreen).evaluate().isEmpty, tries: 80);
       await _transition(tester);
       final rows = await e.journeys(tester);
       final started = rows.singleWhere((r) => r.status == JourneyStatus.active);

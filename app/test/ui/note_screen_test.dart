@@ -1,5 +1,6 @@
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/guestbook.dart';
+import 'package:doobal/domain/paint_trail.dart';
 import 'package:doobal/ui/guestbook/guestbook_read_screen.dart';
 import 'package:doobal/ui/guestbook/guestbook_write_screen.dart';
 import 'package:doobal/ui/note/note_screen.dart';
@@ -45,17 +46,18 @@ Future<void> _openWalksTab(WidgetTester tester, {String? waitFor}) async {
   await tester.pump();
 }
 
-/// 걷기 한 줄을 DB에 직접 넣는다 (걷기 기록 화면을 열지 않는 목록 확인용)
-Future<void> _session(AppDb db, DateTime start, int minutes, int steps, double distanceM) =>
-    db.into(db.walkSessions).insert(WalkSessionsCompanion.insert(
-          startUtc: Value<int>(start.millisecondsSinceEpoch),
-          endUtc: start.add(Duration(minutes: minutes)).millisecondsSinceEpoch,
-          steps: steps,
-          distanceM: distanceM,
-          runRatio: 0,
-          qualified: true,
-          counted: true,
-        ));
+/// [start]부터 [minutes]분 동안 분당 [spm]보를 걷고 그 시간을 닫힌 물감 길 한 줄로 넣는다 (동기화까지)
+Future<void> _trail(UiEnv e, DateTime start, int minutes, int spm) async {
+  e.source.records.add(walkRecord(start, minutes, spm));
+  final end = start.add(Duration(minutes: minutes));
+  await e.db.into(e.db.paintTrails).insert(PaintTrailsCompanion.insert(
+        startUtc: start.millisecondsSinceEpoch,
+        endUtc: Value(end.millisecondsSinceEpoch),
+        endReason: const Value(PaintTrailEnd.idle),
+      ));
+  if (end.isAfter(e.now)) e.now = end.add(const Duration(minutes: 10));
+  await e.svc.sync(e.now);
+}
 
 double _y(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
 
@@ -74,7 +76,7 @@ void main() {
       expect(find.text('내 방명록'), findsOneWidget);
       expect(find.text('걷기 기록'), findsOneWidget);
       expect(_empty, findsOneWidget);
-      expect(find.text('아직 감지된 걷기가 없어요'), findsNothing);
+      expect(find.text('아직 걷기 기록이 없어요'), findsNothing);
 
       // 걷기 기록 탭을 보고 돌아와도 빈 상태
       await _openWalksTab(tester);
@@ -203,42 +205,44 @@ void main() {
     });
   });
 
-  group('걷기 기록 탭', () {
-    testWidgets('걷기가 없으면 빈 상태', (tester) async {
+  group('걷기 기록 탭 (물감 길, 캔버스 6-3)', () {
+    testWidgets('물감 길이 없으면 빈 상태', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
-      await _openWalksTab(tester, waitFor: '아직 감지된 걷기가 없어요');
+      await _openWalksTab(tester, waitFor: '아직 걷기 기록이 없어요');
 
-      expect(find.text('아직 감지된 걷기가 없어요'), findsOneWidget);
+      expect(find.text('아직 걷기 기록이 없어요'), findsOneWidget);
       await end(tester, e);
     });
 
-    testWidgets('최신순으로, 날짜별 묶음에 시각·걸음·거리가 나온다', (tester) async {
+    testWidgets('최신순으로, 날짜 줄(걸음·거리) 아래 물감 길 줄(시각·물감 길 km)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
-        // 한국 11월 17일 20:00, 11월 18일 10:00, 11월 18일 12:00 (일부러 섞어 넣는다)
-        await _session(e.db, DateTime.utc(2026, 11, 18, 1), 15, 1500, 1050);
-        await _session(e.db, DateTime.utc(2026, 11, 17, 11), 30, 3000, 2100);
-        await _session(e.db, DateTime.utc(2026, 11, 18, 3), 20, 2400, 1680);
+        // 한국 11월 18일 10:00, 12:00, 11월 19일 20:00 (설치 뒤, 일부러 섞어 넣는다)
+        await _trail(e, DateTime.utc(2026, 11, 18, 3), 20, 120);
+        await _trail(e, DateTime.utc(2026, 11, 18, 1), 15, 100);
+        await _trail(e, DateTime.utc(2026, 11, 19, 11), 30, 100);
       });
       await _open(tester, e);
       await _openWalksTab(tester, waitFor: '12:00');
 
-      expect(find.text('2,400보'), findsOneWidget);
-      expect(find.text('1.68 km'), findsOneWidget);
-      expect(find.text('1,500보'), findsOneWidget);
-      expect(find.text('1.05 km'), findsOneWidget);
-      expect(find.text('3,000보'), findsOneWidget);
-      expect(find.text('2.10 km'), findsOneWidget);
+      // 물감 길 거리: 2,400보 × 0.7 = 1.68km, 1,500보 = 1.05km, 3,000보 = 2.1km
+      expect(find.text('1.7 km'), findsOneWidget);
+      expect(find.text('1.1 km'), findsOneWidget);
+      expect(find.text('2.1 km'), findsOneWidget);
+      expect(find.text('물감 길'), findsNWidgets(3));
+      // 날짜 줄: 그날 걸음·거리
+      expect(find.text('3,900보 · 2.7 km'), findsOneWidget);
+      expect(find.text('3,000보 · 2.1 km'), findsOneWidget);
 
-      // 위에서 아래로: 11월 18일 → 12:00 → 10:00 → 11월 17일 → 20:00
+      // 위에서 아래로: 11월 19일 → 20:00 → 11월 18일 → 12:00 → 10:00
       final order = [
+        _y(tester, find.text('11월 19일')),
+        _y(tester, find.text('20:00')),
         _y(tester, find.text('11월 18일')),
         _y(tester, find.text('12:00')),
         _y(tester, find.text('10:00')),
-        _y(tester, find.text('11월 17일')),
-        _y(tester, find.text('20:00')),
       ];
       for (var i = 1; i < order.length; i++) {
         expect(order[i], greaterThan(order[i - 1]), reason: '$i번째 줄');
@@ -246,14 +250,13 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('한 줄을 누르면 그 걷기의 걷기 기록이 다시 보기로 열린다 (동기화 없이, 쉼터로 대신 뒤로)', (tester) async {
+    testWidgets('물감 길 줄을 누르면 그 물감 길의 걷기 기록이 열린다 (동기화 없이, 뒤로)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
-        // 걷기 15분 × 100보 = 1,500보, 1.05km. 목적지 여정이 있어도 다시 볼 때는 진행 막대가 없다
+        // 15분 × 100보 = 1,500보, 1.05km, 물감 방울 10개(100m마다), 럭 10.5 + 10.5 → 21
         await e.svc.startJourney('kr003', t1);
-        e.source.records.add(walkRecord(t1, 15, 100));
         e.now = t1.add(const Duration(minutes: 30));
-        await e.svc.sync(e.now);
+        await _trail(e, t1, 15, 100);
       });
       final syncedAt = (await tester.runAsync(() => e.svc.snapshot(e.now)))!.lastFetched;
       // 열 때 시계가 훌쩍 지나 있어도 동기화하지 않는다 (마지막 동기화 시각이 그대로)
@@ -261,26 +264,29 @@ void main() {
       await _open(tester, e);
       await _openWalksTab(tester, waitFor: '10:00');
 
-      await tester.tap(find.byKey(ValueKey('walk-${t1.millisecondsSinceEpoch}')));
+      final id = (await tester.runAsync(() => e.db.select(e.db.paintTrails).getSingle()))!.id;
+      await tester.tap(find.byKey(ValueKey('trail-$id')));
       await transition(tester);
       await settle(tester, () => find.text('기록을 정리하는 중').evaluate().isEmpty);
       await tester.pump();
 
       final screen = tester.widget<WalkRecordScreen>(find.byType(WalkRecordScreen));
-      expect(screen.review, isTrue);
       expect(screen.start, t1);
       expect(screen.end, t1.add(const Duration(minutes: 15)));
 
-      expect(find.text('걷기 기록'), findsOneWidget);
+      expect(find.text('물감 길'), findsOneWidget);
       expect(find.text('11월 18일 10:00 ~ 10:15'), findsOneWidget);
       expect(find.text('1,500'), findsOneWidget);
       // 큰 거리 숫자와 1km 기록의 남은 구간 줄
       expect(find.text('1.05 km'), findsNWidgets(2));
       expect(find.text('15:00'), findsOneWidget);
       expect(find.text('걷기 100% · 달리기 0%'), findsOneWidget);
+      expect(find.text('10개'), findsOneWidget);
+      expect(find.text('+21 럭'), findsOneWidget);
       expect(find.text('오늘 함께 걷기 1/3'), findsOneWidget);
-      expect(find.text('다음 방명록 지점까지 3,500보'), findsOneWidget);
-      // 진행 막대 연출과 쉼터로 버튼은 없고 뒤로 가기만 있다
+      // 실제/여행 두 줄·다음 방명록 지점·진행 막대 연출·쉼터로 버튼은 없다
+      expect(find.textContaining('다음 방명록'), findsNothing);
+      expect(find.textContaining('여행 '), findsNothing);
       expect(find.textContaining('왔어요'), findsNothing);
       expect(find.text('쉼터로'), findsNothing);
       expect(find.byTooltip('뒤로'), findsOneWidget);
@@ -298,15 +304,13 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('지난 날의 걷기는 오늘 대신 그 날짜와 그날의 몇 번째인지로 부른다', (tester) async {
+    testWidgets('지난 날의 물감 길은 오늘 대신 그 날짜와 그날의 몇 번째인지로 부른다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
-        // 같은 날 15분 걷기 4번 (30분 간격): 앞 셋은 인정, 넷째는 하루 최대를 채워 인정 안 됨
+        // 같은 날 15분 물감 길 4번 (30분 간격): 앞 셋은 인정, 넷째는 하루 최대를 채워 인정 안 됨
         for (var i = 0; i < 4; i++) {
-          e.source.records.add(walkRecord(t1.add(Duration(minutes: 30 * i)), 15, 100));
+          await _trail(e, t1.add(Duration(minutes: 30 * i)), 15, 100);
         }
-        e.now = t1.add(const Duration(hours: 3));
-        await e.svc.sync(e.now);
       });
       // 이틀 뒤에 노트를 연다
       e.now = t1.add(const Duration(days: 2));

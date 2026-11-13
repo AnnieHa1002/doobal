@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/companion_providers.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../app/paint_trail_controller.dart';
 import '../../domain/companion_engine.dart' show storyNoticeKey;
 import '../../domain/notification_policy.dart';
 import '../common/palette.dart';
@@ -50,6 +51,12 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
       ref.invalidate(snapshotProvider);
       setState(() => _busy = false);
     }
+  }
+
+  /// 센서 판정을 기다리지 않고 물감 길을 연다 (걸음이 5분 멈추면 평소처럼 끝난다)
+  Future<String> _startTrail() async {
+    await ref.read(paintTrailProvider.notifier).startNow();
+    return ref.read(paintTrailProvider).active ? '열림' : '판정이 아직 시작되지 않았어요';
   }
 
   Future<String> _permission() async {
@@ -200,6 +207,10 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
               OutlinedButton(
                 onPressed: _busy ? null : () => _run('여정', _stop),
                 child: const Text('멈추기'),
+              ),
+              OutlinedButton(
+                onPressed: _busy ? null : () => _run('물감 길', _startTrail),
+                child: const Text('물감 길 지금 열기'),
               ),
               OutlinedButton(
                 onPressed: () => Navigator.of(context).push(

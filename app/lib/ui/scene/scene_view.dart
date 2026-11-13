@@ -41,6 +41,7 @@ class SceneView extends StatelessWidget {
     this.sceneBeside = const [],
     this.sceneAbove = const [],
     this.walkCompanion,
+    this.walkGround,
   });
 
   final SceneMode mode;
@@ -85,6 +86,9 @@ class SceneView extends StatelessWidget {
 
   /// 걷는 중 장면의 동행 층 (정령 뒤·앞풀 아래). 장면이 자리를 넘겨 부른다. 없으면 혼자다
   final Widget Function(SceneCompanionSpot spot)? walkCompanion;
+
+  /// 걷는 중 장면의 땅 위 층 (땅과 같이 흐르는 물감 방울, 정령·동행 뒤). 장면이 자리를 넘겨 부른다
+  final Widget Function(SceneCompanionSpot spot)? walkGround;
 
   @override
   Widget build(BuildContext context) {
@@ -175,17 +179,22 @@ class SceneView extends StatelessWidget {
             ? rules.characterHeightLandscapePx * size.height / 1170
             : rules.characterHeightPx * k);
     final companion = walkCompanion;
+    final ground = walkGround;
+    final spot = companion == null && ground == null
+        ? null
+        : _companionSpot(size, art, artLayout, foot, figureHeight, tint);
     return Stack(
       children: [
         Positioned.fill(
           child: CustomPaint(painter: layer(ScenePass.background)),
         ),
+        if (ground != null) Positioned.fill(child: IgnorePointer(child: ground(spot!))),
         // 동행이 없어도 자리는 둔다 (정령이 다시 만들어지지 않게)
         Positioned.fill(
           child: IgnorePointer(
             child: companion == null
                 ? const SizedBox.shrink()
-                : companion(_companionSpot(size, art, artLayout, foot, figureHeight, tint)),
+                : companion(spot!),
           ),
         ),
         _character(foot, figureHeight, speed, pose, tint),

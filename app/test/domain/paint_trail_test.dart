@@ -27,7 +27,11 @@ Rules _rulesWith(void Function(Map<String, dynamic> config) edit) {
 List<StepMinute> _walk(int minutes, int spm, {int startAfter = 0}) =>
     minutesFrom(_at(startAfter), List.filled(minutes, spm));
 
-List<MinuteTravel> _split(List<StepMinute> minutes, List<PaintTrailWindow> windows, {DateTime? now}) =>
+List<MinuteTravel> _split(
+  List<StepMinute> minutes,
+  List<PaintTrailWindow> windows, {
+  DateTime? now,
+}) =>
     splitTravel(
       minutes: classifyGait(minutes, rules),
       windows: windows,
@@ -37,7 +41,8 @@ List<MinuteTravel> _split(List<StepMinute> minutes, List<PaintTrailWindow> windo
 
 /// 10:00 + [fromMin]분부터 [count]분 동안 분마다 [perMin]보씩 들어온 센서 걸음 (분 안 30초에)
 List<SensorGain> _gains(int fromMin, int count, int perMin, {bool foreground = true}) => [
-      for (var i = 0; i < count; i++) SensorGain(_at(fromMin + i, 30), perMin, foreground: foreground),
+      for (var i = 0; i < count; i++)
+        SensorGain(_at(fromMin + i, 30), perMin, foreground: foreground),
     ];
 
 void main() {
@@ -232,7 +237,8 @@ void main() {
       final t = PaintTrailTracker(rules)..resume(_at(0), lastStep: _at(7, 20));
       expect(t.idleEnd(_at(12, 59)), isNull);
       expect(t.idleEnd(_at(13)), _at(8));
-      expect(t.close(_at(8), PaintTrailEnd.idle), PaintTrailWindow(_at(0), _at(8), PaintTrailEnd.idle));
+      expect(t.close(_at(8), PaintTrailEnd.idle),
+          PaintTrailWindow(_at(0), _at(8), PaintTrailEnd.idle));
       expect(t.active, isFalse);
     });
   });
@@ -241,8 +247,10 @@ void main() {
     test('35 앱 밖 3km → 앱 2km → [pencil 0~3, paint 3~5]', () {
       // 분마다 1km씩 (거리만 본다)
       final minutes = [
-        for (var i = 0; i < 3; i++) MinuteTravel(minute: i, steps: 0, actualM: 1000, inTrail: false),
-        for (var i = 3; i < 5; i++) MinuteTravel(minute: i, steps: 0, actualM: 1000, inTrail: true),
+        for (var i = 0; i < 3; i++)
+          MinuteTravel(minute: i, steps: 0, actualM: 1000, inTrail: false),
+        for (var i = 3; i < 5; i++)
+          MinuteTravel(minute: i, steps: 0, actualM: 1000, inTrail: true),
       ];
       expect(trailSegments(fundKm: 0, minutes: minutes), const [
         TrailSegment(0, 3, TrailKind.pencil),

@@ -1661,10 +1661,11 @@ class SyncService {
   Future<int> startPaintTrail(DateTime start, DateTime now) => db.transaction(() async {
         final state = await _ensureState(now);
         await _closeTrails(await _openTrailRows(), state.lastAliveUtc, now);
-        final at = math.min(start.toUtc().millisecondsSinceEpoch, now.toUtc().millisecondsSinceEpoch);
+        final nowMs = now.toUtc().millisecondsSinceEpoch;
+        final at = math.min(start.toUtc().millisecondsSinceEpoch, nowMs);
         final id =
             await db.into(db.paintTrails).insert(PaintTrailsCompanion.insert(startUtc: at));
-        await _recomputeTrailDays(at, now.toUtc().millisecondsSinceEpoch, now);
+        await _recomputeTrailDays(at, nowMs, now);
         return id;
       });
 
@@ -1685,7 +1686,8 @@ class SyncService {
           endUtc: Value(endMs),
           endReason: Value(reason),
         ));
-        await _recomputeTrailDays(row.startUtc, math.max(endMs, now.toUtc().millisecondsSinceEpoch), now);
+        final nowMs = now.toUtc().millisecondsSinceEpoch;
+        await _recomputeTrailDays(row.startUtc, math.max(endMs, nowMs), now);
       });
 
   /// 열려 있는 물감 길 (없으면 null). 앱이 살아 있는 채 판정기를 새로 만들 때 이어 받는다

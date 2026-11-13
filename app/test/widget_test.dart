@@ -50,7 +50,8 @@ void main() {
 
     expect(find.byType(RestScreen), findsOneWidget);
     expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
-    expect(find.text('출발하기'), findsOneWidget);
+    // 출발하기 버튼은 없다 (16장 11/13: 걸으면 저절로 걷는 중)
+    expect(find.text('출발하기'), findsNothing);
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(db.close);
   });

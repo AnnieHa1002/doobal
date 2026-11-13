@@ -5,6 +5,7 @@ import '../../app/auto_sync.dart';
 import '../../app/providers.dart';
 import '../../domain/onboarding.dart';
 import '../rest/rest_screen.dart';
+import '../walking/paint_trail_host.dart';
 import 'home_pick_screen.dart';
 import 'me_screen.dart';
 import 'permission_screen.dart';
@@ -15,7 +16,7 @@ const _crossfade = Duration(milliseconds: 250);
 
 /// 앱의 첫 화면(home). 첫 실행에는 시작 흐름(환영 → 나 → 출발 동네 → 권한)을 보여 주고,
 /// 끝났으면 쉼터로 간다. 각 단계 화면은 저장한 뒤 onboardingStepProvider를 다시 읽는다.
-/// 동기화·도착 화면(AutoSync)은 흐름이 끝난 뒤에 시작한다. 만 14세 확인 전에는 걸음·알림 권한을
+/// 동기화·도착 화면(AutoSync)과 물감 길(PaintTrailHost)은 흐름이 끝난 뒤에 시작한다. 만 14세 확인 전에는 걸음·알림 권한을
 /// 묻지 않고 (권한은 마지막 단계 버튼을 눌러야 묻는다), 걸음 동기화도 권한 단계 뒤에야 돈다
 class StartGate extends ConsumerWidget {
   const StartGate({super.key});
@@ -36,7 +37,7 @@ class StartGate extends ConsumerWidget {
           OnboardingStep.me => MeScreen(rules: rules),
           OnboardingStep.home => const HomePickScreen(),
           OnboardingStep.permission => PermissionScreen(rules: rules),
-          OnboardingStep.done => const AutoSync(child: RestScreen()),
+          OnboardingStep.done => const AutoSync(child: PaintTrailHost(child: RestScreen())),
         },
       ),
     );

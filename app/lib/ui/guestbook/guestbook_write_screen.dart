@@ -13,6 +13,7 @@ import '../common/format.dart';
 import '../common/game_button.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
+import '../walking/paint_trail_host.dart';
 import 'guestbook_read_screen.dart';
 import 'guestbook_tag.dart';
 
@@ -33,7 +34,8 @@ class GuestbookWriteScreen extends ConsumerStatefulWidget {
   ConsumerState<GuestbookWriteScreen> createState() => _GuestbookWriteScreenState();
 }
 
-class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen> {
+class _GuestbookWriteScreenState extends ConsumerState<GuestbookWriteScreen>
+    with HoldsPaintTrail {
   final _controller = TextEditingController();
   var _busy = false;
 

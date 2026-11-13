@@ -31,6 +31,7 @@ import '../domain/color_props.dart';
 import '../domain/landmark.dart';
 import '../domain/spirit_look.dart';
 import '../domain/spirit_palette.dart';
+import '../domain/time_kst.dart';
 import '../domain/map_land.dart';
 import '../domain/map_projection.dart';
 import '../domain/map_regions.dart';
@@ -367,6 +368,19 @@ final recentDaysProvider = FutureProvider.autoDispose<List<DayBar>>((
 });
 
 /// 감지된 걷기 전부, 최신순 (노트의 걷기 기록)
+/// 노트 걷기 기록: 닫힌 물감 길(최신순)과 그 날들의 하루 걸음·거리
+final trailHistoryProvider = FutureProvider.autoDispose<
+    ({List<PaintTrailView> trails, Map<String, ({int steps, double distanceM})> days})>((
+  ref,
+) async {
+  await ref.watch(snapshotProvider.future);
+  final trails = await (await ref.watch(syncServiceProvider.future)).paintTrails();
+  final days = await ref
+      .watch(statsServiceProvider)
+      .dayTotals({for (final t in trails) kstDayKey(t.start)});
+  return (trails: trails, days: days);
+});
+
 final walkSessionsProvider = FutureProvider.autoDispose<List<WalkSession>>((
   ref,
 ) async {

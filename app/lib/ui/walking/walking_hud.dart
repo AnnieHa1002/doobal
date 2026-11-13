@@ -6,16 +6,16 @@ import 'package:flutter/material.dart';
 
 import '../../app/sync_service.dart';
 import '../../domain/gait.dart';
+import '../../domain/paint_trail.dart';
 import '../../domain/rules.dart';
 import '../../domain/walk_record.dart';
-import '../common/focus_badge.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 
-/// 걷는 중 위·아래 UI (UI 명세 3장 10/30판). 큰 패널 대신
-/// ① 얇은 진행 줄(글자 없음) ② 걸음 알약 ③ 알약을 누르면 펼쳐지는 숫자 카드(8초 뒤 접힘)
-/// ④ 아래 ‘걷기 마치기’ 알약. 배경(SceneView) 위에 Stack으로 얹는다.
-/// 본격 걷기 중이면([focusBadge]) 걸음 알약 오른쪽 끝에 이끼색 딱지(`×1.3`)가 붙는다.
+/// 걷는 중 위 UI (UI 명세 3장 10/30판, 캔버스 3-1 11/13). 큰 패널 대신
+/// ① 얇은 진행 줄(글자 없음) ② 쉼터 아이콘 + 걸음 알약 ③ 알약을 누르면 펼쳐지는 숫자 카드(8초 뒤 접힘,
+/// ‘물감 길 n km · 물감 방울 n개’ 줄). 배경(SceneView) 위에 Stack으로 얹는다.
+/// ‘걷기 마치기’·본격 걷기 ×1.3 딱지는 없다 (16장 11/13 물감 길: 걸음이 멈추면 저절로 끝난다).
 /// 아이콘은 ui_icon SVG를 넣기 전까지 Material 아이콘으로 대신한다
 class WalkingHud extends StatefulWidget {
   const WalkingHud({
@@ -28,8 +28,7 @@ class WalkingHud extends StatefulWidget {
     required this.walkingTime,
     required this.running,
     required this.nextMilestone,
-    required this.onFinish,
-    this.focusBadge,
+    required this.onRest,
     this.event,
     this.eventKm = 2,
     this.onCloseEvent,
@@ -51,10 +50,9 @@ class WalkingHud extends StatefulWidget {
 
   /// 다음 방명록 지점까지 남은 걸음. 없으면 null
   final int? nextMilestone;
-  final VoidCallback onFinish;
 
-  /// 본격 걷기 중일 때 걸음 알약에 붙는 배수 글(`×1.3`). 아니면 null
-  final String? focusBadge;
+  /// 쉼터 아이콘: 화면만 쉼터로 돌리고 물감 길은 이어진다
+  final VoidCallback onRest;
 
   /// 지금 보여 줄 길 위 이벤트 카드(2km 이정표)와 그 칸의 크기(km, config events.everyKm). 없으면 null
   final RoadEventView? event;
@@ -79,13 +77,11 @@ abstract final class HudMetrics {
   static const lineHeight = 3.0;
   static const pillGap = 13.0;
   static const pillMinWidth = 143.0;
-
-  /// 본격 걷기 딱지가 붙으면 알약 최소 폭이 이만큼 는다 (딱지 폭 + 간격)
-  static const pillBadgeExtra = 40.0;
   static const pillHeight = 32.0;
-  static const finishWidth = 120.0;
-  static const finishHeight = 44.0;
-  static const bottomGap = 16.0;
+
+  /// 쉼터 아이콘 (캔버스 3-1: 44pt 둥근 네모, 알약과 8pt 사이)
+  static const restButton = 44.0;
+  static const restGap = 8.0;
   static const collapseAfter = Duration(seconds: 8);
 
   /// 시험에서만: 이정표 카드·새 도장 줄이 떠 있는 시간을 바꾼다.
@@ -135,12 +131,19 @@ class _WalkingHudState extends State<WalkingHud> {
             children: [
               ProgressLine(ratio: j?.progress.ratio ?? 0),
               const SizedBox(height: HudMetrics.pillGap),
-              StepPill(
-                steps: widget.shownSteps,
-                km: widget.shownM / 1000,
-                running: widget.running,
-                badge: widget.focusBadge,
-                onTap: _toggle,
+              Row(
+                children: [
+                  RestButton(onPressed: widget.onRest),
+                  const SizedBox(width: HudMetrics.restGap),
+                  Flexible(
+                    child: StepPill(
+                      steps: widget.shownSteps,
+                      km: widget.shownM / 1000,
+                      running: widget.running,
+                      onTap: _toggle,
+                    ),
+                  ),
+                ],
               ),
               if (widget.badgeLine != null)
                 Padding(
@@ -167,15 +170,6 @@ class _WalkingHudState extends State<WalkingHud> {
                   ),
                 ),
             ],
-          ),
-        ),
-        Positioned(
-          bottom: mq.padding.bottom + HudMetrics.bottomGap,
-          left: landscape ? null : 0,
-          right: landscape ? side + mq.padding.right : 0,
-          child: Align(
-            alignment: landscape ? Alignment.centerRight : Alignment.center,
-            child: FinishPill(onPressed: widget.onFinish),
           ),
         ),
       ],
@@ -218,8 +212,37 @@ class ProgressLine extends StatelessWidget {
 
 const _tabular = [FontFeature.tabularFigures()];
 
+/// 쉼터 아이콘 (캔버스 3-1 왼쪽 위): 44pt 둥근 네모, 카드색 90% + 잉크 테두리, 집 모양
+class RestButton extends StatelessWidget {
+  const RestButton({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '쉼터',
+      child: GestureDetector(
+        key: const Key('walk-rest'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: Container(
+          width: HudMetrics.restButton,
+          height: HudMetrics.restButton,
+          decoration: BoxDecoration(
+            color: Palette.card.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Palette.ink, width: InkLine.pill),
+          ),
+          child: const Icon(Icons.home_outlined, size: 22, color: Palette.ink),
+        ),
+      ),
+    );
+  }
+}
+
 /// 카드색 90% 알약 + 잉크 테두리. 걷기/뛰기 아이콘 + 이번 걸음 수 + ‘걸음 · 1.99 km’.
-/// 본격 걷기 중이면 [badge](`×1.3`)가 오른쪽 끝에 이끼색 딱지로 붙고 알약 폭이 40pt 는다.
 /// 글자를 키워서 알약이 칸보다 넓어지면 안의 글을 통째로 줄인다
 class StepPill extends StatelessWidget {
   const StepPill({
@@ -228,14 +251,12 @@ class StepPill extends StatelessWidget {
     required this.km,
     required this.running,
     required this.onTap,
-    this.badge,
   });
 
   final int steps;
   final double km;
   final bool running;
   final VoidCallback onTap;
-  final String? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +269,7 @@ class StepPill extends StatelessWidget {
         onTap: onTap,
         child: Container(
           constraints: BoxConstraints(
-            minWidth: HudMetrics.pillMinWidth + (badge == null ? 0 : HudMetrics.pillBadgeExtra),
+            minWidth: HudMetrics.pillMinWidth,
             minHeight: HudMetrics.pillHeight,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -284,10 +305,6 @@ class StepPill extends StatelessWidget {
                     fontFeatures: _tabular,
                   ),
                 ),
-                if (badge != null) ...[
-                  const SizedBox(width: 6),
-                  FocusBadge(badge!),
-                ],
               ],
             ),
           ),
@@ -334,6 +351,8 @@ class _DetailCard extends StatelessWidget {
             _Line('${j.dest.name}까지', formatKm(j.progress.remainingKm)),
             _Line('도착 예정일', formatMonthDay(j.eta)),
           ],
+          _Note('물감 길 ${formatKm(widget.shownM / 1000)} · '
+              '물감 방울 ${formatInt(paintDrops(widget.shownM, rules))}개'),
           if (widget.nextMilestone != null)
             _Note('다음 방명록 지점까지 ${formatInt(widget.nextMilestone!)}보'),
           _Note(widget.storyLine ?? '혼자 걷는 중'),
@@ -379,39 +398,6 @@ class _Note extends StatelessWidget {
         padding: const EdgeInsets.only(top: 4),
         child: Text(text, style: const TextStyle(fontSize: 14, color: Palette.subInk)),
       );
-}
-
-/// 보조 버튼 ‘걷기 마치기’. 120×44pt 알약, 카드색 90% + 잉크 테두리
-/// (주 버튼이 아님: 실수로 끝내지 않게)
-class FinishPill extends StatelessWidget {
-  const FinishPill({super.key, required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: Container(
-          width: HudMetrics.finishWidth,
-          height: HudMetrics.finishHeight,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Palette.card.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(HudMetrics.finishHeight / 2),
-            border: Border.all(color: Palette.ink, width: InkLine.pill),
-          ),
-          child: Text(
-            '걷기 마치기',
-            style: context.display(15),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// 새 도장을 받았을 때 걸음 알약 아래에 잠깐 뜨는 작은 줄 (캔버스 Walk의 도장 줄).

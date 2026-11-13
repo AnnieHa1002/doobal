@@ -1114,11 +1114,12 @@ void main() {
           day TEXT NOT NULL, steps INTEGER NOT NULL, distance_m REAL NOT NULL,
           counted_sessions INTEGER NOT NULL, bonus_m REAL NOT NULL DEFAULT 0.0,
           shop_m REAL NOT NULL DEFAULT 0.0, travel_m REAL NOT NULL DEFAULT 0.0,
-          walk_travel_m REAL NOT NULL DEFAULT 0.0, coins INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day))
+          walk_travel_m REAL NOT NULL DEFAULT 0.0, coins INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (day))
       ''');
       // 보너스 252m·상점 1km가 든 옛 하루
-      raw.execute(
-          "INSERT INTO day_summaries VALUES ('2026-11-18', 1200, 840.0, 1, 252.0, 1000.0, 2092.0, 1092.0, 10)");
+      raw.execute("INSERT INTO day_summaries VALUES "
+          "('2026-11-18', 1200, 840.0, 1, 252.0, 1000.0, 2092.0, 1092.0, 10)");
       raw.execute(
           "INSERT INTO day_summaries VALUES ('2026-11-17', 100, 70.0, 0, 0.0, 0.0, 70.0, 0.0, 0)");
       raw.execute('''

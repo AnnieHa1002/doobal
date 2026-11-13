@@ -21,6 +21,13 @@ class StatsService {
     return recentDayBars({for (final r in rows) r.day: r.steps}, today, days: days);
   }
 
+  /// [days](한국 날짜)의 하루 걸음·실제 거리(m). 기록이 없는 날은 빠진다
+  Future<Map<String, ({int steps, double distanceM})>> dayTotals(Iterable<String> days) async {
+    final rows =
+        await (db.select(db.daySummaries)..where((t) => t.day.isIn(days.toSet()))).get();
+    return {for (final r in rows) r.day: (steps: r.steps, distanceM: r.distanceM)};
+  }
+
   /// 감지된 걷기 전부, 최신순
   Future<List<WalkSession>> walkSessions() async {
     final rows = await (db.select(db.walkSessions)

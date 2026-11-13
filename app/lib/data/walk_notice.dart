@@ -5,17 +5,17 @@ import '../domain/format_int.dart';
 import 'live_steps.dart';
 import 'local_notifications.dart';
 
-/// 걷는 중 상시 알림. 본격 걷기(출발하기 ~ 걷기 마치기)는 화면이 꺼져도 앱이 살아 있는 동안 이어지는데,
-/// 안드로이드는 백그라운드 앱을 말없이 죽이므로 걷는 중에는 포그라운드 서비스와 알림으로 앱을 살려 둔다.
+/// 걷는 중 상시 알림 N0. 물감 길은 화면이 꺼져도 앱이 살아 있는 동안 이어지는데, 안드로이드는
+/// 백그라운드 앱을 말없이 죽이므로 물감 길 동안만 포그라운드 서비스와 알림으로 앱을 살려 둔다
+/// (M2~M6 명세 v0.17 T⑦: 물감 길이 시작될 때 켜고 끝날 때 지운다).
 /// iOS에는 같은 것이 없어서 아무것도 하지 않는다. 테스트는 [FakeWalkNotice]를 쓴다
 abstract class WalkNotice {
-  /// 걷기 시작: 상시 알림을 띄우고 포그라운드 서비스를 시작한다. 알림에 걸음 [steps]와 거리 [distanceM]이 보인다.
-  /// [focus]는 본격 걷기 중일 때의 배수 글(`×1.3`, focusBadgeText): 있으면 본문 끝에 ` · 본격 걷기 ×1.3`이 붙는다
-  /// [isRunning]이면 제목이 `두발 · 달리는 중`이 된다
-  Future<void> start(int steps, double distanceM, {String? focus, bool isRunning = false});
+  /// 물감 길 시작: 상시 알림을 띄우고 포그라운드 서비스를 시작한다. 알림에 걸음 [steps]와 거리 [distanceM]이
+  /// 보인다. [isRunning]이면 제목이 `두발 · 달리는 중`이 된다
+  Future<void> start(int steps, double distanceM, {bool isRunning = false});
 
-  /// 알림의 걸음·거리·본격 걷기 표시를 새로 쓴다. 시작하지 않았으면 아무 일도 없다
-  Future<void> update(int steps, double distanceM, {String? focus, bool isRunning = false});
+  /// 알림의 걸음·거리를 새로 쓴다. 시작하지 않았으면 아무 일도 없다
+  Future<void> update(int steps, double distanceM, {bool isRunning = false});
 
   /// 끝: 알림을 지우고 서비스를 멈춘다. 여러 번 불러도 된다
   Future<void> stop();
@@ -24,35 +24,34 @@ abstract class WalkNotice {
 /// 알림에 쓰는 거리 글: 미터를 km로 0.1 단위까지 (`1.2`). 알림 글이 바뀌는지 가늠할 때도 이 글로 견준다
 String noticeKm(double distanceM) => (distanceM / 1000).toStringAsFixed(1);
 
-/// 알림 본문: `1,234보 · 1.2km`, 본격 걷기 중이면 끝에 ` · 본격 걷기 ×1.3` (UI 명세 13장)
+/// 알림 본문: `1,234보 · 1.2km` (UI 명세 13장)
 /// 알림 제목: 뛰고 있으면 `두발 · 달리는 중`, 아니면 `두발 · 걷는 중` (16장 11/1, UI 명세 13장)
 String noticeTitle({required bool isRunning}) => isRunning ? '두발 · 달리는 중' : '두발 · 걷는 중';
 
-String noticeBody(int steps, double distanceM, {String? focus}) =>
-    '${formatInt(steps)}보 · ${noticeKm(distanceM)}km${focus == null ? '' : ' · 본격 걷기 $focus'}';
+String noticeBody(int steps, double distanceM) => '${formatInt(steps)}보 · ${noticeKm(distanceM)}km';
 
 /// iOS·데스크톱·테스트 기본값: 아무것도 하지 않는다
 class NoopWalkNotice implements WalkNotice {
   const NoopWalkNotice();
 
   @override
-  Future<void> start(int steps, double distanceM, {String? focus, bool isRunning = false}) async {}
+  Future<void> start(int steps, double distanceM, {bool isRunning = false}) async {}
 
   @override
-  Future<void> update(int steps, double distanceM, {String? focus, bool isRunning = false}) async {}
+  Future<void> update(int steps, double distanceM, {bool isRunning = false}) async {}
 
   @override
   Future<void> stop() async {}
 }
 
 /// 안드로이드: flutter_local_notifications의 포그라운드 서비스(유형 health)에 알림을 건다.
-/// 알림은 제목 `두발 · 걷는 중`(뛰면 `두발 · 달리는 중`), 본문 `1,234보 · 1.2km` (본격 걷기 중이면 끝에 ` · 본격 걷기 ×1.3`)
+/// 알림은 제목 `두발 · 걷는 중`(뛰면 `두발 · 달리는 중`), 본문 `1,234보 · 1.2km`
 /// (UI 명세 13장. 소리·진동 없음, 시간은 안 보인다).
 /// 갱신은 서비스를 다시 시작하지 않고 같은 id의 알림을
 /// 다시 쓴다 (안드로이드 12부터 앱이 뒤에 있을 때 포그라운드 서비스 시작을 막을 수 있어서).
 /// 알림을 눌러 앱으로 돌아오면 singleTop 액티비티가 이어진다.
 /// 서비스는 AndroidManifest에서 stopWithTask라서 앱을 화면에서 밀어 끄면 함께 끝난다
-/// (앱이 종료되면 본격 걷기도 끝난다). 프로세스가 죽어도 서비스를 되살리지 않는다 (START_NOT_STICKY)
+/// (앱이 종료되면 물감 길도 끝난다). 프로세스가 죽어도 서비스를 되살리지 않는다 (START_NOT_STICKY)
 class AndroidWalkNotice implements WalkNotice {
   AndroidWalkNotice(this._notifications, this._steps);
 
@@ -71,7 +70,6 @@ class AndroidWalkNotice implements WalkNotice {
   Future<void> start(
     int steps,
     double distanceM, {
-    String? focus,
     bool isRunning = false,
   }) async {
     final epoch = ++_epoch;
@@ -84,7 +82,7 @@ class AndroidWalkNotice implements WalkNotice {
       return;
     }
     _running = true;
-    if (!await _post(steps, distanceM, focus, isRunning, epoch, first: true) &&
+    if (!await _post(steps, distanceM, isRunning, epoch, first: true) &&
         epoch == _epoch) {
       _running = false;
     }
@@ -94,11 +92,10 @@ class AndroidWalkNotice implements WalkNotice {
   Future<void> update(
     int steps,
     double distanceM, {
-    String? focus,
     bool isRunning = false,
   }) async {
     if (!_running) return;
-    await _post(steps, distanceM, focus, isRunning, _epoch, first: false);
+    await _post(steps, distanceM, isRunning, _epoch, first: false);
   }
 
   @override
@@ -122,7 +119,6 @@ class AndroidWalkNotice implements WalkNotice {
   Future<bool> _post(
     int steps,
     double distanceM,
-    String? focus,
     bool isRunning,
     int epoch, {
     required bool first,
@@ -131,7 +127,7 @@ class AndroidWalkNotice implements WalkNotice {
       final plugin = await _notifications.ready();
       if (epoch != _epoch) return false;
       final title = noticeTitle(isRunning: isRunning);
-      final body = noticeBody(steps, distanceM, focus: focus);
+      final body = noticeBody(steps, distanceM);
       if (!first) {
         await plugin.show(
           id: _id,
@@ -183,10 +179,6 @@ class FakeWalkNotice implements WalkNotice {
   /// update로 받은 (걸음, 거리 m), 부른 순서대로
   final updates = <(int, double)>[];
 
-  /// start·update가 받은 본격 걷기 배수 글(`×1.3`, 없으면 null), [starts]·[updates]와 같은 순서
-  final startFocus = <String?>[];
-  final updateFocus = <String?>[];
-
   /// start·update가 받은 뛰는 중 여부, [starts]·[updates]와 같은 순서
   final startRunning = <bool>[];
   final updateRunning = <bool>[];
@@ -201,11 +193,9 @@ class FakeWalkNotice implements WalkNotice {
   Future<void> start(
     int steps,
     double distanceM, {
-    String? focus,
     bool isRunning = false,
   }) async {
     starts.add((steps, distanceM));
-    startFocus.add(focus);
     startRunning.add(isRunning);
     running = true;
   }
@@ -214,11 +204,9 @@ class FakeWalkNotice implements WalkNotice {
   Future<void> update(
     int steps,
     double distanceM, {
-    String? focus,
     bool isRunning = false,
   }) async {
     updates.add((steps, distanceM));
-    updateFocus.add(focus);
     updateRunning.add(isRunning);
   }
 

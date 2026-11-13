@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/paint_trail_controller.dart';
 import '../../app/providers.dart';
 import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
@@ -15,7 +16,6 @@ import '../album/album_screen.dart';
 import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
-import '../common/ink_press.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
 import '../debug/debug_screen.dart';
@@ -25,13 +25,16 @@ import '../note/note_screen.dart';
 import '../profile/profile_screen.dart';
 import '../scene/scene_view.dart';
 import '../settings/settings_screen.dart';
-import '../walking/walking_screen.dart';
+import '../walking/paint_trail_host.dart';
 import 'prop_wiggle.dart';
 import 'rest_gestures.dart';
 import 'rest_slots.dart';
 
 /// 쉼터 (홈, 루트 화면). 장면(하늘 → 후경 → 캠프 뒤 → 물건 → 정령 → 동행 → 캠프 앞 → 불꽃)은 화면 폭의
-/// 1.5배이고 좌우로 민다. 프로필·설정·상태 알약·출발하기는 고정이다 (캔버스 2-2).
+/// 1.5배이고 좌우로 민다. 프로필·설정·상태 알약은 고정이다 (캔버스 2-2).
+/// 출발하기 버튼은 없다 (16장 11/13 물감 길): 앱을 연 채 걸으면 저절로 걷는 중으로 넘어간다 (PaintTrailHost).
+/// 첫 여정을 아직 안 걸었으면 아래 가운데 말풍선 ‘걸으면 출발해요’ (캔버스 2-1), 여정이 없으면 지도에 알림 점.
+/// 물감 길이 이어지는 동안(걷는 중에서 쉼터 아이콘으로 왔을 때) 상태 알약은 ‘걷는 중’이고 누르면 걷는 중으로.
 /// 물건은 3~6초마다 하나씩 살짝 흔들린다 (알림 점이 있는 물건 우선, 연출 값은 prop_wiggle.dart).
 /// 불 옆 동행은 알림 점(안 읽은 장)이 있을 때만 흔들림에 든다 (평소에는 캔버스대로 둥실, 그림 쪽 몫)
 class RestScreen extends ConsumerStatefulWidget {
@@ -48,7 +51,9 @@ const _guestbookWiggleId = 'guestbook';
 const _hudInset = 16.0;
 const _hudButton = 56.0;
 const _gemGap = 10.0;
-const _departBottom = 20.0;
+
+/// 첫날 말풍선의 아래 여백 (캔버스 2-1: 40pt, 작은 화면 24pt)
+const _hintBottom = 40.0;
 
 /// 그림으로 서는 물건 (수레·표지판·동행은 따로)
 const _artObjects = {'map', 'backpack', 'note'};
@@ -87,6 +92,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
       all: [..._artObjects, if (sign) _guestbookWiggleId, if (companion) campCompanionId],
       notice: {
         if (_hasNew(snap)) 'backpack',
+        if (snap.journey == null) 'map',
         if (sign) _guestbookWiggleId,
         if (companion) campCompanionId,
       },
@@ -115,7 +121,8 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     // 시작 관문이 출발 동네를 먼저 고르게 하므로 위치는 늘 있다 (없으면 빈 화면)
     final position = snap.position;
     if (position == null) return const Scaffold(body: SizedBox.expand());
-    final firstSketch = _firstSketchBubble(snap, rules);
+    final firstSketch = _firstSketchHint(snap, rules);
+    final trailOn = ref.watch(paintTrailProvider.select((s) => s.active));
 
     return Scaffold(
       body: LayoutBuilder(builder: (context, box) {
@@ -154,7 +161,12 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                       if (shown.contains(o.id))
                         o.id == campCartId
                             ? _slotArt(stage, o, slots.cart!)
-                            : _objectArt(stage, o, hasNew: _hasNew(snap)),
+                            : _objectArt(
+                                stage,
+                                o,
+                                hasNew: _hasNew(snap),
+                                noJourney: snap.journey == null,
+                              ),
                   ],
                   sceneBeside: [
                     if (slots.companion case final slot?) _slotArt(stage, camp.companion, slot),
@@ -205,10 +217,15 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                         // 양쪽 모서리 버튼(56pt + 간격) 사이에 들어가게
                         padding: const EdgeInsets.symmetric(horizontal: 72),
                         child: IgnorePointer(
+                          ignoring: !trailOn,
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _StatusPill(_statusText(snap)),
+                              _StatusPill(
+                                _statusText(snap, walking: trailOn),
+                                onPressed:
+                                    trailOn ? () => openWalking(Navigator.of(context)) : null,
+                              ),
                               if (scale != 1) ...[
                                 const SizedBox(height: 6),
                                 _ScaleBadge(distanceScaleBadge(scale)),
@@ -228,58 +245,52 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
               top: padding.top + _hudInset + _hudButton + _gemGap,
               child: _LuckGem(luck: luck, slot: slots.gem),
             ),
-            Positioned(
-              right: _hudInset,
-              bottom: math.max(padding.bottom, _departBottom),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (firstSketch != null) ...[
-                    IgnorePointer(
-                      child: _SpeechBubble(key: const ValueKey('first-sketch-bubble'), firstSketch),
-                    ),
-                    const SizedBox(height: 6),
-                  ],
-                  _DepartButton(
-                    notice: firstSketch != null,
-                    onPressed: () => _push(
-                      context,
-                      snap.journey == null ? const MapScreen() : const WalkingScreen(),
-                    ),
+            if (firstSketch != null)
+              Positioned(
+                left: _hudInset,
+                right: _hudInset,
+                bottom: math.max(padding.bottom, _hintBottom),
+                child: IgnorePointer(
+                  child: Center(
+                    child: _WalkHint(key: const ValueKey('first-sketch-bubble'), sub: firstSketch),
                   ),
-                ],
+                ),
               ),
-            ),
           ],
         );
       }),
     );
   }
 
-  String _statusText(Snapshot snap) {
+  /// 상태 알약 글. 물감 길이 이어지는 동안([walking])은 ‘걷는 중’, 아니면 ‘쉬는 중’
+  String _statusText(Snapshot snap, {required bool walking}) {
+    final state = walking ? '걷는 중' : '쉬는 중';
     final j = snap.journey;
-    if (j == null) return '쉬는 중 · 목적지를 골라 보세요';
+    if (j == null) return walking ? state : '$state · 목적지를 골라 보세요';
     // 첫 여정은 이름이 있는 목적지가 아니라 내 동네 스케치
     final dest = j.dest.id == sketchId ? sketchName : '목적지';
-    return '쉬는 중 · $dest까지 ${formatKm(j.progress.remainingKm)}';
+    return '$state · $dest까지 ${formatKm(j.progress.remainingKm)}';
   }
 
-  /// 첫 여정 '내 동네 스케치'를 아직 한 걸음도 안 걸었을 때 출발하기 위에 띄우는 말풍선 글.
-  /// 그 밖에는 null (걷기 시작해서 진행이 생기면 말풍선·첫날 이정표·출발하기의 알림 점이 함께 사라진다).
-  String? _firstSketchBubble(Snapshot snap, Rules rules) {
+  /// 첫 여정 '내 동네 스케치'를 아직 한 걸음도 안 걸었을 때 아래 말풍선 ‘걸으면 출발해요’ 밑의 작은 줄
+  /// (캔버스 2-1: `0.6km · 약 860보`). 그 밖에는 null (걷기 시작해서 진행이 생기면 말풍선·첫날 이정표가
+  /// 함께 사라진다)
+  String? _firstSketchHint(Snapshot snap, Rules rules) {
     final j = snap.journey;
-    final home = snap.home;
-    if (j == null || home == null || j.dest.id != sketchId || j.progress.progressKm > 0) {
+    if (j == null || snap.home == null || j.dest.id != sketchId || j.progress.progressKm > 0) {
       return null;
     }
     final km = j.progress.remainingKm;
-    return '첫 그림을 그리러 가요. ${home.name}에서 ${formatKm(km)} · '
-        '약 ${formatInt(sketchSteps(km, rules))}보';
+    return '${formatKm(km)} · 약 ${formatInt(sketchSteps(km, rules))}보';
   }
 
   /// 물건 그림 (장면 층, 정령 뒤). 누름 상자·이름표는 [_hitBox]가 맡는다
-  Widget _objectArt(RestGeometry stage, CampObject o, {required bool hasNew}) {
+  Widget _objectArt(
+    RestGeometry stage,
+    CampObject o, {
+    required bool hasNew,
+    bool noJourney = false,
+  }) {
     final k = stage.k;
     final sign = o.id == campGuestbookSignId;
     final art = o.art;
@@ -308,6 +319,13 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                   top: 4,
                   right: 4,
                   child: NoticeDot(key: ValueKey('backpack-dot')),
+                ),
+              // 여정이 없으면 지도에 점 (출발하기 버튼이 없어서 목적지를 고르는 곳을 알린다, 캔버스 2-2)
+              if (o.id == 'map' && noJourney)
+                const Positioned(
+                  top: 4,
+                  right: 4,
+                  child: NoticeDot(key: ValueKey('map-dot')),
                 ),
               if (sign)
                 const Positioned(top: -4, right: -4, child: NoticeDot()),
@@ -568,88 +586,16 @@ class _GemPlaceholder extends StatelessWidget {
   }
 }
 
-/// 출발하기: 테라코타 둥근 네모에 깃발과 글 (캔버스 2-2). 깃발 그림(ui_obj_flag_start_v01)이 오기 전에는 선으로 그린다
-class _DepartButton extends StatelessWidget {
-  const _DepartButton({required this.notice, required this.onPressed});
-
-  final bool notice;
-  final VoidCallback onPressed;
-
-  static const _size = 72.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: '출발하기',
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          InkPress(
-            onPressed: onPressed,
-            fill: Palette.terracotta,
-            height: _size,
-            width: _size,
-            radius: 22,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CustomPaint(size: const Size(34, 28), painter: _FlagPainter()),
-                const SizedBox(height: 2),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text('출발하기', maxLines: 1, style: context.display(13, color: Palette.card)),
-                ),
-              ],
-            ),
-          ),
-          if (notice)
-            const Positioned(
-              top: -4,
-              right: -4,
-              child: NoticeDot(key: ValueKey('depart-dot')),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 깃발: 깃대 하나와 꼬리가 갈라진 천 (캔버스 그대로의 선)
-class _FlagPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(9, 26)
-        ..lineTo(9, 3)
-        ..moveTo(9, 4)
-        ..lineTo(27, 4)
-        ..lineTo(23, 10)
-        ..lineTo(27, 16)
-        ..lineTo(9, 16),
-      Paint()
-        ..color = Palette.card
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.4
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_FlagPainter old) => false;
-}
-
-/// 위쪽 가운데 상태 알약 (카드색 90%)
+/// 위쪽 가운데 상태 알약 (카드색 90%). [onPressed]가 있으면(물감 길 중) 누르면 걷는 중으로
 class _StatusPill extends StatelessWidget {
-  const _StatusPill(this.text);
+  const _StatusPill(this.text, {this.onPressed});
 
   final String text;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final pill = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Palette.card.withValues(alpha: 0.9),
@@ -662,6 +608,17 @@ class _StatusPill extends StatelessWidget {
           text,
           style: context.display(14),
         ),
+      ),
+    );
+    final tap = onPressed;
+    if (tap == null) return pill;
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        key: const ValueKey('rest-walking-pill'),
+        behavior: HitTestBehavior.opaque,
+        onTap: tap,
+        child: pill,
       ),
     );
   }
@@ -691,63 +648,32 @@ class _ScaleBadge extends StatelessWidget {
   }
 }
 
-/// 출발하기 위의 말풍선: 카드색, 잉크 2px 테두리, 아래 오른쪽(버튼 쪽)으로 작은 꼬리
-class _SpeechBubble extends StatelessWidget {
-  const _SpeechBubble(this.text, {super.key});
+/// 첫날 아래 가운데 말풍선 (캔버스 2-1): ‘걸으면 출발해요’ + 작은 줄 [sub] (`0.6km · 약 860보`)
+class _WalkHint extends StatelessWidget {
+  const _WalkHint({super.key, required this.sub});
 
-  final String text;
+  final String sub;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Container(
-          constraints: const BoxConstraints(maxWidth: 240),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Palette.card,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Palette.ink, width: InkLine.panel),
-          ),
-          child: Text(
-            text,
-            style: context.display(14),
-          ),
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Palette.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Palette.ink, width: InkLine.pill),
+          boxShadow: const [BoxShadow(color: Palette.shadow, offset: Offset(0, InkLine.shadow))],
         ),
-        // 꼬리는 말풍선 아래 테두리를 살짝 덮어 이어 붙인다
-        Padding(
-          padding: const EdgeInsets.only(right: 28),
-          child: Transform.translate(
-            offset: const Offset(0, -2),
-            child: CustomPaint(size: const Size(16, 9), painter: _TailPainter()),
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('걸으면 출발해요', textAlign: TextAlign.center, style: context.display(14)),
+            Text(sub, textAlign: TextAlign.center, style: AppText.label),
+          ],
         ),
-      ],
+      ),
     );
   }
-}
-
-/// 아래로 뾰족한 삼각형 꼬리: 카드색으로 채우고 윗변을 뺀 두 변만 잉크선
-class _TailPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width / 2, size.height)
-      ..lineTo(size.width, 0);
-    canvas.drawPath(Path.from(path)..close(), Paint()..color = Palette.card);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = Palette.ink
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..strokeJoin = StrokeJoin.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_TailPainter old) => false;
 }

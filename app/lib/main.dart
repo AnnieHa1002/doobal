@@ -8,6 +8,7 @@ import 'app/server_providers.dart';
 import 'data/firebase_backend.dart';
 import 'ui/common/app_theme.dart';
 import 'ui/start/start_gate.dart';
+import 'ui/walking/paint_trail_host.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,7 @@ class DoobalApp extends StatelessWidget {
     return MaterialApp(
       title: '두발',
       scaffoldMessengerKey: scaffoldMessengerKey,
+      navigatorObservers: [topRouteObserver],
       debugShowCheckedModeBanner: false,
       theme: doobalTheme(),
       home: const ServerLink(child: StartGate()),

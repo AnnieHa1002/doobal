@@ -533,9 +533,9 @@ void main() {
         Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>),
         const Look(
           eyes: 'e4',
-          brows: 'thin',
-          nose: 'dot',
-          mouth: 'flat',
+          brows: 'b2',
+          nose: 'n7',
+          mouth: 'm7',
           body: SwatchBodyColor(7),
           clothColor: 2,
         ),
@@ -1141,7 +1141,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('"쉼터로 가기" → 첫 여정 "내 동네 스케치"가 정해지고, 쉼터에 알림 점과 말풍선이 뜬다', (tester) async {
+    testWidgets('"쉼터로 가기" → 첫 여정 "내 동네 스케치"가 정해지고, 쉼터에 말풍선이 뜬다', (tester) async {
       final e = UiEnv();
       await openPermission(tester, e);
       // 권한 단계까지는 여정이 없다
@@ -1165,11 +1165,11 @@ void main() {
           inInclusiveRange(rules.firstSketchMinKm - 1e-6, rules.firstSketchMaxKm + 1e-6));
       expect(j.startUtc, e.now.millisecondsSinceEpoch);
 
-      // 쉼터: 상태 알약, 출발하기의 알림 점, 말풍선
+      // 쉼터: 상태 알약, 아래 말풍선 ‘걸으면 출발해요’ (출발하기 버튼 없음, 캔버스 2-1)
       expect(find.textContaining('쉬는 중 · 내 동네 스케치까지 '), findsOneWidget);
-      expect(find.byKey(const ValueKey('depart-dot')), findsOneWidget);
       expect(find.byKey(const ValueKey('first-sketch-bubble')), findsOneWidget);
-      expect(find.textContaining('첫 그림을 그리러 가요. ${home.label}에서 '), findsOneWidget);
+      expect(find.text('걸으면 출발해요'), findsOneWidget);
+      expect(find.text('출발하기'), findsNothing);
       await end(tester, e);
     });
 
@@ -1247,7 +1247,7 @@ void main() {
       expect(r.installId, matches(RegExp(r'^[0-9a-f]{32}$')));
       expect(r.nickname, '나그네');
       expect(Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>),
-          const Look(eyes: 'bean', body: SwatchBodyColor(5)));
+          const Look(eyes: 'e2', body: SwatchBodyColor(5)));
       expect((r.homeId, r.homeName, r.homeLat, r.homeLng),
           (suwon.id, '경기 수원시', suwon.lat, suwon.lng));
       expect(r.onboardedAt, e.now.millisecondsSinceEpoch);
@@ -1258,7 +1258,8 @@ void main() {
       // 첫 여정은 그 동네의 내 동네 스케치
       expect(snap.journey!.dest.id, sketchId);
       expect(snap.position, suwon.latLng);
-      expect(find.textContaining('첫 그림을 그리러 가요. 경기 수원시에서 '), findsOneWidget);
+      // 첫날 말풍선 (캔버스 2-1)
+      expect(find.text('걸으면 출발해요'), findsOneWidget);
       await end(tester, e);
     });
   });

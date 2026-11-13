@@ -63,8 +63,7 @@ void main() {
     });
     await pumpDoobal(tester, e, const DoobalApp());
     await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
-    await tester.tap(find.text('출발하기'));
-    await transition(tester);
+    await startTrailNow(tester);
     await settle(tester, () => false, tries: 8);
     expect(find.byType(WalkingScreen), findsOneWidget);
     e.live.push(1000);
@@ -121,23 +120,34 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('앱 밖에서 걸은(숨어 있던 동안 따라잡은) 걸음은 칸에 안 센다', (tester) async {
+    testWidgets('화면이 꺼진 동안 따라잡은 걸음도 물감 길이라 칸을 넘기고, 다시 켜지면 마지막 카드 1장만 (11/13)',
+        (tester) async {
       final e = await openWalking(tester);
-      // 앱이 숨고 걸음 센서는 3,000보를 더 세서, 돌아올 때 한꺼번에 들어온다
+      // 앱이 숨고 걸음 센서는 5,000보를 더 세서, 돌아올 때 한꺼번에 들어온다
+      // (30분 평균 분당 167보 → 뛰기 1m → 5km: 2km·4km 두 칸)
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
       await tester.pump();
       e.now = e.now.add(const Duration(minutes: 30));
-      e.live.push(4000);
+      e.live.push(6000);
       await tester.pump();
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pump(const Duration(milliseconds: 100));
-      await settle(tester, () => false, tries: 6);
+      await settle(tester, () => _card().evaluate().isNotEmpty);
 
-      expect(_card(), findsNothing);
-      expect((await tester.runAsync(() => e.db.select(e.db.journeyEvents).get()))!, isEmpty);
+      final rows = (await tester.runAsync(() => e.db.select(e.db.journeyEvents).get()))!
+        ..sort((a, b) => a.k.compareTo(b.k));
+      expect(rows.map((r) => r.k), [1, 2]);
+      // 카드는 마지막 칸(4km) 하나 (config events.offScreenCards 1)
+      expect(_card(), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('walk-event-praise'))).data,
+          rows.last.praiseText);
+      await tester.tap(find.byKey(const Key('walk-event-close')));
+      await tester.pump();
+      await settle(tester, () => false, tries: 4);
+      expect(_card(), findsNothing, reason: '첫 칸 카드는 뒤이어 뜨지 않는다');
       await end(tester, e);
     });
   });
@@ -305,8 +315,6 @@ void main() {
           home: WalkRecordScreen(
             start: t1,
             end: t1.add(const Duration(minutes: 30)),
-            ratioBefore: null,
-            review: true,
           ),
         ),
       ));
