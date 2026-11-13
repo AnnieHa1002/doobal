@@ -1,28 +1,71 @@
-// 정령 얼굴 파츠: 저장하는 id → Rive 정수. 순서는 palette.json customParts와 같다
-// (test/domain/spirit_look_test.dart가 같은지 본다). 코는 없음=3·고리=0 순서에 주의
-
-const eyeParts = <String, int>{'dot': 0, 'bean': 1, 'sleepy': 2, 'fierce': 3, 'cat': 4};
-const browParts = <String, int>{'none': 0, 'shiba': 1, 'thin': 2, 'thick': 3, 'fierce': 4};
+// 확정 PSD 얼굴 파츠: 저장 id → 통합 Rive 정수. 기존 저장은 아래 대응표로 읽는다.
+const eyeParts = <String, int>{
+  'default_drop': 0,
+  'soft': 1,
+  'mischievous': 2,
+  'sleepy': 3,
+  'closed': 4,
+  'sparkle': 5,
+};
+const browParts = <String, int>{
+  'none': 0,
+  'gentle': 1,
+  'short': 2,
+  'angry': 3,
+  'sleepy': 4,
+  'worried': 5,
+  'handsome': 6,
+};
 const noseParts = <String, int>{
-  'none': 3,
-  'ring': 0,
-  'dot': 1,
-  'wide': 2,
-  'triangle': 4,
-  'heart': 5,
-  'shy': 6,
+  'none': 7,
+  'slash': 0,
+  'ring': 1,
+  'arch': 2,
+  'scoop': 3,
+  'dots': 4,
+  'curl': 5,
+  'round': 6,
 };
 const mouthParts = <String, int>{
   'smile': 0,
   'omega': 1,
-  'o': 2,
-  'flat': 3,
-  'tongue': 4,
-  'smirk': 5,
+  'fangs': 2,
+  'open': 3,
+  'grin': 4,
+  'long_smile': 5,
+  'soft_smile': 6,
+  'wide_smile': 7,
 };
-
-/// 기본 얼굴: 점+반짝 눈 · 시바 눈썹 · /// 코 · ω 입 (palette.json defaultFace)
-const defaultEyes = 'dot';
-const defaultBrows = 'shiba';
-const defaultNose = 'shy';
-const defaultMouth = 'omega';
+const defaultEyes = 'default_drop';
+const defaultBrows = 'gentle';
+const defaultNose = 'round';
+const defaultMouth = 'soft_smile';
+const legacyFaceAliases = <String, Map<String, String>>{
+  'eyes': {
+    'dot': 'default_drop',
+    'bean': 'soft',
+    'fierce': 'sleepy',
+    'cat': 'mischievous',
+  },
+  'brows': {
+    'shiba': 'gentle',
+    'thin': 'short',
+    'thick': 'handsome',
+    'fierce': 'angry',
+  },
+  'nose': {
+    'dot': 'round',
+    'wide': 'dots',
+    'triangle': 'arch',
+    'heart': 'scoop',
+    'shy': 'slash',
+  },
+  'mouth': {
+    'o': 'open',
+    'flat': 'soft_smile',
+    'tongue': 'grin',
+    'smirk': 'long_smile',
+  },
+};
+String canonicalFacePart(String kind, String id) =>
+    legacyFaceAliases[kind]?[id] ?? id;

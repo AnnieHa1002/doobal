@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/look.dart';
 import '../../domain/prop.dart';
+import '../../domain/unified_wardrobe.dart';
 import '../../domain/spirit_palette.dart';
 import '../common/app_text.dart';
 import '../common/item_cell.dart';
@@ -13,7 +14,12 @@ const _emptyNames = {'face': '얼굴 소품', 'float': '둥실 소품', 'effect'
 
 /// 내 모습 탭: 눈·눈썹·코·입 줄과 몸 색 (견본 10 + 직접 고르기). 정령에는 머리·피부가 없다
 class MeTab extends StatelessWidget {
-  const MeTab({super.key, required this.look, required this.palette, required this.onChanged});
+  const MeTab({
+    super.key,
+    required this.look,
+    required this.palette,
+    required this.onChanged,
+  });
 
   final Look look;
   final SpiritPalette palette;
@@ -21,17 +27,21 @@ class MeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget row(String title, String key, String selected, Look Function(String) set) =>
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: FacePartRow(
-            keyPrefix: key,
-            title: title,
-            parts: palette.faces[key]!,
-            selected: selected,
-            onPick: (id) => onChanged(set(id)),
-          ),
-        );
+    Widget row(
+      String title,
+      String key,
+      String selected,
+      Look Function(String) set,
+    ) => Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: FacePartRow(
+        keyPrefix: key,
+        title: title,
+        parts: palette.faces[key]!,
+        selected: selected,
+        onPick: (id) => onChanged(set(id)),
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Column(
@@ -71,9 +81,13 @@ class PropTab extends StatelessWidget {
     required this.props,
     required this.nextKm,
     required this.onPick,
+    this.onColor,
+    this.palette,
   });
 
   final String slot;
+  final ValueChanged<Look>? onColor;
+  final SpiritPalette? palette;
   final Look look;
 
   /// 그 칸의 가진 소품 (props.json 순서, 색 소품은 기본 소품 바로 뒤)
@@ -89,6 +103,13 @@ class PropTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final current = look.slots[slot];
     final next = nextKm;
+    Prop? selectedProp;
+    for (final p in props) {
+      if (p.id == current) selectedProp = p;
+    }
+    final base = selectedProp?.variantOf ?? current;
+    final mapped = unifiedProp(base);
+    final selectedHex = base == null ? null : look.propColors[base];
     final emptyName = _emptyNames[slot];
     final empty = emptyName != null && props.isEmpty;
 
@@ -146,6 +167,27 @@ class PropTab extends StatelessWidget {
             const SizedBox(height: 10),
           ],
           ItemShelf(cells: cells),
+          if (mapped != null && palette != null && onColor != null) ...[
+            const SizedBox(height: 12),
+            BodyColorSection(
+              palette: palette!.body,
+              color: CustomBodyColor(
+                selectedHex ??
+                    '#${(selectedProp?.materialArgb ?? mapped.argb).toRadixString(16).padLeft(8, '0').substring(2)}',
+              ),
+              label: '소품 색',
+              keyPrefix: 'prop-color',
+              onChanged: (color) {
+                final argb = palette!.body.argbOf(color);
+                onColor!(
+                  look.withPropColor(
+                    mapped.id,
+                    '#${argb.toRadixString(16).padLeft(8, '0').substring(2)}',
+                  ),
+                );
+              },
+            ),
+          ],
           const SizedBox(height: 8),
         ],
       ),

@@ -1,21 +1,24 @@
 import 'face_parts.dart';
 import 'look.dart';
+import 'unified_wardrobe.dart';
 
 /// 정령 몸 그림의 기준 색 기본값 (palette.json body.baseHex와 같다: Rive v25 몸통의 평면색)
 const defaultBodyBaseArgb = 0xFFFFF5E2;
 
-/// 정령 Rive(v25)의 View Model 입력값. 번호는 Rive 파일이 정한 값이다 (docs/정령_애니메이션.md)
+/// 통합 Rive의 choices·colors 입력과 기존 게임 호출의 호환 값.
 class SpiritLook {
   const SpiritLook({
     this.eye = 0,
     this.brow = 1,
     this.nose = 6,
-    this.mouth = 1,
+    this.mouth = 6,
     this.bag = 0,
     this.outfit = 0,
     this.companion = 0,
     this.bodyArgb,
     this.bodyBaseArgb = defaultBodyBaseArgb,
+    this.choices = const {},
+    this.colors = const {},
   });
 
   /// 기본 얼굴(점+반짝 눈·시바 눈썹·/// 코·ω 입), 소품 없음, 몸 색 그대로. Rive 파일의 기본값과 같다
@@ -27,23 +30,30 @@ class SpiritLook {
   /// bagStyle · outfitStyle · companionStyle (0은 없음)
   final int bag, outfit, companion;
 
-  /// 몸 색 (불투명 ARGB). null이면 Rive 그림 그대로. Rive v25에는 몸 색 입력이 없어서
-  /// SpiritCharacter가 곱하기 필터로 입힌다 ([bodyBaseArgb]는 palette.json body.baseHex)
+  /// 몸 색 (불투명 ARGB). null이면 확정 크림색. 필터 없이 bodyColor 채색 면에 직접 적용한다.
   final int? bodyArgb;
   final int bodyBaseArgb;
+  final Map<String, int> choices, colors;
 
-  SpiritLook copyWith({int? bag, int? outfit, int? companion, int? bodyArgb, int? bodyBaseArgb}) =>
-      SpiritLook(
-        eye: eye,
-        brow: brow,
-        nose: nose,
-        mouth: mouth,
-        bag: bag ?? this.bag,
-        outfit: outfit ?? this.outfit,
-        companion: companion ?? this.companion,
-        bodyArgb: bodyArgb ?? this.bodyArgb,
-        bodyBaseArgb: bodyBaseArgb ?? this.bodyBaseArgb,
-      );
+  SpiritLook copyWith({
+    int? bag,
+    int? outfit,
+    int? companion,
+    int? bodyArgb,
+    int? bodyBaseArgb,
+  }) => SpiritLook(
+    eye: eye,
+    brow: brow,
+    nose: nose,
+    mouth: mouth,
+    bag: bag ?? this.bag,
+    outfit: outfit ?? this.outfit,
+    companion: companion ?? this.companion,
+    choices: choices,
+    colors: colors,
+    bodyArgb: bodyArgb ?? this.bodyArgb,
+    bodyBaseArgb: bodyBaseArgb ?? this.bodyBaseArgb,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -56,14 +66,32 @@ class SpiritLook {
       other.outfit == outfit &&
       other.companion == companion &&
       other.bodyArgb == bodyArgb &&
-      other.bodyBaseArgb == bodyBaseArgb;
+      other.bodyBaseArgb == bodyBaseArgb &&
+      _same(choices, other.choices) &&
+      _same(colors, other.colors);
 
   @override
-  int get hashCode =>
-      Object.hash(eye, brow, nose, mouth, bag, outfit, companion, bodyArgb, bodyBaseArgb);
+  int get hashCode => Object.hash(
+    eye,
+    brow,
+    nose,
+    mouth,
+    bag,
+    outfit,
+    companion,
+    bodyArgb,
+    bodyBaseArgb,
+    Object.hashAllUnordered(
+      choices.entries.map((e) => Object.hash(e.key, e.value)),
+    ),
+    Object.hashAllUnordered(
+      colors.entries.map((e) => Object.hash(e.key, e.value)),
+    ),
+  );
 
   @override
-  String toString() => 'SpiritLook(eye: $eye, brow: $brow, nose: $nose, mouth: $mouth, '
+  String toString() =>
+      'SpiritLook(eye: $eye, brow: $brow, nose: $nose, mouth: $mouth, '
       'bag: $bag, outfit: $outfit, companion: $companion, '
       'bodyArgb: ${bodyArgb?.toRadixString(16)}, bodyBaseArgb: ${bodyBaseArgb.toRadixString(16)})';
 }
@@ -83,17 +111,57 @@ SpiritLook spiritLookOf(
   int? bodyArgb,
   int bodyBaseArgb = defaultBodyBaseArgb,
   Map<String, String> baseOf = const {},
+  Map<String, int> variantColors = const {},
+  int? initialClothArgb,
 }) {
   int style(Map<String, int> styles, String slot) {
     final id = look.slots[slot];
     return styles[id] ?? styles[baseOf[id]] ?? 0;
   }
 
+  final choices = <String, int>{
+    for (final slot in [
+      'hat',
+      'face',
+      'cloth',
+      'shoe',
+      'hand',
+      'bag',
+      'pet',
+      'float',
+    ])
+      slot: 0,
+  };
+  final colors = <String, int>{
+    for (final p in unifiedProps) p.colorField: p.argb,
+  };
+  for (final p in unifiedProps) {
+    final hex = look.propColors[p.id];
+    if (hex != null)
+      colors[p.colorField] = int.parse('FF${hex.substring(1)}', radix: 16);
+  }
+  for (final e in look.slots.entries) {
+    final id = e.value;
+    final base = baseOf[id] ?? id;
+    final p = unifiedProp(base);
+    if (p == null) continue;
+    choices[p.slot] = p.choice;
+    if (!look.propColors.containsKey(p.id)) {
+      final color = id != base
+          ? variantColors[id]
+          : p.id == 'cloth_02'
+          ? initialClothArgb
+          : null;
+      if (color != null) colors[p.colorField] = color;
+    }
+  }
   return SpiritLook(
-    eye: eyeParts[look.eyes] ?? 0,
-    brow: browParts[look.brows] ?? 1,
-    nose: noseParts[look.nose] ?? 6,
-    mouth: mouthParts[look.mouth] ?? 1,
+    choices: Map.unmodifiable(choices),
+    colors: Map.unmodifiable(colors),
+    eye: eyeParts[canonicalFacePart('eyes', look.eyes)] ?? 0,
+    brow: browParts[canonicalFacePart('brows', look.brows)] ?? 1,
+    nose: noseParts[canonicalFacePart('nose', look.nose)] ?? 6,
+    mouth: mouthParts[canonicalFacePart('mouth', look.mouth)] ?? 6,
     bag: style(_bagStyles, 'bag'),
     outfit: style(_outfitStyles, 'cloth'),
     companion: style(_companionStyles, 'pet'),
@@ -101,3 +169,6 @@ SpiritLook spiritLookOf(
     bodyBaseArgb: bodyBaseArgb,
   );
 }
+
+bool _same(Map<String, int> a, Map<String, int> b) =>
+    a.length == b.length && a.entries.every((e) => b[e.key] == e.value);

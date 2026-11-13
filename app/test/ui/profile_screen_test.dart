@@ -184,7 +184,7 @@ void main() {
     final spirit = find.descendant(
         of: find.byKey(const ValueKey('portrait')), matching: find.byType(SpiritCharacter));
     final look = tester.widget<SpiritCharacter>(spirit).look;
-    expect((look.eye, look.brow, look.nose, look.mouth), (0, 1, 6, 1));
+    expect((look.eye, look.brow, look.nose, look.mouth), (0, 1, 6, 6));
     expect(look.bodyArgb, 0xFFF3E4C4);
     await end(tester, e);
   });

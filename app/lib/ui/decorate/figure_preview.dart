@@ -5,20 +5,22 @@ import '../../domain/spirit_look.dart';
 import '../common/app_text.dart';
 import '../common/palette.dart';
 import '../scene/spirit_character.dart';
+import '../scene/spirit_controller.dart';
 import 'decorate_widgets.dart';
 
-/// 표정 미리보기 단추: (이름, Rive 표정 번호). 저장하지 않는 미리보기다 (palette.json expressions)
+/// 동작 미리보기 단추: (이름, Rive 표정 번호). 저장하지 않는 미리보기다 (palette.json expressions)
 const previewExpressions = [
   ('기본', 0),
-  ('행복', 1),
-  ('울먹임', 2),
-  ('놀람', 3),
-  ('졸림', 4),
+  ('기쁨', 1),
+  ('인사', 2),
+  ('배 눌림', 3),
+  ('잠들기', 4),
   ('화남', 5),
+  ('머리 눌림', 6),
 ];
 
 /// 꾸미기 위 미리보기: 쉼터와 같은 정령을 정면으로 풀밭 위에 세운다. 머리·배를 누르면 정령이 반응하고
-/// 연타하면 화낸다. 아래에 입고 있는 소품 요약 줄, 오른쪽 위에 표정 미리보기 단추 여섯.
+/// 연타하면 화낸다. 아래에 입고 있는 소품 요약 줄, 오른쪽 위에 동작 미리보기 단추 여섯.
 /// 고르는 대로 얼굴·몸 색이 바뀌고, Rive에 붙은 소품(domain/spirit_look.dart)도 입는다
 class SpiritPreview extends StatelessWidget {
   const SpiritPreview({
@@ -28,8 +30,10 @@ class SpiritPreview extends StatelessWidget {
     required this.expression,
     required this.onExpression,
     this.tapRules,
+    this.onReady,
   });
 
+  final ValueChanged<SpiritController>? onReady;
   final SpiritLook look;
 
   /// 입고 있는 소품 이름을 이은 줄 ("소품 없음"이면 비었다는 뜻)
@@ -69,6 +73,7 @@ class SpiritPreview extends StatelessWidget {
                   footAt: 0.82,
                   expression: expression,
                   tapRules: tapRules,
+                  onReady: onReady,
                 ),
               ),
               Positioned(
@@ -77,16 +82,23 @@ class SpiritPreview extends StatelessWidget {
                 right: 12,
                 child: Container(
                   key: const ValueKey('summary'),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: Palette.card.withValues(alpha: 0.94),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '$summary${expression == 0 ? '' : '  ·  표정 미리보기'}',
+                    '$summary${expression == 0 ? '' : '  ·  동작 미리보기'}',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, height: 1.4, color: Palette.ink),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      height: 1.4,
+                      color: Palette.ink,
+                    ),
                   ),
                 ),
               ),
@@ -139,7 +151,7 @@ class _ExpressionButton extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: '표정 $name',
+      label: '동작 $name',
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -150,13 +162,21 @@ class _ExpressionButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? Palette.ink : Palette.card.withValues(alpha: 0.94),
+            color: selected
+                ? Palette.ink
+                : Palette.card.withValues(alpha: 0.94),
             borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: selected ? Palette.ink : lineColor, width: InkLine.pill),
+            border: Border.all(
+              color: selected ? Palette.ink : lineColor,
+              width: InkLine.pill,
+            ),
           ),
           child: Text(
             name,
-            style: context.display(12, color: selected ? Palette.card : Palette.ink),
+            style: context.display(
+              12,
+              color: selected ? Palette.card : Palette.ink,
+            ),
           ),
         ),
       ),

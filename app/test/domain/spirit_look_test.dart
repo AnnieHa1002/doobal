@@ -12,24 +12,27 @@ import 'helpers.dart';
 void main() {
   group('spiritLookOf', () {
     test('첫 모습은 Rive 기본 얼굴에 기본 가방 큰 붓, 기본 옷 여행복 (16장 11/8)', () {
-      expect(spiritLookOf(Look.initial), SpiritLook.base.copyWith(bag: 1, outfit: 1));
+      final initial=spiritLookOf(Look.initial);
+      expect((initial.bag,initial.outfit),(1,1));
+      expect(initial.choices,{'hat':1,'face':0,'cloth':4,'shoe':4,'hand':0,'bag':1,'pet':1,'float':0});
+      expect(initial.colors.length,37);
       expect(
           (SpiritLook.base.eye, SpiritLook.base.brow, SpiritLook.base.nose, SpiritLook.base.mouth),
-          (0, 1, 6, 1));
+          (0, 1, 6, 6));
       expect(SpiritLook.base.bodyArgb, isNull);
     });
 
     test('얼굴 id를 Rive 값으로 바꾼다', () {
       final s = spiritLookOf(
           Look.initial.copyWith(eyes: 'cat', brows: 'none', nose: 'none', mouth: 'smirk'));
-      expect((s.eye, s.brow, s.nose, s.mouth), (4, 0, 3, 5));
+      expect((s.eye, s.brow, s.nose, s.mouth), (2, 0, 7, 5));
     });
 
     test('코는 없음=3·고리=0 순서로 Rive 값을 바꾼다 (빠짐없이 한 번씩)', () {
       final styles = [
         for (final id in noseParts.keys) spiritLookOf(Look.initial.copyWith(nose: id)).nose,
       ];
-      expect(styles, [3, 0, 1, 2, 4, 5, 6]);
+      expect(styles, [7, 0, 1, 2, 3, 4, 5, 6]);
       expect(styles.toSet().length, noseParts.length);
     });
 
