@@ -7,7 +7,6 @@ import '../domain/backup_policy.dart';
 import '../domain/badge.dart' as stamp;
 import '../domain/boat.dart';
 import '../domain/companion_engine.dart' show parseStoryNoticeKey;
-import '../domain/focus_walk.dart';
 import '../domain/notification_policy.dart' show NoticeKind, parseNoticePayload;
 import '../domain/prop.dart';
 import '../ui/arrival/arrival_screen.dart';
@@ -38,10 +37,9 @@ const _toastMinKm = 0.1;
 /// 도착 화면을 띄운다. 걷는 중 화면이 떠 있을 때는 그 화면이 걷기를 마치고 도착 화면으로 바꾸므로
 /// (walkingActiveProvider) 여기서는 띄우지 않고, 걷는 중 화면이 닫힌 뒤에 남아 있으면 띄운다.
 /// 이 위젯이 home이라 어느 화면 위에서든 같은 Navigator에 올릴 수 있다.
-/// 앱 걷기(본격 걷기 보너스의 창)를 위해 앱이 살아 있는 동안 config sync.aliveSaveSec마다와
-/// 백그라운드로 갈 때 '살아 있던 시각'을 적는다. 앱을 켠 직후에는 앞 실행에서 끝나지 않은 앱 걷기를
-/// 그 시각에서 닫고(동기화보다 먼저) 동기화한다. 닫은 창이 있으면(걷는 중에 앱이 끝났다) 첫 동기화 뒤에
-/// 쉼터에 토스트를 한 번 띄운다: 창이 끝난 뒤 쌓인 걸음은 평소 걸음으로 더해졌다고 알린다.
+/// 물감 길을 위해 앱이 살아 있는 동안 config sync.aliveSaveSec마다와 백그라운드로 갈 때 '살아 있던 시각'을
+/// 적는다. 앱을 켠 직후에는 앞 실행에서 끝나지 않은 물감 길을 그 시각에서 닫고(appEnded, 동기화보다 먼저)
+/// 동기화한다 (모든 걸음이 같게 세지므로 따로 알리지 않는다).
 /// 어느 화면의 동기화든 소품을 새로 얻으면(SyncService.newProps) 지금 화면 위에 한 줄 토스트를 띄운다.
 /// 알림을 눌러 들어오면(앱이 켜져 있을 때·알림으로 켜졌을 때) 그 알림이 가리키는 화면을 연다.
 /// 켤 때 앱이 닫혀 있어도 동기화하는 주기 작업(backgroundSyncProvider)을 건다
@@ -123,19 +121,17 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     super.dispose();
   }
 
-  /// 앱을 켠 직후: 앞 실행에서 끝나지 않은 앱 걷기를 닫고 지금 살아 있다고 적은 뒤 동기화한다
+  /// 앱을 켠 직후: 앞 실행에서 끝나지 않은 물감 길을 닫고 지금 살아 있다고 적은 뒤 동기화한다
   /// (닫은 날의 하루 요약이 먼저 맞아야 동기화가 그 위에서 계산한다). 앞의 일이 실패해도 동기화는 한다.
-  /// 닫은 창이 있었으면 동기화가 끝난 뒤 토스트를 띄운다
+  /// 물감 길 판정(PaintTrailController)은 닫기가 끝난 뒤에 시작한다 (startUpDoneProvider)
   Future<void> _startUp() async {
-    DateTime? orphanEnd;
     await _service((svc, now) async {
-      orphanEnd = await svc.closeOrphanAppWalksEnd(now);
+      await svc.closeOrphanPaintTrails(now);
       await svc.saveAlive(now);
-    }, '앱 걷기 정리');
+    }, '물감 길 정리');
+    if (mounted) ref.read(trailsReadyProvider.notifier).set(true);
     await _startAliveTimer();
     await _sync();
-    final end = orphanEnd;
-    if (end != null) await _showOrphanToast(end);
     await _startBackgroundSync();
   }
 
@@ -149,18 +145,6 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     } catch (e) {
       debugPrint('백그라운드 동기화 걸기 실패: $e');
     }
-  }
-
-  /// 걷는 중에 앱이 끝나 닫은 창 [end] 뒤 지금까지 쌓인 걸음을 세어 `걷기가 멈췄어요` 토스트를 띄운다
-  /// (걸음이 없으면 멈췄다는 말만). 첫 동기화가 건강 기록을 넣은 뒤라 그 걸음이 들어 있다.
-  /// 같은 동기화가 띄운 `그동안 n km 걸었어요`는 지우고 이 토스트만 남긴다 (같은 걸음 이야기라서)
-  Future<void> _showOrphanToast(DateTime end) async {
-    var steps = 0;
-    await _service((svc, now) async => steps = await svc.stepsFrom(end, now), '멈춘 걷기 걸음 세기');
-    final messenger = scaffoldMessengerKey.currentState;
-    if (!mounted || messenger == null) return;
-    messenger.clearSnackBars();
-    showToastOn(messenger, orphanWalkToast(steps));
   }
 
   /// 누른 알림이 가리키는 화면 (UI 명세 13장): N1 → 그 걸음 숫자의 방명록 쓰기, N3 → 그 동행의 그 장.

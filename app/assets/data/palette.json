@@ -1,465 +1,633 @@
 {
-  "version": 8,
-  "source": "2026-11-12 확정 PSD 얼굴 파츠·통합 Rive v04 연결. 기존 소품·몸 팔레트는 유지. 예전 얼굴 id는 face_parts.dart 대응표로 읽음.",
-  "formula": "출력 RGB = 견본 RGB × L ÷ base, L = 0.299R + 0.587G + 0.114B, 알파 그대로",
-  "rive": {
-    "file": "doobal_unified.riv",
-    "artboard": "DoobalCharacterStudio",
-    "stateMachine": "WardrobeController",
-    "viewModel": "WardrobeColors",
-    "props": {
-      "eye": "eye",
-      "brow": "brow",
-      "nose": "nose",
-      "mouth": "mouth",
-      "lookX": "lookX",
-      "lookY": "lookY",
-      "body": "bodyColor",
-      "pose": "poseChoice"
+ "version": 8,
+ "source": "v7(11/6 개발 기획): 사용자 소품 색 고르기(tintProps) 폐기 → 색 소품은 props.json material·colorVariants(고정 색). 배 색은 boats.json recolor가 body 견본을 씀. body.baseHex #FFF5E2는 리포 개발 실측(11/4, 회색조 몸 납품 전까지). v6(11/4 개발 기획): 몸 색 견본 10 확정(11/4 Annie, 수채 파스텔 6 + 자연색 4, 기본 크림), 기준 밝기 가안 200(v21 회색조 몸 실측 뒤 고침), 채도 막대 없음. 베레모는 기본 #A4502F + 같은 10색. v5(11/4 개발 기획): 얼굴을 Codex 리그 v24 승인본으로 — 눈 5·눈썹 5(없음 포함)·코 7(없음 포함)·입 6, 표정 6(기본·행복·울먹임·놀람·졸림·화남) + 자동 깜빡임. 저장값은 문자 id, Rive View model에는 rive 정수로 넘김(README 'Doobal_Spirit_Face_Rig_v24', noseStyle은 0 고리·3 없음 순서 주의). 베레모 색 바꾸기 tintProps. v4(11/03): 얼굴 5종·표정 4. v3(11/03): 몸 색 1채널, hair·skin은 legacy",
+ "formula": "출력 RGB = 견본 RGB × L ÷ base, L = 0.299R + 0.587G + 0.114B, 알파 그대로",
+ "rive": {
+  "file": "doobal_spirit_face_rig_v24.riv",
+  "drive": "193DZTyOHoqAi9uBRqQZufZ9vx1XJRmlJ",
+  "artboard": "DoobalSpirit",
+  "stateMachine": "SpiritController",
+  "viewModel": "DoobalSpirit",
+  "props": {
+   "eye": "eyeStyle",
+   "brow": "browStyle",
+   "nose": "noseStyle",
+   "mouth": "mouthStyle",
+   "expression": "expression",
+   "blink": "blinkMode",
+   "direction": "direction",
+   "motion": "motion",
+   "faceVisible": "faceVisible",
+   "headPressed": "headPressed",
+   "bellyPressed": "bellyPressed",
+   "lookX": "lookX",
+   "lookY": "lookY"
+  },
+  "direction": {
+   "front": 0,
+   "right": 1,
+   "back": 2,
+   "left": 3
+  },
+  "blinkMode": {
+   "auto": 0,
+   "open": 1,
+   "closed": 2
+  },
+  "motion": {
+   "idle": 0,
+   "walk": 1,
+   "sit": 2,
+   "lie": 3,
+   "jump": 4,
+   "run": 5,
+   "sleep": 6,
+   "wave": 7,
+   "fall": 8,
+   "laugh": 9
+  },
+  "note": "11/6: 정령 움직임이 '동작 시트 + 독립 파츠'로 바뀜(16장). 얼굴 부위 id·표정 id는 그대로 쓰고, rive 정수표는 새 방식이 들어올 때까지 지금 앱(Rive v25)용"
+ },
+ "customParts": {
+  "asOf": "2026-11-06",
+  "eyes": [
+   {
+    "id": "e1",
+    "name": "기본"
+   },
+   {
+    "id": "e2",
+    "name": "부드러운 눈"
+   },
+   {
+    "id": "e3",
+    "name": "장난 눈"
+   },
+   {
+    "id": "e4",
+    "name": "졸린 눈"
+   },
+   {
+    "id": "e5",
+    "name": "감은 눈"
+   },
+   {
+    "id": "e6",
+    "name": "반짝 눈"
+   }
+  ],
+  "brows": [
+   {
+    "id": "none",
+    "name": "없음"
+   },
+   {
+    "id": "b1",
+    "name": "둥근 눈썹"
+   },
+   {
+    "id": "b2",
+    "name": "짧은 눈썹"
+   },
+   {
+    "id": "b3",
+    "name": "화난 눈썹"
+   },
+   {
+    "id": "b4",
+    "name": "졸린 눈썹"
+   },
+   {
+    "id": "b5",
+    "name": "걱정 눈썹"
+   },
+   {
+    "id": "b6",
+    "name": "미남 눈썹"
+   }
+  ],
+  "nose": [
+   {
+    "id": "none",
+    "name": "없음"
+   },
+   {
+    "id": "n1",
+    "name": "빗금"
+   },
+   {
+    "id": "n2",
+    "name": "고리"
+   },
+   {
+    "id": "n3",
+    "name": "위 곡선"
+   },
+   {
+    "id": "n4",
+    "name": "아래 곡선"
+   },
+   {
+    "id": "n5",
+    "name": "두 점"
+   },
+   {
+    "id": "n6",
+    "name": "옆 곡선"
+   },
+   {
+    "id": "n7",
+    "name": "동글"
+   }
+  ],
+  "mouth": [
+   {
+    "id": "m1",
+    "name": "미소"
+   },
+   {
+    "id": "m2",
+    "name": "오메가"
+   },
+   {
+    "id": "m3",
+    "name": "송곳니"
+   },
+   {
+    "id": "m4",
+    "name": "벌린 입"
+   },
+   {
+    "id": "m5",
+    "name": "활짝"
+   },
+   {
+    "id": "m6",
+    "name": "긴 미소"
+   },
+   {
+    "id": "m7",
+    "name": "살짝 미소"
+   },
+   {
+    "id": "m8",
+    "name": "큰 미소"
+   }
+  ],
+  "defaultFace": {
+   "eyes": "e1",
+   "brows": "b1",
+   "nose": "n7",
+   "mouth": "m7"
+  },
+  "expressions": [
+   {
+    "id": "default",
+    "name": "기본",
+    "rive": 0
+   },
+   {
+    "id": "happy",
+    "name": "행복",
+    "rive": 1
+   },
+   {
+    "id": "teary",
+    "name": "울먹임",
+    "rive": 2
+   },
+   {
+    "id": "surprised",
+    "name": "놀람",
+    "rive": 3
+   },
+   {
+    "id": "sleepy",
+    "name": "졸림",
+    "rive": 4
+   },
+   {
+    "id": "angry",
+    "name": "화남",
+    "rive": 5
+   }
+  ],
+  "expressionTriggers": {
+   "happy": [
+    "arrival",
+    "paintingGet",
+    "tap",
+    "praise"
+   ],
+   "surprised": [
+    "companionMeet",
+    "newProp",
+    "regionComplete"
+   ],
+   "teary": [
+    "fall",
+    "storyMoving",
+    "returnAfterLongRest"
+   ],
+   "sleepy": [
+    "nightRest",
+    "sleep"
+   ],
+   "angry": [
+    "rapidTap"
+   ]
+  },
+  "holdSec": {
+   "approx": true,
+   "happy": 1,
+   "surprised": 2,
+   "teary": 3,
+   "angry": 2
+  },
+  "note": "11/13 T5: 얼굴 부위를 계약 v0.5(customPartsV33) id로 바꿈. 이름은 PSD v20 부위 이름(화면은 그림 칸이 오기 전까지 글자). 11/12 통합 작업의 PSD 이름 id와 옛 v24 id는 face_parts.dart가 읽을 때 옮긴다. 11/4 Annie 확정(Codex v24). 얼굴 파츠는 색을 입히지 않음. 화면 이름은 꾸미기 얼굴 탭에 쓰지 않아도 됨(그림만). 졸림은 밤 쉼터·잠자기 동작에서 유지(holdSec 없음). 화남 조건은 config character.tapReaction 11/5 Annie: 꾸미기·정령 만들기에서 눈·눈썹·코·입을 부위별로 고름(묶음 프리셋 없음)."
+ },
+ "body": {
+  "base": 200,
+  "baseApprox": true,
+  "baseHex": "#FFF5E2",
+  "baseHexNote": "11/4 개발: Rive 정령 v25 몸통은 회색 200이 아니라 평면색 #FFF5E2 (렌더해서 잰 값). 곱하기 필터는 이 색을 기준으로 채널별로 나눈다. 회색조 몸 그림이 납품되면 baseHex를 없애고 base를 쓴다",
+  "default": 1,
+  "swatches": [
+   {
+    "id": 1,
+    "name": "크림",
+    "hex": "#F3E4C4"
+   },
+   {
+    "id": 2,
+    "name": "살구",
+    "hex": "#F5C9A3"
+   },
+   {
+    "id": 3,
+    "name": "분홍",
+    "hex": "#EFC0BE"
+   },
+   {
+    "id": 4,
+    "name": "라벤더",
+    "hex": "#D3C6E6"
+   },
+   {
+    "id": 5,
+    "name": "하늘",
+    "hex": "#BCD9E8"
+   },
+   {
+    "id": 6,
+    "name": "연두",
+    "hex": "#CDE0AC"
+   },
+   {
+    "id": 7,
+    "name": "이끼",
+    "hex": "#9FAE7E"
+   },
+   {
+    "id": 8,
+    "name": "흙",
+    "hex": "#C4A07C"
+   },
+   {
+    "id": 9,
+    "name": "테라코타",
+    "hex": "#C9775A"
+   },
+   {
+    "id": 10,
+    "name": "남청",
+    "hex": "#7F8DB3"
+   }
+  ],
+  "custom": {
+   "lightMin": null,
+   "lightMax": null,
+   "note": "직접 고르기는 둠, 밝기 제한 값은 디자인 기획(없으면 제한 없음)"
+  },
+  "saturationSlider": false,
+  "parts": [
+   "body",
+   "arm_l",
+   "arm_r",
+   "foot_l",
+   "foot_r"
+  ],
+  "note": "견본 id는 저장값이라 순서를 바꾸지 않음"
+ },
+ "legacy": {
+  "deprecated": "2026-11-02 정령 전환으로 더 쓰지 않음",
+  "hair": {
+   "base": 182,
+   "swatches": [
+    {
+     "id": 1,
+     "name": "흑발",
+     "hex": "#2B2522"
     },
-    "faceDefaults": {
-      "eye": 1,
-      "brow": 1,
-      "nose": 7,
-      "mouth": 7
+    {
+     "id": 2,
+     "name": "짙은 갈색",
+     "hex": "#4A3226"
     },
-    "gaze": {
-      "range": [
-        -1,
-        1
-      ],
-      "openEyesOnly": true,
-      "closedAndSleepingFixed": true
+    {
+     "id": 3,
+     "name": "갈색",
+     "hex": "#6E4A32"
     },
-    "note": "얼굴은 확정 PSD 원본. 소품 선택·색·동작 입력은 unified_wardrobe.dart와 SpiritController가 대응하며, 채색은 색 면에 직접 적용한다.",
-    "version": "v21-game-gaze-v05",
-    "faceMapping": {
-      "eye": "index+1",
-      "brow": "index",
-      "nose": "index==7?0:index+1",
-      "mouth": "index+1"
+    {
+     "id": 4,
+     "name": "적갈색",
+     "hex": "#8C3E2A"
     },
-    "poses": {
-      "front": 0,
-      "side": 1,
-      "sitFront": 2,
-      "sitSide": 3,
-      "sleep": 4,
-      "back": 5,
-      "moveSide": 6
+    {
+     "id": 5,
+     "name": "진저",
+     "hex": "#C2703A"
+    },
+    {
+     "id": 6,
+     "name": "금발",
+     "hex": "#D6B26E"
+    },
+    {
+     "id": 7,
+     "name": "애쉬그레이",
+     "hex": "#849AA9"
+    },
+    {
+     "id": 8,
+     "name": "백발",
+     "hex": "#E3E0DA"
+    },
+    {
+     "id": 9,
+     "name": "푸른색",
+     "hex": "#4F6F9E"
+    },
+    {
+     "id": 10,
+     "name": "분홍색",
+     "hex": "#E39AB0"
     }
+   ]
   },
-  "customParts": {
-    "asOf": "2026-11-12",
-    "eyes": [
-      {
-        "id": "default_drop",
-        "name": "기본",
-        "rive": 0
-      },
-      {
-        "id": "soft",
-        "name": "부드러운 눈",
-        "rive": 1
-      },
-      {
-        "id": "mischievous",
-        "name": "장난 눈",
-        "rive": 2
-      },
-      {
-        "id": "sleepy",
-        "name": "졸린 눈",
-        "rive": 3
-      },
-      {
-        "id": "closed",
-        "name": "감은 눈",
-        "rive": 4
-      },
-      {
-        "id": "sparkle",
-        "name": "반짝 눈",
-        "rive": 5
-      }
-    ],
-    "brows": [
-      {
-        "id": "none",
-        "name": "없음",
-        "rive": 0
-      },
-      {
-        "id": "gentle",
-        "name": "둥근 눈썹",
-        "rive": 1
-      },
-      {
-        "id": "short",
-        "name": "짧은 눈썹",
-        "rive": 2
-      },
-      {
-        "id": "angry",
-        "name": "화난 눈썹",
-        "rive": 3
-      },
-      {
-        "id": "sleepy",
-        "name": "졸린 눈썹",
-        "rive": 4
-      },
-      {
-        "id": "worried",
-        "name": "걱정 눈썹",
-        "rive": 5
-      },
-      {
-        "id": "handsome",
-        "name": "미남 눈썹",
-        "rive": 6
-      }
-    ],
-    "nose": [
-      {
-        "id": "none",
-        "name": "없음",
-        "rive": 7
-      },
-      {
-        "id": "slash",
-        "name": "빗금",
-        "rive": 0
-      },
-      {
-        "id": "ring",
-        "name": "고리",
-        "rive": 1
-      },
-      {
-        "id": "arch",
-        "name": "위 곡선",
-        "rive": 2
-      },
-      {
-        "id": "scoop",
-        "name": "아래 곡선",
-        "rive": 3
-      },
-      {
-        "id": "dots",
-        "name": "두 점",
-        "rive": 4
-      },
-      {
-        "id": "curl",
-        "name": "옆 곡선",
-        "rive": 5
-      },
-      {
-        "id": "round",
-        "name": "동글",
-        "rive": 6
-      }
-    ],
-    "mouth": [
-      {
-        "id": "smile",
-        "name": "미소",
-        "rive": 0
-      },
-      {
-        "id": "omega",
-        "name": "오메가",
-        "rive": 1
-      },
-      {
-        "id": "fangs",
-        "name": "송곳니",
-        "rive": 2
-      },
-      {
-        "id": "open",
-        "name": "벌린 입",
-        "rive": 3
-      },
-      {
-        "id": "grin",
-        "name": "활짝",
-        "rive": 4
-      },
-      {
-        "id": "long_smile",
-        "name": "긴 미소",
-        "rive": 5
-      },
-      {
-        "id": "soft_smile",
-        "name": "살짝 미소",
-        "rive": 6
-      },
-      {
-        "id": "wide_smile",
-        "name": "큰 미소",
-        "rive": 7
-      }
-    ],
-    "defaultFace": {
-      "eyes": "default_drop",
-      "brows": "gentle",
-      "nose": "round",
-      "mouth": "soft_smile"
+  "skin": {
+   "base": 196,
+   "swatches": [
+    {
+     "id": 1,
+     "name": "피부 1",
+     "hex": "#F6E1D3"
     },
-    "expressions": [
-      {
-        "id": "default",
-        "name": "기본",
-        "rive": 0
-      },
-      {
-        "id": "happy",
-        "name": "행복",
-        "rive": 1
-      },
-      {
-        "id": "teary",
-        "name": "울먹임",
-        "rive": 2
-      },
-      {
-        "id": "surprised",
-        "name": "놀람",
-        "rive": 3
-      },
-      {
-        "id": "sleepy",
-        "name": "졸림",
-        "rive": 4
-      },
-      {
-        "id": "angry",
-        "name": "화남",
-        "rive": 5
-      }
-    ],
-    "expressionTriggers": {
-      "happy": [
-        "arrival",
-        "paintingGet",
-        "tap",
-        "praise"
-      ],
-      "surprised": [
-        "companionMeet",
-        "newProp",
-        "regionComplete"
-      ],
-      "teary": [
-        "fall",
-        "storyMoving",
-        "returnAfterLongRest"
-      ],
-      "sleepy": [
-        "nightRest",
-        "sleep"
-      ],
-      "angry": [
-        "rapidTap"
-      ]
+    {
+     "id": 2,
+     "name": "피부 2",
+     "hex": "#F4D7D7"
     },
-    "holdSec": {
-      "approx": true,
-      "happy": 1,
-      "surprised": 2,
-      "teary": 3,
-      "angry": 2
+    {
+     "id": 3,
+     "name": "피부 3",
+     "hex": "#EECBB2"
     },
-    "note": "확정 PSD 원본 파츠. 눈6·눈썹6+없음·코7+없음·입8. 감은 눈과 잠들기는 시선 고정, 기쁨·화남·잠들기에는 확정 표정이 우선이며 이후 선택 얼굴로 복귀."
-  },
-  "body": {
-    "base": 200,
-    "baseApprox": true,
-    "baseHex": "#FFF5E2",
-    "baseHexNote": "11/4 개발: Rive 정령 v25 몸통은 회색 200이 아니라 평면색 #FFF5E2 (렌더해서 잰 값). 곱하기 필터는 이 색을 기준으로 채널별로 나눈다. 회색조 몸 그림이 납품되면 baseHex를 없애고 base를 쓴다",
-    "default": 1,
-    "swatches": [
-      {
-        "id": 1,
-        "name": "크림",
-        "hex": "#F3E4C4"
-      },
-      {
-        "id": 2,
-        "name": "살구",
-        "hex": "#F5C9A3"
-      },
-      {
-        "id": 3,
-        "name": "분홍",
-        "hex": "#EFC0BE"
-      },
-      {
-        "id": 4,
-        "name": "라벤더",
-        "hex": "#D3C6E6"
-      },
-      {
-        "id": 5,
-        "name": "하늘",
-        "hex": "#BCD9E8"
-      },
-      {
-        "id": 6,
-        "name": "연두",
-        "hex": "#CDE0AC"
-      },
-      {
-        "id": 7,
-        "name": "이끼",
-        "hex": "#9FAE7E"
-      },
-      {
-        "id": 8,
-        "name": "흙",
-        "hex": "#C4A07C"
-      },
-      {
-        "id": 9,
-        "name": "테라코타",
-        "hex": "#C9775A"
-      },
-      {
-        "id": 10,
-        "name": "남청",
-        "hex": "#7F8DB3"
-      }
-    ],
-    "custom": {
-      "lightMin": null,
-      "lightMax": null,
-      "note": "직접 고르기는 둠, 밝기 제한 값은 디자인 기획(없으면 제한 없음)"
+    {
+     "id": 4,
+     "name": "피부 4",
+     "hex": "#E2B48F"
     },
-    "saturationSlider": false,
-    "parts": [
-      "body",
-      "arm_l",
-      "arm_r",
-      "foot_l",
-      "foot_r"
-    ],
-    "note": "견본 id는 저장값이라 순서를 바꾸지 않음"
-  },
-  "legacy": {
-    "deprecated": "2026-11-02 정령 전환으로 더 쓰지 않음",
-    "hair": {
-      "base": 182,
-      "swatches": [
-        {
-          "id": 1,
-          "name": "흑발",
-          "hex": "#2B2522"
-        },
-        {
-          "id": 2,
-          "name": "짙은 갈색",
-          "hex": "#4A3226"
-        },
-        {
-          "id": 3,
-          "name": "갈색",
-          "hex": "#6E4A32"
-        },
-        {
-          "id": 4,
-          "name": "적갈색",
-          "hex": "#8C3E2A"
-        },
-        {
-          "id": 5,
-          "name": "진저",
-          "hex": "#C2703A"
-        },
-        {
-          "id": 6,
-          "name": "금발",
-          "hex": "#D6B26E"
-        },
-        {
-          "id": 7,
-          "name": "애쉬그레이",
-          "hex": "#849AA9"
-        },
-        {
-          "id": 8,
-          "name": "백발",
-          "hex": "#E3E0DA"
-        },
-        {
-          "id": 9,
-          "name": "푸른색",
-          "hex": "#4F6F9E"
-        },
-        {
-          "id": 10,
-          "name": "분홍색",
-          "hex": "#E39AB0"
-        }
-      ]
+    {
+     "id": 5,
+     "name": "피부 5",
+     "hex": "#CF9A72"
     },
-    "skin": {
-      "base": 196,
-      "swatches": [
-        {
-          "id": 1,
-          "name": "피부 1",
-          "hex": "#F6E1D3"
-        },
-        {
-          "id": 2,
-          "name": "피부 2",
-          "hex": "#F4D7D7"
-        },
-        {
-          "id": 3,
-          "name": "피부 3",
-          "hex": "#EECBB2"
-        },
-        {
-          "id": 4,
-          "name": "피부 4",
-          "hex": "#E2B48F"
-        },
-        {
-          "id": 5,
-          "name": "피부 5",
-          "hex": "#CF9A72"
-        },
-        {
-          "id": 6,
-          "name": "피부 6",
-          "hex": "#B57E57"
-        },
-        {
-          "id": 7,
-          "name": "피부 7",
-          "hex": "#966242"
-        }
-      ]
+    {
+     "id": 6,
+     "name": "피부 6",
+     "hex": "#B57E57"
+    },
+    {
+     "id": 7,
+     "name": "피부 7",
+     "hex": "#966242"
     }
-  },
-  "grass": {
-    "base": 150,
-    "approx": true,
-    "seasons": {
-      "spring": "#B5C98A",
-      "summer": "#6F8F4E",
-      "autumn": "#C79A5B",
-      "winter": "#D8D6CC"
-    },
-    "layers": [
-      "ground_grass",
-      "camp_back_grass",
-      "camp_front_grass"
-    ]
+   ]
   }
+ },
+ "grass": {
+  "base": 150,
+  "approx": true,
+  "seasons": {
+   "spring": "#B5C98A",
+   "summer": "#6F8F4E",
+   "autumn": "#C79A5B",
+   "winter": "#D8D6CC"
+  },
+  "layers": [
+   "ground_grass",
+   "camp_back_grass",
+   "camp_front_grass"
+  ]
+ },
+ "customPartsV33": {
+  "pending": false,
+  "note": "16장 11/13 얼굴·잠들기 Rive v32 확정, 계약 v0.4 4장. 저장값 = 이 id, Rive 뷰 모델 WardrobeColors의 eye·brow·nose·mouth에는 rive 번호. T5에서 customParts(v24)를 이것으로 바꾸고 옛 모습의 얼굴 값은 기본 얼굴로 초기화(출시 전). 칸 이름은 화면에 안 씀(그림만) / 11/13 v33 납품: riv는 eye·mouth도 0 = 없음을 받지만 앱은 칸을 안 둠(눈썹·코만 없음)",
+  "eyes": [
+   {
+    "id": "e1",
+    "rive": 1
+   },
+   {
+    "id": "e2",
+    "rive": 2
+   },
+   {
+    "id": "e3",
+    "rive": 3
+   },
+   {
+    "id": "e4",
+    "rive": 4
+   },
+   {
+    "id": "e5",
+    "rive": 5
+   },
+   {
+    "id": "e6",
+    "rive": 6
+   }
+  ],
+  "brows": [
+   {
+    "id": "none",
+    "rive": 0
+   },
+   {
+    "id": "b1",
+    "rive": 1
+   },
+   {
+    "id": "b2",
+    "rive": 2
+   },
+   {
+    "id": "b3",
+    "rive": 3
+   },
+   {
+    "id": "b4",
+    "rive": 4
+   },
+   {
+    "id": "b5",
+    "rive": 5
+   },
+   {
+    "id": "b6",
+    "rive": 6
+   }
+  ],
+  "nose": [
+   {
+    "id": "none",
+    "rive": 0
+   },
+   {
+    "id": "n1",
+    "rive": 1
+   },
+   {
+    "id": "n2",
+    "rive": 2
+   },
+   {
+    "id": "n3",
+    "rive": 3
+   },
+   {
+    "id": "n4",
+    "rive": 4
+   },
+   {
+    "id": "n5",
+    "rive": 5
+   },
+   {
+    "id": "n6",
+    "rive": 6
+   },
+   {
+    "id": "n7",
+    "rive": 7
+   }
+  ],
+  "mouth": [
+   {
+    "id": "m1",
+    "rive": 1
+   },
+   {
+    "id": "m2",
+    "rive": 2
+   },
+   {
+    "id": "m3",
+    "rive": 3
+   },
+   {
+    "id": "m4",
+    "rive": 4
+   },
+   {
+    "id": "m5",
+    "rive": 5
+   },
+   {
+    "id": "m6",
+    "rive": 6
+   },
+   {
+    "id": "m7",
+    "rive": 7
+   },
+   {
+    "id": "m8",
+    "rive": 8
+   }
+  ],
+  "defaultFace": {
+   "eyes": "e1",
+   "brows": "b1",
+   "nose": "n7",
+   "mouth": "m7"
+  },
+  "expressions": [
+   {
+    "id": "default",
+    "name": "기본",
+    "rive": 0
+   },
+   {
+    "id": "happy",
+    "name": "행복",
+    "rive": 1
+   },
+   {
+    "id": "surprised",
+    "name": "놀람",
+    "rive": 2
+   },
+   {
+    "id": "teary",
+    "name": "울먹임",
+    "rive": 3
+   },
+   {
+    "id": "sleepy",
+    "name": "졸림",
+    "rive": 4
+   },
+   {
+    "id": "angry",
+    "name": "화남",
+    "rive": 5
+   }
+  ],
+  "expressionNote": "v24와 번호가 다름: 놀람 2·울먹임 3(v24는 울먹임 2·놀람 3). 졸림을 끝낼 때 expr 0. 화남 빠직·잠들기 자는 눈은 riv가 그림",
+  "expressionTriggers": {
+   "happy": [
+    "arrival",
+    "paintingGet",
+    "tap",
+    "praise"
+   ],
+   "surprised": [
+    "companionMeet",
+    "newProp",
+    "regionComplete"
+   ],
+   "teary": [
+    "storyMoving",
+    "returnAfterLongRest"
+   ],
+   "sleepy": [
+    "nightRest",
+    "sleep"
+   ],
+   "angry": [
+    "rapidTap"
+   ]
+  },
+  "holdSec": {
+   "approx": true,
+   "happy": 1,
+   "surprised": 2,
+   "teary": 3,
+   "angry": 2
+  }
+ }
 }

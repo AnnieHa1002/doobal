@@ -194,6 +194,65 @@ for obj in camp_doc['objects']:
 if camp_doc['drag']['farParallax'] != config['rest']['drag']['farParallax']:
     err("farParallax: camp_wide.json ≠ config")
 
+# Rive 정령(계약 v0.4, 16장 11/11·11/13): 자세 번호 0~6, 화면별 자세가 표 안에 있음, 얼굴 번호 범위, 키 = 동행 × 0.75
+rv = config['character'].get('rive')
+if rv:
+    poses = rv['poses']
+    if sorted(poses.values()) != list(range(7)):
+        err("character.rive.poses가 0~6 일곱 개가 아님")
+    for scr, pose in rv['screens'].items():
+        if pose != 'restSwap' and pose not in poses:
+            err(f"character.rive.screens {scr}: 모르는 자세 {pose}")
+    for pose in rv['restSwap']['poses'] + [rv['restSwap']['night']]:
+        if pose not in poses:
+            err(f"character.rive.restSwap: 모르는 자세 {pose}")
+    if set(rv['triggers'].values()) != {'greet', 'joy', 'tapHead', 'tapBelly', 'angry', 'resetMotion'}:
+        err("character.rive.triggers가 v32 트리거 6개와 다름")
+fl = config['character'].get('float')
+if fl and not 0.6 <= fl['scaleToCompanion'] <= 0.9:
+    err(f"character.float scaleToCompanion {fl['scaleToCompanion']}가 0.6~0.9 밖")
+pal = load('palette.json').get('customPartsV33')
+if pal:
+    want = {'eyes': (1, 6), 'brows': (0, 6), 'nose': (0, 7), 'mouth': (1, 8)}
+    for part, (lo, hi) in want.items():
+        nums = [x['rive'] for x in pal[part]]
+        if nums != list(range(lo, hi + 1)):
+            err(f"palette customPartsV33 {part}: rive 번호 {nums} ≠ {lo}~{hi}")
+    for part, pid in pal['defaultFace'].items():
+        if pid not in {x['id'] for x in pal[part]}:
+            err(f"palette customPartsV33 defaultFace {part} {pid} 없음")
+    if [x['rive'] for x in pal['expressions']] != list(range(6)):
+        err("palette customPartsV33 expressions가 0~5가 아님")
+riv_props = [x for x in props_doc['props'] if 'rive' in x]
+seen = {}
+for x in riv_props:
+    key = (x['rive']['choice'], x['rive']['n'])
+    base = x.get('variantOf', x['id'])
+    if seen.setdefault(key, base) != base:
+        err(f"props {x['id']}: Rive 번호 {key}가 {seen[key]}와 겹침")
+
+# 같은 값이 두 파일에 있는 곳(개발 계획 7장, 11/13 개발 기획: 하나로 합치지 않고 같은지만 본다. 앱이 읽는 쪽은 config)
+if shop.get('priceFormat') != config['coins']['format']['amount']:
+    err(f"shop priceFormat {shop.get('priceFormat')} ≠ config coins.format.amount")
+for it in shop['items']:
+    if it.get('effect') and it.get('maxHold') != config['shop']['maxHoldPerItem']:
+        err(f"shop {it['id']}: maxHold {it.get('maxHold')} ≠ config shop.maxHoldPerItem")
+    if it.get('desc') and not it.get('effect'):
+        err(f"shop {it['id']}: 설명 줄(desc)은 여행 효과만(16장 11/13)")
+    if it.get('effect') and not it.get('desc'):
+        err(f"shop {it['id']}: 여행 효과인데 설명 줄(desc) 없음")
+    ef = it.get('effect') or {}
+    if ef.get('km') is not None and f"{ef['km']:g}km" not in it.get('desc', ''):
+        err(f"shop {it['id']}: desc에 {ef['km']:g}km가 없음")
+    if ef.get('ratio') is not None and f"{round(ef['ratio'] * 100)}%" not in it.get('desc', ''):
+        err(f"shop {it['id']}: desc에 {round(ef['ratio'] * 100)}%가 없음")
+fx_ids = {x['id'] for x in props_doc['props'] if x['slot'] == 'effect' and x['status'] == 'mvp'}
+if set(config.get('effects', {}).get('items', {})) != fx_ids: err(f"config effects.items {sorted(config.get('effects',{}).get('items',{}))} ≠ props 효과 {sorted(fx_ids)}")
+art_doc = load('scene_art.json')
+for o in ('portrait', 'landscape'):
+    if art_doc[o].get('figureHeight') != config['character']['canvas']['screenHeightPx'][o]:
+        err(f"정령 화면 키: scene_art {o}.figureHeight ≠ config character.canvas.screenHeightPx.{o}")
+
 for w in warns:
     print('경고:', w)
 for e in errors:

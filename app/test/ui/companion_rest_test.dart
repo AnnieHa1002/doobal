@@ -207,6 +207,8 @@ void main() {
     testWidgets('알림 점 있는 동행이 먼저 흔들린다 (다른 물건에 점이 없으면 동행만)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
+        // 여정이 있어야 지도에 점이 없다 (여정이 없으면 지도 점, 16장 11/13)
+        await e.svc.startJourney('kr003', t1, useFund: false);
         await met(e, 'bright', chapter: 1);
         await walkWith(e, 'bright');
       });
@@ -227,6 +229,7 @@ void main() {
     testWidgets('점이 없으면 동행은 흔들림에 들지 않는다 (캔버스는 둥실)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
+        await e.svc.startJourney('kr003', t1, useFund: false);
         await met(e, 'bright', chapter: 1, read: 1);
         await walkWith(e, 'bright');
       });

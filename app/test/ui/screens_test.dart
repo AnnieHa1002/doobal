@@ -1,5 +1,5 @@
-import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:doobal/app/auto_sync.dart';
 import 'package:doobal/app/providers.dart';
@@ -12,6 +12,7 @@ import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/route.dart';
+import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/spirit_look.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/album/album_screen.dart';
@@ -31,12 +32,21 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../app/helpers.dart';
 import '../domain/helpers.dart';
+import 'ui_env.dart' show startTrailNow;
 
 // 설치 KST 2026-11-18 09:00, 걷기 시작은 한 시간 뒤 (낮)
 final _t0 = DateTime.utc(2026, 11, 18, 0);
 final _t1 = _t0.add(const Duration(hours: 1));
 
 final _byId = {for (final l in landmarks) l.id: l};
+
+/// 이 파일의 앱 규칙: config 그대로에 물감 길 멈춤 끝(idleEndMin)만 아주 길게 둔다. 걷는 중 화면의 표시를 보는
+/// 시험들이 시계를 몇 분씩 건너뛰어도 물감 길이 닫히지 않게 (멈춤 끝은 paint_trail_ui_test가 본다)
+final Rules _appRules = () {
+  final j = jsonDecode(File('assets/data/config.json').readAsStringSync()) as Map<String, dynamic>;
+  ((j['paintTrail'] as Map)['idleEndMin'] as Map)['min'] = 100000;
+  return Rules.fromJson(j);
+}();
 
 StepRecord _walk(DateTime start, int minutes, int spm) => StepRecord(
       start: start,
@@ -45,19 +55,6 @@ StepRecord _walk(DateTime start, int minutes, int spm) => StepRecord(
       sourceId: 'iphone',
       method: RecordingMethod.automatic,
     );
-
-/// 권한을 묻는 창의 답이 늦게 오는 센서 ([answer]를 끝내야 답한다)
-class _SlowLive extends FakeLiveSteps {
-  _SlowLive() : super(permitted: false);
-
-  final answer = Completer<bool>();
-
-  @override
-  Future<bool> requestPermission() {
-    permissionRequests++;
-    return answer.future;
-  }
-}
 
 /// 메모리 DB + 가짜 걸음 + 바꿀 수 있는 시계. 에셋은 모두 직접 넣는다
 /// (두 번째 testWidgets부터는 rootBundle 에셋이 로드되지 않는다)
@@ -70,7 +67,7 @@ class _Env {
     svc = SyncService(
       db: db,
       source: source,
-      rules: rules,
+      rules: _appRules,
       allowedSources: const [],
       landmarks: _byId,
       props: props,
@@ -89,7 +86,7 @@ class _Env {
   DateTime now;
 
   List<Override> get overrides => [
-        rulesProvider.overrideWith((ref) => rules),
+        rulesProvider.overrideWith((ref) => _appRules),
         landmarksProvider.overrideWith((ref) => landmarks),
         propsProvider.overrideWith((ref) => props),
         milestonesProvider.overrideWith((ref) => milestones),
@@ -175,22 +172,23 @@ void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   group('쉼터', () {
-    testWidgets('여정이 없으면 목적지를 고르라는 알약, 출발하기는 지도로 간다', (tester) async {
+    testWidgets('여정이 없으면 목적지를 고르라는 알약과 지도의 점, 출발하기 버튼은 없다 (16장 11/13)',
+        (tester) async {
       final e = _Env();
       await e.seed(tester);
       await _pumpApp(tester, e);
 
       expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
-      expect(find.text('출발하기'), findsOneWidget);
+      expect(find.text('출발하기'), findsNothing);
+      expect(find.byKey(const ValueKey('map-dot')), findsOneWidget);
       expect(find.text('지도'), findsOneWidget);
       expect(find.text('배낭'), findsOneWidget);
       expect(find.text('노트'), findsOneWidget);
 
-      await tester.tap(find.text('출발하기'));
+      await tester.tap(find.text('지도'));
       await _transition(tester);
       expect(find.byType(MapScreen), findsOneWidget);
       expect(find.text('명소 이름 검색'), findsOneWidget);
-      expect(find.text('걷기 마치기'), findsNothing);
       await _end(tester, e);
     });
 
@@ -226,7 +224,7 @@ void main() {
       await e.seed(tester, dest: 'kr001');
       await tester.runAsync(() => (e.db.update(e.db.profile)).write(ProfileCompanion(
             look: Value(jsonEncode(Look.initial
-                .copyWith(eyes: 'cat', mouth: 'smirk')
+                .copyWith(eyes: 'e3', mouth: 'm6')
                 .withSlot('pet', 'pet_05')
                 .withSlot('cloth', 'cloth_02_c1')
                 .toJson())),
@@ -239,8 +237,7 @@ void main() {
       expect((worn.eye,worn.mouth,worn.bodyArgb),(2,5,0xFFF3E4C4));
       expect(worn.choices['cloth'],4);expect(worn.choices['bag'],1);
 
-      await tester.tap(find.text('출발하기'));
-      await _transition(tester);
+      await startTrailNow(tester);
       await _wait(tester);
       final walking = find.descendant(
           of: find.byType(WalkingScreen), matching: find.byType(SceneView));
@@ -248,16 +245,16 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('여정이 있으면 목적지까지 남은 거리, 출발하기는 걷는 중으로 간다', (tester) async {
+    testWidgets('여정이 있으면 목적지까지 남은 거리, 물감 길이 열리면 걷는 중 (걷기 마치기 없음)', (tester) async {
       final e = _Env();
       await e.seed(tester, dest: 'kr003');
       await _pumpApp(tester, e);
 
       expect(find.text('쉬는 중 · 목적지까지 ${formatKm(_totalKm('kr003'))}'), findsOneWidget);
+      expect(find.byKey(const ValueKey('map-dot')), findsNothing);
 
-      await tester.tap(find.text('출발하기'));
-      await _transition(tester);
-      expect(find.text('걷기 마치기'), findsOneWidget);
+      await startTrailNow(tester);
+      expect(find.text('걷기 마치기'), findsNothing);
       expect(find.byType(StepPill), findsOneWidget);
       await _end(tester, e);
     });
@@ -331,18 +328,11 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('result-kr003')));
       await _transition(tester);
-      // 여정이 없으면 `출발하기`가 그 명소로 출발하고 걷는 중으로 간다 (지도 자리를 대신한다)
+      // 여정이 없으면 `출발하기`가 그 명소로 여정을 정하고 쉼터로 돌아간다 (걷는 중은 걸으면 저절로)
       await tester.tap(find.text('출발하기'));
-      await _settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      await _settle(tester, () => find.byType(MapScreen).evaluate().isEmpty, tries: 80);
       await _transition(tester);
-      await _wait(tester);
-      expect(find.byType(MapScreen), findsNothing);
-      // 걷기를 마치면 걷기 기록, `쉼터로`로 쉼터에 돌아온다
-      await tester.tap(find.text('걷기 마치기'));
-      await _transition(tester);
-      await _settle(tester, () => find.text('쉼터로').evaluate().isNotEmpty, tries: 80);
-      await tester.tap(find.text('쉼터로'));
-      await _transition(tester);
+      expect(find.byType(WalkingScreen), findsNothing);
       await _settle(tester, () => find.textContaining('목적지까지').evaluate().isNotEmpty);
 
       expect(find.text('쉬는 중 · 목적지까지 ${formatKm(_totalKm('kr003'))}'), findsOneWidget);
@@ -351,11 +341,10 @@ void main() {
   });
 
   group('걷는 중', () {
-    /// 쉼터에서 출발하기를 눌러 걷는 중까지 가고, 첫 동기화가 끝나길 기다린다
+    /// 쉼터에서 물감 길을 열어 걷는 중까지 가고, 첫 동기화가 끝나길 기다린다
     Future<void> openWalking(WidgetTester tester, _Env e) async {
       await _pumpApp(tester, e);
-      await tester.tap(find.text('출발하기'));
-      await _transition(tester);
+      await startTrailNow(tester);
       await _wait(tester);
     }
 
@@ -396,8 +385,7 @@ void main() {
 
       await walkAndRefresh(tester, e, 10, 100);
       expect(pillText('1,000'), findsOneWidget);
-      // 진행 줄: 출발 전 0 → 이동 거리만큼. 걷는 중 화면이 앱 걷기 창을 열어 두었고 10분·1,000보로
-      // 걷기 1번을 채웠으니 실제 0.7km에 보너스 ×1.3이 붙어 0.91km다
+      // 진행 줄: 출발 전 0 → 여행 거리만큼 (보너스 없이 실제 0.7km, 16장 11/13)
       final ratio = (await tester.runAsync(() => e.svc.snapshot(e.now)))!.journey!.progress.ratio;
       expect(tester.widget<ProgressLine>(find.byType(ProgressLine)).ratio, closeTo(ratio, 1e-9));
       expect(ratio, greaterThan(0));
@@ -415,7 +403,7 @@ void main() {
       expect(find.text('0.70 m'), findsOneWidget);
       expect(find.text('오늘 걸음'), findsOneWidget);
       expect(find.text('1,000보'), findsOneWidget);
-      final remaining = _totalKm('kr003') - 0.91;
+      final remaining = _totalKm('kr003') - 0.70;
       expect(find.text('${_byId['kr003']!.name}까지'), findsOneWidget);
       expect(find.text(formatKm(remaining)), findsOneWidget);
       final eta = (await tester.runAsync(() => e.svc.snapshot(e.now)))!.journey!.eta;
@@ -650,65 +638,16 @@ void main() {
         await _end(tester, e);
       });
 
-      testWidgets('걷기 마치기로 나가면 센서 읽기를 멈춘다', (tester) async {
+      testWidgets('쉼터 아이콘으로 나가도 센서는 계속 읽는다 (물감 길은 이어진다)', (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
         expect(e.live.listeners, 1);
 
-        await tester.tap(find.text('걷기 마치기'));
+        await tester.tap(find.byKey(const Key('walk-rest')));
         await _transition(tester);
-        expect(e.live.listeners, 0);
-        await _end(tester, e);
-      });
-
-      testWidgets('걷기 마치기 직후 걷기 기록은 센서 걸음을 보인다 (health 기록이 아직 모자라도)',
-          (tester) async {
-        final e = _Env();
-        await e.seed(tester, dest: 'kr003');
-        await openWalking(tester, e);
-
-        // 14초마다 20보씩 4번: 80보 = 56m, 한 분 안이라 걸은 분은 1분 (분당 80보)
-        e.live.push(0);
-        for (var i = 1; i <= 4; i++) {
-          await sensorTo(tester, e, 14, i * 20);
-        }
-        expect(_pillSteps('80'), findsOneWidget);
-        // health(Health Connect)는 아직 30보만 들어왔다 (21m)
-        e.source.records.add(_walk(_t1, 1, 30));
-
-        await tester.tap(find.text('걷기 마치기'));
-        await _transition(tester);
-        await _settle(tester, () => find.text('80').evaluate().isNotEmpty);
-
-        expect(find.text('걷기 기록'), findsOneWidget);
-        expect(find.text('80'), findsOneWidget);
-        expect(find.text('0.06 km'), findsOneWidget);
-        // 평균 줄도 센서 기준: 56초에 56m라 1,000초/km = 16'40", 80보 ÷ 1분
-        expect(find.text('평균 페이스 16\'40"/km · 평균 분당 걸음 80보'), findsOneWidget);
-        expect(find.text('30'), findsNothing);
-        await _end(tester, e);
-      });
-
-      testWidgets('걷기 마치기 직후 health 걸음이 센서보다 많으면 걷기 기록은 health 값이다', (tester) async {
-        final e = _Env();
-        await e.seed(tester, dest: 'kr003');
-        await openWalking(tester, e);
-
-        e.live.push(0);
-        await sensorTo(tester, e, 5, 30);
-        expect(_pillSteps('30'), findsOneWidget);
-        // 10분 × 100보 = 1,000보, 700m가 들어와서 센서(30보)보다 크다
-        await walkAndRefresh(tester, e, 10, 100);
-        expect(_pillSteps('1,000'), findsOneWidget);
-
-        await tester.tap(find.text('걷기 마치기'));
-        await _transition(tester);
-        await _settle(tester, () => find.text('1,000').evaluate().isNotEmpty);
-
-        expect(find.text('1,000'), findsOneWidget);
-        expect(find.text('0.70 km'), findsOneWidget);
-        expect(find.text('30'), findsNothing);
+        expect(find.byType(WalkingScreen), findsNothing);
+        expect(e.live.listeners, 1);
         await _end(tester, e);
       });
 
@@ -755,44 +694,54 @@ void main() {
         await _end(tester, e);
       });
 
-      testWidgets('권한이 없으면 처음 들어올 때 한 번 묻고, 허용되면 센서를 읽는다', (tester) async {
-        final e = _Env();
-        e.live.permitted = false;
-        await e.seed(tester, dest: 'kr003');
-        await openWalking(tester, e);
-
-        expect(e.live.permissionRequests, 1);
-        expect(e.live.listeners, 1);
-        await _end(tester, e);
-      });
-
-      testWidgets('거부하면 health 값만 쓰고, 이 앱이 켜져 있는 동안 다시 들어와도 다시 묻지 않는다', (tester) async {
+      testWidgets('센서 권한이 없으면 묻지 않고(시작 흐름이 묻는다) health 값만 쓴다', (tester) async {
         final e = _Env();
         e.live
           ..permitted = false
           ..grantOnRequest = false;
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
-        expect(e.live.permissionRequests, 1);
+        expect(e.live.permissionRequests, 0);
         expect(e.live.listeners, 0);
 
         await walkAndRefresh(tester, e, 10, 100);
         expect(_pillSteps('1,000'), findsOneWidget);
         expect(find.byIcon(Icons.directions_walk), findsOneWidget);
 
-        // 걷기 마치기 → 쉼터로 → 출발하기로 다시 들어온다
-        await tester.tap(find.text('걷기 마치기'));
+        // 쉼터 아이콘 → 상태 알약 ‘걷는 중’으로 다시 들어와도 묻지 않는다
+        await tester.tap(find.byKey(const Key('walk-rest')));
         await _transition(tester);
-        await _settle(tester, () => find.text('쉼터로').evaluate().isNotEmpty);
-        await tester.tap(find.text('쉼터로'));
-        await _transition(tester);
-        await tester.tap(find.text('출발하기'));
+        await tester.tap(find.byKey(const ValueKey('rest-walking-pill')));
         await _transition(tester);
         await _wait(tester);
-        expect(find.text('걷기 마치기'), findsOneWidget);
-
-        expect(e.live.permissionRequests, 1);
+        expect(find.byType(WalkingScreen), findsOneWidget);
+        expect(e.live.permissionRequests, 0);
         expect(e.live.listeners, 0);
+        await _end(tester, e);
+      });
+
+      testWidgets('설정에서 센서 권한을 켜고 돌아오면 읽기 시작한다', (tester) async {
+        final e = _Env();
+        e.live.permitted = false;
+        await e.seed(tester, dest: 'kr003');
+        await _pumpApp(tester, e);
+        await _wait(tester);
+        expect(e.live.listeners, 0);
+
+        e.live.permitted = true;
+        for (final st in [
+          AppLifecycleState.inactive,
+          AppLifecycleState.hidden,
+          AppLifecycleState.paused,
+          AppLifecycleState.hidden,
+          AppLifecycleState.inactive,
+          AppLifecycleState.resumed,
+        ]) {
+          tester.binding.handleAppLifecycleStateChanged(st);
+        }
+        await _wait(tester);
+        expect(e.live.listeners, 1);
+        expect(e.live.permissionRequests, 0);
         await _end(tester, e);
       });
     });
@@ -833,7 +782,7 @@ void main() {
       List<int> sentSteps(_Env e) => [for (final u in e.notice.updates) u.$1];
       List<double> sentMeters(_Env e) => [for (final u in e.notice.updates) u.$2];
 
-      testWidgets('센서 권한이 있으면 걷는 중에 들어올 때 알림을 시작한다 (그때의 걸음·거리)',
+      testWidgets('센서 권한이 있으면 물감 길이 열릴 때 알림을 시작한다 (그때의 걸음·거리)',
           (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
@@ -845,21 +794,11 @@ void main() {
         await _end(tester, e);
       });
 
-      testWidgets('권한이 없으면 묻고, 허용되면 그 뒤에 알림을 시작한다', (tester) async {
-        final e = _Env(FakeLiveSteps(permitted: false));
-        await e.seed(tester, dest: 'kr003');
-        await openWalking(tester, e);
-
-        expect(e.live.permissionRequests, 1);
-        expect(e.notice.starts, [(0, 0.0)]);
-        await _end(tester, e);
-      });
-
-      testWidgets('센서 권한을 거부하면 알림을 시작하지 않고, 걸어도 건드리지 않는다', (tester) async {
+      testWidgets('센서 권한이 없으면 알림을 시작하지 않고, 걸어도 건드리지 않는다', (tester) async {
         final e = _Env(FakeLiveSteps(permitted: false, grantOnRequest: false));
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
-        expect(e.live.permissionRequests, 1);
+        expect(e.live.permissionRequests, 0);
         expect(e.notice.starts, isEmpty);
 
         // health 기록만으로 걸음이 올라가도 알림은 그대로다
@@ -1020,27 +959,20 @@ void main() {
         await _end(tester, e);
       });
 
-      testWidgets('걷기 마치기를 누르면 알림을 끄고, 그 뒤로는 갱신하지 않는다', (tester) async {
+      testWidgets('쉼터 아이콘으로 나가도 알림은 켜진 채 (물감 길은 이어진다)', (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
         expect(e.notice.running, isTrue);
-        expect(e.notice.stops, 0);
 
-        await tester.tap(find.text('걷기 마치기'));
+        await tester.tap(find.byKey(const Key('walk-rest')));
         await _transition(tester);
-        expect(e.notice.running, isFalse);
-        expect(e.notice.stops, greaterThanOrEqualTo(1));
-
-        // 센서 값이 더 와도 (화면이 나갔으니) 알림은 그대로다
-        e.live.push(1);
-        e.now = e.now.add(const Duration(seconds: 30));
-        await tester.pump(const Duration(milliseconds: 100));
-        expect(e.notice.updates, isEmpty);
+        expect(e.notice.running, isTrue);
+        expect(e.notice.stops, 0);
         await _end(tester, e);
       });
 
-      testWidgets('걷는 중 화면이 사라지면(걷기 마치기 없이) 알림을 끈다', (tester) async {
+      testWidgets('앱 화면이 통째로 사라지면 알림을 끈다', (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
@@ -1053,102 +985,23 @@ void main() {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
         await tester.runAsync(e.db.close);
       });
-
-      testWidgets('센서 권한 답을 기다리는 사이 화면을 나가면 알림을 시작하지 않는다', (tester) async {
-        final live = _SlowLive();
-        final e = _Env(live);
-        await e.seed(tester, dest: 'kr003');
-        await openWalking(tester, e);
-        expect(live.permissionRequests, 1);
-
-        await tester.tap(find.text('걷기 마치기'));
-        await _transition(tester);
-        live.answer.complete(true);
-        await _wait(tester);
-
-        expect(e.notice.starts, isEmpty);
-        expect(live.listeners, 0);
-        await _end(tester, e);
-      });
-    });
-  });
-
-  group('걷기 마치기 → 걷기 기록 → 쉼터로', () {
-    testWidgets('걷기 기록의 숫자와 걷기 1번 줄, 쉼터로 돌아온다', (tester) async {
-      final e = _Env();
-      await e.seed(tester, dest: 'kr003');
-      await _pumpApp(tester, e);
-      await tester.tap(find.text('출발하기'));
-      await _transition(tester);
-      await _wait(tester);
-
-      // 15분 × 100보 = 1,500보, 1.05km
-      e.source.records.add(_walk(_t1, 15, 100));
-      e.now = _t1.add(const Duration(minutes: 15));
-      for (var i = 0;
-          i < 600 &&
-              find
-                  .descendant(of: find.byType(StepPill), matching: find.text('1,500'))
-                  .evaluate()
-                  .isEmpty;
-          i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        if (i % 10 == 0) {
-          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
-        }
-      }
-
-      await tester.tap(find.text('걷기 마치기'));
-      await _transition(tester);
-      // 걸음 알약에도 1,500이 있으니 걷는 중이 사라진 뒤를 기다린다
-      await _settle(tester,
-          () => find.byType(StepPill).evaluate().isEmpty && find.text('1,500').evaluate().isNotEmpty);
-
-      expect(find.text('걷기 기록'), findsOneWidget);
-      expect(find.text('1,500'), findsOneWidget);
-      // 큰 거리 숫자와 1km 기록의 남은 구간 줄
-      expect(find.text('1.05 km'), findsNWidgets(2));
-      expect(find.text('15:00'), findsOneWidget);
-      expect(find.text('걸음'), findsOneWidget);
-      expect(find.text('거리'), findsOneWidget);
-      expect(find.text('시간'), findsOneWidget);
-      expect(find.text('걷기 100% · 달리기 0%'), findsOneWidget);
-      expect(find.text('오늘 함께 걷기 1/3'), findsOneWidget);
-      expect(find.text('다음 방명록 지점까지 3,500보'), findsOneWidget);
-
-      // 진행 막대: 걷기 전 0%에서 지금 %까지
-      final name = _byId['kr003']!.name;
-      // 15분 걷기도 걷는 중 화면의 창 안이라 이동 거리는 1.05 × 1.3 = 1.365km (큰 숫자는 실제 거리 1.05km)
-      final after = (1.365 / _totalKm('kr003') * 100).round();
-      expect(find.text('$name까지 0% 왔어요'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 2));
-      expect(find.text('$name까지 $after% 왔어요'), findsOneWidget);
-
-      await tester.tap(find.text('쉼터로'));
-      await _transition(tester);
-      expect(find.text('걷기 기록'), findsNothing);
-      expect(find.text('걷기 마치기'), findsNothing);
-      expect(find.byType(RestScreen), findsOneWidget);
-      expect(find.text('쉬는 중 · 목적지까지 ${formatKm(_totalKm('kr003') - 1.365)}'), findsOneWidget);
-      expect(Navigator.of(tester.element(find.byType(RestScreen))).canPop(), isFalse);
-      await _end(tester, e);
     });
   });
 
   group('걷기 기록 화면 (직접 열기)', () {
+    /// 넣어 둔 걸음 기록을 저장(동기화)하고 [start, end)의 물감 길 기록을 연다 (기록 화면은 동기화하지 않는다)
     Future<void> openRecord(
       WidgetTester tester,
       _Env e, {
       required DateTime start,
       required DateTime end,
-      double? ratioBefore,
-      bool review = false,
     }) async {
+      await tester.runAsync(() => e.svc.sync(end.add(const Duration(minutes: 30))));
       _phone(tester);
       await tester.pumpWidget(ProviderScope(
         overrides: e.overrides,
         child: MaterialApp(
-          home: WalkRecordScreen(start: start, end: end, ratioBefore: ratioBefore, review: review),
+          home: WalkRecordScreen(start: start, end: end),
         ),
       ));
       await _settle(tester, () => find.text('기록을 정리하는 중').evaluate().isEmpty);
@@ -1183,7 +1036,7 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('큰 숫자 40·라벨 12, 쉼터로 버튼이 있다', (tester) async {
+    testWidgets('큰 숫자 40·라벨 12, 제목 ‘물감 길’, 쉼터로 버튼 없이 뒤로', (tester) async {
       final e = _Env();
       await e.seed(tester);
       e.source.records.add(_walk(_t1, 15, 100));
@@ -1194,30 +1047,7 @@ void main() {
       expect(tester.widget<Text>(find.text('1.05 km').first).textSpan!.style!.fontSize, 40);
       expect(tester.widget<Text>(find.text('15:00')).textSpan!.style!.fontSize, 40);
       expect(tester.widget<Text>(find.text('걸음')).style!.fontSize, 12);
-      expect(tester.widget<Text>(find.text('걷기 기록')).style!.fontSize, 22);
-      expect(find.text('쉼터로'), findsOneWidget);
-      expect(find.byTooltip('뒤로'), findsNothing);
-      await _end(tester, e);
-    });
-
-    testWidgets('다시 보기(review)는 진행 막대 연출과 쉼터로 없이 뒤로 가기만 있다', (tester) async {
-      final e = _Env();
-      await e.seed(tester, dest: 'kr003');
-      e.source.records.add(_walk(_t1, 15, 100));
-      // 다시 보기는 동기화하지 않으니 저장돼 있어야 한다
-      await tester.runAsync(() => e.svc.sync(_t1.add(const Duration(minutes: 30))));
-      // 걷기 전 비율을 넘겨도 다시 볼 때는 막대를 그리지 않는다
-      await openRecord(
-        tester,
-        e,
-        start: _t1,
-        end: _t1.add(const Duration(minutes: 15)),
-        ratioBefore: 0,
-        review: true,
-      );
-
-      expect(find.text('1,500'), findsOneWidget);
-      expect(find.textContaining('왔어요'), findsNothing);
+      expect(find.text('물감 길'), findsOneWidget);
       expect(find.text('쉼터로'), findsNothing);
       expect(find.byTooltip('뒤로'), findsOneWidget);
       await _end(tester, e);
@@ -1291,22 +1121,7 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('마지막 방명록 걸음 숫자를 넘으면 다음 방명록 줄이 없다', (tester) async {
-      final e = _Env();
-      await e.seed(tester);
-      // 설치 전 날짜로 큰 걸음을 직접 넣어 둔다 (동기화가 다시 계산하는 범위 밖)
-      await tester.runAsync(() => e.db.into(e.db.daySummaries).insert(
-          DaySummariesCompanion.insert(
-              day: '2026-11-10', steps: 1234567, distanceM: 0, countedSessions: 0)));
-      e.source.records.add(_walk(_t1, 15, 100));
-      await openRecord(tester, e, start: _t1, end: _t1.add(const Duration(minutes: 15)));
-
-      expect(find.text('1,500'), findsOneWidget);
-      expect(find.textContaining('다음 방명록'), findsNothing);
-      await _end(tester, e);
-    });
-
-    testWidgets('쉼터로는 첫 화면까지 돌아간다', (tester) async {
+    testWidgets('뒤로 가면 연 화면으로 돌아간다', (tester) async {
       final e = _Env();
       await e.seed(tester);
       _phone(tester);
@@ -1317,7 +1132,7 @@ void main() {
             builder: (context) => Scaffold(
               body: TextButton(
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                  builder: (_) => WalkRecordScreen(start: _t1, end: _t1, ratioBefore: null),
+                  builder: (_) => WalkRecordScreen(start: _t1, end: _t1),
                 )),
                 child: const Text('열기'),
               ),
@@ -1327,11 +1142,11 @@ void main() {
       ));
       await tester.tap(find.text('열기'));
       await _transition(tester);
-      expect(find.text('걷기 기록'), findsOneWidget);
-      await tester.tap(find.text('쉼터로'));
+      expect(find.text('물감 길'), findsOneWidget);
+      await tester.tap(find.byTooltip('뒤로'));
       await _transition(tester);
       expect(find.text('열기'), findsOneWidget);
-      expect(find.text('걷기 기록'), findsNothing);
+      expect(find.text('물감 길'), findsNothing);
       await _end(tester, e);
     });
   });

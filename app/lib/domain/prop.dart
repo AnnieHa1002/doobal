@@ -143,7 +143,7 @@ Set<String> earnedPropIds(
   };
 }
 
-/// 다음 거리 소품까지 남은 본격 걷기 이동 거리(km): [totalKm]보다 먼 거리 소품 중 가장 가까운 것까지.
+/// 다음 거리 소품까지 남은 거리(km): 설치 뒤 모든 걸음의 실제 거리 [totalKm]보다 먼 거리 소품 중 가장 가까운 것까지.
 /// 거리 소품을 다 얻었으면 null. 무엇인지는 화면에 보이지 않는다 (UI 명세 12장, 16장 11/3)
 double? kmToNextDistanceProp(List<Prop> props, double totalKm) {
   double? next;
@@ -154,10 +154,10 @@ double? kmToNextDistanceProp(List<Prop> props, double totalKm) {
   return next == null ? null : next - totalKm;
 }
 
-/// 꾸미기 소품 칸 위 한 줄: `다음 소품까지 본격 걷기 63km`. 남은 거리는 올림이라 1km보다 적게 남아도
+/// 꾸미기 소품 칸 위 한 줄: `다음 소품까지 63km` (16장 11/13, 기준은 모든 걸음). 남은 거리는 올림이라 1km보다 적게 남아도
 /// 0km로 보이지 않는다 (더한 거리의 소수 오차로 한 칸 더 올라가지 않게 아주 작은 값은 뺀다)
 String nextPropText(double km) =>
-    '다음 소품까지 본격 걷기 ${formatInt(math.max(1, (km - 1e-6).ceil()))}km';
+    '다음 소품까지 ${formatInt(math.max(1, (km - 1e-6).ceil()))}km';
 
 /// 새로 얻은 소품 토스트 한 줄 (가안): `새 소품을 얻었어요 · 지팡이`, 여럿이면 `… · 지팡이 외 1개`
 String newPropToast(List<Prop> props) =>

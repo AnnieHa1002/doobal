@@ -24,7 +24,8 @@ import '../domain/helpers.dart';
 import 'ui_env.dart';
 
 final _bubble = find.byKey(const ValueKey('first-sketch-bubble'));
-final _dot = find.byKey(const ValueKey('depart-dot'));
+/// 여정이 없을 때 지도에 붙는 알림 점 (출발하기 버튼이 없어서 목적지를 고르는 곳을 알린다)
+final _mapDot = find.byKey(const ValueKey('map-dot'));
 final _card = find.byKey(const ValueKey('arrival-card'));
 Finder _cell(String id) => find.byKey(ValueKey('cell-$id'));
 Finder _packIn(Finder owner) => find.descendant(of: owner, matching: find.byType(FirstPackFace));
@@ -61,25 +62,20 @@ void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   group('쉼터: 첫날 (아직 안 걸음)', () {
-    testWidgets('상태 알약, 출발하기의 알림 점, 말풍선 "첫 그림을 그리러 가요"', (tester) async {
+    testWidgets('상태 알약, 아래 가운데 말풍선 "걸으면 출발해요" + 거리·걸음 (캔버스 2-1)', (tester) async {
       final e = UiEnv();
       // 환산 2.5km인 목적지로 정해 두면 글을 그대로 비교할 수 있다 (2.5km ÷ 0.7m = 3,571보 → 3,600보)
       await e.seed(tester, () => e.insertSketchJourney(2.5));
       await _pumpRest(tester, e);
 
       expect(find.text('쉬는 중 · 내 동네 스케치까지 2.5 km'), findsOneWidget);
-      expect(_dot, findsOneWidget);
-      expect(
-          find.descendant(
-              of: _bubble, matching: find.text('첫 그림을 그리러 가요. 중구에서 2.5 km · 약 3,600보')),
-          findsOneWidget);
-      // 점은 출발하기 버튼 위에 걸친다
-      final button = tester.getRect(find.byTooltip('출발하기'));
-      final dot = tester.getRect(_dot);
-      expect(button.contains(dot.center), isTrue);
-      // 말풍선은 출발하기 바로 위
-      expect(tester.getRect(_bubble).bottom, lessThanOrEqualTo(button.top));
-      expect(tester.getRect(_bubble).bottom, greaterThan(button.top - 24));
+      expect(find.descendant(of: _bubble, matching: find.text('걸으면 출발해요')), findsOneWidget);
+      expect(find.descendant(of: _bubble, matching: find.text('2.5 km · 약 3,600보')), findsOneWidget);
+      // 출발하기 버튼은 없다 (16장 11/13), 말풍선은 아래 가운데
+      expect(find.byTooltip('출발하기'), findsNothing);
+      final bubble = tester.getRect(_bubble);
+      expect(bubble.center.dx, closeTo(390 / 2, 1));
+      expect(bubble.bottom, greaterThan(844 - 100));
       await end(tester, e);
     });
 
@@ -90,14 +86,11 @@ void main() {
       await _pumpRest(tester, e);
 
       expect(find.text('쉬는 중 · 내 동네 스케치까지 0.6 km'), findsOneWidget);
-      expect(
-          find.descendant(
-              of: _bubble, matching: find.text('첫 그림을 그리러 가요. 중구에서 0.6 km · 약 900보')),
-          findsOneWidget);
+      expect(find.descendant(of: _bubble, matching: find.text('0.6 km · 약 900보')), findsOneWidget);
       await end(tester, e);
     });
 
-    testWidgets('말풍선은 카드색에 잉크 2px 테두리', (tester) async {
+    testWidgets('말풍선은 카드색에 잉크 1.4pt 테두리 (캔버스 2-1)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => e.insertSketchJourney(2.5));
       await _pumpRest(tester, e);
@@ -109,7 +102,7 @@ void main() {
           .firstWhere((d) => d.border != null);
       expect(box.color, Palette.card);
       expect((box.border! as Border).top.color, Palette.ink);
-      expect((box.border! as Border).top.width, InkLine.panel);
+      expect((box.border! as Border).top.width, InkLine.pill);
       await end(tester, e);
     });
 
@@ -124,12 +117,12 @@ void main() {
       // 0.5~0.8km라 `0.6 km`처럼 소수 한 자리로 나온다
       expect(formatKm(km), matches(RegExp(r'^0\.[5-8] km$')));
       expect(find.text('쉬는 중 · 내 동네 스케치까지 ${formatKm(km)}'), findsOneWidget);
-      expect(find.text('첫 그림을 그리러 가요. 중구에서 ${formatKm(km)} · '
-          '약 ${formatInt(sketchSteps(km, rules))}보'), findsOneWidget);
+      expect(find.text('${formatKm(km)} · 약 ${formatInt(sketchSteps(km, rules))}보'),
+          findsOneWidget);
       await end(tester, e);
     });
 
-    testWidgets('걷기 시작해서 진행이 생기면 말풍선과 알림 점이 함께 사라진다', (tester) async {
+    testWidgets('걷기 시작해서 진행이 생기면 말풍선이 사라진다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.startSketch);
       // 앱을 켜면 동기화하니 그 전에 걸은 기록을 넣어 둔다 (3분 × 100보 = 0.21km, 첫 여정의 최소 거리보다 짧다)
@@ -145,15 +138,14 @@ void main() {
       final snap = (await tester.runAsync(() => e.svc.snapshot(e.now)))!;
       expect(snap.journey!.progress.progressKm, greaterThan(0));
       expect(_bubble, findsNothing);
-      expect(_dot, findsNothing);
-      // 알약은 줄어든 남은 거리로, 출발하기는 그대로
+      // 알약은 줄어든 남은 거리로
       expect(find.text('쉬는 중 · 내 동네 스케치까지 ${formatKm(snap.journey!.progress.remainingKm)}'),
           findsOneWidget);
-      expect(find.byTooltip('출발하기'), findsOneWidget);
       await end(tester, e);
     });
 
-    testWidgets('다른 목적지(명소)로 가는 중이거나 여정이 없으면 말풍선·점·스케치 알약이 없다', (tester) async {
+    testWidgets('다른 목적지(명소)로 가는 중이거나 여정이 없으면 말풍선·스케치 알약이 없다, 여정이 없으면 지도에 점',
+        (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         await placeAt(e.db, nearGyeongbok, t0);
@@ -161,7 +153,7 @@ void main() {
       });
       await _pumpRest(tester, e);
       expect(_bubble, findsNothing);
-      expect(_dot, findsNothing);
+      expect(_mapDot, findsNothing);
       expect(find.textContaining('내 동네 스케치'), findsNothing);
       expect(find.textContaining('쉬는 중 · 목적지까지'), findsOneWidget);
       await end(tester, e);
@@ -170,17 +162,16 @@ void main() {
       await none.seed(tester);
       await _pumpRest(tester, none);
       expect(_bubble, findsNothing);
-      expect(_dot, findsNothing);
+      expect(_mapDot, findsOneWidget);
       expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
       await end(tester, none);
     });
 
-    testWidgets('출발하기를 누르면 걷는 중으로 간다 (여정이 있다)', (tester) async {
+    testWidgets('물감 길이 열리면 걷는 중으로 간다 (여정이 있다)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.startSketch);
       await _pumpRest(tester, e);
-      await tester.tap(find.byTooltip('출발하기'));
-      await transition(tester);
+      await startTrailNow(tester);
       expect(find.byType(StepPill), findsOneWidget);
       // 목적지 이름은 걸음 알약을 눌러 펼친 숫자 카드에 있다
       await tester.tap(find.byKey(const Key('walk-pill')));

@@ -9,7 +9,6 @@ import '../../domain/guestbook.dart';
 import '../../domain/journey.dart' show Frame;
 import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
-import '../../domain/walk_arrival.dart';
 import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
@@ -20,7 +19,7 @@ import '../common/game_button.dart';
 import '../common/palette.dart';
 import '../guestbook/guestbook_write_screen.dart';
 import '../map/map_screen.dart';
-import '../walk_record/walk_record_screen.dart';
+import '../walking/paint_trail_host.dart';
 
 /// 그림이 번지는 시간, 그다음 액자가 나타나는 시간
 /// 도착 카드 맨 아래 AI 표기 (캔버스 3-2 문구 그대로)
@@ -38,22 +37,22 @@ const _frameThickness = 12.0;
 /// 카드에는 제목·이름·거리·날짜·걸음만 나온다.
 /// 버튼은 주 "방명록 쓰기"(이 도착의 기회가 열려 있을 때만 켜진다)와 보조 "다음 목적지".
 /// "화집에 걸기"는 없다: 그림은 화집 일기에 저절로 들어간다 (11/4).
-/// 닫기: 걷다가 도착했으면([walk] 있음) 그 걷기의 걷기 기록으로, 아니면(앱 밖에서 도착해 다음 실행에
-/// 뜬 경우) 그냥 닫아 쉼터로 간다. 시스템 뒤로도 같다. 닫을 때 도착을 본 것으로 적는다
-/// (AutoSync가 띄운 경우는 AutoSync도 같은 것을 적는다)
+/// 닫기: 쉼터로 간다 (11/13: 걷기 기록 화면을 거치지 않는다. 걷는 중에서 왔으면 물감 길은 이어진다).
+/// 시스템 뒤로도 같다. 닫을 때 도착을 본 것으로 적는다 (AutoSync가 띄운 경우는 AutoSync도 같은 것을 적는다).
+/// 떠 있는 동안 물감 길이 새로 열려도 걷는 중으로 넘어가지 않고 닫힐 때까지 기다린다 (HoldsPaintTrail)
 class ArrivalScreen extends ConsumerStatefulWidget {
-  const ArrivalScreen({super.key, required this.journeyId, this.walk});
+  const ArrivalScreen({super.key, required this.journeyId, this.fromWalk = false});
 
   final String journeyId;
 
-  /// 이 도착으로 마친 걷기. 있으면 닫은 뒤 걷기 기록을 보여 준다
-  final WalkEnd? walk;
+  /// 걷는 중 화면이 진행 100%로 바꿔 연 도착인가 (닫으면 쉼터까지 돌아간다)
+  final bool fromWalk;
 
   @override
   ConsumerState<ArrivalScreen> createState() => _ArrivalScreenState();
 }
 
-class _ArrivalScreenState extends ConsumerState<ArrivalScreen> {
+class _ArrivalScreenState extends ConsumerState<ArrivalScreen> with HoldsPaintTrail {
   var _leaving = false;
 
   /// 걷다 도착해서 열렸으면 닫힐 때까지 AutoSync가 도착 화면을 또 띄우지 않게 알린다
@@ -64,7 +63,7 @@ class _ArrivalScreenState extends ConsumerState<ArrivalScreen> {
   void initState() {
     super.initState();
     _active = ref.read(walkingActiveProvider.notifier);
-    if (widget.walk != null) Future.microtask(_enter);
+    if (widget.fromWalk) Future.microtask(_enter);
   }
 
   void _enter() {
@@ -77,7 +76,7 @@ class _ArrivalScreenState extends ConsumerState<ArrivalScreen> {
 
   @override
   void dispose() {
-    if (widget.walk != null) {
+    if (widget.fromWalk) {
       Future.microtask(() {
         try {
           _active.leave();
@@ -100,25 +99,17 @@ class _ArrivalScreenState extends ConsumerState<ArrivalScreen> {
     if (mounted) ref.invalidate(snapshotProvider);
   }
 
-  /// 닫기: 걷다 왔으면 걷기 기록으로 바꾸고, 아니면 닫는다
+  /// 닫기: 쉼터로. 걷다 왔으면 도착을 본 것으로 적고 쉼터까지 돌아간다
   Future<void> _close() async {
     if (_leaving) return;
     _leaving = true;
-    final walk = widget.walk;
-    if (walk == null) {
+    if (!widget.fromWalk) {
       Navigator.of(context).pop();
       return;
     }
     await _markShown();
     if (!mounted) return;
-    await Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
-      builder: (_) => WalkRecordScreen(
-        start: walk.start,
-        end: walk.end,
-        ratioBefore: walk.ratioBefore,
-        liveMinutes: walk.liveMinutes,
-      ),
-    ));
+    Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
   /// 다음 목적지: 지도로 바꿔 연다 (지도에서 뒤로 가면 쉼터)
@@ -136,8 +127,8 @@ class _ArrivalScreenState extends ConsumerState<ArrivalScreen> {
     final view = ref.watch(arrivalViewProvider(widget.journeyId));
     final data = view.value;
     return PopScope(
-      // 걷다 왔으면 시스템 뒤로도 걷기 기록으로 간다
-      canPop: widget.walk == null,
+      // 걷다 왔으면 시스템 뒤로도 도착을 적고 쉼터로 간다
+      canPop: !widget.fromWalk,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _close();
       },

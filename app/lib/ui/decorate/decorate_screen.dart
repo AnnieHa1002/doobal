@@ -19,6 +19,7 @@ import 'decorate_tabs.dart';
 import 'decorate_widgets.dart';
 import 'figure_preview.dart';
 import '../scene/spirit_controller.dart';
+import '../walking/paint_trail_host.dart';
 
 /// 탭 줄 글자 배율 상한
 const _tabMaxTextScale = 1.5;
@@ -37,7 +38,7 @@ class DecorateScreen extends ConsumerStatefulWidget {
   ConsumerState<DecorateScreen> createState() => _DecorateScreenState();
 }
 
-class _DecorateScreenState extends ConsumerState<DecorateScreen> {
+class _DecorateScreenState extends ConsumerState<DecorateScreen> with HoldsPaintTrail {
   /// 저장된 모습과 지금 꾸미는 모습. 프로필을 읽기 전에는 null
   Look? _saved;
   Look? _look;
@@ -155,7 +156,7 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
                         rules: rules,
                         nextKm: snap == null
                             ? null
-                            : kmToNextDistanceProp(props, snap.walkTravelKm),
+                            : kmToNextDistanceProp(props, snap.totalKm),
                       )
                     : const SizedBox(),
               ),

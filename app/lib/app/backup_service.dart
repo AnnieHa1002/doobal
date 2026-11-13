@@ -5,7 +5,8 @@ import 'package:drift/drift.dart';
 
 import '../data/db/app_db.dart';
 import '../domain/bucket.dart';
-import '../domain/focus_walk.dart';
+import '../domain/gait.dart';
+import '../domain/paint_trail.dart';
 import '../domain/rules.dart';
 import '../domain/time_kst.dart';
 
@@ -52,7 +53,7 @@ class BackupService {
     db.guestbookTickets: {},
     db.guestbookPosts: {},
     db.notificationSettings: {},
-    db.appWalks: {},
+    db.paintTrails: {},
     db.coinLedger: {},
     db.journeyEvents: {},
     db.badgesOwned: {},
@@ -113,11 +114,13 @@ class BackupService {
   ///   첫 기록일보다는 앞서지 않게). 복원한 하루 요약의 마지막 날은 restoreFloorDay에 적는다:
   ///   새 기기의 건강 앱에 그 기록이 없어도 그 날까지의 하루 요약·걷기 구간이 0으로 덮이지 않는다
   ///   (SyncService가 다시 계산한 값이 복원값보다 작으면 복원값을 지킨다)
-  /// - 앱 걷기 창(AppWalks)과 럭 장부(CoinLedger)도 되살린다. 옛 백업에는 없어서 비어 있어도 된다.
-  ///   백업을 만들 때 열려 있던 앱 걷기는 백업을 만든 시각에서 닫는다 (appEnded).
-  ///   이동 거리 열이 없는 옛 백업의 하루 요약은 이동 거리를 실제 거리로 채운다
-  /// - 진행 중인 여정은 걸음 분이 없어서 진행 거리를 다시 셀 수 없다. 백업에 적힌 걸은 이동 거리
-  ///   (journeyWalked.km, 앱 걷기 보너스 포함)를 여정의 경비(fundKm)에 더하고 시작 시각을 syncedUtc의 분으로 옮긴다.
+  /// - 물감 길(PaintTrails)과 럭 장부(CoinLedger)도 되살린다. 옛 백업에는 없어서 비어 있어도 된다.
+  ///   스키마 15 이하 백업의 앱 걷기 창(app_walks)은 물감 길로 읽는다 (finish → idle, 상점 사용 기록의
+  ///   app_walk_id → paint_trail_id). 백업을 만들 때 열려 있던 물감 길은 백업을 만든 시각에서 닫는다 (appEnded).
+  ///   여행 거리 열이 없는 옛 백업의 하루 요약은 여행 거리를 실제 거리로 채우고, 스키마 15 이하 백업은
+  ///   보너스가 든 여행 거리를 실제 + 상점으로 고친다
+  /// - 진행 중인 여정은 걸음 분이 없어서 진행 거리를 다시 셀 수 없다. 백업에 적힌 걸은 실제 거리
+  ///   (journeyWalked.km)를 여정의 경비(fundKm)에 더하고 시작 시각을 syncedUtc의 분으로 옮긴다.
   ///   그러면 진행 거리 = 경비 + 시작 이후 걸은 거리라는 엔진 계산은 그대로이고, 복원 뒤 동기화가
   ///   가져오는 그 분 이후의 걸음만 새로 더해진다 (엔진은 바꾸지 않는다)
   Future<void> restoreBackup(String text) async {
@@ -138,13 +141,16 @@ class BackupService {
           guestbookConsentAt: Value(device.guestbookConsentAt),
         ));
       }
-      // 이동 거리 열이 없던 옛 백업: 그때는 앱 걷기가 없었으니 이동 거리 = 실제 거리
+      // 여행 거리 열이 없던 옛 백업: 그때는 앱 걷기가 없었으니 여행 거리 = 실제 거리
       if (!(backup.tables['day_summaries']?.cols.contains('travel_m') ?? true)) {
         await db.customStatement('UPDATE day_summaries SET travel_m = distance_m');
+      } else if (backup.schema < 16) {
+        // 본격 걷기 보너스가 든 옛 여행 거리 (스키마 16에서 보너스를 없앴다)
+        await db.customStatement('UPDATE day_summaries SET travel_m = distance_m + shop_m');
       }
       await db.customStatement(
-        'UPDATE app_walks SET end_utc = MAX(start_utc, ?), end_reason = ? WHERE end_utc IS NULL',
-        [backup.createdUtc, AppWalkEnd.appEnded.name],
+        'UPDATE paint_trails SET end_utc = MAX(start_utc, ?), end_reason = ? WHERE end_utc IS NULL',
+        [backup.createdUtc, PaintTrailEnd.appEnded.name],
       );
       await _carryWalkedKm(backup);
       await db.delete(db.stepMinutes).go();
@@ -184,8 +190,8 @@ class BackupService {
     };
   }
 
-  /// 진행 중인 여정이 시작한 뒤 마지막 동기화 직전 분까지 저장된 걸음으로 잰 걸은 이동 거리(km).
-  /// 여정 진행 거리와 같은 값이라 앱 걷기 보너스가 붙어 있다 (열린 앱 걷기 창은 마지막 동기화 시각까지로 센다).
+  /// 진행 중인 여정이 시작한 뒤 마지막 동기화 직전 분까지 저장된 걸음으로 잰 걸은 실제 거리(km).
+  /// 여정 진행 거리에서 상점 효과를 뺀 값이다 (상점 효과는 상점 사용 기록과 함께 되살아난다).
   /// 마지막 동기화 분은 아직 덜 찬 분이라 빼고, 복원 뒤 동기화가 그 분부터 다시 가져와서 센다.
   /// 진행 중인 여정이 없거나 동기화한 적이 없으면 null (이때는 이을 값이 없다).
   /// 디버그 거리 배수는 곱하지 않은 값이다
@@ -195,33 +201,14 @@ class BackupService {
           ..where((t) => t.status.equalsValue(JourneyStatus.active)))
         .getSingleOrNull();
     if (active == null) return null;
-    final fromMinute = _minuteOf(active.startUtc);
-    final windows = [
-      for (final r in await (db.select(db.appWalks)
-            ..where((t) =>
-                t.endUtc.isNull() |
-                t.endUtc.isBiggerThanValue(fromMinute * Duration.millisecondsPerMinute)))
-          .get())
-        AppWalkWindow(
-          DateTime.fromMillisecondsSinceEpoch(r.startUtc, isUtc: true),
-          r.endUtc == null ? null : DateTime.fromMillisecondsSinceEpoch(r.endUtc!, isUtc: true),
-        ),
-    ];
     final rows = await (db.select(db.stepMinutes)
           ..where((t) =>
-              t.minuteUtc.isBiggerOrEqualValue(
-                  windows.isEmpty ? fromMinute : contextStartMinute(fromMinute)) &
+              t.minuteUtc.isBiggerOrEqualValue(_minuteOf(active.startUtc)) &
               t.minuteUtc.isSmallerThanValue(_minuteOf(syncedUtc)))
           ..orderBy([(t) => OrderingTerm(expression: t.minuteUtc)]))
         .get();
-    final travel = travelFrom(
-      context: [for (final r in rows) StepMinute(r.minuteUtc, r.steps)],
-      fromMinute: fromMinute,
-      windows: windows,
-      now: DateTime.fromMillisecondsSinceEpoch(syncedUtc, isUtc: true),
-      rules: rules,
-    );
-    return {'id': active.id, 'km': sumTravel(travel).travelM / 1000};
+    final gaits = classifyGait([for (final r in rows) StepMinute(r.minuteUtc, r.steps)], rules);
+    return {'id': active.id, 'km': distanceM(gaits, rules) / 1000};
   }
 
   Future<SyncStateRow?> _syncStateRow() =>
@@ -317,6 +304,10 @@ class BackupService {
       throw StateError('더 새로운 앱에서 만든 백업이에요 (백업 $schema, 이 앱 ${db.schemaVersion})');
     }
 
+    // 스키마 15 이하 백업: 앱 걷기 창 표를 물감 길로 읽는다
+    if (!tables.containsKey('paint_trails') && tables['app_walks'] is Map<String, dynamic>) {
+      tables['paint_trails'] = _appWalksAsTrails(tables['app_walks'] as Map<String, dynamic>);
+    }
     final dumps = <String, _Dump>{};
     for (final t in _included.keys) {
       final raw = tables[t.actualTableName];
@@ -331,7 +322,7 @@ class BackupService {
         if (r is! List || r.length != cols.length) throw const FormatException(_unreadable);
       }
       dumps[t.actualTableName] = (
-        cols: cols.cast<String>(),
+        cols: [for (final c in cols.cast<String>()) c == 'app_walk_id' ? 'paint_trail_id' : c],
         rows: [for (final r in rows) (r as List).cast<Object?>()],
       );
     }
@@ -346,7 +337,25 @@ class BackupService {
       walkedId = walked['id'] as String;
       walkedKm = (walked['km'] as num).toDouble();
     }
-    return _Backup(created, synced as int?, walkedId, walkedKm, dumps);
+    return _Backup(schema, created, synced as int?, walkedId, walkedKm, dumps);
+  }
+
+  /// 옛 앱 걷기 창 표 (cols·rows)를 물감 길 표로: 끝난 까닭 finish(걷기 마치기)는 idle로 읽는다
+  Map<String, dynamic> _appWalksAsTrails(Map<String, dynamic> raw) {
+    final cols = raw['cols'];
+    final rows = raw['rows'];
+    if (cols is! List || rows is! List) return raw;
+    final reason = cols.indexOf('end_reason');
+    return {
+      'cols': cols,
+      'rows': [
+        for (final r in rows)
+          if (r is List && reason >= 0 && reason < r.length && r[reason] == 'finish')
+            [...r]..[reason] = PaintTrailEnd.idle.name
+          else
+            r,
+      ],
+    };
   }
 }
 
@@ -357,14 +366,23 @@ int _minuteOf(int ms) => ms ~/ Duration.millisecondsPerMinute;
 typedef _Dump = ({List<String> cols, List<List<Object?>> rows});
 
 class _Backup {
-  const _Backup(this.createdUtc, this.syncedUtc, this.walkedJourneyId, this.walkedKm, this.tables);
+  const _Backup(
+    this.schema,
+    this.createdUtc,
+    this.syncedUtc,
+    this.walkedJourneyId,
+    this.walkedKm,
+    this.tables,
+  );
 
+  /// 백업을 만든 앱의 DB 스키마 번호
+  final int schema;
   final int createdUtc;
 
   /// 백업한 기기가 마지막으로 동기화한 시각. 동기화한 적이 없으면 null
   final int? syncedUtc;
 
-  /// 진행 중이던 여정과 그 여정이 그때까지 걸은 거리(km). 없으면 null
+  /// 진행 중이던 여정과 그 여정이 그때까지 걸은 거리(km, 스키마 15 이하 백업은 보너스가 든 이동 거리). 없으면 null
   final String? walkedJourneyId;
   final double walkedKm;
   final Map<String, _Dump> tables;

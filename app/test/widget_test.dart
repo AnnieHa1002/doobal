@@ -50,7 +50,8 @@ void main() {
 
     expect(find.byType(RestScreen), findsOneWidget);
     expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
-    expect(find.text('출발하기'), findsOneWidget);
+    // 출발하기 버튼은 없다 (16장 11/13: 걸으면 저절로 걷는 중)
+    expect(find.text('출발하기'), findsNothing);
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(db.close);
   });
@@ -170,14 +171,13 @@ void main() {
       landmarks: const {},
       props: props,
     );
-    // 5시간 전에 설치. 4시간 전부터 걷는 중 화면을 열고 160분 동안 분당 100보(약 11km)를 걸었다:
-    // 본격 걷기 이동 거리 10km를 넘겨 지팡이를 얻을 걸음이 쌓였지만 아직 동기화 전이다
+    // 5시간 전에 설치. 4시간 전부터 160분 동안 분당 100보(약 11km)를 걸었다:
+    // 실제 거리 10km를 넘겨 지팡이를 얻을 걸음이 쌓였지만 아직 동기화 전이다
     final start = now.subtract(const Duration(hours: 4));
     final end = start.add(const Duration(minutes: 160));
     await tester.runAsync(() async {
       await svc.sync(now.subtract(const Duration(hours: 5)));
       await completeOnboarding(db);
-      final id = await svc.startAppWalk(start);
       source.records.add(StepRecord(
         start: start,
         end: end,
@@ -185,7 +185,6 @@ void main() {
         sourceId: 'iphone',
         method: RecordingMethod.automatic,
       ));
-      await svc.finishAppWalk(id, end);
     });
 
     await tester.pumpWidget(ProviderScope(

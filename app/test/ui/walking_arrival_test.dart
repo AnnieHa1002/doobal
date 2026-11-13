@@ -1,5 +1,6 @@
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
+import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -8,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../app/helpers.dart';
 import 'ui_env.dart';
 
-// 걷는 중 100% → 걷기 자동 마침 → 도착 (11/4). 진행 기준은 언제나 health 동기화 값이다:
+// 걷는 중 100% → 도착 (11/4), 닫으면 쉼터 (11/13). 진행 기준은 언제나 health 동기화 값이다:
 // 센서 미리보기가 남은 거리를 넘으면 동기화를 바로 돌려 보고, 도착이 확정돼야 넘어간다.
 
 void main() {
@@ -24,8 +25,7 @@ void main() {
     });
     await pumpDoobal(tester, e, const DoobalApp());
     await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
-    await tester.tap(find.text('출발하기'));
-    await transition(tester);
+    await startTrailNow(tester);
     await settle(tester, () => false, tries: 8);
     expect(find.byType(WalkingScreen), findsOneWidget);
     if (healthArrives) {
@@ -71,11 +71,14 @@ void main() {
     await transition(tester);
     expect(find.byType(WalkingScreen, skipOffstage: false), findsNothing);
 
-    // 도착 화면을 닫으면 그 걷기의 걷기 기록
+    // 도착 화면을 닫으면 쉼터 (11/13: 걷기 기록을 거치지 않고, 물감 길은 이어진다)
     await tester.tap(find.byTooltip('닫기'));
     await transition(tester);
-    await settle(tester, () => find.byType(WalkRecordScreen).evaluate().isNotEmpty);
-    expect(find.byType(WalkRecordScreen), findsOneWidget);
+    await settle(tester, () => find.byType(RestScreen).evaluate().isNotEmpty);
+    await transition(tester);
+    expect(find.byType(RestScreen), findsOneWidget);
+    expect(find.byType(WalkRecordScreen), findsNothing);
+    expect(find.byType(ArrivalScreen), findsNothing);
     await end(tester, e);
   });
 

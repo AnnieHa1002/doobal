@@ -248,8 +248,7 @@ void main() {
       });
       await pumpDoobal(tester, e, const DoobalApp());
       await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
-      await tester.tap(find.text('출발하기'));
-      await transition(tester);
+      await startTrailNow(tester);
       await settle(tester, () => false, tries: 8);
       expect(find.byType(WalkingScreen), findsOneWidget);
       e.live.push(1000);
@@ -266,7 +265,8 @@ void main() {
     Future<List<CompanionRow>> rows(WidgetTester tester, UiEnv e) async =>
         (await tester.runAsync(() => e.db.select(e.db.companions).get()))!;
 
-    Finder finish() => find.text('걷기 마치기');
+    /// HUD가 보이는가 (만남 동안은 가린다): 왼쪽 위 쉼터 아이콘
+    Finder finish() => find.byKey(const Key('walk-rest'));
 
     testWidgets('첫 실제 여정의 2km: 이정표 카드 대신 길 위 만남, 고르면 걷는 중으로 돌아온다', (tester) async {
       final e = await openWalking(tester);

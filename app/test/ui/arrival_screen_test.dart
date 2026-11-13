@@ -7,7 +7,6 @@ import 'package:doobal/ui/album/painting_viewer.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/common/framed_painting.dart';
-import 'package:doobal/domain/walk_arrival.dart';
 import 'package:doobal/ui/map/map_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
@@ -98,7 +97,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('걷는 중 진행이 100%가 되면 걷기를 자동으로 마치고 도착 화면으로 바뀐다 (한 번만, 계속 새로 읽어도)',
+    testWidgets('걷는 중 진행이 100%가 되면 도착 화면으로 바뀌고 닫으면 쉼터 (한 번만, 계속 새로 읽어도)',
         (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
@@ -107,8 +106,7 @@ void main() {
       });
       await pumpDoobal(tester, e, const DoobalApp());
       await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
-      await tester.tap(find.text('출발하기'));
-      await transition(tester);
+      await startTrailNow(tester);
       await settle(tester, () => false, tries: 8);
       expect(find.byType(WalkingScreen), findsOneWidget);
       expect(find.byType(ArrivalScreen), findsNothing);
@@ -137,13 +135,14 @@ void main() {
       }
       expect(find.byType(ArrivalScreen, skipOffstage: false), findsOneWidget);
 
-      // 닫으면 그 걷기의 걷기 기록, `쉼터로`를 누르면 쉼터
+      // 닫으면 쉼터 (11/13: 걷기 기록을 거치지 않는다)
       await tester.tap(find.byTooltip('닫기'));
       await transition(tester);
-      await settle(tester, () => find.byType(WalkRecordScreen).evaluate().isNotEmpty);
+      await settle(tester, () => find.byType(ArrivalScreen).evaluate().isEmpty);
+      await transition(tester);
       expect(find.byType(ArrivalScreen, skipOffstage: false), findsNothing);
-      expect(find.byType(WalkRecordScreen), findsOneWidget);
-      expect(find.text('쉼터로'), findsOneWidget);
+      expect(find.byType(WalkRecordScreen), findsNothing);
+      expect(find.byType(RestScreen), findsOneWidget);
       await settle(tester, () => false, tries: 4);
       final j = await _journey(tester, e, 'j${t1.millisecondsSinceEpoch}');
       expect(j.arrivalShown, isTrue);
@@ -152,11 +151,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(find.byType(ArrivalScreen, skipOffstage: false), findsNothing);
-
-      await tester.tap(find.text('쉼터로'));
-      await transition(tester);
-      expect(find.byType(WalkRecordScreen, skipOffstage: false), findsNothing);
-      expect(find.textContaining('쉬는 중'), findsOneWidget);
+      expect(find.byType(RestScreen), findsOneWidget);
       await end(tester, e);
     });
   });
@@ -347,19 +342,15 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('걷다 온 도착은 닫기·시스템 뒤로 모두 그 걷기의 걷기 기록으로 가고, `쉼터로`로 돌아간다', (tester) async {
+    testWidgets('걷다 온 도착은 닫기·시스템 뒤로 모두 걷기 기록 없이 쉼터(첫 화면)로 돌아간다 (11/13)',
+        (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => e.insertArrival('j1', 'kr001', _day));
-      final walk = WalkEnd(
-        start: _day.subtract(const Duration(minutes: 30)),
-        end: _day,
-        ratioBefore: 0.4,
-      );
       for (final system in [false, true]) {
         await openOnTop(
           tester,
           e,
-          ArrivalScreen(journeyId: 'j1', walk: walk),
+          const ArrivalScreen(journeyId: 'j1', fromWalk: true),
           ready: () => _card.evaluate().isNotEmpty,
         );
         if (system) {
@@ -368,15 +359,9 @@ void main() {
           await tester.tap(find.byTooltip('닫기'));
         }
         await transition(tester);
-        await settle(tester, () => find.byType(WalkRecordScreen).evaluate().isNotEmpty);
-        // 도착 화면은 걷기 기록으로 바뀌었다 (쌓이지 않는다)
-        expect(find.byType(ArrivalScreen, skipOffstage: false), findsNothing);
-        final record = tester.widget<WalkRecordScreen>(find.byType(WalkRecordScreen));
-        expect((record.start, record.end, record.ratioBefore), (walk.start, walk.end, 0.4));
-        expect(record.review, isFalse);
-
-        await tester.tap(find.text('쉼터로'));
+        await settle(tester, () => find.byType(ArrivalScreen).evaluate().isEmpty);
         await transition(tester);
+        expect(find.byType(ArrivalScreen, skipOffstage: false), findsNothing);
         expect(find.byType(WalkRecordScreen), findsNothing);
         expect(find.text('열기'), findsOneWidget);
       }

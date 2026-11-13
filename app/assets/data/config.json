@@ -1,6 +1,6 @@
 {
- "version": 11,
- "changes": "v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
+ "version": 20,
+ "changes": "v20 (11/13 개발 기획, 꾸밈효과_개발인계): effects 새로(입자 5종 개수·속도·크기·수명 가안, 공통 제외 구역, 밤 그리기 순서, 반딧불 빛, 동작 줄이기, 물감 4색). v19 (11/13 개발 기획, R34 정령_v33_개발인계): character.rive.bodyBox를 디자인 기획 실측으로(머리~발바닥 y 71~559·489px, 발 디딤점 (244,559) = 아트보드 48.7%·93.2%, 아트보드 높이 = 몸 키 × 1.227). v18 (11/13 개발 기획, 16장 11/13 화면 세부 4건): hud.eventCardSec 7→8, ui.orientation(가로는 걷는 중만), ui.newDot(배낭·동행·행상 수레 새 상품, 노트 없음), character.rive.customizePreview(밀어서 정면·옆·뒤, 표정 버튼 없음). v17 (11/13 개발 기획, v33 납품 대조): character.rive pending false·fileId·designApproval pending·exprDraft 0·bodyBox(몸 키 실측 489px)·screenScale 0.703/0.530(추정)·fallback crop 44/252, character.float pending false. v16 (11/13 개발 기획, 16장 11/13 Annie): coins.format.buyQuestion '구매하시겠습니까?'(상품 이름·값 없이). v15 (11/13 개발 기획, 물감 길·하루 카드): bonus 배수 1.0(없앰, 키는 코드 때문에 남김), paintTrail·paintDrop·report 새로, events.distanceBasis paintTrailActual, props.distanceBasis actualAll. v14 (11/13 개발 기획): character.rive 새로(spirit_v33.riv·Spirit·WardrobeController·WardrobeColors, 자세 7, 화면별 자세, 쉼터 떠 있기↔앉기 20~40초·밤 잠들기, 트리거 6, 누름 가안), anim mode rive, float는 키 규칙만. v13 (11/13 개발 기획): album.bigView share false·saveWith gal(공유 보류). 글꼴 Noto Sans KR은 PR #2가 ui.font를 바꿈. v12 (11/10 개발 기획): character.facing fall·sit 삭제(둥둥 정령), character.float 새로(정령 키 = 동행 × 0.75·떠 있는 높이 0.15·화면 키 가안 344/259px, T5 전까지 pending), anim.file spirit_float.json, album.bigView 새로(그림 크게 보기 2배·저장 토스트 1.5초). v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
  "gait": {
   "walkMaxSpm": 130,
   "runMinSpm": 140,
@@ -13,20 +13,39 @@
   "minSteps": 1000,
   "maxPerDay": 3
  },
- "bonus": {
-  "approx": true,
-  "appliesTo": "qualifiedSession",
-  "travelMultiplier": 1.3,
-  "coinMultiplier": 2.0,
-  "note": "qualifiedSession = 앱 걷는 중(출발하기~걷기 마치기) 창 안에서 인정된 걷기 1번 구간(11/1)"
- },
  "appWalk": {
   "endOnAppKilled": "lastAliveUtc",
   "androidForegroundService": true,
-  "aliveSaveKey": "sync.aliveSaveSec"
+  "aliveSaveKey": "sync.aliveSaveSec",
+  "note": "11/13: 걷기 창(출발하기~걷기 마치기)은 물감 길(paintTrail)로 바뀜. 종료 처리(lastAliveUtc·포그라운드 서비스)는 그대로 씀"
+ },
+ "paintTrail": {
+  "startNeedsForeground": true,
+  "startMinSteps": {
+   "approx": true,
+   "steps": 10,
+   "withinSec": 60
+  },
+  "idleEndMin": {
+   "approx": true,
+   "min": 5
+  },
+  "endOnAppKilled": "lastAliveUtc",
+  "androidForegroundService": true,
+  "note": "16장 11/13: 출발·마치기 버튼 없음. 앱이 앞에 있을 때 센서 걸음이 60초 안에 10보 늘면 시작(가안), 화면을 꺼도 앱이 살아 있는 동안 이어짐(안드로이드 상시 알림 N0), 걸음 0인 시간이 idleEndMin 이어지면 마지막 걸음 시각에 끝, 앱이 종료되면 lastAliveUtc에 끝. 시작하면 쉼터 → 걷는 중, 끝나면 걷는 중 → 쉼터"
+ },
+ "paintDrop": {
+  "coinsPerKm": 10,
+  "spacingM": {
+   "approx": true,
+   "m": 100
+  },
+  "coinsPerDrop": 1,
+  "note": "물감 길 실제 1km마다 10럭(= 100m마다 방울 1개 × 1럭, 간격·모양은 디자인 기획 가안). 럭은 물감 길 실제 거리로 계산하고 방울은 보이는 연출(지나가면 저절로 주움, 저장 안 함). 하루 상한 coins.dailyCap 400에 같이 들어감"
  },
  "props": {
-  "distanceBasis": "walkTravel"
+  "distanceBasis": "actualAll",
+  "note": "11/13: 거리 소품 = 설치 뒤 모든 걸음의 실제 거리 누적(여행 경비 구간 포함, 상점 효과 제외). 이전 walkTravel(본격 걷기 여행 거리)은 폐기"
  },
  "coins": {
   "displayName": "럭",
@@ -37,9 +56,9 @@
   "format": {
    "amount": "{n} 럭",
    "gain": "+{n} 럭",
-   "buyQuestion": "{item}을(를) {n} 럭에 구매할까요?",
+   "buyQuestion": "구매하시겠습니까?",
    "buyButton": "구매",
-   "note": "숫자 뒤 단위(11/3). 문구 최종은 UI 명세 15장. 조사는 앱이 받침으로 고름"
+   "note": "숫자 뒤 단위(11/3). 구매 질문은 상품 이름·값 없이 한 줄(11/13 Annie, 이전 '{item}을(를) {n} 럭에 구매할까요?'). 상품 칸에 이름·값(여행 효과는 설명 한 줄)이 이미 보임"
   }
  },
  "shop": {
@@ -119,7 +138,9 @@
   "flushSec": 5,
   "propChance": 0.0,
   "propChanceAfterLaunch": 0.1,
-  "distanceBasis": "actualForeground"
+  "distanceBasis": "paintTrailActual",
+  "note": "11/13: 물감 길 실제 거리 2km마다(상점 효과 미포함). 화면이 꺼진 동안 넘은 칸은 모두 기록하고, 다시 켤 때 마지막 칸 카드 1장만(11/13 Annie 확정, 거리 요약 카드 없음)",
+  "offScreenCards": 1
  },
  "seasons": {
   "spring": [
@@ -412,11 +433,10 @@
    "arrival": "front",
    "walking": "side",
    "running": "side",
-   "fall": "side",
-   "sit": "side",
    "departMoment": "back",
    "splash": "back",
-   "viewScenery": "back"
+   "viewScenery": "back",
+   "note": "11/13: Rive 정령은 character.rive.screens(자세 번호)를 씀. 이 표는 T5 전 Rive v25용"
   },
   "canvas": {
    "sizePx": [
@@ -454,14 +474,156 @@
     "taps": 5,
     "holdSec": 2
    },
-   "note": "쉼터·꾸미기에서 정령 몸을 누르면 행복(머리·배 누르기 동작 그대로), 3초 안에 5번이면 2초 화남 뒤 기본. 화면 글 없음 / 11/5 캔버스: 누르면 기쁨 1초",
+   "note": "쉼터·꾸미기에서 정령 몸을 누르면 행복(머리·배 누르기 동작 그대로), 3초 안에 5번이면 2초 화남 뒤 기본. 화면 글 없음 / 11/5 캔버스: 누르면 기쁨 1초 / 11/10 둥둥 정령: 머리 누르기 → press_head, 배 누르기 → press_belly, 화남 → angry_front, 기쁨 1초는 joy_front / 11/13 v33: 머리 tapHead·배 tapBelly 트리거, 연타 angry, 행복 1초는 expr 1",
    "happySec": 1
   },
   "anim": {
-   "mode": "cutout",
-   "file": "spirit_cutout.json",
-   "pending": true,
-   "note": "11/6 컷아웃: 조각(머리·몸통·팔·다리·옷) + 클립 14개, 소품 조각은 기준점에. 계약은 개발기획/정령_시트_계약.md v0.2. spirit_cutout.json 납품·성능 확인 전까지 앱은 Rive v25 그대로"
+   "mode": "rive",
+   "file": "spirit_v33.riv",
+   "pending": false,
+   "note": "11/11 정령 움직임 = Rive(컷아웃·조각 + json 대체). 값은 character.rive"
+  },
+  "float": {
+   "approx": true,
+   "pending": false,
+   "scaleToCompanion": 0.75,
+   "companionCanvasHeightPx": 653,
+   "screenHeightPx": {
+    "portrait": 344,
+    "landscape": 259
+   },
+   "note": "11/13 개발 기획(계약 v0.5): 떠 있기·그림자는 riv가 그림. 정령 키 = 동행 × 0.75(16장 11/9) → 화면 몸 키 344/259px(동행 키 추정). 아트보드 배율은 character.rive.screenScale(v33 몸 키 489px 실측으로 계산)"
+  },
+  "rive": {
+   "pending": false,
+   "file": "spirit_v33.riv",
+   "artboard": "Spirit",
+   "artboardPx": [
+    502,
+    600
+   ],
+   "stateMachine": "WardrobeController",
+   "viewModel": "WardrobeColors",
+   "fallback": {
+    "file": "두발_표정입크기_코입간격_v32.riv",
+    "artboard": "SelectableFaceWardrobe",
+    "crop": [
+     44,
+     252,
+     502,
+     600
+    ],
+    "note": "v33이 와서 안 씀. 11/13 Codex가 원점을 (-44,-252)로 보정해 v32 같은 자리를 자르려면 이 값"
+   },
+   "poses": {
+    "floatFront": 0,
+    "floatSide": 1,
+    "sitFront": 2,
+    "sitSide": 3,
+    "sleep": 4,
+    "floatBack": 5,
+    "moveSide": 6
+   },
+   "screens": {
+    "rest": "restSwap",
+    "restNight": "sleep",
+    "walking": "moveSide",
+    "walkingIdle": "floatSide",
+    "arrival": "floatFront",
+    "customize": "floatFront",
+    "maker": "floatFront",
+    "profile": "floatFront",
+    "departMoment": "floatBack",
+    "splash": "floatBack",
+    "viewScenery": "floatBack",
+    "story": "floatBack"
+   },
+   "restSwap": {
+    "approx": true,
+    "poses": [
+     "floatFront",
+     "sitFront",
+     "sitSide"
+    ],
+    "minSec": 20,
+    "maxSec": 40,
+    "noRepeat": true,
+    "night": "sleep"
+   },
+   "sideFacesLeft": true,
+   "flipSideOn": [
+    "walking",
+    "walkingIdle"
+   ],
+   "triggers": {
+    "greet": "greet",
+    "joy": "joy",
+    "tapHead": "tapHead",
+    "tapBelly": "tapBelly",
+    "angry": "angry",
+    "reset": "resetMotion"
+   },
+   "hit": {
+    "approx": true,
+    "headTopRatio": 0.45,
+    "note": "아트보드 위에서 45% 안을 누르면 tapHead, 그 아래 정령 몸은 tapBelly(가안, 폰에서 확인). 자세별 실측이 오면 바꿈"
+   },
+   "note": "계약 v0.5(16장 11/11 Rive·11/13 v32). 입력은 모두 뷰 모델 속성. 자세는 poseChoice만 바꾸면 riv가 전환(겹쳐 흐리기 금지, 같은 인스턴스 유지). 11/13 v33 납품(입력 59개 이름·형식 계약과 같음). 앱 연결은 개발 T5",
+   "fileId": "1jrCPAdnsWlHQYlFTp6S6T8PEbfobHmPN",
+   "fileBytes": 11779535,
+   "designApproval": "pending",
+   "exprDraft": 0,
+   "bodyBox": {
+    "approx": true,
+    "bbox": [
+     101,
+     71,
+     388,
+     559
+    ],
+    "heightPx": 489,
+    "headPx": 253,
+    "neckY": 324,
+    "footPoint": [
+     244,
+     559
+    ],
+    "footAnchor": [
+     0.487,
+     0.932
+    ],
+    "artboardPerBody": 1.227,
+    "note": "디자인기획/정령_v33_개발인계 2장(qa/default_state.png, 자세 0·여행복·소품 없음, 1px 오차). footAnchor 점을 길·갑판·쉼터 발 디딤 자리에 맞춤(가운데 50%면 6px 오른쪽으로 쏠림). 모자·떠 있는 소품은 키에 안 넣음. 소품을 다 끼면 x 2~500·y 3~597까지 차므로 잘라 그리지 않음. 원점 (-44,-252) 보정이 검수에서 채택될 때 기준"
+   },
+   "screenScale": {
+    "approx": true,
+    "portrait": 0.703,
+    "landscape": 0.53,
+    "artboardOnScreenPx": {
+     "portrait": [
+      353,
+      422
+     ],
+     "landscape": [
+      266,
+      318
+     ]
+    },
+    "note": "float.screenHeightPx ÷ bodyBox.heightPx(344÷489, 259÷489) = 아트보드 높이 600 × 배율이 몸 키 × 1.227과 같음. 동행 화면 키(540×0.85 추정)를 실측하면 다시 계산"
+   },
+   "qaFile": {
+    "file": "spirit_v33_qa.riv",
+    "note": "v32 시험 화면(SelectableFaceWardrobe). 앱에 넣지 않음"
+   },
+   "customizePreview": {
+    "swipe": [
+     "floatFront",
+     "floatSide",
+     "floatBack"
+    ],
+    "exprButton": false,
+    "note": "16장 11/13: 꾸미기 미리보기는 좌우로 밀어 정면·옆·뒤 차례로 돌려 봄(poseChoice 0·1·5), 표정 미리보기 버튼 없음"
+   }
   }
  },
  "notifications": {
@@ -517,6 +679,22 @@
    ],
    "subset": true,
    "note": "11/12 Annie: 제목·숫자·버튼·본문 모두 Noto Sans KR 하나(이전 11/4 Pretendard, 줄인 판에 예약 이름을 쓰는 문제로 바꿈). 설정 글꼴 고르기·배율 없음(리포 DB v14에서 뺌), OFL 전문 고지"
+  },
+  "orientation": {
+   "landscape": [
+    "walking"
+   ],
+   "others": "portrait",
+   "note": "16장 11/13: 가로 화면은 걷는 중만, 나머지 화면은 세로 고정"
+  },
+  "newDot": {
+   "on": [
+    "backpack",
+    "companion",
+    "cart"
+   ],
+   "cartWhen": "newShopItem",
+   "note": "16장 11/13: 새 소식 점은 배낭·동행 + 행상 수레(새 상품이 들어올 때만). 노트에는 점 없음(하루 카드가 대신)"
   }
  },
  "rest": {
@@ -573,12 +751,216 @@
  "walk": {
   "arrivalProbeSec": 5,
   "autoFinishOnArrival": true,
-  "note": "걷다가 도착하면 걷기를 자동으로 마침(11/4) — 도착 확인 주기"
+  "note": "걷다가 도착하면 걷기를 자동으로 마침(11/4) — 도착 확인 주기 / 11/13 물감 길: 걷기 마치기 버튼은 없고, 도착하면 그 물감 길은 이어지되 화면만 도착 → 걷기 기록 대신 쉼터로"
  },
  "hud": {
-  "eventCardSec": 7,
+  "eventCardSec": 8,
   "stampLineSec": 4,
   "approx": true,
-  "note": "이정표 카드·도장 줄 보이는 시간(리포 HudMetrics 임시값)"
+  "note": "이정표 카드·도장 줄 보이는 시간(리포 HudMetrics 임시값) / 11/13 Annie: 이정표 카드는 8초 뒤 저절로 접힘(걸음 알약과 같은 시간)"
+ },
+ "album": {
+  "bigView": {
+   "approx": true,
+   "maxZoom": 2.0,
+   "pageInAlbumOnly": true,
+   "closeSwipeDown": true,
+   "landscape": false,
+   "savedToastSec": 1.5,
+   "note": "16장 11/10 그림 크게 보기·저장: 화집(일기·전체)·도착에서 그림을 누르면 액자째 화면 가득, 글 없음. 두 손가락 1~2배(2배 가안), 좌우 넘기기는 화집 안에서만(같은 보기 순서), 도착은 한 장. 아래로 밀거나 뒤로 가면 닫힘. 왼쪽 위 저장 아이콘 → 기기 사진에 저장 + 토스트 ‘저장했어요’ 1.5초. 화집 그림 상세 시트는 없음(16장 11/10) / 16장 11/13: 공유(다른 앱으로 보내기)는 보류 — 다시 넣을 때는 크게 보기 아이콘으로, 사진첩 저장은 gal 패키지",
+   "share": false,
+   "saveWith": "gal"
+  }
+ },
+ "report": {
+  "dayStartHour": 5,
+  "maxMergeDays": {
+   "approx": true,
+   "days": 30
+  },
+  "weekStartsMonday": {
+   "approx": true,
+   "value": true
+  },
+  "detailDays": {
+   "approx": true,
+   "options": [
+    7,
+    30
+   ],
+   "default": 7
+  },
+  "share": "share_plus",
+  "note": "16장 11/13 하루 카드: 한국 시간 새벽 5시 이후 그날 처음 앱을 열 때, 아직 안 보여 준 지난날(0~24시) 카드 1장. 밀린 날이 여럿이면 한 장으로 합침(지난 n일 합계·하루 평균·가장 많이 걸은 날, 최대 maxMergeDays일). 이번 주 7일 막대는 카드 날이 든 주(월~일 가안). 공유 = 카드 이미지(share_plus). 리포트(시간대별·걷기/달리기·물감 길 비율)는 최근 detailDays일, 공유 없음, 기기 안 자료만",
+  "shareImagePx": {
+   "approx": true,
+   "size": [
+    1080,
+    1350
+   ]
+  }
+ },
+ "effects": {
+  "approx": true,
+  "screens": [
+   "rest",
+   "walking"
+  ],
+  "items": {
+   "effect_01": {
+    "key": "leaf",
+    "sprites": [
+     "fx_leaf_a_v01",
+     "fx_leaf_b_v01"
+    ],
+    "count": [
+     3,
+     5
+    ],
+    "spawn": {
+     "from": "aboveHead",
+     "widthOfBody": 1.6
+    },
+    "fallPtPerSec": 20,
+    "swayPt": 12,
+    "spinDeg": 40,
+    "sizePt": [
+     14,
+     20
+    ],
+    "lifeSec": [
+     4,
+     6
+    ]
+   },
+   "effect_02": {
+    "key": "rain",
+    "sprites": [
+     "fx_raindrop_v01"
+    ],
+    "puddle": "fx_puddle_v01",
+    "count": [
+     8,
+     12
+    ],
+    "spawn": {
+     "from": "aboveBody",
+     "widthOfBody": 1.4
+    },
+    "fallPtPerSec": 90,
+    "endAt": "feet",
+    "sizePt": [
+     8,
+     12
+    ],
+    "lifeSec": 1.2
+   },
+   "effect_03": {
+    "key": "sparkle",
+    "sprites": [
+     "fx_star_a_v01",
+     "fx_star_b_v01"
+    ],
+    "count": [
+     4,
+     6
+    ],
+    "spawn": {
+     "from": "ring",
+     "radiusOfBody": 0.6
+    },
+    "scale": [
+     0,
+     1,
+     0
+    ],
+    "sizePt": [
+     10,
+     16
+    ],
+    "lifeSec": 0.8
+   },
+   "effect_04": {
+    "key": "paint",
+    "sprites": [
+     "fx_paintdrop_a_v01",
+     "fx_paintdrop_b_v01"
+    ],
+    "tint": "multiplyRgb",
+    "colors": [
+     "#C9775A",
+     "#BCD9E8",
+     "#CDE0AC",
+     "#D3C6E6"
+    ],
+    "count": [
+     3,
+     4
+    ],
+    "spawn": {
+     "from": "handsSides"
+    },
+    "path": "arcUp",
+    "sizePt": [
+     10,
+     14
+    ],
+    "lifeSec": 1.5
+   },
+   "effect_05": {
+    "key": "firefly",
+    "sprites": [
+     "fx_firefly_v01"
+    ],
+    "count": [
+     4,
+     6
+    ],
+    "spawn": {
+     "from": "aroundBody"
+    },
+    "speedPtPerSec": 8,
+    "turnEverySec": 2,
+    "brightness": [
+     0.4,
+     1.0
+    ],
+    "sizePt": [
+     6,
+     8
+    ],
+    "lifeSec": null,
+    "glow": {
+     "radiusPt": 60,
+     "centerAlpha": 0.35,
+     "colors": [
+      "#FFFFFF",
+      "#FFF6C8"
+     ],
+     "blend": "plus",
+     "followBrightness": true
+    }
+   }
+  },
+  "exclude": {
+   "faceLowerRatio": 0.6,
+   "screenTopPt": 120,
+   "screenSidePt": 12,
+   "note": "머리 아래쪽 60%(얼굴)·화면 위 120pt·좌우 12pt에는 입자를 두지 않음. 얼굴에 닿을 입자는 잘라 그리지 않고 아예 안 그림"
+  },
+  "nightOrder": [
+   "background",
+   "spirit",
+   "nightTint",
+   "fireflyGlow",
+   "particles"
+  ],
+  "particlesIgnoreNight": true,
+  "reducedMotion": {
+   "still": true,
+   "glowAlpha": 0.25,
+   "note": "동작 줄이기: 입자는 정지 그림 1장, 반딧불 빛은 깜빡이지 않고 알파 0.25"
+  },
+  "note": "디자인기획/꾸밈효과_개발인계(11/13 Annie 밤 규칙)·Drive effects_v01_검토_20261113 motion_draft.json(가안). 그림은 clean/(입자 9·아이콘 5, 검수 전). 앱 CustomPainter(R2, 개발). 입자는 밤 필터를 받지 않고 낮과 같은 색, 반딧불 빛은 그림 없이 RadialGradient(흰~연노랑, 가운데 0.35 → 0)를 더하기로 겹쳐 근처 땅·정령을 밝힘. 물감 입자는 회색 그림에 색을 곱함. 키 id는 props effect 슬롯 id와 같음"
  }
 }

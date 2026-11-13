@@ -85,13 +85,8 @@ Future<JourneyRow> _startedAt(AppDb db, DateTime at) => (db.select(db.journeys)
 StepRecord _walkKm(DateTime start, double km) =>
     _walk(start, (km * 1000 / (rules.walkStrideM * 100)).ceil() + 1, 100);
 
-/// [r]을 걸음 기록으로 넣고, 그 걸음을 정확히 덮는 앱 걷기 창(걷는 중 화면을 연 것)을 연다.
-/// 거리 소품은 이 창 안에서 걸은 이동 거리(보너스 ×1.3 포함)로 센다
-Future<void> _walkInApp(_Env e, StepRecord r) async {
-  final id = await e.svc.startAppWalk(r.start);
-  e.source.records.add(r);
-  await e.svc.finishAppWalk(id, r.end);
-}
+/// [r]을 걸음 기록으로 넣는다 (16장 11/13: 앱을 켰든 안 켰든 거리 소품에 같게 센다)
+Future<void> _walkInApp(_Env e, StepRecord r) async => e.source.records.add(r);
 
 double _routeKm(LatLng from, String destId) =>
     buildRoute(from, _landmarks[destId]!.latLng, rules).totalEffectiveKm;
@@ -1309,30 +1304,24 @@ void main() {
       expect((await e.svc.snapshot(_t0)).unseenProps, 0);
     });
 
-    test('앱 걷기 창 안에서 걸은 이동 거리가 10km를 넘으면 hand_02, 얻은 소품은 다시 안 들어온다', () async {
+    test('모든 걸음의 실제 거리가 10km를 넘으면 hand_02, 얻은 소품은 다시 안 들어온다', () async {
       final e = await _env();
       await e.svc.sync(_t0);
-      // 앱 없이 걸은 9km는 거리 소품에 안 센다 (실제 거리로는 10km를 넘겨도)
-      e.source.records.add(_walkKm(t1, 11));
+      // 앱 없이 걸은 9km도 센다 (config props.distanceBasis actualAll). 아직 10km 전
+      e.source.records.add(_walkKm(t1, 9));
       await e.svc.sync(_t0.add(const Duration(hours: 4)));
       expect(await _propIds(e.db), defaults);
-      expect((await e.svc.snapshot(_t0.add(const Duration(hours: 4)))).totalKm, greaterThan(10));
 
-      // 창 안에서 걸은 7km는 이동 거리 7.07 × 1.3 = 9.19km라 아직이다
-      await _walkInApp(e, _walkKm(_t0.add(const Duration(hours: 5)), 7));
-      await e.svc.sync(_t0.add(const Duration(hours: 6)));
-      expect(await _propIds(e.db), defaults);
-
-      // 거리 소품은 여정이 없어도(경비로 가는 걸음) 센다. 2km 더 걸으면 9.19 + 2.73 = 11.92km
+      // 거리 소품은 여정이 없어도(경비로 가는 걸음) 센다. 2km 더 걸으면 11km를 넘는다
       final t3 = _t0.add(const Duration(hours: 9));
-      await _walkInApp(e, _walkKm(_t0.add(const Duration(hours: 7)), 2));
+      e.source.records.add(_walkKm(_t0.add(const Duration(hours: 7)), 2));
       await e.svc.sync(t3);
       expect(await _propIds(e.db), {...defaults, 'hand_02'});
       final row = await (e.db.select(e.db.propsOwned)..where((t) => t.propId.equals('hand_02')))
           .getSingle();
       expect(row.unlockedUtc, _ms(t3));
       expect(row.seen, isFalse);
-      expect((await e.svc.snapshot(t3)).walkTravelKm, greaterThan(10));
+      expect((await e.svc.snapshot(t3)).totalKm, greaterThan(10));
 
       final before = await e.dump();
       await e.svc.sync(t3);

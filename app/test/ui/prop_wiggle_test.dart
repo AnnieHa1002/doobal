@@ -181,7 +181,8 @@ void main() {
 
     testWidgets('알림 점이 없으면 전체에서 고른다 (세 번째 = 노트)', (tester) async {
       final e = UiEnv();
-      await e.seed(tester);
+      // 여정이 있어야 지도에 점이 없다 (여정이 없으면 지도 점, 16장 11/13)
+      await e.seed(tester, () => e.svc.startJourney('kr003', t1, useFund: false));
       await _openRest(tester, e, _spec([2]));
 
       await _wiggleStarted(tester);
@@ -193,6 +194,7 @@ void main() {
     testWidgets('알림 점이 있는 물건(배낭 점, 방명록 표지판) 중에서만 고른다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
+        await e.svc.startJourney('kr003', t1, useFund: false);
         // 안 본 그림 → 배낭 점, 쓸 기회 → 방명록 표지판
         await e.ownPaintings({'kr001': Frame.wood}, seen: false);
         await e.db.into(e.db.guestbookTickets).insert(GuestbookTicketsCompanion.insert(

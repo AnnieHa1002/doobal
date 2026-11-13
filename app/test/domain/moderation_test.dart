@@ -63,7 +63,8 @@ void main() {
 
   test('규칙은 123개, 막힌 글 안내는 한 줄', () {
     expect((_json('moderation.json')['rules'] as List), hasLength(123));
-    expect(_moderation.message, '이 표현은 방명록에 남길 수 없어요');
+    // moderation.json v2 (16장 11/13): 어떤 단어인지는 보여 주지 않는다
+    expect(_moderation.message, '금칙어가 포함되어 있어요');
   });
 
   test('모르는 규칙 자리는 FormatException', () {

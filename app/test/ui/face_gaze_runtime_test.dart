@@ -31,7 +31,7 @@ void main() {
       f.dispose();
     });
     final l = Look.initial
-        .copyWith(eyes: 'sparkle', brows: 'none', nose: 'none', mouth: 'fangs');
+        .copyWith(eyes: 'e6', brows: 'none', nose: 'none', mouth: 'm3');
     c.wear(spiritLookOf(l));
     expect(
       [
@@ -74,10 +74,10 @@ void main() {
     tick(c, 1);
     expect(c.instance.number('eye')!.value, before);
   });
-  test('기존 게임 얼굴 호출도 새 PSD 선택으로 변환된다', () {
+  test('옛 v24 얼굴 id는 계약 v0.5대로 기본 얼굴(e1·b1·n7·m7)로 읽는다', () {
     final s = spiritLookOf(
       const Look(eyes: 'cat', brows: 'fierce', nose: 'heart', mouth: 'tongue'),
     );
-    expect([s.eye, s.brow, s.nose, s.mouth], [2, 3, 3, 4]);
+    expect([s.eye, s.brow, s.nose, s.mouth], [0, 1, 6, 6]);
   });
 }

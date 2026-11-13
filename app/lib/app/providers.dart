@@ -31,6 +31,7 @@ import '../domain/color_props.dart';
 import '../domain/landmark.dart';
 import '../domain/spirit_look.dart';
 import '../domain/spirit_palette.dart';
+import '../domain/time_kst.dart';
 import '../domain/map_land.dart';
 import '../domain/map_projection.dart';
 import '../domain/map_regions.dart';
@@ -239,6 +240,17 @@ final appForegroundProvider = NotifierProvider<AppForeground, bool>(
   AppForeground.new,
 );
 
+/// 앱을 켠 직후 앞 실행의 끝나지 않은 물감 길을 닫았는가 (AutoSync가 켠다). 물감 길 판정은 이 뒤에 시작한다
+/// (닫기 전에 새 물감 길을 열면 앞 것과 겹친다)
+class TrailsReady extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool ready) => state = ready;
+}
+
+final trailsReadyProvider = NotifierProvider<TrailsReady, bool>(TrailsReady.new);
+
 /// 걷는 중 화면(과 걷다 도착해서 열린 도착 화면)이 몇 개 떠 있는가. 0보다 큰 동안 도착은 그 화면들이
 /// 직접 다룬다 (걷기를 마치고 도착 화면으로 바꾸고, 닫으면 걷기 기록). AutoSync는 그동안 도착 화면을
 /// 따로 띄우지 않고 다 닫힌 뒤에 새로 읽어 다시 본다. 걷는 중 → 도착으로 바뀔 때 잠깐 겹쳐서 개수로 센다
@@ -356,6 +368,19 @@ final recentDaysProvider = FutureProvider.autoDispose<List<DayBar>>((
 });
 
 /// 감지된 걷기 전부, 최신순 (노트의 걷기 기록)
+/// 노트 걷기 기록: 닫힌 물감 길(최신순)과 그 날들의 하루 걸음·거리
+final trailHistoryProvider = FutureProvider.autoDispose<
+    ({List<PaintTrailView> trails, Map<String, ({int steps, double distanceM})> days})>((
+  ref,
+) async {
+  await ref.watch(snapshotProvider.future);
+  final trails = await (await ref.watch(syncServiceProvider.future)).paintTrails();
+  final days = await ref
+      .watch(statsServiceProvider)
+      .dayTotals({for (final t in trails) kstDayKey(t.start)});
+  return (trails: trails, days: days);
+});
+
 final walkSessionsProvider = FutureProvider.autoDispose<List<WalkSession>>((
   ref,
 ) async {

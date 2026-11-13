@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../data/db/app_db.dart' show PostStatus;
-import '../../domain/session.dart';
 import '../../domain/time_kst.dart';
 import '../../domain/walk_history.dart';
 import '../common/app_text.dart';
@@ -206,55 +205,72 @@ class _PostCard extends StatelessWidget {
   }
 }
 
-/// 걷기 기록: 감지된 걷기를 날짜별로, 최신순. 한 줄을 누르면 그 걷기의 걷기 기록을 다시 본다
+/// 걷기 기록 (캔버스 6-3, 16장 11/13): 물감 길을 날짜별로, 최신순. 날짜 줄은 그날 걸음·거리,
+/// 그 아래 물감 길 줄을 누르면 그 물감 길의 걷기 기록(3-3)을 본다.
+/// 걷기 리포트 줄·날짜 줄의 하루 카드는 T10 몫이라 아직 없다
 class _WalksTab extends ConsumerWidget {
   const _WalksTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(walkSessionsProvider).value;
-    if (sessions == null) return const SizedBox();
-    if (sessions.isEmpty) {
-      return const Center(child: Text('아직 감지된 걷기가 없어요', style: AppText.bodySub));
+    final history = ref.watch(trailHistoryProvider).value;
+    if (history == null) return const SizedBox();
+    if (history.trails.isEmpty) {
+      return const Center(child: Text('아직 걷기 기록이 없어요', style: AppText.bodySub));
     }
-    // 날짜 제목과 그 날의 걷기를 한 줄로 펴서 늘어놓는다 (String = 날짜 제목)
+    // 날짜 제목과 그 날의 물감 길을 한 줄로 펴서 늘어놓는다 (String = 날짜 제목)
     final items = <Object>[
-      for (final g in groupSessionsByDay(sessions)) ...[g.day, ...g.sessions],
+      for (final g in groupByKstDay(history.trails, (t) => t.start)) ...[g.day, ...g.items],
     ];
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       itemCount: items.length,
       itemBuilder: (context, i) => switch (items[i]) {
-        final String day => _DayHeader(day),
-        final WalkSession s => _WalkRow(s),
+        final String day => _DayHeader(day, history.days[day]),
+        final PaintTrailView t => _TrailRow(t),
         _ => throw StateError('알 수 없는 걷기 기록 줄'),
       },
     );
   }
 }
 
+/// 날짜 줄: 날짜와 그날 걸음·거리
 class _DayHeader extends StatelessWidget {
-  const _DayHeader(this.day);
+  const _DayHeader(this.day, this.totals);
 
   final String day;
+  final ({int steps, double distanceM})? totals;
 
   @override
   Widget build(BuildContext context) {
+    final t = totals;
     return Padding(
       padding: const EdgeInsets.only(top: 12, bottom: 8),
-      child: Text(
-        formatMonthDay(dayFromKey(day)),
-        style: context.display(15),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Text(formatMonthDay(dayFromKey(day)), style: context.display(15)),
+          if (t != null) ...[
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                '${formatInt(t.steps)}보 · ${formatKm(t.distanceM / 1000)}',
+                style: AppText.bodySub,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
-/// 걷기 한 줄: 시작 시각, 걸음, 거리
-class _WalkRow extends StatelessWidget {
-  const _WalkRow(this.session);
+/// 물감 길 한 줄: 시작 시각, ‘물감 길 n km’ (캔버스 6-3)
+class _TrailRow extends StatelessWidget {
+  const _TrailRow(this.trail);
 
-  final WalkSession session;
+  final PaintTrailView trail;
 
   @override
   Widget build(BuildContext context) {
@@ -263,15 +279,10 @@ class _WalkRow extends StatelessWidget {
       child: Semantics(
         button: true,
         child: GestureDetector(
-          key: ValueKey('walk-${session.start.millisecondsSinceEpoch}'),
+          key: ValueKey('trail-${trail.id}'),
           behavior: HitTestBehavior.opaque,
           onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-            builder: (_) => WalkRecordScreen(
-              start: session.start,
-              end: session.end,
-              ratioBefore: null,
-              review: true,
-            ),
+            builder: (_) => WalkRecordScreen(start: trail.start, end: trail.end),
           )),
           child: Container(
             constraints: const BoxConstraints(minHeight: 52),
@@ -305,12 +316,12 @@ class _WalkRow extends StatelessWidget {
                               child: Padding(
                                 padding: const EdgeInsets.only(right: 8),
                                 child: Text(
-                                  formatKstClock(session.start),
+                                  formatKstClock(trail.start),
                                   style: context.display(15),
                                 ),
                               ),
                             ),
-                            Text('${formatInt(session.steps)}보', style: AppText.body),
+                            Text('물감 길', style: AppText.body),
                           ],
                         ),
                       ),
@@ -318,7 +329,7 @@ class _WalkRow extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            formatKm(session.distanceM / 1000, digits: 2),
+                            formatKm(trail.trailM / 1000),
                             style: AppText.bodySub,
                           ),
                           const SizedBox(width: 4),

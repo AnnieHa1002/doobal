@@ -92,3 +92,18 @@ RoutePosition positionAt(TravelRoute r, double effectiveKm) {
   }
   throw StateError('unreachable');
 }
+
+/// 경로의 [fromKm]~[toKm](환산 거리) 부분을 점 목록으로: 시작 지점, 그 사이 다리의 꺾이는 점, 끝 지점
+/// (지도에 물감 길 구간을 그릴 때). 거리는 경로 안으로 자른다
+List<LatLng> routeSlice(TravelRoute r, double fromKm, double toKm) {
+  final total = r.totalEffectiveKm;
+  final a = fromKm.clamp(0.0, total);
+  final b = toKm.clamp(a, total);
+  final start = positionAt(r, a);
+  final end = positionAt(r, b);
+  return [
+    start.latLng,
+    for (var i = start.legIndex; i < end.legIndex; i++) r.legs[i].to,
+    end.latLng,
+  ];
+}
