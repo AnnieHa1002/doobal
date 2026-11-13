@@ -260,7 +260,7 @@ void main() {
       expect(await e.progressKm(_at(1)), closeTo(before + 1, 1e-9));
       expect(await e.svc.shopHeld(), isEmpty);
       final use = (await e.uses()).single;
-      expect((use.itemId, use.day, use.km, use.appWalkId), (_shortcut, _day, 1.0, null));
+      expect((use.itemId, use.day, use.km, use.paintTrailId), (_shortcut, _day, 1.0, null));
       final day = await e.day();
       expect(day.shopM, 1000);
       expect(day.travelM, 1000);
@@ -284,7 +284,7 @@ void main() {
       expect(await e.progressKm(tomorrow), closeTo(3, 1e-9));
     });
 
-    test('순풍: 걷는 중이 아니면 막는다', () async {
+    test('순풍: 열린 물감 길이 없으면 막는다', () async {
       final e = await _journey(60);
       await e.give(40);
       await e.svc.buyItem(_tailwind, _at(1));
@@ -292,42 +292,45 @@ void main() {
       expect((await e.svc.shopHeld())[_tailwind], 1);
     });
 
-    test('순풍: 이번 걷는 중의 실제 거리 20%, 창 밖 걸음은 안 친다, 하루 1번', () async {
+    test('순풍: 열린 물감 길의 실제 거리 20%, 물감 길 밖 걸음은 안 친다, 하루 1번', () async {
       final e = await _journey(60);
       await e.give(80);
       await e.svc.buyItem(_tailwind, _at(0));
       await e.svc.buyItem(_tailwind, _at(0));
-      // 창 앞에서 10분, 창 안에서 50분 (4,200m), 창 뒤에서 10분
+      // 물감 길 앞에서 10분, 안에서 50분 (4,200m), 뒤에서 10분
       e.source.records.addAll([
         _walk(_at(0), 10),
         _walk(_at(20), 50),
         _walk(_at(80), 10),
       ]);
-      final id = await e.svc.startAppWalk(_at(20));
+      final id = await e.svc.startPaintTrail(_at(20), _at(20));
       await e.svc.useTravelEffect(_tailwind, _at(21));
       final use = (await e.uses()).single;
-      expect(use.appWalkId, id);
+      expect(use.paintTrailId, id);
       await expectLater(e.svc.useTravelEffect(_tailwind, _at(22)), _blocked(ShopBlock.dailyLimit));
 
-      await e.svc.finishAppWalk(id, _at(70));
+      await e.svc.endPaintTrail(id, _at(70), _at(70));
       await e.svc.sync(_at(95));
       final km = (await e.uses()).single.km;
       expect(km, closeTo(4.2 * 0.2, 1e-9));
       final day = await e.day();
       expect(day.shopM, closeTo(840, 1e-9));
-      expect(day.travelM, closeTo(day.distanceM + day.bonusM + 840, 1e-9));
+      // 실제 70분 × 84m = 5,880m, 이동 = 실제 + 순풍 (보너스 없음), 물감 길 거리는 안의 50분만
+      expect(day.distanceM, closeTo(5880, 1e-9));
+      expect(day.travelM, closeTo(5880 + 840, 1e-9));
+      expect(day.trailM, closeTo(4200, 1e-9));
     });
 
-    test('순풍을 걷기 끝 무렵에 켜도 이번 걷는 중 전체를 본다', () async {
+    test('순풍을 물감 길 끝 무렵에 켜도 그 물감 길 전체를 본다', () async {
       final e = await _journey(60);
       await e.give(40);
       await e.svc.buyItem(_tailwind, _at(0));
       e.source.records.add(_walk(_at(0), 50));
-      final id = await e.svc.startAppWalk(_at(0));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
       await e.svc.sync(_at(50));
       await e.svc.useTravelEffect(_tailwind, _at(50));
       expect((await e.uses()).single.km, closeTo(4.2 * 0.2, 1e-9));
-      await e.svc.finishAppWalk(id, _at(50));
+      await e.svc.endPaintTrail(id, _at(50), _at(50));
     });
 
     test('하루 3km 상한: 지름길 2 + 순풍 5km 걷기 → 2 + 1 = 3', () async {
@@ -340,16 +343,16 @@ void main() {
       await e.svc.useTravelEffect(_shortcut, _at(0));
       // 60분 5,040m → 1.008km인데 상한에서 1km로 잘린다
       e.source.records.add(_walk(_at(0), 60));
-      final id = await e.svc.startAppWalk(_at(0));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
       await e.svc.useTravelEffect(_tailwind, _at(1));
-      await e.svc.finishAppWalk(id, _at(60));
+      await e.svc.endPaintTrail(id, _at(60), _at(60));
       await e.svc.sync(_at(61));
 
       final km = {for (final u in await e.uses()) u.id: u.km}.values.toList()..sort();
       expect(km, [1.0, 1.0, 1.0]);
       final day = await e.day();
       expect(day.shopM, closeTo(3000, 1e-9));
-      expect(day.travelM, closeTo(day.distanceM + day.bonusM + 3000, 1e-9));
+      expect(day.travelM, closeTo(5040 + 3000, 1e-9));
     });
 
     test('순풍이 상한을 다 채웠으면 지름길을 막고, 조금 남았으면 남은 만큼만 더한다', () async {
@@ -359,9 +362,9 @@ void main() {
       await e.svc.buyItem(_tailwind, _at(0));
       // 155분 13,020m → 순풍 2.604km
       e.source.records.add(_walk(_at(0), 155));
-      final id = await e.svc.startAppWalk(_at(0));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
       await e.svc.useTravelEffect(_tailwind, _at(1));
-      await e.svc.finishAppWalk(id, _at(155));
+      await e.svc.endPaintTrail(id, _at(155), _at(155));
       await e.svc.sync(_at(156));
       expect((await e.uses()).single.km, closeTo(2.604, 1e-9));
 
@@ -384,9 +387,9 @@ void main() {
       await e.svc.buyItem(_tailwind, _at(0));
       await e.svc.useTravelEffect(_shortcut, _at(0));
       e.source.records.add(_walk(_at(0), 60));
-      final id = await e.svc.startAppWalk(_at(0));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
       await e.svc.useTravelEffect(_tailwind, _at(1));
-      await e.svc.finishAppWalk(id, _at(60));
+      await e.svc.endPaintTrail(id, _at(60), _at(60));
       await e.svc.sync(_at(61));
       final before = await e.dump();
       final progress = await e.progressKm(_at(61));
@@ -401,9 +404,9 @@ void main() {
       final e = await _journey(60);
       await e.give(40);
       await e.svc.buyItem(_tailwind, _at(0));
-      final id = await e.svc.startAppWalk(_at(0));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
       await e.svc.useTravelEffect(_tailwind, _at(1));
-      await e.svc.finishAppWalk(id, _at(50));
+      await e.svc.endPaintTrail(id, _at(50), _at(50));
       await e.svc.sync(_at(51));
       expect((await e.uses()).single.km, 0);
 
@@ -418,9 +421,9 @@ void main() {
       await e.give(40);
       await e.svc.buyItem(_tailwind, _at(0));
       e.source.records.add(_walk(_at(0), 50));
-      final id = await e.svc.startAppWalk(_at(0));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
       await e.svc.useTravelEffect(_tailwind, _at(1));
-      await e.svc.finishAppWalk(id, _at(50));
+      await e.svc.endPaintTrail(id, _at(50), _at(50));
       await e.svc.sync(_at(51));
       expect((await e.uses()).single.km, closeTo(0.84, 1e-9));
       final progress = await e.progressKm(_at(51));
@@ -439,14 +442,14 @@ void main() {
       await e.give(40);
       await e.svc.buyItem(_tailwind, _at(0));
       e.source.records.add(_walk(_at(0), 50));
-      final id = await e.svc.startAppWalk(_at(0));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
       await e.svc.useTravelEffect(_tailwind, _at(1));
       await e.svc.sync(_at(25));
       expect(await e.svc.stopJourney(_at(25)), isTrue);
       final atStop = (await e.uses()).single.km;
       expect(atStop, closeTo(84 * 25 * 0.2 / 1000, 1e-9));
 
-      await e.svc.finishAppWalk(id, _at(50));
+      await e.svc.endPaintTrail(id, _at(50), _at(50));
       await e.svc.sync(_at(51));
       expect((await e.uses()).single.km, closeTo(atStop, 1e-9));
     });
@@ -469,13 +472,13 @@ void main() {
       final total = (await e.svc.snapshot(_at(0))).journey!.totalKm;
       await e.give(40);
       await e.svc.buyItem(_tailwind, _at(0));
-      // 실제 × (1 + 보너스 0.3 + 순풍 0.2) ≥ 전체, 실제 × 1.3 < 전체
-      final minutes = (total / 1.5 / 0.084).ceil();
-      expect(minutes * 0.084 * 1.3, lessThan(total));
+      // 실제 × (1 + 순풍 0.2) ≥ 전체, 실제 < 전체 (물감 길 보너스는 없다)
+      final minutes = (total / 1.2 / 0.084).ceil();
+      expect(minutes * 0.084, lessThan(total));
       e.source.records.add(_walk(_at(0), minutes));
-      final id = await e.svc.startAppWalk(_at(0));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
       await e.svc.useTravelEffect(_tailwind, _at(0));
-      await e.svc.finishAppWalk(id, _at(minutes));
+      await e.svc.endPaintTrail(id, _at(minutes), _at(minutes));
       await e.svc.sync(_at(minutes + 1));
 
       expect((await e.svc.snapshot(_at(minutes + 1))).journey, isNull);
@@ -663,13 +666,20 @@ void main() {
       expect((await e.svc.paintings()).single.frame, Frame.silver);
     });
 
-    test('걷기 기록·누적 거리·걸음·소품 거리·럭에 안 들어간다', () async {
+    test('걷기 기록·누적 거리(소품 거리)·걸음·물감 길 거리·럭에 안 들어간다', () async {
       final e = await _journey(60);
       e.source.records.add(_walk(_at(0), 60));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
+      await e.svc.endPaintTrail(id, _at(60), _at(60));
       await e.svc.sync(_at(60));
       final before = await e.day();
-      final coinsBefore = before.coins;
+      // 60분 × 84m = 5,040m 모두 물감 길 안: 럭 = 내림(5.04 × 10 + 5.04 × 10) = 100
+      expect(before.distanceM, closeTo(5040, 1e-9));
+      expect(before.trailM, closeTo(5040, 1e-9));
+      expect(before.coins, 100);
       final record = await e.svc.walkRecord(_at(0), _at(60));
+      expect(record.actualM, closeTo(5040, 1e-9));
+      expect(record.trailM, closeTo(5040, 1e-9));
       final snapBefore = await e.svc.snapshot(_at(60));
 
       await e.give(50);
@@ -681,14 +691,13 @@ void main() {
       expect(after.travelM, closeTo(before.travelM + 1000, 1e-9));
       expect(after.distanceM, before.distanceM);
       expect(after.steps, before.steps);
-      expect(after.walkTravelM, before.walkTravelM);
-      expect(after.coins, coinsBefore);
+      expect(after.trailM, before.trailM);
+      expect(after.coins, before.coins);
       final again = await e.svc.walkRecord(_at(0), _at(60));
-      expect(again.travelM, record.travelM);
+      expect((again.actualM, again.trailM), (record.actualM, record.trailM));
       final snap = await e.svc.snapshot(_at(60));
       expect(snap.totalKm, snapBefore.totalKm);
       expect(snap.totalSteps, snapBefore.totalSteps);
-      expect(snap.walkTravelKm, snapBefore.walkTravelKm);
       // 방명록 걸음 숫자 기회도 그대로
       expect(snap.guestbookTicket?.id, snapBefore.guestbookTicket?.id);
     });
@@ -815,9 +824,9 @@ void main() {
       await e.svc.chooseBoat('boat_cruise');
       await e.svc.useTravelEffect(_shortcut, _at(0));
       e.source.records.add(_walk(_at(0), 60));
-      final id = await e.svc.startAppWalk(_at(0));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
       await e.svc.useTravelEffect(_tailwind, _at(1));
-      await e.svc.finishAppWalk(id, _at(60));
+      await e.svc.endPaintTrail(id, _at(60), _at(60));
       await e.svc.sync(_at(65));
       final progress = await e.progressKm(_at(65));
       final uses = await e.uses();
@@ -848,9 +857,9 @@ void main() {
       await e.give(40);
       await e.svc.buyItem(_tailwind, _at(0));
       e.source.records.add(_walk(_at(0), 60));
-      final id = await e.svc.startAppWalk(_at(0));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
       await e.svc.useTravelEffect(_tailwind, _at(1));
-      await e.svc.finishAppWalk(id, _at(60));
+      await e.svc.endPaintTrail(id, _at(60), _at(60));
       await e.svc.sync(_at(65));
       final km = (await e.uses()).single.km;
       expect(km, closeTo(5.04 * 0.2, 1e-9));

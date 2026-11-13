@@ -155,7 +155,7 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> {
                         rules: rules,
                         nextKm: snap == null
                             ? null
-                            : kmToNextDistanceProp(props, snap.walkTravelKm),
+                            : kmToNextDistanceProp(props, snap.totalKm),
                       )
                     : const SizedBox(),
               ),

@@ -814,18 +814,18 @@ void main() {
       await end(tester, e);
     });
 
-    // 본격 걷기: 거리 두 줄(실제 / 여행 + 본격 걷기 ×1.3)과 럭 줄(×2 딱지)까지 모두 나오는 경우
-    _scaleCases('방금 마침 (본격 걷기·럭)', (tester, fit) async {
+    // 물감 길: 물감 방울·럭 줄까지 모두 나오는 경우
+    _scaleCases('방금 마침 (물감 길·럭)', (tester, fit) async {
       final e = UiEnv(appRules: _coinRules);
       await e.seed(tester, () async {
         await seedWalk(e);
-        final id = await e.svc.startAppWalk(t1);
-        await e.svc.finishAppWalk(id, t1.add(const Duration(minutes: 15)));
+        final id = await e.svc.startPaintTrail(t1, t1);
+        await e.svc.endPaintTrail(id, t1.add(const Duration(minutes: 15)), t1);
       });
       await openRecord(tester, e, fit, review: false);
-      expect(find.textContaining('(본격 걷기 ×1.3)'), findsOneWidget);
+      expect(find.text('물감 방울'), findsOneWidget);
       expect(find.textContaining(RegExp(r'^\+[0-9,]+ 럭$')), findsOneWidget);
-      fit.check('걷기 기록 (거리 두 줄·럭)');
+      fit.check('걷기 기록 (물감 방울·럭)');
       await end(tester, e);
     });
   });

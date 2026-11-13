@@ -74,36 +74,33 @@ void main() {
       expect(out.useRecomputedSessions, isTrue);
     });
 
-    group('본격 걷기 열 (보너스·상점·이동 거리·앱 걷기 이동 거리·럭)', () {
-      // 실제 4.2km + 보너스 1.26km + 상점 0.1km = 이동 5.56km, 앱 걷기 이동 5.46km, 럭 84
+    group('거리 열 (상점·여행 거리·물감 길 거리·럭)', () {
+      // 실제 4.2km + 상점 0.1km = 여행 4.3km, 물감 길 3km, 럭 72
       const restored = DayTotals(6000, 4200, 2,
-          bonusM: 1260, shopM: 100, travelM: 5560, walkTravelM: 5460, coins: 84);
+          shopM: 100, travelM: 4300, trailM: 3000, coins: 72);
 
       test('다시 계산한 값이 0이면 새 열도 복원값 그대로다', () {
         final out = guardRestoredDay(restored, const DayTotals(0, 0, 0));
         final t = out.totals;
-        expect((t.bonusM, t.shopM, t.travelM, t.walkTravelM, t.coins),
-            (1260, 100, 5560, 5460, 84));
+        expect((t.shopM, t.travelM, t.trailM, t.coins), (100, 4300, 3000, 72));
         expect(out.useRecomputedSessions, isFalse);
       });
 
       test('열마다 큰 쪽을 쓴다 (줄어들지 않는다)', () {
-        // 보너스·럭은 줄고(창이 짧아짐), 이동 거리·앱 걷기 이동 거리는 늘었다
+        // 물감 길·럭은 줄고(창이 짧아짐), 상점·여행 거리는 늘었다
         final out = guardRestoredDay(
           restored,
-          const DayTotals(6000, 4200, 2,
-              bonusM: 300, shopM: 200, travelM: 6000, walkTravelM: 5000, coins: 90),
+          const DayTotals(6000, 4200, 2, shopM: 200, travelM: 4400, trailM: 1000, coins: 60),
         );
         final t = out.totals;
-        expect((t.bonusM, t.shopM, t.travelM, t.walkTravelM, t.coins),
-            (1260, 200, 6000, 5460, 90));
+        expect((t.shopM, t.travelM, t.trailM, t.coins), (200, 4400, 3000, 72));
         expect(out.useRecomputedSessions, isTrue);
       });
 
       test('새 열을 안 적으면 0이라 옛 값은 그대로 지킨다 (열이 생기기 전 값과 같은 모양)', () {
         final out = guardRestoredDay(_restored, const DayTotals(6000, 4200, 2));
         final t = out.totals;
-        expect((t.bonusM, t.shopM, t.travelM, t.walkTravelM, t.coins), (0, 0, 0, 0, 0));
+        expect((t.shopM, t.travelM, t.trailM, t.coins), (0, 0, 0, 0));
       });
     });
   });

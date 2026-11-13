@@ -66,7 +66,8 @@ extension ShopSync on SyncService {
 
   /// 보관한 여행 효과를 하나 쓴다. 쓸 수 없으면 [ShopBlocked]를 던지고 효과를 줄이지 않는다.
   /// 먼저 동기화한다 (이미 도착했는데 효과를 버리지 않게). 지름길은 쓰는 순간 오늘 남은 상한에서 잘라 정하고,
-  /// 순풍은 지금 열린 걷는 중에 묶어 두고 [_shopMetersByDay]가 다시 계산한다.
+  /// 순풍은 지금 열린 물감 길에 묶어 두고(그 물감 길이 끝날 때까지 실제 거리 × 비율) [_shopMetersByDay]가
+  /// 다시 계산한다.
   /// 쓴 뒤에 다시 동기화해서 효과로 도착했으면 바로 도착을 처리한다. 뒤의 동기화가 실패하면 예외가 나가지만
   /// 효과는 이미 쓴 것이고 도착은 다음 동기화가 처리한다
   Future<void> useTravelEffect(String itemId, DateTime now) async {
@@ -80,7 +81,7 @@ extension ShopSync on SyncService {
       final usedKm = uses.fold(0.0, (sum, u) => sum + u.km);
       final capKm = rules.shopDailyEffectCapKm;
       final active = await _activeJourney();
-      final walk = await (db.select(db.appWalks)
+      final walk = await (db.select(db.paintTrails)
             ..where((t) => t.endUtc.isNull())
             ..orderBy([(t) => OrderingTerm.desc(t.startUtc)])
             ..limit(1))
@@ -101,7 +102,7 @@ extension ShopSync on SyncService {
             itemId: item.id,
             day: today,
             journeyId: active!.id,
-            appWalkId: Value(instant ? null : walk!.id),
+            paintTrailId: Value(instant ? null : walk!.id),
             km: Value(instant ? clipEffectKm(effect.km ?? 0, usedKm: usedKm, capKm: capKm) : 0.0),
           ));
       await _setHeld(item.id, held - 1);
@@ -221,18 +222,18 @@ extension ShopSync on SyncService {
     return {for (final d in days) d: usedKm[d]! * 1000};
   }
 
-  /// 순풍이 더하고 싶은 km: 묶인 걷는 중 창이 그 여정과 겹친 동안의 실제 거리 × [ratio].
-  /// 창이나 여정 기록이 없으면 적힌 값 그대로
+  /// 순풍이 더하고 싶은 km: 묶인 물감 길이 그 여정과 겹친 동안의 실제 거리 × [ratio].
+  /// 물감 길이나 여정 기록이 없으면 적힌 값 그대로
   Future<double> _tailwindWantKm(
     ShopUseRow use,
     double ratio,
     List<GaitMinute> gaits,
     DateTime now,
   ) async {
-    final walkId = use.appWalkId;
+    final walkId = use.paintTrailId;
     if (walkId == null) return use.km;
     final walk =
-        await (db.select(db.appWalks)..where((t) => t.id.equals(walkId))).getSingleOrNull();
+        await (db.select(db.paintTrails)..where((t) => t.id.equals(walkId))).getSingleOrNull();
     final journey = await (db.select(db.journeys)..where((t) => t.id.equals(use.journeyId)))
         .getSingleOrNull();
     if (walk == null || journey == null) return use.km;

@@ -1,6 +1,7 @@
 import 'package:doobal/app/background_sync.dart';
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/domain/paint_trail.dart';
 import 'package:doobal/data/notifier.dart';
 import 'package:doobal/data/step_source.dart';
 import 'package:doobal/domain/bucket.dart' show StepRecord;
@@ -51,16 +52,16 @@ void main() {
     await tester.runAsync(e.db.close);
   });
 
-  testWidgets('걷는 중에 앱이 꺼진 채면 그 앱 걷기를 닫고 동기화한다 (꺼진 뒤 걸음엔 보너스가 없다)',
+  testWidgets('물감 길 중에 앱이 꺼진 채면 그 물감 길을 닫고 동기화한다 (꺼진 뒤 걸음은 물감 길이 아니다)',
       (tester) async {
     final e = UiEnv();
     await e.seed(tester);
     final svc = e.svc;
     await tester.runAsync(() async {
-      // 한국 9시에 출발하기, 9시 10분까지 살아 있다가 꺼졌다. 그 뒤 40분 동안 걸었다
+      // 한국 9시에 물감 길이 열렸고, 9시 10분까지 살아 있다가 꺼졌다. 그 뒤 40분 동안 걸었다
       await e.db
-          .into(e.db.appWalks)
-          .insert(AppWalksCompanion.insert(startUtc: t0.millisecondsSinceEpoch));
+          .into(e.db.paintTrails)
+          .insert(PaintTrailsCompanion.insert(startUtc: t0.millisecondsSinceEpoch));
       await svc.saveAlive(t0.add(const Duration(minutes: 10)));
     });
     e.source.records.add(walkRecord(t0.add(const Duration(minutes: 15)), 40, 100));
@@ -68,11 +69,11 @@ void main() {
     addTearDown(c.dispose);
 
     await tester.runAsync(() => runBackgroundSync(c, e.now));
-    final walk = await tester.runAsync(() => e.db.select(e.db.appWalks).getSingle());
+    final walk = await tester.runAsync(() => e.db.select(e.db.paintTrails).getSingle());
     expect(walk!.endUtc, t0.add(const Duration(minutes: 10)).millisecondsSinceEpoch);
-    expect(walk.endReason, AppWalkEnd.appEnded);
+    expect(walk.endReason, PaintTrailEnd.appEnded);
     final day = await tester.runAsync(() => e.db.select(e.db.daySummaries).getSingle());
-    expect((day!.steps, day.bonusM), (4000, 0));
+    expect((day!.steps, day.trailM), (4000, 0));
     await tester.runAsync(e.db.close);
   });
 

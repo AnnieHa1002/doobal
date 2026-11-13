@@ -158,8 +158,6 @@ class Rules {
     required this.liveCadenceWindowSec,
     required this.liveNoticeUpdateSec,
     required this.lapKm,
-    required this.bonusTravelMultiplier,
-    required this.bonusCoinMultiplier,
     required this.paintTrailStartSteps,
     required this.paintTrailStartWithinSec,
     required this.paintTrailIdleEndMin,
@@ -314,10 +312,6 @@ class Rules {
 
   /// 걷기 기록의 랩 길이(km) (config record.lapKm)
   final double lapKm;
-
-  /// 본격 걷기 보너스 (config bonus, 16장 11/13에 없앰). 다음 커밋에서 읽지 않는다
-  final double bonusTravelMultiplier;
-  final double bonusCoinMultiplier;
 
   /// 물감 길 시작 (config paintTrail.startMinSteps): 앱이 앞에 있을 때 [paintTrailStartWithinSec]초 안에
   /// 센서 걸음이 [paintTrailStartSteps]보 늘면 시작한다 (가안 60초 10보)
@@ -509,7 +503,6 @@ class Rules {
     final sync = j['sync'] as Map<String, dynamic>;
     final live = j['live'] as Map<String, dynamic>;
     final record = j['record'] as Map<String, dynamic>;
-    final bonus = j['bonus'] as Map<String, dynamic>;
     final paintTrail = j['paintTrail'] as Map<String, dynamic>;
     final trailStart = paintTrail['startMinSteps'] as Map<String, dynamic>;
     final paintDrop = j['paintDrop'] as Map<String, dynamic>;
@@ -578,16 +571,6 @@ class Rules {
     // 랩 길이가 0 이하면 랩을 끊을 수 없다
     if (_d(record['lapKm']) <= 0) throw const FormatException('record.lapKm는 0보다 커야 한다');
 
-    // 보너스는 늘려 주는 것이라 1배 미만이면 거리·럭이 줄어든다. 구현한 적용 범위는 하나뿐이다
-    if (bonus['appliesTo'] != 'qualifiedSession') {
-      throw FormatException('bonus.appliesTo를 모른다: ${bonus['appliesTo']}');
-    }
-    if (_d(bonus['travelMultiplier']) < 1) {
-      throw const FormatException('bonus.travelMultiplier는 1 이상이어야 한다');
-    }
-    if (_d(bonus['coinMultiplier']) < 1) {
-      throw const FormatException('bonus.coinMultiplier는 1 이상이어야 한다');
-    }
     if (_dn(coins['perKm']) case final perKm? when perKm < 0) {
       throw const FormatException('coins.perKm는 0 이상이거나 null이어야 한다');
     }
@@ -636,8 +619,6 @@ class Rules {
       liveCadenceWindowSec: live['cadenceWindowSec'] as int,
       liveNoticeUpdateSec: live['noticeUpdateSec'] as int,
       lapKm: _d(record['lapKm']),
-      bonusTravelMultiplier: _d(bonus['travelMultiplier']),
-      bonusCoinMultiplier: _d(bonus['coinMultiplier']),
       paintTrailStartSteps: trailStart['steps'] as int,
       paintTrailStartWithinSec: trailStart['withinSec'] as int,
       paintTrailIdleEndMin: (paintTrail['idleEndMin'] as Map)['min'] as int,

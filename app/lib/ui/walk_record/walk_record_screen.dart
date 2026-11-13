@@ -6,16 +6,15 @@ import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/companion.dart';
 import '../../domain/companion_engine.dart' show StoryRef;
-import '../../domain/focus_walk.dart';
 import '../../domain/gait.dart';
 import '../../domain/laps.dart';
 import '../../domain/milestones.dart';
+import '../../domain/paint_trail.dart';
 import '../../domain/rules.dart';
 import '../../domain/time_kst.dart';
 import '../../domain/walk_record.dart';
 import '../common/app_text.dart';
 import '../common/big_number.dart';
-import '../common/focus_badge.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
 import '../common/ink_bar.dart';
@@ -199,40 +198,18 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
     return rows;
   }
 
-  /// 큰 숫자 아래 거리 줄 (UI 명세 4장): `실제 2.1km` / `여행 2.6km (본격 걷기 ×1.3)`.
-  /// 여정은 여행 거리로, 액자는 실제 거리로 센다. 본격 걷기 구간이 없으면(보너스 0) 여행 거리가
-  /// 실제와 같아서 실제 줄만 둔다. 그 아래 `+n 럭`(본격 걷기 분이 있으면 ×2 딱지, 11/3 숫자 뒤 단위)은 럭 단가
-  /// (coins.perKm)가 정해진 뒤에만 나온다
-  List<Widget> _distanceLines(Rules rules, WalkRecord record) {
-    final focused = record.bonusM > 0;
+  /// 물감 방울·럭 두 줄 (캔버스 3-3, 점선 아래). 방울 = 내림(물감 길 거리 ÷ paintDrop.spacingM),
+  /// 럭 = 내림(실제 km × coins.perKm + 물감 길 km × paintDrop.coinsPerKm). 럭 단가가 없으면 럭 줄은 없다
+  List<Widget> _dropLines(Rules rules, WalkRecord record) {
     final coins = rules.coinsPerKm == null
         ? null
-        : walkCoins(actualM: record.actualM, bonusActualM: record.bonusActualM, rules: rules);
+        : trailCoins(actualM: record.actualM, trailM: record.trailM, rules: rules);
     return [
-      const SizedBox(height: 8),
-      Text('실제 ${formatKmShort(record.actualM)}',
-          key: const ValueKey('line-actual'), style: AppText.bodySub),
-      if (focused)
-        Text(
-          '여행 ${formatKmShort(record.travelM)} (본격 걷기 ${focusBadgeText(rules)})',
-          key: const ValueKey('line-travel'),
-          style: AppText.bodySub.copyWith(color: Palette.moss),
-        ),
+      const SizedBox(height: 12),
+      _ValueRow('물감 방울', '${formatInt(paintDrops(record.trailM, rules))}개',
+          key: const ValueKey('line-drops')),
       if (coins != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 6,
-            children: [
-              Text('+${formatInt(coins)} 럭',
-                  key: const ValueKey('line-coins'),
-                  style: context.display(15)),
-              if (record.bonusActualM > 0)
-                FocusBadge('×${formatMultiplier(rules.bonusCoinMultiplier)}'),
-            ],
-          ),
-        ),
+        _ValueRow('럭', '+${formatInt(coins)} 럭', key: const ValueKey('line-coins')),
     ];
   }
 
@@ -275,7 +252,6 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
             _Big(BigNumber(formatDuration(widget.end.difference(widget.start))), '시간'),
           ],
         ),
-        ..._distanceLines(rules, record),
         const SizedBox(height: 16),
         InkBar(segments: [
           BarSegment(1 - run, Palette.moss),
@@ -297,6 +273,7 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
           const SizedBox(height: 4),
           ..._lapRows(record.laps),
         ],
+        ..._dropLines(rules, record),
         if (_events.isNotEmpty) ..._eventLines(rules),
         const SizedBox(height: 16),
         _SessionLine(
@@ -477,6 +454,27 @@ class _LapRow extends StatelessWidget {
         children: [
           Expanded(child: Text(label, style: AppText.bodySub)),
           Flexible(child: Text(value, style: AppText.body, textAlign: TextAlign.end)),
+        ],
+      ),
+    );
+  }
+}
+
+/// 이름은 왼쪽(흐린 글), 값은 오른쪽(굵게) 한 줄 (캔버스 3-3 물감 방울·럭)
+class _ValueRow extends StatelessWidget {
+  const _ValueRow(this.label, this.value, {super.key});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: AppText.bodySub)),
+          Text(value, style: context.display(15)),
         ],
       ),
     );

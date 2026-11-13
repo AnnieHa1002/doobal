@@ -63,6 +63,10 @@ class PaintTrailTracker {
   final _recent = <SensorGain>[];
   DateTime? _start;
   DateTime? _lastStep;
+  var _lastStartSteps = 0;
+
+  /// 마지막으로 물감 길을 연 걸음들의 합 (시작 판정 창 안에서 늘어난 걸음)
+  int get lastStartSteps => _lastStartSteps;
 
   /// 열린 물감 길이 있는가
   bool get active => _start != null;
@@ -100,6 +104,7 @@ class PaintTrailTracker {
     if (sum < rules.paintTrailStartSteps) return null;
     final start = minuteStart(_recent.first.at);
     _start = start;
+    _lastStartSteps = sum;
     _lastStep = g.at;
     _recent.clear();
     return start;

@@ -239,6 +239,17 @@ final appForegroundProvider = NotifierProvider<AppForeground, bool>(
   AppForeground.new,
 );
 
+/// 앱을 켠 직후 앞 실행의 끝나지 않은 물감 길을 닫았는가 (AutoSync가 켠다). 물감 길 판정은 이 뒤에 시작한다
+/// (닫기 전에 새 물감 길을 열면 앞 것과 겹친다)
+class TrailsReady extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool ready) => state = ready;
+}
+
+final trailsReadyProvider = NotifierProvider<TrailsReady, bool>(TrailsReady.new);
+
 /// 걷는 중 화면(과 걷다 도착해서 열린 도착 화면)이 몇 개 떠 있는가. 0보다 큰 동안 도착은 그 화면들이
 /// 직접 다룬다 (걷기를 마치고 도착 화면으로 바꾸고, 닫으면 걷기 기록). AutoSync는 그동안 도착 화면을
 /// 따로 띄우지 않고 다 닫힌 뒤에 새로 읽어 다시 본다. 걷는 중 → 도착으로 바뀔 때 잠깐 겹쳐서 개수로 센다

@@ -102,9 +102,8 @@ Future<void> _walked(AppDb db, double km) =>
           steps: 1000,
           distanceM: km * 1000,
           countedSessions: 0,
-          // 거리 소품의 기준은 앱 걷기 이동 거리다
+          // 거리 소품의 기준은 모든 걸음의 실제 거리다 (16장 11/13)
           travelM: Value(km * 1000),
-          walkTravelM: Value(km * 1000),
         ));
 
 /// 소품 칸 안의 상태 글자 (입는 중 / 가짐)
@@ -749,7 +748,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('소품 칸 위에 다음 거리 소품까지 남은 본격 걷기 거리 한 줄 (무엇인지는 숨김)', (tester) async {
+    testWidgets('소품 칸 위에 다음 거리 소품까지 남은 거리 한 줄 (모든 걸음) (무엇인지는 숨김)', (tester) async {
       final e = UiEnv();
       // 이동 거리 87km: 다음 거리 소품은 100km(등산화)라 13km
       await e.seed(tester, () => _walked(e.db, 87));
@@ -760,7 +759,7 @@ void main() {
       expect(_key('next-prop'), findsNothing);
       for (final slot in ['hat', 'cloth', 'pet']) {
         await _goTab(tester, slot);
-        expect(find.text('다음 소품까지 본격 걷기 13km'), findsOneWidget, reason: slot);
+        expect(find.text('다음 소품까지 13km'), findsOneWidget, reason: slot);
         // 줄은 칸들 위에 있다
         expect(tester.getBottomLeft(_key('next-prop')).dy,
             lessThan(tester.getTopLeft(find.byType(ItemCell).first).dy));
