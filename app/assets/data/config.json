@@ -1,6 +1,6 @@
 {
- "version": 19,
- "changes": "v19 (11/13 개발 기획, R34 정령_v33_개발인계): character.rive.bodyBox를 디자인 기획 실측으로(머리~발바닥 y 71~559·489px, 발 디딤점 (244,559) = 아트보드 48.7%·93.2%, 아트보드 높이 = 몸 키 × 1.227). v18 (11/13 개발 기획, 16장 11/13 화면 세부 4건): hud.eventCardSec 7→8, ui.orientation(가로는 걷는 중만), ui.newDot(배낭·동행·행상 수레 새 상품, 노트 없음), character.rive.customizePreview(밀어서 정면·옆·뒤, 표정 버튼 없음). v17 (11/13 개발 기획, v33 납품 대조): character.rive pending false·fileId·designApproval pending·exprDraft 0·bodyBox(몸 키 실측 489px)·screenScale 0.703/0.530(추정)·fallback crop 44/252, character.float pending false. v16 (11/13 개발 기획, 16장 11/13 Annie): coins.format.buyQuestion '구매하시겠습니까?'(상품 이름·값 없이). v15 (11/13 개발 기획, 물감 길·하루 카드): bonus 배수 1.0(없앰, 키는 코드 때문에 남김), paintTrail·paintDrop·report 새로, events.distanceBasis paintTrailActual, props.distanceBasis actualAll. v14 (11/13 개발 기획): character.rive 새로(spirit_v33.riv·Spirit·WardrobeController·WardrobeColors, 자세 7, 화면별 자세, 쉼터 떠 있기↔앉기 20~40초·밤 잠들기, 트리거 6, 누름 가안), anim mode rive, float는 키 규칙만. v13 (11/13 개발 기획): album.bigView share false·saveWith gal(공유 보류). 글꼴 Noto Sans KR은 PR #2가 ui.font를 바꿈. v12 (11/10 개발 기획): character.facing fall·sit 삭제(둥둥 정령), character.float 새로(정령 키 = 동행 × 0.75·떠 있는 높이 0.15·화면 키 가안 344/259px, T5 전까지 pending), anim.file spirit_float.json, album.bigView 새로(그림 크게 보기 2배·저장 토스트 1.5초). v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
+ "version": 20,
+ "changes": "v20 (11/13 개발 기획, 꾸밈효과_개발인계): effects 새로(입자 5종 개수·속도·크기·수명 가안, 공통 제외 구역, 밤 그리기 순서, 반딧불 빛, 동작 줄이기, 물감 4색). v19 (11/13 개발 기획, R34 정령_v33_개발인계): character.rive.bodyBox를 디자인 기획 실측으로(머리~발바닥 y 71~559·489px, 발 디딤점 (244,559) = 아트보드 48.7%·93.2%, 아트보드 높이 = 몸 키 × 1.227). v18 (11/13 개발 기획, 16장 11/13 화면 세부 4건): hud.eventCardSec 7→8, ui.orientation(가로는 걷는 중만), ui.newDot(배낭·동행·행상 수레 새 상품, 노트 없음), character.rive.customizePreview(밀어서 정면·옆·뒤, 표정 버튼 없음). v17 (11/13 개발 기획, v33 납품 대조): character.rive pending false·fileId·designApproval pending·exprDraft 0·bodyBox(몸 키 실측 489px)·screenScale 0.703/0.530(추정)·fallback crop 44/252, character.float pending false. v16 (11/13 개발 기획, 16장 11/13 Annie): coins.format.buyQuestion '구매하시겠습니까?'(상품 이름·값 없이). v15 (11/13 개발 기획, 물감 길·하루 카드): bonus 배수 1.0(없앰, 키는 코드 때문에 남김), paintTrail·paintDrop·report 새로, events.distanceBasis paintTrailActual, props.distanceBasis actualAll. v14 (11/13 개발 기획): character.rive 새로(spirit_v33.riv·Spirit·WardrobeController·WardrobeColors, 자세 7, 화면별 자세, 쉼터 떠 있기↔앉기 20~40초·밤 잠들기, 트리거 6, 누름 가안), anim mode rive, float는 키 규칙만. v13 (11/13 개발 기획): album.bigView share false·saveWith gal(공유 보류). 글꼴 Noto Sans KR은 PR #2가 ui.font를 바꿈. v12 (11/10 개발 기획): character.facing fall·sit 삭제(둥둥 정령), character.float 새로(정령 키 = 동행 × 0.75·떠 있는 높이 0.15·화면 키 가안 344/259px, T5 전까지 pending), anim.file spirit_float.json, album.bigView 새로(그림 크게 보기 2배·저장 토스트 1.5초). v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
  "gait": {
   "walkMaxSpm": 130,
   "runMinSpm": 140,
@@ -807,5 +807,168 @@
     1350
    ]
   }
+ },
+ "effects": {
+  "approx": true,
+  "screens": [
+   "rest",
+   "walking"
+  ],
+  "items": {
+   "effect_01": {
+    "key": "leaf",
+    "sprites": [
+     "fx_leaf_a_v01",
+     "fx_leaf_b_v01"
+    ],
+    "count": [
+     3,
+     5
+    ],
+    "spawn": {
+     "from": "aboveHead",
+     "widthOfBody": 1.6
+    },
+    "fallPtPerSec": 20,
+    "swayPt": 12,
+    "spinDeg": 40,
+    "sizePt": [
+     14,
+     20
+    ],
+    "lifeSec": [
+     4,
+     6
+    ]
+   },
+   "effect_02": {
+    "key": "rain",
+    "sprites": [
+     "fx_raindrop_v01"
+    ],
+    "puddle": "fx_puddle_v01",
+    "count": [
+     8,
+     12
+    ],
+    "spawn": {
+     "from": "aboveBody",
+     "widthOfBody": 1.4
+    },
+    "fallPtPerSec": 90,
+    "endAt": "feet",
+    "sizePt": [
+     8,
+     12
+    ],
+    "lifeSec": 1.2
+   },
+   "effect_03": {
+    "key": "sparkle",
+    "sprites": [
+     "fx_star_a_v01",
+     "fx_star_b_v01"
+    ],
+    "count": [
+     4,
+     6
+    ],
+    "spawn": {
+     "from": "ring",
+     "radiusOfBody": 0.6
+    },
+    "scale": [
+     0,
+     1,
+     0
+    ],
+    "sizePt": [
+     10,
+     16
+    ],
+    "lifeSec": 0.8
+   },
+   "effect_04": {
+    "key": "paint",
+    "sprites": [
+     "fx_paintdrop_a_v01",
+     "fx_paintdrop_b_v01"
+    ],
+    "tint": "multiplyRgb",
+    "colors": [
+     "#C9775A",
+     "#BCD9E8",
+     "#CDE0AC",
+     "#D3C6E6"
+    ],
+    "count": [
+     3,
+     4
+    ],
+    "spawn": {
+     "from": "handsSides"
+    },
+    "path": "arcUp",
+    "sizePt": [
+     10,
+     14
+    ],
+    "lifeSec": 1.5
+   },
+   "effect_05": {
+    "key": "firefly",
+    "sprites": [
+     "fx_firefly_v01"
+    ],
+    "count": [
+     4,
+     6
+    ],
+    "spawn": {
+     "from": "aroundBody"
+    },
+    "speedPtPerSec": 8,
+    "turnEverySec": 2,
+    "brightness": [
+     0.4,
+     1.0
+    ],
+    "sizePt": [
+     6,
+     8
+    ],
+    "lifeSec": null,
+    "glow": {
+     "radiusPt": 60,
+     "centerAlpha": 0.35,
+     "colors": [
+      "#FFFFFF",
+      "#FFF6C8"
+     ],
+     "blend": "plus",
+     "followBrightness": true
+    }
+   }
+  },
+  "exclude": {
+   "faceLowerRatio": 0.6,
+   "screenTopPt": 120,
+   "screenSidePt": 12,
+   "note": "머리 아래쪽 60%(얼굴)·화면 위 120pt·좌우 12pt에는 입자를 두지 않음. 얼굴에 닿을 입자는 잘라 그리지 않고 아예 안 그림"
+  },
+  "nightOrder": [
+   "background",
+   "spirit",
+   "nightTint",
+   "fireflyGlow",
+   "particles"
+  ],
+  "particlesIgnoreNight": true,
+  "reducedMotion": {
+   "still": true,
+   "glowAlpha": 0.25,
+   "note": "동작 줄이기: 입자는 정지 그림 1장, 반딧불 빛은 깜빡이지 않고 알파 0.25"
+  },
+  "note": "디자인기획/꾸밈효과_개발인계(11/13 Annie 밤 규칙)·Drive effects_v01_검토_20261113 motion_draft.json(가안). 그림은 clean/(입자 9·아이콘 5, 검수 전). 앱 CustomPainter(R2, 개발). 입자는 밤 필터를 받지 않고 낮과 같은 색, 반딧불 빛은 그림 없이 RadialGradient(흰~연노랑, 가운데 0.35 → 0)를 더하기로 겹쳐 근처 땅·정령을 밝힘. 물감 입자는 회색 그림에 색을 곱함. 키 id는 props effect 슬롯 id와 같음"
  }
 }

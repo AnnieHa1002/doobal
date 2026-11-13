@@ -246,6 +246,8 @@ for it in shop['items']:
         err(f"shop {it['id']}: desc에 {ef['km']:g}km가 없음")
     if ef.get('ratio') is not None and f"{round(ef['ratio'] * 100)}%" not in it.get('desc', ''):
         err(f"shop {it['id']}: desc에 {round(ef['ratio'] * 100)}%가 없음")
+fx_ids = {x['id'] for x in props_doc['props'] if x['slot'] == 'effect' and x['status'] == 'mvp'}
+if set(config.get('effects', {}).get('items', {})) != fx_ids: err(f"config effects.items {sorted(config.get('effects',{}).get('items',{}))} ≠ props 효과 {sorted(fx_ids)}")
 art_doc = load('scene_art.json')
 for o in ('portrait', 'landscape'):
     if art_doc[o].get('figureHeight') != config['character']['canvas']['screenHeightPx'][o]:
