@@ -290,7 +290,7 @@ def build_props():
     assert sorted(x['unlock']['km'] for x in mvp if x['unlock']['kind'] == 'distance') == [10, 25, 50, 100, 150, 200, 300, 500, 700, 1000]
     assert sum(x['status'] == 'pending' for x in props) == 12
     assert all('일체형' not in x['name'] for x in props), '화면 글 원칙: 이름에 설명을 넣지 않음'
-    dump('props.json', {'version': 8, 'slots': SLOTS, 'rive': {'viewModel': 'WardrobeColors', 'riveVerified': True, 'note': '계약 v0.5 5장. 11/13 v33 색 속성 38개 이름·슬롯별 순서 대조 끝(그림 확인은 개발 T5). choice 0 = 안 입음, 색 소품은 같은 번호 + 그 색 hex를 color 속성에. 효과는 Rive 밖(앱 입자)'},
+    dump('props.json', {'version': 8, 'slots': SLOTS, 'rive': {'viewModel': 'WardrobeColors', 'riveVerified': True, 'unusedChoices': {'hatChoice': [5, 6]}, 'note': '계약 v0.7 5장. 11/13 v33 색 속성 38개 이름·슬롯별 순서 대조 끝, 11/14 v36도 입력 같음(그림 확인은 개발 T5). hatChoice 5 새싹·6 꽃은 riv에만 있고 MVP에서 안 씀(16장 11/14, 앱은 0~4만). choice 0 = 안 입음, 색 소품은 같은 번호 + 그 색 hex를 color 속성에. 효과는 Rive 밖(앱 입자)'},
                         'material': {'neutralReference': 180, 'formula': 'rgb = clamp(neutral.rgb × hex.rgb ÷ 180) 위에 고정 무늬 층',
                                      'source': 'Codex 기본 소품 v07 recolor/materials_v07.json'},
                         'colorVariants': {'price': COLOR_VARIANT_PRICE, 'perBase': 3, 'bases': list(MATERIAL),

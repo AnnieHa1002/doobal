@@ -246,6 +246,12 @@ for it in shop['items']:
         err(f"shop {it['id']}: desc에 {ef['km']:g}km가 없음")
     if ef.get('ratio') is not None and f"{round(ef['ratio'] * 100)}%" not in it.get('desc', ''):
         err(f"shop {it['id']}: desc에 {round(ef['ratio'] * 100)}%가 없음")
+unused = props_doc.get('rive', {}).get('unusedChoices', {})
+for x in riv_props:
+    if x['rive']['n'] in unused.get(x['rive']['choice'], []):
+        err(f"props {x['id']}: Rive {x['rive']['choice']} {x['rive']['n']}은 쓰지 않는 번호(16장 11/14 새싹·꽃)")
+if unused.get('hatChoice') != config['character']['rive'].get('unusedChoices', {}).get('hatChoice'):
+    err("props rive.unusedChoices ≠ config character.rive.unusedChoices")
 fx_ids = {x['id'] for x in props_doc['props'] if x['slot'] == 'effect' and x['status'] == 'mvp'}
 if set(config.get('effects', {}).get('items', {})) != fx_ids: err(f"config effects.items {sorted(config.get('effects',{}).get('items',{}))} ≠ props 효과 {sorted(fx_ids)}")
 art_doc = load('scene_art.json')
