@@ -33,6 +33,21 @@ class DayGroup {
   final List<WalkSession> sessions;
 }
 
+/// 최신순으로 정렬된 것 [newestFirst]를 [startOf] 시각의 한국 날짜별로 묶는다 (노트 걷기 기록의 물감 길).
+/// 묶음과 묶음 안 모두 최신순 그대로
+List<({String day, List<T> items})> groupByKstDay<T>(
+  List<T> newestFirst,
+  DateTime Function(T) startOf,
+) {
+  final groups = <({String day, List<T> items})>[];
+  for (final x in newestFirst) {
+    final day = kstDayKey(startOf(x));
+    if (groups.isEmpty || groups.last.day != day) groups.add((day: day, items: <T>[]));
+    groups.last.items.add(x);
+  }
+  return groups;
+}
+
 /// 최신순으로 정렬된 걷기를 시작 시각의 한국 날짜별로 묶는다. 묶음과 묶음 안 모두 최신순 그대로
 List<DayGroup> groupSessionsByDay(List<WalkSession> newestFirst) {
   final groups = <DayGroup>[];

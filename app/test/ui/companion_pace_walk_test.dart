@@ -10,7 +10,6 @@ import 'package:doobal/ui/companion/companion_walk_layer.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/scene/doobal_character.dart';
 import 'package:doobal/ui/scene/scene_view.dart';
-import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
@@ -140,8 +139,7 @@ void main() {
       });
       await pumpDoobal(tester, e, const DoobalApp());
       await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
-      await tester.tap(find.text('출발하기'));
-      await transition(tester);
+      await startTrailNow(tester);
       await settle(tester, () => _mate.evaluate().isNotEmpty, tries: 16);
       expect(find.byType(WalkingScreen), findsOneWidget);
       e.live.push(1000);
@@ -190,12 +188,8 @@ void main() {
       await frames(tester, 8);
       expect(_mate, findsNothing);
 
-      // 걷기를 마친다 → 걷기 기록 → 쉼터로: 불 옆은 비었다가, 늦은 도착 최대 시간이 지나면 앉는다
-      await tester.tap(find.text('걷기 마치기'));
-      await transition(tester);
-      await settle(tester, () => find.text('쉼터로').evaluate().isNotEmpty);
-      expect(find.byType(WalkRecordScreen), findsOneWidget);
-      await tester.tap(find.text('쉼터로'));
+      // 쉼터 아이콘으로 쉼터에 돌아간다: 불 옆은 비었다가, 늦은 도착 최대 시간이 지나면 앉는다
+      await tester.tap(find.byKey(const Key('walk-rest')));
       await transition(tester);
       await settle(tester, () => find.byType(RestScreen).evaluate().isNotEmpty);
       final entry = find.byKey(const ValueKey('camp-object-companion'));
@@ -217,10 +211,7 @@ void main() {
       await frames(tester, 5);
       expect(tester.getCenter(_mate).dx, closeTo(home, 0.5));
 
-      await tester.tap(find.text('걷기 마치기'));
-      await transition(tester);
-      await settle(tester, () => find.text('쉼터로').evaluate().isNotEmpty);
-      await tester.tap(find.text('쉼터로'));
+      await tester.tap(find.byKey(const Key('walk-rest')));
       await transition(tester);
       final entry = find.byKey(const ValueKey('camp-object-companion'));
       await settle(tester, () => entry.evaluate().isNotEmpty);
@@ -238,8 +229,7 @@ void main() {
       });
       await pumpDoobal(tester, e, const DoobalApp());
       await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
-      await tester.tap(find.text('출발하기'));
-      await transition(tester);
+      await startTrailNow(tester);
       await settle(tester, () => false, tries: 8);
       expect(find.byType(WalkingScreen), findsOneWidget);
       expect(_mate, findsNothing);

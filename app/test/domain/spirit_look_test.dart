@@ -12,42 +12,54 @@ import 'helpers.dart';
 void main() {
   group('spiritLookOf', () {
     test('첫 모습은 Rive 기본 얼굴에 기본 가방 큰 붓, 기본 옷 여행복 (16장 11/8)', () {
-      expect(spiritLookOf(Look.initial), SpiritLook.base.copyWith(bag: 1, outfit: 1));
+      final initial=spiritLookOf(Look.initial);
+      expect((initial.bag,initial.outfit),(1,1));
+      expect(initial.choices,{'hat':1,'face':0,'cloth':4,'shoe':4,'hand':0,'bag':1,'pet':1,'float':0});
+      expect(initial.colors.length,37);
       expect(
           (SpiritLook.base.eye, SpiritLook.base.brow, SpiritLook.base.nose, SpiritLook.base.mouth),
-          (0, 1, 6, 1));
+          (0, 1, 6, 6));
       expect(SpiritLook.base.bodyArgb, isNull);
     });
 
     test('얼굴 id를 Rive 값으로 바꾼다', () {
       final s = spiritLookOf(
-          Look.initial.copyWith(eyes: 'cat', brows: 'none', nose: 'none', mouth: 'smirk'));
-      expect((s.eye, s.brow, s.nose, s.mouth), (4, 0, 3, 5));
+          Look.initial.copyWith(eyes: 'e3', brows: 'none', nose: 'none', mouth: 'm6'));
+      expect((s.eye, s.brow, s.nose, s.mouth), (2, 0, 7, 5));
     });
 
     test('코는 없음=3·고리=0 순서로 Rive 값을 바꾼다 (빠짐없이 한 번씩)', () {
       final styles = [
         for (final id in noseParts.keys) spiritLookOf(Look.initial.copyWith(nose: id)).nose,
       ];
-      expect(styles, [3, 0, 1, 2, 4, 5, 6]);
+      expect(styles, [7, 0, 1, 2, 3, 4, 5, 6]);
       expect(styles.toSet().length, noseParts.length);
     });
 
-    test('const 표는 palette.json customParts의 id와 rive 값, 순서까지 같다', () {
-      final parts = (jsonDecode(File('assets/data/palette.json').readAsStringSync())
-          as Map<String, dynamic>)['customParts'] as Map<String, dynamic>;
-      for (final (key, table) in [
-        ('eyes', eyeParts),
-        ('brows', browParts),
-        ('nose', noseParts),
-        ('mouth', mouthParts),
+    test('const 표는 palette.json customPartsV33(계약 v0.5)의 id·순서와 같고, Rive 값으로 바꾸면 rive와 같다',
+        () {
+      final palette =
+          jsonDecode(File('assets/data/palette.json').readAsStringSync()) as Map<String, dynamic>;
+      final parts = palette['customPartsV33'] as Map<String, dynamic>;
+      // SpiritController가 하는 대로: 눈 +1, 눈썹 그대로, 코 7(없음) → 0·나머지 +1, 입 +1
+      for (final (key, table, toRive) in [
+        ('eyes', eyeParts, (int i) => i + 1),
+        ('brows', browParts, (int i) => i),
+        ('nose', noseParts, (int i) => i == 7 ? 0 : i + 1),
+        ('mouth', mouthParts, (int i) => i + 1),
       ]) {
         final json = {
           for (final p in parts[key] as List)
             (p as Map<String, dynamic>)['id'] as String: p['rive'] as int,
         };
-        expect(table, json, reason: key);
+        expect({for (final e in table.entries) e.key: toRive(e.value)}, json, reason: key);
         expect(table.keys.toList(), json.keys.toList(), reason: '$key 순서');
+        // customParts(그림 이름표)도 같은 id·순서다
+        final names = [
+          for (final p in (palette['customParts'] as Map<String, dynamic>)[key] as List)
+            (p as Map<String, dynamic>)['id'],
+        ];
+        expect(names, table.keys.toList(), reason: '$key customParts');
       }
     });
 

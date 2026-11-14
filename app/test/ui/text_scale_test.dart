@@ -743,96 +743,81 @@ void main() {
     _scaleCases('걷기 기록 탭', (tester, fit) async {
       final e = UiEnv();
       await e.seed(tester, () async {
+        // 사흘 동안 40분씩 물감 길 (분당 120보 = 4,800보, 하루 줄은 걸음·거리)
         for (var i = 0; i < 3; i++) {
-          final start = t1.add(Duration(hours: i, days: -i));
-          await e.db.into(e.db.walkSessions).insert(WalkSessionsCompanion.insert(
-                startUtc: Value<int>(start.millisecondsSinceEpoch),
-                endUtc: start.add(const Duration(minutes: 40)).millisecondsSinceEpoch,
-                steps: 12345 + i,
-                distanceM: 8123.0 + i,
-                runRatio: 0,
-                qualified: true,
-                counted: true,
+          final start = t1.add(Duration(hours: i, days: i));
+          e.source.records.add(walkRecord(start, 40, 120));
+          await e.db.into(e.db.paintTrails).insert(PaintTrailsCompanion.insert(
+                startUtc: start.millisecondsSinceEpoch,
+                endUtc: Value(start.add(const Duration(minutes: 40)).millisecondsSinceEpoch),
               ));
         }
+        e.now = t1.add(const Duration(days: 3));
+        await e.svc.sync(e.now);
       });
       await openNote(tester, e, fit);
       await _tap(tester, _key('tab-walks'));
-      await settle(tester, () => find.textContaining('12,345보').evaluate().isNotEmpty);
-      expect(find.textContaining('12,345보'), findsWidgets);
+      await settle(tester, () => find.textContaining('4,800보').evaluate().isNotEmpty);
+      expect(find.textContaining('4,800보'), findsWidgets);
+      // 목록은 보이는 줄만 그린다 (작은 화면·큰 글자면 한 줄뿐일 수 있다)
+      expect(find.text('물감 길'), findsWidgets);
       fit.check('걷기 기록 탭');
       await end(tester, e);
     });
   });
 
   group('걷기 기록', () {
-    Future<void> openRecord(WidgetTester tester, UiEnv e, _Fit fit, {required bool review}) async {
+    Future<void> openRecord(WidgetTester tester, UiEnv e, _Fit fit) async {
       await openOnTop(
         tester,
         e,
-        WalkRecordScreen(
-          start: t1,
-          end: t1.add(const Duration(minutes: 15)),
-          ratioBefore: review ? null : 0.0,
-          review: review,
-        ),
+        WalkRecordScreen(start: t1, end: t1.add(const Duration(minutes: 15))),
         width: fit.width,
         height: fit.height,
         ready: () => find.text('기록을 정리하는 중').evaluate().isEmpty,
       );
       await settle(tester, () => false, tries: 8);
-      // 진행 막대 연출(1.2초)이 끝난 뒤
       await tester.pump(const Duration(seconds: 2));
     }
 
-    // 이름이 긴 목적지(엑스포과학공원 한빛탑)로 가는 중에 15분 걸었다
+    // 이름이 긴 목적지(엑스포과학공원 한빛탑)로 가는 중에 15분 걸었다. 기록 화면은 동기화하지 않으니
+    // 저장해 둔다
     Future<void> seedWalk(UiEnv e) async {
       await placeAt(e.db, nearGyeongbok, t0);
       await e.svc.startJourney('kr003', t1, useFund: false);
       e.source.records.add(walkRecord(t1, 15, 100));
+      await e.svc.sync(t1.add(const Duration(minutes: 30)));
     }
 
-    _scaleCases('방금 마침', (tester, fit) async {
+    _scaleCases('물감 길 기록', (tester, fit) async {
       final e = UiEnv();
       await e.seed(tester, () => seedWalk(e));
-      await openRecord(tester, e, fit, review: false);
+      await openRecord(tester, e, fit);
       // 15분 × 100보는 1km를 넘어서 평균 줄과 1km 기록 줄도 같이 점검한다
       expect(find.text('1km 기록'), findsOneWidget);
-      fit.check('걷기 기록 (진행 막대·긴 목적지 이름)');
+      fit.check('걷기 기록 (1km 기록)');
       await end(tester, e);
     });
 
-    _scaleCases('다시 보기', (tester, fit) async {
-      final e = UiEnv();
-      await e.seed(tester, () async {
-        await seedWalk(e);
-        // 다시 보기는 동기화하지 않으니 저장돼 있어야 한다
-        await e.svc.sync(t1.add(const Duration(minutes: 30)));
-      });
-      await openRecord(tester, e, fit, review: true);
-      fit.check('걷기 기록 다시 보기');
-      await end(tester, e);
-    });
-
-    // 본격 걷기: 거리 두 줄(실제 / 여행 + 본격 걷기 ×1.3)과 럭 줄(×2 딱지)까지 모두 나오는 경우
-    _scaleCases('방금 마침 (본격 걷기·럭)', (tester, fit) async {
+    // 물감 길: 물감 방울·럭 줄까지 모두 나오는 경우
+    _scaleCases('물감 길 기록 (물감 방울·럭)', (tester, fit) async {
       final e = UiEnv(appRules: _coinRules);
       await e.seed(tester, () async {
         await seedWalk(e);
-        final id = await e.svc.startAppWalk(t1);
-        await e.svc.finishAppWalk(id, t1.add(const Duration(minutes: 15)));
+        final id = await e.svc.startPaintTrail(t1, t1);
+        await e.svc.endPaintTrail(id, t1.add(const Duration(minutes: 15)), t1);
       });
-      await openRecord(tester, e, fit, review: false);
-      expect(find.textContaining('(본격 걷기 ×1.3)'), findsOneWidget);
+      await openRecord(tester, e, fit);
+      expect(find.text('물감 방울'), findsOneWidget);
       expect(find.textContaining(RegExp(r'^\+[0-9,]+ 럭$')), findsOneWidget);
-      fit.check('걷기 기록 (거리 두 줄·럭)');
+      fit.check('걷기 기록 (물감 방울·럭)');
       await end(tester, e);
     });
   });
 
   group('걷는 중 걸음 알약', () {
-    // 화면 너비에서 양옆 20pt를 뺀 칸 (걷는 중 위쪽 UI의 칸). 알약은 칸 안에 들어오고 딱지도 그 안에 있어야 한다
-    Future<void> openPill(WidgetTester tester, _Fit fit, {required String? badge}) async {
+    // 화면 너비에서 양옆 20pt를 뺀 칸 (걷는 중 위쪽 UI의 칸). 쉼터 아이콘과 알약이 칸 안에 들어와야 한다
+    Future<void> openPill(WidgetTester tester, _Fit fit) async {
       phone(tester, width: fit.width, height: fit.height);
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
@@ -840,7 +825,15 @@ void main() {
             padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
             child: Align(
               alignment: Alignment.topLeft,
-              child: StepPill(steps: 12345, km: 12.34, running: true, badge: badge, onTap: () {}),
+              child: Row(
+                children: [
+                  RestButton(onPressed: () {}),
+                  const SizedBox(width: HudMetrics.restGap),
+                  Flexible(
+                    child: StepPill(steps: 12345, km: 12.34, running: true, onTap: () {}),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -848,27 +841,15 @@ void main() {
       await tester.pump();
     }
 
-    for (final badge in <String?>['×1.3', null]) {
-      _scaleCases(badge == null ? '본격 걷기 아님' : '본격 걷기 딱지 ×1.3', (tester, fit) async {
-        await openPill(tester, fit, badge: badge);
-        fit.check('걸음 알약');
-        final pill = tester.getRect(find.byType(StepPill));
-        // 칸(양옆 20pt)을 넘지 않는다. 글자가 커지면 안의 글이 줄어든다
-        expect(pill.left, greaterThanOrEqualTo(20 - 0.01));
-        expect(pill.right, lessThanOrEqualTo(fit.width - 20 + 0.01));
-        final found = find.byKey(const Key('focus-badge'));
-        if (badge == null) {
-          expect(found, findsNothing);
-        } else {
-          // 딱지는 알약 안에 있고, 걸음 숫자보다 오른쪽 끝에 있다
-          expect(found, findsOneWidget);
-          final tag = tester.getRect(found);
-          expect(tag.right, lessThanOrEqualTo(pill.right + 0.01));
-          expect(tag.left, greaterThan(pill.left));
-          expect(tester.getRect(find.text('12,345')).right, lessThanOrEqualTo(tag.left + 0.01));
-        }
-      });
-    }
+    _scaleCases('쉼터 아이콘 + 걸음 알약', (tester, fit) async {
+      await openPill(tester, fit);
+      fit.check('걸음 알약');
+      final pill = tester.getRect(find.byType(StepPill));
+      // 칸(양옆 20pt)을 넘지 않는다. 글자가 커지면 안의 글이 줄어든다
+      expect(tester.getRect(find.byType(RestButton)).left, greaterThanOrEqualTo(20 - 0.01));
+      expect(pill.right, lessThanOrEqualTo(fit.width - 20 + 0.01));
+      expect(find.byKey(const Key('focus-badge')), findsNothing);
+    });
   });
 
   group('꾸미기', () {
@@ -903,7 +884,7 @@ void main() {
       await e.seed(tester);
       await openDecorate(tester, e, fit);
       await _tap(tester, _key('tab-me'));
-      await _tap(tester, _key('eyes-cat'));
+      await _tap(tester, _key('eyes-e3'));
       fit.check('눈을 고름');
       await _tap(tester, _key('body-custom'));
       fit.check('몸 색 직접 고르기가 열림');
@@ -927,7 +908,7 @@ void main() {
       await e.seed(tester);
       await openDecorate(tester, e, fit);
       await _tap(tester, _key('tab-me'));
-      await _tap(tester, _key('eyes-cat'));
+      await _tap(tester, _key('eyes-e3'));
       await tester.tap(find.byTooltip('뒤로'));
       await transition(tester);
       expect(find.text('저장하지 않고 나갈까요?'), findsOneWidget);
@@ -1053,8 +1034,7 @@ void main() {
       });
       await pumpDoobal(tester, e, const DoobalApp(), width: fit.width, height: fit.height);
       await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
-      await tester.tap(find.text('출발하기'));
-      await transition(tester);
+      await startTrailNow(tester);
       await settle(tester, () => false, tries: 8);
       expect(find.byType(WalkingScreen), findsOneWidget);
       fit.check('걷는 중');

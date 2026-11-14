@@ -141,26 +141,9 @@ void main() {
       }
     });
 
-    test('본격 걷기 중이면 본문 끝에 ` · 본격 걷기 ×1.3`, 아니면 안 붙는다 (시작·갱신 모두)', () async {
-      final notice = make(FakeLiveSteps());
-      await notice.start(0, 0, focus: '×1.3');
-      expect(data(starts().single)['body'], '0보 · 0.0km · 본격 걷기 ×1.3');
-
-      await notice.update(1234, 1200, focus: '×1.3');
-      await notice.update(1300, 1240);
-      await notice.update(17890, 12345, focus: '×1.25');
-      final bodies = [for (final c in shows()) (c.arguments as Map<Object?, Object?>)['body']];
-      expect(bodies, [
-        '1,234보 · 1.2km · 본격 걷기 ×1.3',
-        '1,300보 · 1.2km',
-        '17,890보 · 12.3km · 본격 걷기 ×1.25',
-      ]);
-    });
-
-    test('noticeBody: 걸음·거리와 본격 걷기 끝 글', () {
+    test('noticeBody: 걸음·거리 (본격 걷기 끝 글은 없다, 16장 11/13)', () {
       expect(noticeBody(7, 4), '7보 · 0.0km');
       expect(noticeBody(1234, 1234), '1,234보 · 1.2km');
-      expect(noticeBody(1234, 1234, focus: '×1.3'), '1,234보 · 1.2km · 본격 걷기 ×1.3');
     });
 
     test('noticeKm: 미터를 km 0.1 단위 글로', () {
@@ -283,11 +266,6 @@ void main() {
       expect(notice.starts, [(3, 2.1)]);
       expect(notice.updates, [(10, 7.0), (20, 14.0)]);
       expect(notice.running, isTrue);
-      // 본격 걷기 표시는 따로 쌓인다 (넘기지 않으면 null)
-      expect(notice.startFocus, [null]);
-      expect(notice.updateFocus, [null, null]);
-      await notice.update(30, 21, focus: '×1.3');
-      expect(notice.updateFocus, [null, null, '×1.3']);
 
       await notice.stop();
       await notice.stop();

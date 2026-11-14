@@ -1,3 +1,4 @@
+import 'package:rive/rive.dart' as rive;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -74,10 +75,10 @@ void main() {
       for (var x = 220; x <= 380; x += 20) Offset(x.toDouble(), y.toDouble()),
   ];
 
-  /// 필터 없는 그림에서 몸통 평면색(#FFF5E2)인 점의 수: 같은 점들이 견본색이 되어야 한다
-  const bodyFlat = 0xFFF5E2;
+  /// 필터 없는 그림에서 몸통 평면색(#F2DFC6)인 점의 수: 같은 점들이 견본색이 되어야 한다
+  const bodyFlat = 0xF2DFC6;
 
-  testWidgets('몸 색을 주면 몸통 픽셀이 견본색이 된다 (필터 없는 그림은 평면색 #FFF5E2)', (tester) async {
+  testWidgets('몸 색을 주면 몸통 픽셀이 견본색이 된다 (필터 없는 그림은 평면색 #F2DFC6)', (tester) async {
     final plain = await _paint(tester, SpiritLook.base, grid);
     final flatAt = [for (var i = 0; i < grid.length; i++) if (plain[i] == bodyFlat) i];
     // 훑는 점의 상당수가 몸통이다 (그림이 바뀌어 이 가정이 깨지면 먼저 알린다)
@@ -117,11 +118,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: SpiritCharacter(look: SpiritLook.base.copyWith(bodyArgb: 0xFFC9775A))),
     );
-    for (var i = 0; i < 100 && find.byType(ColorFiltered).evaluate().isEmpty; i++) {
+    for (var i = 0; i < 100 && find.byType(rive.RiveWidget).evaluate().isEmpty; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
       await tester.pump();
     }
-    expect(find.byType(ColorFiltered), findsOneWidget);
+    expect(find.byType(ColorFiltered), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 }

@@ -73,8 +73,7 @@ void main() {
     await pumpDoobal(tester, e, const DoobalApp());
     await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
     await tester.pump();
-    await tester.tap(find.text('출발하기'));
-    await transition(tester);
+    await startTrailNow(tester);
     await settle(tester, () => false, tries: 8);
     expect(find.byType(WalkingScreen), findsOneWidget);
     await settle(

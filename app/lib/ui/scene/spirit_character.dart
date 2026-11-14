@@ -3,7 +3,7 @@ import 'package:rive/rive.dart' as rive;
 
 import '../../domain/rules.dart';
 import '../../domain/spirit_look.dart';
-import '../../domain/tint.dart';
+
 import 'spirit_controller.dart';
 
 /// 정령 캔버스 600×600, 기본 머리 위 y150, 발바닥 y440.
@@ -21,7 +21,10 @@ class SpiritCharacter extends StatefulWidget {
     this.expression = 0,
     this.onReady,
   });
-  static const asset = 'assets/rive/doobal_spirit.riv';
+  /// 앱용 정령 Rive v33 (16장 11/13, 아트보드 `Spirit` 502×600, 바탕 투명, 입력은 v32 inputs.md와 같다)
+  static const asset = 'assets/rive/spirit_v33.riv';
+  @visibleForTesting
+  static rive.Factory renderer = rive.Factory.rive;
   final double speed, lookX, lookY;
   final bool sitting, boat, capeEnabled;
 
@@ -37,6 +40,9 @@ class SpiritCharacter extends StatefulWidget {
   @override
   State<SpiritCharacter> createState() => _SpiritCharacterState();
 }
+
+/// 600 캔버스에서 Rive 그림 1px의 크기 (11/12 통합본이 잘라 쓰던 배율 328.16 / 560)
+const _scale = 328.16 / 560;
 
 class _SpiritCharacterState extends State<SpiritCharacter>
     with WidgetsBindingObserver {
@@ -56,7 +62,7 @@ class _SpiritCharacterState extends State<SpiritCharacter>
       await rive.RiveNative.init();
       file = await rive.File.asset(
         SpiritCharacter.asset,
-        riveFactory: rive.Factory.flutter,
+        riveFactory: SpiritCharacter.renderer,
       );
       if (file == null) throw StateError('정령 파일을 읽지 못했어요');
       if (!mounted) {
@@ -128,22 +134,75 @@ class _SpiritCharacterState extends State<SpiritCharacter>
   Widget build(BuildContext context) {
     final controller = _controller;
     if (controller == null) return const SizedBox.expand();
-    Widget view = rive.RiveWidget(controller: controller, fit: rive.Fit.contain);
-    // Rive v25에는 몸 색 입력이 없어서 그림 전체에 채널별 곱하기 색을 입힌다.
-    // 얼굴·소품에도 같이 입혀지는 임시 방법이다 (Rive에 몸 색 입력이 생기면 바꾼다)
-    final body = widget.look.bodyArgb;
-    if (body != null) {
-      view = ColorFiltered(
-        colorFilter: ColorFilter.matrix(bodyTintMatrix(body, widget.look.bodyBaseArgb)),
-        child: view,
-      );
-    }
+    // v33 `Spirit` 아트보드(502×600)를 기존 600 캔버스(머리 위 y150~발 y440 잣대)에 놓는다.
+    // 자리는 11/12 통합본(v32와 같은 1500×1100 시험 판에서 잘라 쓰던 것)과 픽셀까지 같게 맞췄다(11/13 그려서 대조):
+    // 잘라 쓰던 배율 0.586, v33 원점은 v32 판의 (44, 252)
+    final view = FittedBox(
+      fit: BoxFit.contain,
+      child: SizedBox(
+        width: 600,
+        height: 600,
+        child: Stack(
+          children: [
+            Positioned(
+              left: 133 + 44 * _scale,
+              top: 68 + (252 - 180) * _scale,
+              width: 502 * _scale,
+              height: 600 * _scale,
+              child: rive.RiveWidget(controller: controller, fit: rive.Fit.contain),
+            ),
+          ],
+        ),
+      ),
+    );
     return Semantics(
       label: '두발 정령. 머리와 배를 눌러 볼 수 있어요',
-      child: Listener(
-        onPointerUp: (_) => controller.release(),
-        onPointerCancel: (_) => controller.release(),
-        child: view,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          void center() => controller.setLook(widget.lookX, widget.lookY);
+          void gaze(Offset point) {
+            final scale =
+                (box.maxWidth < box.maxHeight ? box.maxWidth : box.maxHeight) /
+                600;
+            if (scale <= 0) return;
+            final x = (point.dx - (box.maxWidth - 600 * scale) / 2) / scale;
+            final y = (point.dy - (box.maxHeight - 600 * scale) / 2) / scale;
+            controller.setLook((x - 300) / 140, (y - 240) / 140);
+          }
+
+          return MouseRegion(
+            onHover: (e) => gaze(e.localPosition),
+            onExit: (_) => center(),
+            child: Listener(
+              onPointerMove: (e) => gaze(e.localPosition),
+              onPointerUp: (_) => center(),
+              onPointerCancel: (_) => center(),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (d) {
+                  final scale = box.maxWidth < box.maxHeight
+                      ? box.maxWidth / 600
+                      : box.maxHeight / 600;
+                  if (scale <= 0) return;
+                  final x =
+                      (d.localPosition.dx - (box.maxWidth - 600 * scale) / 2) /
+                      scale;
+                  final y =
+                      (d.localPosition.dy - (box.maxHeight - 600 * scale) / 2) /
+                      scale;
+                  if (x >= 200 && x <= 400 && y >= 135 && y <= 300) {
+                    controller.press(SpiritPress.head);
+                  } else if (x >= 230 && x <= 380 && y > 300 && y <= 445) {
+                    controller.press(SpiritPress.belly);
+                  }
+                },
+                onTapUp: (_) => controller.release(),
+                onTapCancel: controller.release,
+                child: view,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -160,8 +219,10 @@ class SpiritStanding extends StatelessWidget {
     this.footAt = 0.88,
     this.expression = 0,
     this.tapRules,
+    this.onReady,
   });
 
+  final ValueChanged<SpiritController>? onReady;
   final SpiritLook look;
   final double share, footAt;
 
@@ -171,22 +232,30 @@ class SpiritStanding extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, box) {
-      final scale = (box.maxWidth < box.maxHeight ? box.maxWidth : box.maxHeight) *
-          share /
-          (440 - 150);
-      return Stack(
-        children: [
-          if (scale > 0)
-            Positioned(
-              left: box.maxWidth / 2 - 300 * scale,
-              top: box.maxHeight * footAt - 440 * scale,
-              width: 600 * scale,
-              height: 600 * scale,
-              child: SpiritCharacter(look: look, expression: expression, tapRules: tapRules),
-            ),
-        ],
-      );
-    });
+    return LayoutBuilder(
+      builder: (context, box) {
+        final scale =
+            (box.maxWidth < box.maxHeight ? box.maxWidth : box.maxHeight) *
+            share /
+            (440 - 150);
+        return Stack(
+          children: [
+            if (scale > 0)
+              Positioned(
+                left: box.maxWidth / 2 - 300 * scale,
+                top: box.maxHeight * footAt - 440 * scale,
+                width: 600 * scale,
+                height: 600 * scale,
+                child: SpiritCharacter(
+                  look: look,
+                  expression: expression,
+                  tapRules: tapRules,
+                  onReady: onReady,
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 }

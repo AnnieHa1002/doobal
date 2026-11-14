@@ -69,17 +69,16 @@ void backgroundSyncDispatcher() {
 const _staleAliveTimes = 3;
 
 /// 백그라운드 동기화 한 번. 시작 흐름을 끝내지 않았으면(또는 계정을 지웠으면) 하지 않는다.
-/// 앱이 걷는 중에 꺼진 채라면 그 앱 걷기를 닫고 동기화한다 (그래서 다음에 앱을 켤 때 '걷기가 멈췄어요'
-/// 토스트는 뜨지 않을 수 있다).
+/// 앱이 물감 길 중에 꺼진 채라면 그 물감 길을 닫고 동기화한다.
 /// 실패해도 true를 돌려준다: 다시 시도는 다음 주기에 한다 (안드로이드의 재시도 대기에 쌓이지 않게)
 Future<bool> runBackgroundSync(ProviderContainer container, DateTime now) async {
   try {
     if (await container.read(profileServiceProvider).step() != OnboardingStep.done) return true;
     final rules = await container.read(rulesProvider.future);
     final svc = await container.read(syncServiceProvider.future);
-    // 앱이 걷는 중에 꺼졌으면 그 앱 걷기를 먼저 닫는다. 살아 있는 앱은 aliveSaveSec마다 적으니
+    // 앱이 물감 길 중에 꺼졌으면 그 물감 길을 먼저 닫는다. 살아 있는 앱은 aliveSaveSec마다 적으니
     // 세 번 거를 만큼 오래 소식이 없을 때만 꺼진 것으로 본다
-    await svc.closeStaleAppWalks(now, Duration(seconds: rules.aliveSaveSec * _staleAliveTimes));
+    await svc.closeStalePaintTrails(now, Duration(seconds: rules.aliveSaveSec * _staleAliveTimes));
     await svc.sync(now);
   } catch (e) {
     debugPrint('백그라운드 동기화 실패: $e');

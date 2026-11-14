@@ -198,11 +198,11 @@ void main() {
     });
 
     test('한 줄 문구: 올림, 1km 미만도 1km, 더한 거리의 아주 작은 오차는 올리지 않는다', () {
-      expect(nextPropText(13), '다음 소품까지 본격 걷기 13km');
-      expect(nextPropText(62.3), '다음 소품까지 본격 걷기 63km');
-      expect(nextPropText(0.2), '다음 소품까지 본격 걷기 1km');
-      expect(nextPropText(63.0000000001), '다음 소품까지 본격 걷기 63km');
-      expect(nextPropText(1000), '다음 소품까지 본격 걷기 1,000km');
+      expect(nextPropText(13), '다음 소품까지 13km');
+      expect(nextPropText(62.3), '다음 소품까지 63km');
+      expect(nextPropText(0.2), '다음 소품까지 1km');
+      expect(nextPropText(63.0000000001), '다음 소품까지 63km');
+      expect(nextPropText(1000), '다음 소품까지 1,000km');
     });
 
     test('새 소품 토스트: 하나면 이름, 여럿이면 첫 이름 외 n개', () {

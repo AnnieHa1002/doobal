@@ -1,3 +1,4 @@
+import 'package:doobal/app/paint_trail_controller.dart';
 import 'package:doobal/app/painting_saver_provider.dart';
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/sync_service.dart';
@@ -16,6 +17,7 @@ import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/sketch.dart';
+import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -263,6 +265,22 @@ Future<void> end(WidgetTester tester, UiEnv e) async {
   await tester.pumpWidget(const SizedBox());
   await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
   await tester.runAsync(e.db.close);
+}
+
+/// 쉼터가 떠 있는 앱에서 물감 길을 지금 연다 (센서 판정을 기다리지 않고 PaintTrailController.startNow,
+/// 16장 11/13: 출발하기 버튼이 없다). 판정이 시작되길 기다렸다가 열고 걷는 중 화면이 뜰 때까지 기다린다.
+/// 센서 걸음은 이 뒤에 처음 받는 값이 기준이다
+Future<void> startTrailNow(WidgetTester tester) async {
+  final c = ProviderScope.containerOf(tester.element(find.byType(MaterialApp).first));
+  for (var i = 0; i < 80 && !c.read(paintTrailProvider).active; i++) {
+    await tester.runAsync(() => c.read(paintTrailProvider.notifier).startNow());
+    await tester.pump();
+    if (!c.read(paintTrailProvider).active) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 25)));
+    }
+  }
+  await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+  await transition(tester);
 }
 
 /// 앱 전체(DoobalApp = 시작 관문 → AutoSync + 쉼터)를 폰 크기로 띄운다

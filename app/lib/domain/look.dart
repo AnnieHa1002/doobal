@@ -1,9 +1,20 @@
 import 'face_parts.dart';
 
-export 'face_parts.dart' show defaultBrows, defaultEyes, defaultMouth, defaultNose;
+export 'face_parts.dart'
+    show defaultBrows, defaultEyes, defaultMouth, defaultNose;
 
 /// 소품 칸 아홉 (props.json v4 slots). 얼굴 소품·손·둥실·효과는 처음에 비어 있다
-const lookSlots = ['hat', 'face', 'cloth', 'shoe', 'hand', 'bag', 'pet', 'float', 'effect'];
+const lookSlots = [
+  'hat',
+  'face',
+  'cloth',
+  'shoe',
+  'hand',
+  'bag',
+  'pet',
+  'float',
+  'effect',
+];
 
 /// 비울 수 없는 칸: 옷은 늘 무언가를 입는다
 const alwaysWornSlot = 'cloth';
@@ -22,7 +33,14 @@ const defaultSlots = <String, String?>{
 };
 
 /// 처음부터 가진 소품: props.json에서 unlock.kind가 default인 것 (look_test가 맞는지 본다)
-const initialPropIds = {'hat_01', 'cloth_02', 'shoe_01', 'hand_01', 'bag_01', 'pet_01'};
+const initialPropIds = {
+  'hat_01',
+  'cloth_02',
+  'shoe_01',
+  'hand_01',
+  'bag_01',
+  'pet_01',
+};
 
 /// 11/10 전 기본 옷(앞치마). 지금은 300km 보상이라, 그 전에 저장된 모습에 끼워져 있으면 여행복으로 읽는다
 const _oldDefaultCloth = 'cloth_01';
@@ -38,10 +56,10 @@ sealed class BodyColor {
   Map<String, dynamic> toJson();
 
   factory BodyColor.fromJson(Map<String, dynamic> j) => switch (j['kind']) {
-        'swatch' => SwatchBodyColor(_int(j['i'])),
-        'custom' => CustomBodyColor(checkedHex(j['hex'])),
-        final k => throw FormatException('모르는 색 종류: $k'),
-      };
+    'swatch' => SwatchBodyColor(_int(j['i'])),
+    'custom' => CustomBodyColor(checkedHex(j['hex'])),
+    final k => throw FormatException('모르는 색 종류: $k'),
+  };
 }
 
 /// palette.json body.swatches의 번호 (1부터)
@@ -73,7 +91,8 @@ class CustomBodyColor extends BodyColor {
   Map<String, dynamic> toJson() => {'kind': 'custom', 'hex': hex};
 
   @override
-  bool operator ==(Object other) => other is CustomBodyColor && other.hex == hex;
+  bool operator ==(Object other) =>
+      other is CustomBodyColor && other.hex == hex;
 
   @override
   int get hashCode => Object.hash('custom', hex);
@@ -89,8 +108,8 @@ const defaultBody = SwatchBodyColor(1);
 /// clothColor는 기본 옷(여행복)의 시작 색 번호(props.json startColors, 1부터, 16장 11/8)다. 이 키가 없는 JSON은
 /// 11/10 전에 저장된 것이라 옷 칸의 앞치마(그때 기본 옷)를 여행복으로 읽는다.
 /// 얼굴 값은 palette.json customParts의 문자 id다 (Rive 값으로는 domain/spirit_look.dart가 바꾼다).
-/// 옛 사람형 JSON은 [Look.fromJson]이 기본 얼굴·크림으로 읽는다. 소품 색은 직접 고르지 않고
-/// 색마다 따로 된 상점 소품이라(16장 11/4) 옛 JSON의 tints는 읽지 않는다
+/// 옛 사람형 JSON은 기본 얼굴·크림으로 읽는다. 소품 색은 직접 고르지 않고 색마다 따로 된 상점 소품이라
+/// (16장 11/4, 11/13 Annie: 소품 색 고르기는 빼고 합침) 옛 JSON의 tints·propColors는 읽지 않는다.
 class Look {
   const Look({
     this.eyes = defaultEyes,
@@ -124,21 +143,22 @@ class Look {
     String? mouth,
     BodyColor? body,
     int? clothColor,
-  }) =>
-      Look(
-        eyes: eyes ?? this.eyes,
-        brows: brows ?? this.brows,
-        nose: nose ?? this.nose,
-        mouth: mouth ?? this.mouth,
-        body: body ?? this.body,
-        clothColor: clothColor ?? this.clothColor,
-        slots: slots,
-      );
+  }) => Look(
+    eyes: canonicalFacePart('eyes', eyes ?? this.eyes),
+    brows: canonicalFacePart('brows', brows ?? this.brows),
+    nose: canonicalFacePart('nose', nose ?? this.nose),
+    mouth: canonicalFacePart('mouth', mouth ?? this.mouth),
+    body: body ?? this.body,
+    clothColor: clothColor ?? this.clothColor,
+    slots: slots,
+  );
 
   /// [slot] 칸에 [propId]를 끼운 모습 (null이면 비운다). 칸 이름과 옷 비우기만 막고,
   /// 가진 소품인지는 ProfileService.saveLook이 본다
   Look withSlot(String slot, String? propId) {
-    if (!lookSlots.contains(slot)) throw ArgumentError.value(slot, 'slot', '모르는 소품 칸');
+    if (!lookSlots.contains(slot)) {
+      throw ArgumentError.value(slot, 'slot', '모르는 소품 칸');
+    }
     if (propId == null && slot == alwaysWornSlot) {
       throw ArgumentError.value(slot, 'slot', '옷은 비울 수 없다');
     }
@@ -156,14 +176,14 @@ class Look {
   }
 
   Map<String, dynamic> toJson() => {
-        'eyes': eyes,
-        'brows': brows,
-        'nose': nose,
-        'mouth': mouth,
-        'body': body.toJson(),
-        'clothColor': clothColor,
-        'slots': {for (final s in lookSlots) s: slots[s]},
-      };
+    'eyes': canonicalFacePart('eyes', eyes),
+    'brows': canonicalFacePart('brows', brows),
+    'nose': canonicalFacePart('nose', nose),
+    'mouth': canonicalFacePart('mouth', mouth),
+    'body': body.toJson(),
+    'clothColor': clothColor,
+    'slots': {for (final s in lookSlots) s: slots[s]},
+  };
 
   /// 옛 사람형 JSON(`hair` 키가 있거나 eyes가 숫자)은 예외 없이 기본 얼굴·크림으로 읽고,
   /// slots는 읽을 수 있는 칸만 살린다 (모르는 칸은 무시, 읽을 수 없는 칸은 그 칸의 기본 소품).
@@ -183,7 +203,9 @@ class Look {
       brows: _part(j, 'brows', browParts, defaultBrows),
       nose: _part(j, 'nose', noseParts, defaultNose),
       mouth: _part(j, 'mouth', mouthParts, defaultMouth),
-      body: j['body'] == null ? defaultBody : BodyColor.fromJson(_map(j['body'], '몸 색')),
+      body: j['body'] == null
+          ? defaultBody
+          : BodyColor.fromJson(_map(j['body'], '몸 색')),
       clothColor: clothColor as int? ?? defaultClothColor,
       slots: j.containsKey('clothColor') ? slots : _swapOldDefaultCloth(slots),
     );
@@ -192,36 +214,48 @@ class Look {
   @override
   bool operator ==(Object other) =>
       other is Look &&
-      other.eyes == eyes &&
-      other.brows == brows &&
-      other.nose == nose &&
-      other.mouth == mouth &&
+      canonicalFacePart('eyes', other.eyes) ==
+          canonicalFacePart('eyes', eyes) &&
+      canonicalFacePart('brows', other.brows) ==
+          canonicalFacePart('brows', brows) &&
+      canonicalFacePart('nose', other.nose) ==
+          canonicalFacePart('nose', nose) &&
+      canonicalFacePart('mouth', other.mouth) ==
+          canonicalFacePart('mouth', mouth) &&
       other.body == body &&
       other.clothColor == clothColor &&
       lookSlots.every((s) => other.slots[s] == slots[s]);
 
   @override
   int get hashCode => Object.hash(
-        eyes,
-        brows,
-        nose,
-        mouth,
-        body,
-        clothColor,
-        Object.hashAll([for (final s in lookSlots) slots[s]]),
-      );
+    canonicalFacePart('eyes',eyes),
+    canonicalFacePart('brows',brows),
+    canonicalFacePart('nose',nose),
+    canonicalFacePart('mouth',mouth),
+    body,
+    clothColor,
+    Object.hashAll([for (final s in lookSlots) slots[s]]),
+  );
 
   @override
-  String toString() => 'Look(eyes: $eyes, brows: $brows, nose: $nose, mouth: $mouth, '
+  String toString() =>
+      'Look(eyes: $eyes, brows: $brows, nose: $nose, mouth: $mouth, '
       'body: $body, clothColor: $clothColor, slots: $slots)';
 }
 
 /// 얼굴 파츠 id 하나. 없으면 [fallback], 있는데 [parts]에 없으면 FormatException
-String _part(Map<String, dynamic> j, String key, Map<String, int> parts, String fallback) {
+String _part(
+  Map<String, dynamic> j,
+  String key,
+  Map<String, int> parts,
+  String fallback,
+) {
   final v = j[key];
   if (v == null) return fallback;
-  if (v is! String || !parts.containsKey(v)) throw FormatException('모르는 $key: $v');
-  return v;
+  if (v is! String || !parts.containsKey(canonicalFacePart(key, v))) {
+    throw FormatException('모르는 $key: $v');
+  }
+  return canonicalFacePart(key, v);
 }
 
 /// slots 읽기. 통째로 없으면 기본 소품, 맵 안에서 빠진 칸도 그 칸의 기본 소품.
@@ -251,8 +285,11 @@ Map<String, String?> _slotsOf(dynamic raw) {
 /// 11/10 전 모습의 옷 칸: 그때 기본 옷이던 앞치마는 여행복으로 (앞치마는 이제 300km 보상이다)
 Map<String, String?> _swapOldDefaultCloth(Map<String, String?> slots) =>
     slots[alwaysWornSlot] != _oldDefaultCloth
-        ? slots
-        : Map.unmodifiable({...slots, alwaysWornSlot: defaultSlots[alwaysWornSlot]});
+    ? slots
+    : Map.unmodifiable({
+        ...slots,
+        alwaysWornSlot: defaultSlots[alwaysWornSlot],
+      });
 
 /// 옛 JSON의 slots: 틀린 칸·맵이 아닌 값에도 멈추지 않고 그 칸의 기본 소품으로 둔다
 Map<String, String?> _legacySlots(dynamic raw) {
@@ -263,19 +300,22 @@ Map<String, String?> _legacySlots(dynamic raw) {
     out[slot] = raw.containsKey(slot) && v == null && slot != alwaysWornSlot
         ? null
         : v is String && v.isNotEmpty
-            ? v
-            : defaultSlots[slot];
+        ? v
+        : defaultSlots[slot];
   }
   return Map.unmodifiable(out);
 }
 
 int _int(dynamic v) => v is int ? v : throw FormatException('정수가 아니다: $v');
 
-Map<String, dynamic> _map(dynamic v, String what) =>
-    v is Map<String, dynamic> ? v : throw FormatException('$what이(가) 맵이 아니다: $v');
+Map<String, dynamic> _map(dynamic v, String what) => v is Map<String, dynamic>
+    ? v
+    : throw FormatException('$what이(가) 맵이 아니다: $v');
 
 final _hexPattern = RegExp(r'^#[0-9A-Fa-f]{6}$');
 
 /// "#RRGGBB"면 그대로, 아니면 FormatException
-String checkedHex(dynamic v) =>
-    v is String && _hexPattern.hasMatch(v) ? v : throw FormatException('#RRGGBB가 아니다: $v');
+String checkedHex(dynamic v) => v is String && _hexPattern.hasMatch(v)
+    ? v
+    : throw FormatException('#RRGGBB가 아니다: $v');
+

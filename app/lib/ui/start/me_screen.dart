@@ -49,8 +49,11 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   }
 
   /// 금칙어 규칙은 화면을 열 때 받아 둔다. 아직 못 받았으면 글자 수만 본다
-  NicknameCheck get _check =>
-      checkNickname(_name.text, widget.rules, moderation: ref.read(moderationProvider).value);
+  NicknameCheck get _check => checkNickname(
+    _name.text,
+    widget.rules,
+    moderation: ref.read(moderationProvider).value,
+  );
 
   Future<void> _submit() async {
     final check = _check;
@@ -67,7 +70,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final palette = ref.watch(spiritPaletteProvider).value;
     final props = ref.watch(propsProvider).value;
     ref.watch(moderationProvider);
-    if (palette == null || props == null) return const Scaffold(body: SizedBox.expand());
+    if (palette == null || props == null) {
+      return const Scaffold(body: SizedBox.expand());
+    }
     final rules = widget.rules;
     final check = _check;
     // 기본 옷(여행복)과 시작 색
@@ -83,6 +88,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           _look,
           bodyArgb: palette.body.argbOf(_look.body),
           bodyBaseArgb: palette.body.baseArgb,
+          initialClothArgb: clothColor?.argb,
         ),
         // 고른 몸 색과 옷 색 (캔버스: '크림 · 여행복 카키')
         label:
@@ -106,10 +112,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               ? null
               : Padding(
                   padding: const EdgeInsets.only(top: 6, left: 4),
-                  child: Text(switch (check.problem!) {
-                    NicknameProblem.swear => '닉네임으로 쓸 수 없는 말이 있어요',
-                    _ => '${rules.nicknameMin}~${rules.nicknameMax}자로 지어 주세요',
-                  }, style: const TextStyle(fontSize: 13, color: Palette.terracotta)),
+                  child: Text(
+                    switch (check.problem!) {
+                      NicknameProblem.swear => '닉네임으로 쓸 수 없는 말이 있어요',
+                      _ => '${rules.nicknameMin}~${rules.nicknameMax}자로 지어 주세요',
+                    },
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Palette.terracotta,
+                    ),
+                  ),
                 ),
         ),
         const SizedBox(height: 4),
@@ -133,7 +145,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         // 탭을 바꿔도 아래 버튼이 덜 움직이게 (캔버스 최소 96)
         ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 96),
-          child: Align(alignment: Alignment.topLeft, child: _panel(palette, cloth)),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: _panel(palette, cloth),
+          ),
         ),
         const SizedBox(height: 16),
         GameButton(label: '이 모습으로', onPressed: check.ok ? _submit : null),
@@ -190,7 +205,12 @@ class _MeScreenState extends ConsumerState<MeScreen> {
 
 /// 부위 탭 하나: 고른 탭은 잉크 바탕에 카드색 글자
 class _TabButton extends StatelessWidget {
-  const _TabButton({super.key, required this.name, required this.selected, required this.onTap});
+  const _TabButton({
+    super.key,
+    required this.name,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String name;
   final bool selected;
@@ -217,7 +237,10 @@ class _TabButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected ? Palette.ink : Palette.card,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: selected ? Palette.ink : lineColor, width: InkLine.pill),
+                border: Border.all(
+                  color: selected ? Palette.ink : lineColor,
+                  width: InkLine.pill,
+                ),
               ),
               // 글자를 키워도 탭 안에서 줄어든다 (탭 6개가 한 줄)
               child: FittedBox(
@@ -361,84 +384,92 @@ class _Top extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, box) {
-      if (box.maxHeight < 150) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Semantics(
-              label: '3단계 중 1단계',
-              excludeSemantics: true,
-              child: Row(
-                key: const ValueKey('steps'),
-                children: [
-                  for (var i = 0; i < 3; i++) ...[
-                    if (i > 0) const SizedBox(width: 6),
-                    Container(
-                      width: 28,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: i == 0 ? Palette.terracotta : lineColor,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '내 정령 만들기',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.title(context),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: DecoratedBox(
-                key: const ValueKey('me-preview'),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE9DFC9),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: FractionallySizedBox(
-                          heightFactor: 0.2,
-                          alignment: Alignment.bottomCenter,
-                          child: const ColoredBox(color: Color(0xFFD8CBB0)),
-                        ),
-                      ),
-                      Positioned.fill(child: SpiritStanding(look: spirit)),
-                      Positioned(
-                        right: 10,
-                        top: 10,
-                        child: Container(
-                          key: const ValueKey('picked-label'),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Palette.card,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            label,
-                            style: const TextStyle(fontSize: 12, color: Palette.ink),
-                          ),
+    return LayoutBuilder(
+      builder: (context, box) {
+        if (box.maxHeight < 150) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                label: '3단계 중 1단계',
+                excludeSemantics: true,
+                child: Row(
+                  key: const ValueKey('steps'),
+                  children: [
+                    for (var i = 0; i < 3; i++) ...[
+                      if (i > 0) const SizedBox(width: 6),
+                      Container(
+                        width: 28,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: i == 0 ? Palette.terracotta : lineColor,
+                          borderRadius: BorderRadius.circular(3),
                         ),
                       ),
                     ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '내 정령 만들기',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.title(context),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: DecoratedBox(
+                  key: const ValueKey('me-preview'),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE9DFC9),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: FractionallySizedBox(
+                            heightFactor: 0.2,
+                            alignment: Alignment.bottomCenter,
+                            child: const ColoredBox(color: Color(0xFFD8CBB0)),
+                          ),
+                        ),
+                        Positioned.fill(child: SpiritStanding(look: spirit)),
+                        Positioned(
+                          right: 10,
+                          top: 10,
+                          child: Container(
+                            key: const ValueKey('picked-label'),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Palette.card,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              label,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Palette.ink,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      );
-    });
+            ],
+          ),
+        );
+      },
+    );
   }
 }

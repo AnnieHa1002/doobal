@@ -53,7 +53,6 @@ void main() {
       await _open(tester, e);
       final profile = tester.getRect(find.byTooltip('나의 정보'));
       final settings = tester.getRect(find.byTooltip('설정'));
-      final depart = tester.getRect(find.byTooltip('출발하기'));
       final pill = tester.getRect(find.textContaining('쉬는 중'));
 
       final gesture = await tester.startGesture(const Offset(100, 300));
@@ -66,7 +65,6 @@ void main() {
       expect(moved, greaterThanOrEqualTo(268 - 80));
       expect(tester.getRect(find.byTooltip('나의 정보')), profile);
       expect(tester.getRect(find.byTooltip('설정')), settings);
-      expect(tester.getRect(find.byTooltip('출발하기')), depart);
       expect(tester.getRect(find.textContaining('쉬는 중')), pill);
       await gesture.up();
       await _settleSnap(tester);
@@ -173,14 +171,14 @@ void main() {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
-      final depart = tester.getRect(find.byTooltip('출발하기'));
+      final settings = tester.getRect(find.byTooltip('설정'));
       final fingers = await pinch(tester, 50);
       // 손가락 사이 100 → 150 = 1.5배 (config max)
       final rect = tester.getRect(_backpack);
       expect(rect.width, closeTo(64 * 1.5, 0.5));
       // 아래 기준: 물건의 y는 화면 아래에서 (844 − 510) × 배율
       expect(rect.top, closeTo(844 - (844 - 510) * 1.5, 0.5));
-      expect(tester.getRect(find.byTooltip('출발하기')), depart);
+      expect(tester.getRect(find.byTooltip('설정')), settings);
       for (final f in fingers) {
         await f.up();
       }
@@ -340,12 +338,11 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('첫날: 이정표 글이 서고 출발하기에 점, 걸으면 함께 사라진다는 조건은 말풍선과 같다', (tester) async {
+    testWidgets('첫날: 이정표 글과 아래 말풍선이 함께 선다 (걸으면 함께 사라진다는 조건이 같다)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => e.insertSketchJourney(0.6));
       await _open(tester, e);
       expect(find.text('첫 스케치 →'), findsOneWidget);
-      expect(find.byKey(const ValueKey('depart-dot')), findsOneWidget);
       expect(find.byKey(const ValueKey('first-sketch-bubble')), findsOneWidget);
       await end(tester, e);
     });
@@ -358,14 +355,12 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('출발하기는 둥근 네모에 글이 들어 있고 72pt, 오른쪽 아래 고정', (tester) async {
+    testWidgets('출발하기 버튼은 없다 (16장 11/13: 걸으면 저절로 걷는 중)', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
-      final button = tester.getRect(find.byTooltip('출발하기'));
-      expect(button.width, 72);
-      expect(button.right, 390 - 16);
-      expect(find.descendant(of: find.byTooltip('출발하기'), matching: find.text('출발하기')), findsOneWidget);
+      expect(find.byTooltip('출발하기'), findsNothing);
+      expect(find.text('출발하기'), findsNothing);
       await end(tester, e);
     });
   });

@@ -2,7 +2,6 @@ import 'package:doobal/app/companion_providers.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/landmark.dart';
-import 'package:doobal/domain/notification_policy.dart';
 import 'package:doobal/domain/route.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/companion/companion_screen.dart';
@@ -71,8 +70,7 @@ void main() {
       });
       await pumpDoobal(tester, e, const DoobalApp());
       await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
-      await tester.tap(find.text('출발하기'));
-      await transition(tester);
+      await startTrailNow(tester);
       await settle(tester, () => false, tries: 8);
       expect(find.byType(WalkingScreen), findsOneWidget);
       await tester.tap(find.byKey(const Key('walk-pill')));
@@ -185,23 +183,17 @@ void main() {
   });
 
   group('걷기 기록', () {
-    /// t1에 시작한 12분 걷기의 기록 화면을 연다
+    /// t1에 시작한 12분 물감 길의 기록 화면을 연다 (노트에서 여는 것과 같다)
     Future<UiEnv> openRecord(
       WidgetTester tester,
-      Future<void> Function(UiEnv e) seed, {
-      bool review = true,
-    }) async {
+      Future<void> Function(UiEnv e) seed,
+    ) async {
       final e = UiEnv();
       await e.seed(tester, () => seed(e));
       await openOnTop(
         tester,
         e,
-        WalkRecordScreen(
-          start: t1,
-          end: t1.add(const Duration(minutes: 12)),
-          ratioBefore: null,
-          review: review,
-        ),
+        WalkRecordScreen(start: t1, end: t1.add(const Duration(minutes: 12))),
         ready: () => find.text('걸음').evaluate().isNotEmpty,
       );
       await settle(tester, () => false, tries: 3);
@@ -231,26 +223,6 @@ void main() {
       expect(row.readChapter, 1);
       expect(find.byType(WalkRecordScreen, skipOffstage: false), findsOneWidget,
           reason: '닫으면 걷기 기록으로 돌아온다');
-      await end(tester, e);
-    });
-
-    testWidgets('마친 걷기로 4번째가 채워지면 동기화 뒤 읽기 카드가 뜨고 시스템 알림은 안 나간다', (tester) async {
-      final e = await openRecord(tester, (e) async {
-        await met(e, 'bright', walks: 3);
-        await withCompanion(e, 'bright');
-        for (var d = -3; d <= -1; d++) {
-          await session(e, d);
-        }
-        e.source.records.add(walkRecord(t1, 12, 100));
-      }, review: false);
-      await settle(tester, () => _opened.evaluate().isNotEmpty);
-      expect(find.text('이야기 1장이 열렸어요'), findsOneWidget);
-      expect(find.text('오늘 함께 걷기 1/${rules.sessionMaxPerDay}'), findsOneWidget);
-      final log = (await tester.runAsync(() => (e.db.select(e.db.notificationLog)
-            ..where((t) => t.kind.equalsValue(NoticeKind.n3)))
-          .get()))!;
-      expect(log.single.refKey, 'bright:1');
-      expect(e.notifier.calls.where((c) => c.kind == NoticeKind.n3), isEmpty);
       await end(tester, e);
     });
 
@@ -306,12 +278,7 @@ void main() {
         MediaQuery.withClampedTextScaling(
           minScaleFactor: 2,
           maxScaleFactor: 2,
-          child: WalkRecordScreen(
-            start: t1,
-            end: t1.add(const Duration(minutes: 12)),
-            ratioBefore: null,
-            review: true,
-          ),
+          child: WalkRecordScreen(start: t1, end: t1.add(const Duration(minutes: 12))),
         ),
         width: 320,
         height: 640,

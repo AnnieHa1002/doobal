@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/color.dart';
 import '../../domain/look.dart';
 import '../../domain/spirit_palette.dart';
+import '../../domain/face_parts.dart';
 import '../common/app_text.dart';
 import '../common/palette.dart';
 import 'color_picker.dart';
@@ -56,7 +57,9 @@ class SwatchDot extends StatelessWidget {
                   ? Icon(
                       Icons.check,
                       size: 18,
-                      color: color.computeLuminance() > 0.5 ? Palette.ink : Palette.paper,
+                      color: color.computeLuminance() > 0.5
+                          ? Palette.ink
+                          : Palette.paper,
                     )
                   : null,
             ),
@@ -166,7 +169,9 @@ class BodyColorSection extends StatelessWidget {
               // 지금 색에서 이어서 고른다
               onTap: custom
                   ? () {}
-                  : () => onChanged(CustomBodyColor(hexFromArgb(palette.argbOf(color)))),
+                  : () => onChanged(
+                      CustomBodyColor(hexFromArgb(palette.argbOf(color))),
+                    ),
             ),
           ],
         ),
@@ -205,10 +210,23 @@ class FacePartRow extends StatelessWidget {
 
   /// 칸에 들어가는 짧은 이름 (캔버스의 이름: '콩 눈' → '콩', '쑥스러움' → '///', '삐죽 미소' → '삐죽')
   static String shortName(String id, String name) => switch (id) {
-        'shy' => '///',
-        'smirk' => '삐죽',
-        _ => name.replaceAll(' 눈', ''),
-      };
+    'n1' => '///',
+    'e1' => '기본',
+    'e2' => '순한',
+    'e3' => '장난',
+    'b1' => '둥근',
+    'b2' => '짧은',
+    'b3' => '화난',
+    'b5' => '걱정',
+    'b6' => '미남',
+    'n3' => '∩',
+    'n4' => '∪',
+    'n6' => '옆선',
+    'm6' => '긴웃음',
+    'm7' => '살짝',
+    'm8' => '활짝',
+    _ => name.replaceAll(' 눈', ''),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -216,22 +234,38 @@ class FacePartRow extends StatelessWidget {
       children: [
         SizedBox(
           width: MediaQuery.textScalerOf(context).scale(34),
-          child: Text(title, style: const TextStyle(fontSize: 13, color: Palette.ink)),
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 13, color: Palette.ink),
+          ),
         ),
         const SizedBox(width: 6),
-        for (final p in parts)
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: p == parts.last ? 0 : 6),
-              child: PartCell(
-                key: ValueKey('$keyPrefix-${p.id}'),
-                label: '$title ${p.name}',
-                text: shortName(p.id, p.name),
-                selected: selected == p.id,
-                onTap: () => onPick(p.id),
-              ),
-            ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final columns = (box.maxWidth / 52).floor().clamp(1, 8);
+              final width = (box.maxWidth - (columns - 1) * 6) / columns;
+              return Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final p in parts)
+                    SizedBox(
+                      width: width,
+                      child: PartCell(
+                        key: ValueKey('$keyPrefix-${p.id}'),
+                        label: '$title ${p.name}',
+                        text: shortName(p.id, p.name),
+                        selected:
+                            canonicalFacePart(keyPrefix, selected) == p.id,
+                        onTap: () => onPick(p.id),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
+        ),
       ],
     );
   }

@@ -31,6 +31,7 @@ import '../domain/color_props.dart';
 import '../domain/landmark.dart';
 import '../domain/spirit_look.dart';
 import '../domain/spirit_palette.dart';
+import '../domain/time_kst.dart';
 import '../domain/map_land.dart';
 import '../domain/map_projection.dart';
 import '../domain/map_regions.dart';
@@ -57,16 +58,22 @@ export 'server_providers.dart';
 
 final rulesProvider = FutureProvider<Rules>((ref) => loadRules());
 
-final landmarksProvider = FutureProvider<List<Landmark>>((ref) => loadLandmarks());
+final landmarksProvider = FutureProvider<List<Landmark>>(
+  (ref) => loadLandmarks(),
+);
 
 /// 소품 MVP 27개 (props.json)
 final propsProvider = FutureProvider<List<Prop>>((ref) => loadProps());
 
 /// 길 위 이벤트 문구 (events.json)
-final eventCatalogProvider = FutureProvider<EventCatalog>((ref) => loadEventCatalog());
+final eventCatalogProvider = FutureProvider<EventCatalog>(
+  (ref) => loadEventCatalog(),
+);
 
 /// 도장 20개와 하늘 구간 (badges.json)
-final badgeCatalogProvider = FutureProvider<BadgeCatalog>((ref) => loadBadgeCatalog());
+final badgeCatalogProvider = FutureProvider<BadgeCatalog>(
+  (ref) => loadBadgeCatalog(),
+);
 
 /// 방명록 걸음 숫자 (milestones.json)
 final milestonesProvider = FutureProvider<List<int>>((ref) => loadMilestones());
@@ -75,19 +82,28 @@ final milestonesProvider = FutureProvider<List<int>>((ref) => loadMilestones());
 final campThemeProvider = FutureProvider<CampTheme>((ref) => loadCampTheme());
 
 /// 지도 위경도 → 캔버스 px (assets/map/ui_map_projection_v01.json)
-final mapProjectionProvider = FutureProvider<MapProjection>((ref) => loadMapProjection());
+final mapProjectionProvider = FutureProvider<MapProjection>(
+  (ref) => loadMapProjection(),
+);
 
 /// 지도 시도 경계 (assets/map/ui_map_regions_v01.svg)
-final mapRegionsProvider = FutureProvider<List<MapRegion>>((ref) => loadMapRegions());
+final mapRegionsProvider = FutureProvider<List<MapRegion>>(
+  (ref) => loadMapRegions(),
+);
 
 /// 시·군·구 (sigungu.json). 출발 동네 고르기
 final sigunguProvider = FutureProvider<List<Sigungu>>((ref) => loadSigungu());
 
 /// 정령 팔레트 (palette.json body·customParts): 몸 색 견본, 얼굴 파츠 이름, 소품 색 규칙
-final spiritPaletteProvider = FutureProvider<SpiritPalette>((ref) => loadSpiritPalette());
+final spiritPaletteProvider = FutureProvider<SpiritPalette>(
+  (ref) => loadSpiritPalette(),
+);
 
 /// 지금 시각(UTC). 화면과 서비스는 DateTime.now()를 직접 부르지 않고 이걸 쓴다. 테스트에서 바꾼다
-final clockProvider = Provider<DateTime Function()>((ref) => () => DateTime.now().toUtc());
+final clockProvider = Provider<DateTime Function()>(
+  (ref) =>
+      () => DateTime.now().toUtc(),
+);
 
 /// 1분마다 새로 나오는 지금 시각. 쉼터처럼 가만히 있는 화면의 하늘이 시간을 따라가게 한다
 final minuteClockProvider = StreamProvider<DateTime>((ref) {
@@ -98,15 +114,17 @@ final minuteClockProvider = StreamProvider<DateTime>((ref) {
 /// 앱 DB. 앱이 닫혀 있을 때 도는 백그라운드 동기화(다른 Flutter 엔진)도 같은 파일을 열어서,
 /// WAL로 읽기와 쓰기가 서로 막지 않게 하고 쓰기가 겹치면 5초까지 기다린다 (database is locked 방지)
 final dbProvider = Provider<AppDb>((ref) {
-  final db = AppDb(driftDatabase(
-    name: 'doobal',
-    native: DriftNativeOptions(
-      setup: (raw) {
-        raw.execute('PRAGMA journal_mode = WAL');
-        raw.execute('PRAGMA busy_timeout = 5000');
-      },
+  final db = AppDb(
+    driftDatabase(
+      name: 'doobal',
+      native: DriftNativeOptions(
+        setup: (raw) {
+          raw.execute('PRAGMA journal_mode = WAL');
+          raw.execute('PRAGMA busy_timeout = 5000');
+        },
+      ),
     ),
-  ));
+  );
   ref.onDispose(db.close);
   return db;
 });
@@ -114,7 +132,9 @@ final dbProvider = Provider<AppDb>((ref) {
 final stepSourceProvider = Provider<StepSource>((ref) => HealthStepSource());
 
 /// 기기 걸음 센서. 걷는 중 화면의 실시간 걸음에만 쓴다 (진행·보상은 stepSourceProvider의 health 값)
-final liveStepsProvider = Provider<LiveSteps>((ref) => const PedometerLiveSteps());
+final liveStepsProvider = Provider<LiveSteps>(
+  (ref) => const PedometerLiveSteps(),
+);
 
 /// 이번 앱 실행 중 기기 걸음 센서 권한을 거부당했는가. 거부하면 걷는 중 화면이 다시 묻지 않는다.
 /// 메모리에만 두어서 앱을 다시 켜면 처음부터 다시 물을 수 있다
@@ -130,8 +150,9 @@ class LiveDenied extends Notifier<bool> {
 final liveDeniedProvider = NotifierProvider<LiveDenied, bool>(LiveDenied.new);
 
 /// 휴대폰 설정 앱 열기 (권한을 거부한 사용자를 설정으로 보낸다)
-final appSettingsOpenerProvider =
-    Provider<AppSettingsOpener>((ref) => const PlatformAppSettingsOpener());
+final appSettingsOpenerProvider = Provider<AppSettingsOpener>(
+  (ref) => const PlatformAppSettingsOpener(),
+);
 
 /// 시작 흐름에서 걸음 권한을 거부한 사용자를 앱 설정으로 보내는가 (false면 권한 요청을 다시 부른다).
 /// iOS만 보낸다. HealthKit은 한 번 답한 뒤에는 권한 창을 다시 띄우지 않아서 다시 물어도 소용이 없고,
@@ -140,8 +161,9 @@ final appSettingsOpenerProvider =
 final stepFixOpensSettingsProvider = Provider<bool>((ref) => Platform.isIOS);
 
 /// 그림 공유 시트 (share_plus). 11/10 그림 상세 화면을 빼서 지금은 부르는 곳이 없다 (공유를 둘지 기획 답 대기)
-final paintingSharerProvider =
-    Provider<PaintingSharer>((ref) => const SharePlusPaintingSharer());
+final paintingSharerProvider = Provider<PaintingSharer>(
+  (ref) => const SharePlusPaintingSharer(),
+);
 
 /// 방명록 금칙어 규칙: 서버 config/moderation (오프라인이면 기기에 남은 마지막 값), 그것도 없거나
 /// 읽을 수 없으면 앱에 넣은 assets/data/moderation.json. 쓰기 화면을 열 때 invalidate 해서 다시 받는다
@@ -159,36 +181,51 @@ final moderationProvider = FutureProvider<Moderation>((ref) async {
 });
 
 /// 금칙어 검사에서 빼는 이름: 명소와 시·군·구 (오탐 방지). 읽는 동안에는 비어 있다
-final moderationNamesProvider = Provider<List<String>>((ref) => [
-      ...?ref.watch(landmarksProvider).value?.map((l) => l.name),
-      ...?ref.watch(sigunguProvider).value?.map((s) => s.name),
-    ]);
+final moderationNamesProvider = Provider<List<String>>(
+  (ref) => [
+    ...?ref.watch(landmarksProvider).value?.map((l) => l.name),
+    ...?ref.watch(sigunguProvider).value?.map((s) => s.name),
+  ],
+);
 
 /// 앱이 같이 쓰는 flutter_local_notifications 플러그인 하나 (알림 권한, 걷는 중 상시 알림).
 /// 처음 쓸 때 한 번 초기화한다
-final localNotificationsProvider = Provider<LocalNotifications>((ref) => LocalNotifications());
+final localNotificationsProvider = Provider<LocalNotifications>(
+  (ref) => LocalNotifications(),
+);
 
 /// 알림 권한 묻기. 휴대폰이 아닌 곳에서는 묻지 않고 거부로 답한다
 final notificationPermissionProvider = Provider<NotificationPermission>(
-    (ref) => LocalNotificationPermission(ref.watch(localNotificationsProvider)));
+  (ref) => LocalNotificationPermission(ref.watch(localNotificationsProvider)),
+);
 
 /// 걷는 중 상시 알림 + 포그라운드 서비스(안드로이드). 걷는 동안 앱이 백그라운드에서 죽지 않게 한다.
 /// iOS·그 밖에서는 아무것도 하지 않는다
-final walkNoticeProvider = Provider<WalkNotice>((ref) => Platform.isAndroid
-    ? AndroidWalkNotice(ref.watch(localNotificationsProvider), ref.watch(liveStepsProvider))
-    : const NoopWalkNotice());
+final walkNoticeProvider = Provider<WalkNotice>(
+  (ref) => Platform.isAndroid
+      ? AndroidWalkNotice(
+          ref.watch(localNotificationsProvider),
+          ref.watch(liveStepsProvider),
+        )
+      : const NoopWalkNotice(),
+);
 
 /// 지금 알림 권한이 허용돼 있는가. 모르면 null (설정 화면의 권한 줄). 권한을 다시 물은 뒤에는 invalidate 한다
 final notificationGrantedProvider = FutureProvider.autoDispose<bool?>(
-    (ref) => ref.watch(notificationPermissionProvider).isGranted());
+  (ref) => ref.watch(notificationPermissionProvider).isGranted(),
+);
 
 /// 알림 종류별 우선순위와 문구 (notifications.json)
-final noticeCatalogProvider = FutureProvider<NoticeCatalog>((ref) => loadNoticeCatalog());
+final noticeCatalogProvider = FutureProvider<NoticeCatalog>(
+  (ref) => loadNoticeCatalog(),
+);
 
 /// 시스템 알림을 띄우는 곳. M6에서 flutter_local_notifications로 바꾼다 (지금은 아무것도 안 띄우는 자리표시)
-final systemNotifierProvider = Provider<SystemNotifier>((ref) => Platform.isAndroid
-    ? AndroidSystemNotifier(ref.watch(localNotificationsProvider))
-    : PlaceholderNotifier());
+final systemNotifierProvider = Provider<SystemNotifier>(
+  (ref) => Platform.isAndroid
+      ? AndroidSystemNotifier(ref.watch(localNotificationsProvider))
+      : PlaceholderNotifier(),
+);
 
 /// 앱이 앞에 있는가 (알림 판단이 앞이면 화면 안 표시만 하려고 읽는다). AutoSync가 lifecycle에 따라 바꾼다.
 /// 앞에서 시작한다. 앱 화면 없이 도는 백그라운드 동기화(background_sync.dart)는 false로 덮어쓴다
@@ -199,7 +236,20 @@ class AppForeground extends Notifier<bool> {
   void set(bool foreground) => state = foreground;
 }
 
-final appForegroundProvider = NotifierProvider<AppForeground, bool>(AppForeground.new);
+final appForegroundProvider = NotifierProvider<AppForeground, bool>(
+  AppForeground.new,
+);
+
+/// 앱을 켠 직후 앞 실행의 끝나지 않은 물감 길을 닫았는가 (AutoSync가 켠다). 물감 길 판정은 이 뒤에 시작한다
+/// (닫기 전에 새 물감 길을 열면 앞 것과 겹친다)
+class TrailsReady extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool ready) => state = ready;
+}
+
+final trailsReadyProvider = NotifierProvider<TrailsReady, bool>(TrailsReady.new);
 
 /// 걷는 중 화면(과 걷다 도착해서 열린 도착 화면)이 몇 개 떠 있는가. 0보다 큰 동안 도착은 그 화면들이
 /// 직접 다룬다 (걷기를 마치고 도착 화면으로 바꾸고, 닫으면 걷기 기록). AutoSync는 그동안 도착 화면을
@@ -213,10 +263,14 @@ class WalkingActive extends Notifier<int> {
   void leave() => state = state > 0 ? state - 1 : 0;
 }
 
-final walkingActiveProvider = NotifierProvider<WalkingActive, int>(WalkingActive.new);
+final walkingActiveProvider = NotifierProvider<WalkingActive, int>(
+  WalkingActive.new,
+);
 
 /// 알림 판단(어떤 알림을 보내거나 예약할지)과 알림 기록·켜고 끄기
-final notificationServiceProvider = FutureProvider<NotificationService>((ref) async {
+final notificationServiceProvider = FutureProvider<NotificationService>((
+  ref,
+) async {
   return NotificationService(
     db: ref.watch(dbProvider),
     rules: await ref.watch(rulesProvider.future),
@@ -227,14 +281,17 @@ final notificationServiceProvider = FutureProvider<NotificationService>((ref) as
 });
 
 /// 설정 화면의 알림 켜고 끄기. 바꾼 뒤에는 invalidate 해서 다시 읽는다
-final noticeSettingsProvider = FutureProvider.autoDispose<NoticeSettings>((ref) async {
+final noticeSettingsProvider = FutureProvider.autoDispose<NoticeSettings>((
+  ref,
+) async {
   return (await ref.watch(notificationServiceProvider.future)).settings();
 });
 
 /// 백업 문자열을 서버에 두고 받아 오는 곳: Firestore users/{uid}/backup/state (server_providers.dart).
 /// 서버가 없는 빌드·시험은 메모리에만 두는 자리표시
 final backupStoreProvider = Provider<BackupStore>(
-    (ref) => ref.watch(serverBackendProvider)?.backup ?? PlaceholderBackupStore());
+  (ref) => ref.watch(serverBackendProvider)?.backup ?? PlaceholderBackupStore(),
+);
 
 /// 계정을 연결한 사용자의 uid (Firebase Auth). 연결하지 않았으면(익명·로그인 전·서버 없음) null.
 /// 백업은 계정을 연결한 사용자만 한다 (익명 uid는 앱을 지우면 다시 찾을 수 없다)
@@ -245,7 +302,10 @@ final backupUidProvider = Provider<String?>((ref) {
 
 /// 로컬 DB ↔ 백업 문자열
 final backupServiceProvider = FutureProvider<BackupService>((ref) async {
-  return BackupService(ref.watch(dbProvider), await ref.watch(rulesProvider.future));
+  return BackupService(
+    ref.watch(dbProvider),
+    await ref.watch(rulesProvider.future),
+  );
 });
 
 /// 자동 백업 (동기화·도착·백그라운드에서 AutoSync가 부른다). 마지막 백업 시각을 메모리에 들고 있어서
@@ -260,18 +320,24 @@ final backupRunnerProvider = FutureProvider<BackupRunner>((ref) async {
 });
 
 /// 프로필(사용자 자신의 정보) 읽기·쓰기. 걸음·여정이 아니라서 SyncService와 따로 둔다
-final profileServiceProvider =
-    Provider<ProfileService>((ref) => ProfileService(ref.watch(dbProvider)));
+final profileServiceProvider = Provider<ProfileService>(
+  (ref) => ProfileService(ref.watch(dbProvider)),
+);
 
 /// 시작 흐름에서 지금 보여 줄 단계. 단계를 마칠 때마다 invalidate 해서 다음 단계를 읽는다
-final onboardingStepProvider =
-    FutureProvider<OnboardingStep>((ref) => ref.watch(profileServiceProvider).step());
+final onboardingStepProvider = FutureProvider<OnboardingStep>(
+  (ref) => ref.watch(profileServiceProvider).step(),
+);
 
 /// 나의 정보·노트가 읽는 모음 쿼리 (읽기만)
-final statsServiceProvider = Provider<StatsService>((ref) => StatsService(ref.watch(dbProvider)));
+final statsServiceProvider = Provider<StatsService>(
+  (ref) => StatsService(ref.watch(dbProvider)),
+);
 
 /// 나의 정보의 닉네임·모습. 화면을 열 때마다 다시 읽는다
-final meProvider = FutureProvider.autoDispose<Me>((ref) => ref.watch(profileServiceProvider).me());
+final meProvider = FutureProvider.autoDispose<Me>(
+  (ref) => ref.watch(profileServiceProvider).me(),
+);
 
 /// 쉼터·걷는 중·꾸미기·나의 정보·시작 화면이 같이 쓰는 내 정령 (me + 팔레트). 아직 못 읽었으면 기본 정령.
 /// 색 소품은 소품 목록을 읽은 뒤 기본 소품 그림으로 보인다
@@ -285,17 +351,39 @@ final spiritLookProvider = Provider<SpiritLook>((ref) {
     bodyArgb: palette.body.argbOf(me.look.body),
     bodyBaseArgb: palette.body.baseArgb,
     baseOf: props == null ? const {} : variantBases(props),
+    variantColors: {
+      for (final p in props ?? <Prop>[])
+        if (p.materialArgb != null) p.id: p.materialArgb!,
+    },
+    initialClothArgb: initialClothColor(props ?? [], me.look.clothColor),
   );
 });
 
 /// 최근 14일의 하루 걸음 (나의 정보 막대). 동기화·삭제로 상태가 바뀌면 snapshotProvider와 함께 새로 읽는다
-final recentDaysProvider = FutureProvider.autoDispose<List<DayBar>>((ref) async {
+final recentDaysProvider = FutureProvider.autoDispose<List<DayBar>>((
+  ref,
+) async {
   final snap = await ref.watch(snapshotProvider.future);
   return ref.watch(statsServiceProvider).recentDays(snap.today);
 });
 
 /// 감지된 걷기 전부, 최신순 (노트의 걷기 기록)
-final walkSessionsProvider = FutureProvider.autoDispose<List<WalkSession>>((ref) async {
+/// 노트 걷기 기록: 닫힌 물감 길(최신순)과 그 날들의 하루 걸음·거리
+final trailHistoryProvider = FutureProvider.autoDispose<
+    ({List<PaintTrailView> trails, Map<String, ({int steps, double distanceM})> days})>((
+  ref,
+) async {
+  await ref.watch(snapshotProvider.future);
+  final trails = await (await ref.watch(syncServiceProvider.future)).paintTrails();
+  final days = await ref
+      .watch(statsServiceProvider)
+      .dayTotals({for (final t in trails) kstDayKey(t.start)});
+  return (trails: trails, days: days);
+});
+
+final walkSessionsProvider = FutureProvider.autoDispose<List<WalkSession>>((
+  ref,
+) async {
   await ref.watch(snapshotProvider.future);
   return ref.watch(statsServiceProvider).walkSessions();
 });
@@ -309,12 +397,15 @@ class DebugDistanceScale extends Notifier<double> {
   void set(double scale) => state = scale;
 }
 
-final debugDistanceScaleProvider =
-    NotifierProvider<DebugDistanceScale, double>(DebugDistanceScale.new);
+final debugDistanceScaleProvider = NotifierProvider<DebugDistanceScale, double>(
+  DebugDistanceScale.new,
+);
 
 final syncServiceProvider = FutureProvider<SyncService>((ref) async {
   // 배수를 바꾸면 서비스를 새로 만들어서, 그것을 읽는 상태도 함께 새로 읽는다
-  final distanceScale = kDebugMode ? ref.watch(debugDistanceScaleProvider) : 1.0;
+  final distanceScale = kDebugMode
+      ? ref.watch(debugDistanceScaleProvider)
+      : 1.0;
   final rules = await ref.watch(rulesProvider.future);
   final landmarks = await ref.watch(landmarksProvider.future);
   final props = await ref.watch(propsProvider.future);
@@ -331,7 +422,9 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
     db: ref.watch(dbProvider),
     source: ref.watch(stepSourceProvider),
     rules: rules,
-    allowedSources: Platform.isIOS ? rules.allowedSourcesIos : rules.allowedSourcesAndroid,
+    allowedSources: Platform.isIOS
+        ? rules.allowedSourcesIos
+        : rules.allowedSourcesAndroid,
     landmarks: {for (final l in landmarks) l.id: l},
     props: props,
     milestones: milestones,
@@ -360,19 +453,19 @@ final mapDataProvider = FutureProvider<MapData>((ref) async {
 });
 
 /// 지금 자리에서 그 명소까지의 거리와 일수 (지도 카드)
-final journeyPreviewProvider =
-    FutureProvider.autoDispose.family<JourneyPreview, String>((ref, destId) async {
-  final svc = await ref.watch(syncServiceProvider.future);
-  await ref.watch(snapshotProvider.future);
-  return svc.preview(destId, ref.read(clockProvider)());
-});
+final journeyPreviewProvider = FutureProvider.autoDispose
+    .family<JourneyPreview, String>((ref, destId) async {
+      final svc = await ref.watch(syncServiceProvider.future);
+      await ref.watch(snapshotProvider.future);
+      return svc.preview(destId, ref.read(clockProvider)());
+    });
 
 /// 도착 화면의 값 (여정 하나). 한 번 읽으면 그대로라 상태가 바뀌어도 다시 읽지 않는다
-final arrivalViewProvider =
-    FutureProvider.autoDispose.family<ArrivalView, String>((ref, journeyId) async {
-  final svc = await ref.watch(syncServiceProvider.future);
-  return svc.arrivalView(journeyId);
-});
+final arrivalViewProvider = FutureProvider.autoDispose
+    .family<ArrivalView, String>((ref, journeyId) async {
+      final svc = await ref.watch(syncServiceProvider.future);
+      return svc.arrivalView(journeyId);
+    });
 
 /// 얻은 그림 전부 (화집·그림 상세). 도착해서 상태가 바뀌면 새로 읽는다
 /// 화집 일기 (도착마다 한 항목, 최근이 앞). 동기화·도착으로 상태가 바뀌면 새로 읽는다
@@ -382,37 +475,44 @@ final diaryProvider = FutureProvider.autoDispose<List<DiaryEntry>>((ref) async {
   return svc.diary();
 });
 
-final paintingsProvider = FutureProvider.autoDispose<List<OwnedPaintingView>>((ref) async {
+final paintingsProvider = FutureProvider.autoDispose<List<OwnedPaintingView>>((
+  ref,
+) async {
   final svc = await ref.watch(syncServiceProvider.future);
   await ref.watch(snapshotProvider.future);
   return svc.paintings();
 });
 
 /// 얻은 소품 id (화집 소품 탭)
-final ownedPropIdsProvider = FutureProvider.autoDispose<Set<String>>((ref) async {
+final ownedPropIdsProvider = FutureProvider.autoDispose<Set<String>>((
+  ref,
+) async {
   final svc = await ref.watch(syncServiceProvider.future);
   await ref.watch(snapshotProvider.future);
   return svc.ownedPropIds();
 });
 
 /// 받은 도장 id와 받은 시각 (화집 도장 탭). 동기화·이벤트로 상태가 바뀌면 새로 읽는다
-final ownedBadgesProvider = FutureProvider.autoDispose<Map<String, DateTime>>((ref) async {
+final ownedBadgesProvider = FutureProvider.autoDispose<Map<String, DateTime>>((
+  ref,
+) async {
   final svc = await ref.watch(syncServiceProvider.future);
   await ref.watch(snapshotProvider.future);
   return svc.ownedBadges();
 });
 
-
 /// 방명록 기회 하나 (쓰기 화면, 도착 화면의 방명록 쓰기 버튼). 열려 있지 않으면 null.
 /// 글을 쓴 뒤에는 invalidate 해서 다시 읽는다
-final guestbookTicketProvider =
-    FutureProvider.autoDispose.family<GuestbookTicket?, String>((ref, ticketId) async {
-  final svc = await ref.watch(syncServiceProvider.future);
-  return svc.guestbookTicket(ticketId, ref.read(clockProvider)());
-});
+final guestbookTicketProvider = FutureProvider.autoDispose
+    .family<GuestbookTicket?, String>((ref, ticketId) async {
+      final svc = await ref.watch(syncServiceProvider.future);
+      return svc.guestbookTicket(ticketId, ref.read(clockProvider)());
+    });
 
 /// 내가 쓴 방명록 글, 최신순 (노트의 내 방명록). 글을 쓴 뒤에는 invalidate 해서 다시 읽는다
-final myPostsProvider = FutureProvider.autoDispose<List<GuestbookPostView>>((ref) async {
+final myPostsProvider = FutureProvider.autoDispose<List<GuestbookPostView>>((
+  ref,
+) async {
   final svc = await ref.watch(syncServiceProvider.future);
   return svc.myPosts();
 });

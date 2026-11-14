@@ -120,6 +120,10 @@ void main() {
       paths: const [
         [LatLng(37.5665, 126.978), LatLng(36.37, 127.38)],
       ],
+      // 그 길 앞쪽 일부가 물감 길 (연필 선 위에 붓자국)
+      paintLines: const [
+        [LatLng(37.3, 127.06), LatLng(37.0, 127.15)],
+      ],
       destId: 'kr002',
       position: const LatLng(37.0, 127.0),
       fundKm: 0,

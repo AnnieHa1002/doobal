@@ -45,9 +45,9 @@ void main() {
     test('얼굴 파츠: 눈 5 · 눈썹 5 · 코 7 · 입 6, 이름은 palette.json 그대로', () {
       final f = spiritPalette.faces;
       expect(
-          f.map((k, v) => MapEntry(k, v.length)), {'eyes': 5, 'brows': 5, 'nose': 7, 'mouth': 6});
-      expect(f['eyes']!.first, (id: 'dot', name: '점+반짝'));
-      expect(f['nose']!.last, (id: 'shy', name: '쑥스러움'));
+          f.map((k, v) => MapEntry(k, v.length)), {'eyes': 6, 'brows': 7, 'nose': 8, 'mouth': 8});
+      expect(f['eyes']!.first, (id: 'e1', name: '기본'));
+      expect(f['nose']!.last, (id: 'n7', name: '동글'));
     });
 
     test('모양이 틀리면 FormatException (모르는 파츠 id, 기본 견본 없음, 기준 밝기 0)', () {

@@ -13,14 +13,6 @@
   "minSteps": 1000,
   "maxPerDay": 3
  },
- "bonus": {
-  "approx": true,
-  "appliesTo": "qualifiedSession",
-  "travelMultiplier": 1.0,
-  "coinMultiplier": 1.0,
-  "note": "16장 11/13 물감 길: 본격 걷기 보너스 없앰. 지금 코드가 이 키를 필수로 읽어서 배수 1.0으로 끈 채 둠(= 보너스 없음). 개발이 물감 길로 바꿀 때 키를 지움",
-  "deprecated": true
- },
  "appWalk": {
   "endOnAppKilled": "lastAliveUtc",
   "androidForegroundService": true,

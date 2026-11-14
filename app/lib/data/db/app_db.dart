@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../../domain/guestbook.dart' show TicketKind;
 import '../../domain/journey.dart' show Frame;
 import '../../domain/notification_policy.dart' show NoticeKind;
+import '../../domain/paint_trail.dart' show PaintTrailEnd;
 
 part 'app_db.g.dart';
 
@@ -11,7 +12,8 @@ part 'app_db.g.dart';
 // + 스키마 7 (첫 여정 '내 동네 스케치': 가상 목적지) + 스키마 8 (방명록 쓸 기회·쓴 글)
 // + 스키마 9 (알림 기록·알림 켜고 끄기) + 스키마 10 (복원한 하루 요약 지키기: 동기화 상태 열)
 // + 스키마 11 (본격 걷기: 앱 걷기 창·이동 거리·럭 장부) + 스키마 13 (길 위 이벤트·도장, 화집 벽 표 삭제)
-// + 스키마 15 (동행·상점 보관함·상점 사용 기록·얻은 배, 프로필: 고른 배).
+// + 스키마 15 (동행·상점 보관함·상점 사용 기록·얻은 배, 프로필: 고른 배)
+// + 스키마 16 (물감 길: 앱 걷기 창 → 물감 길, 보너스·앱 걷기 이동 거리 열 → 물감 길 거리).
 // 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
@@ -26,27 +28,25 @@ class StepMinutes extends Table {
   Set<Column> get primaryKey => {minuteUtc};
 }
 
-/// 하루 요약. distanceM은 실제로 걸은 거리(걸음 × 보폭)이고 보너스·상점은 안 들어 있다 (이름을 바꾸지 않았다).
-/// 본격 걷기(스키마 11)의 열: bonusM은 앱 걷기 보너스, shopM은 상점 효과,
-/// travelM = distanceM + bonusM + shopM은 여정·경비·도착 예정일이 쓰는 이동 거리,
-/// walkTravelM은 앱 걷기 창 안에서 걸은 이동 거리(상점 뺌, 소품 거리의 기준), coins는 그날 번 럭
+/// 하루 요약. distanceM은 실제로 걸은 거리(걸음 × 보폭)이고 상점 효과는 안 들어 있다 (이름을 바꾸지 않았다).
+/// shopM은 상점 효과, travelM = distanceM + shopM은 여정·경비·도착 예정일이 쓰는 여행 거리(스키마 11),
+/// trailM은 물감 길 안의 실제 거리(스키마 16, 럭 덤·리포트), coins는 그날 번 럭
 @DataClassName('DaySummaryRow')
 class DaySummaries extends Table {
   TextColumn get day => text()();
   IntColumn get steps => integer()();
   RealColumn get distanceM => real()();
   IntColumn get countedSessions => integer()();
-  RealColumn get bonusM => real().withDefault(const Constant(0.0))();
   RealColumn get shopM => real().withDefault(const Constant(0.0))();
   RealColumn get travelM => real().withDefault(const Constant(0.0))();
-  RealColumn get walkTravelM => real().withDefault(const Constant(0.0))();
+  RealColumn get trailM => real().withDefault(const Constant(0.0))();
   IntColumn get coins => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {day};
 }
 
-/// 걷기 구간. distanceM은 실제 거리, bonusM은 그 구간 안 앱 걷기 보너스 거리(스키마 11)
+/// 걷기 구간. distanceM은 실제 거리 (걷기 1번 인정은 동행 이야기 횟수·도장에 쓴다)
 @DataClassName('WalkSessionRow')
 class WalkSessions extends Table {
   IntColumn get startUtc => integer()();
@@ -56,7 +56,6 @@ class WalkSessions extends Table {
   RealColumn get runRatio => real()();
   BoolColumn get qualified => boolean()();
   BoolColumn get counted => boolean()();
-  RealColumn get bonusM => real().withDefault(const Constant(0.0))();
 
   @override
   Set<Column> get primaryKey => {startUtc};
@@ -95,8 +94,9 @@ class Journeys extends Table {
   RealColumn get destLat => real().nullable()();
   RealColumn get destLng => real().nullable()();
 
-  /// 앱이 켜져 있는 동안 센서 걸음 × 보폭으로 센 실제 걸은 거리(m) 누적 (스키마 13, 길 위 이벤트의 칸 기준).
-  /// 경비로 더한 거리·배 환산·화면이 꺼진 동안 따라잡은 걸음은 들어 있지 않다. 진행 거리와는 따로다
+  /// 물감 길 동안 센서 걸음 × 보폭으로 센 실제 걸은 거리(m) 누적 (스키마 13, 길 위 이벤트의 칸 기준).
+  /// 화면이 꺼진 동안 따라잡은 걸음은 들고(스키마 16), 경비로 더한 거리·배 환산·상점 효과·물감 길 밖 걸음은
+  /// 들어 있지 않다. 진행 거리와는 따로다
   RealColumn get eventM => real().withDefault(const Constant(0.0))();
 
   @override
@@ -160,8 +160,12 @@ class SyncState extends Table {
   TextColumn get restoreFloorDay => text().nullable()();
 
   /// 앱이 살아 있던 마지막 시각 (epoch ms). 살아 있는 동안 config sync.aliveSaveSec마다와 백그라운드로
-  /// 갈 때 적는다. 다음 실행에서 끝나지 않은 앱 걷기를 이 시각에서 닫는다. 이 기기에만 두는 값
+  /// 갈 때 적는다. 다음 실행에서 끝나지 않은 물감 길을 이 시각에서 닫는다. 이 기기에만 두는 값
   IntColumn get lastAliveUtc => integer().nullable()();
+
+  /// 다음 동기화가 하루 요약을 이 날(한국 날짜 키)부터 다시 계산한다 (스키마 16: 거리 규칙이 바뀐 옛 날).
+  /// 다시 계산하면 null로 지운다. 이 기기에만 두는 값
+  TextColumn get recomputeFromDay => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -272,18 +276,16 @@ class NotificationSettings extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// 앱 걷기가 끝난 까닭: finish는 걷기 마치기(또는 화면 닫기), appEnded는 앱이 끝나서 다음 실행에서 닫았다
-enum AppWalkEnd { finish, appEnded }
-
-/// 앱 걷기 창: 걷는 중 화면을 연 때(출발하기)부터 닫은 때까지 ([startUtc, endUtc), epoch ms).
-/// endUtc가 null이면 열려 있다 (앱이 살아 있는 동안은 지금까지로 센다). 이 창 안에서 걷기 1번을 채워야
-/// 보너스가 붙는다
-@DataClassName('AppWalkRow')
-class AppWalks extends Table {
+/// 물감 길 (스키마 16, 옛 앱 걷기 창 AppWalks를 대신): 앱이 앞에 있을 때 걸으면 저절로 열리고
+/// ([startUtc] = 그 첫 걸음의 분), 걸음이 멈추면(idle, 마지막 걸음 분의 끝) 또는 앱이 끝나면(appEnded,
+/// 다음 실행에서 마지막으로 살아 있던 시각) 닫힌다 ([startUtc, endUtc), epoch ms).
+/// endUtc가 null이면 열려 있다 (앱이 살아 있는 동안은 지금까지로 센다)
+@DataClassName('PaintTrailRow')
+class PaintTrails extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get startUtc => integer()();
   IntColumn get endUtc => integer().nullable()();
-  TextColumn get endReason => textEnum<AppWalkEnd>().nullable()();
+  TextColumn get endReason => textEnum<PaintTrailEnd>().nullable()();
 }
 
 /// 럭 장부 행의 종류: earn은 걸어서 번 것(하루 한 행, 다시 계산하면 덮어쓴다), ad는 광고 보상,
@@ -373,14 +375,14 @@ class ShopInventory extends Table {
 }
 
 /// 여행 효과를 쓴 기록 (스키마 15). day는 한국 날짜, km은 여행 거리에 더한 양(하루 상한 config shop.dailyEffectCapKm),
-/// appWalkId는 이번 걷는 중에만 듣는 효과(순풍)의 앱 걷기 창
+/// paintTrailId는 열린 물감 길이 끝날 때까지 듣는 효과(순풍)의 물감 길 (스키마 16, 옛 appWalkId)
 @DataClassName('ShopUseRow')
 class ShopUses extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get itemId => text()();
   TextColumn get day => text()();
   TextColumn get journeyId => text()();
-  IntColumn get appWalkId => integer().nullable()();
+  IntColumn get paintTrailId => integer().nullable()();
   RealColumn get km => real().withDefault(const Constant(0.0))();
 }
 
@@ -411,7 +413,7 @@ class BoatsOwned extends Table {
     GuestbookPosts,
     NotificationLog,
     NotificationSettings,
-    AppWalks,
+    PaintTrails,
     CoinLedger,
     JourneyEvents,
     BadgesOwned,
@@ -426,7 +428,7 @@ class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -481,15 +483,21 @@ class AppDb extends _$AppDb {
           if (from < 10) await m.addColumn(syncState, syncState.restoreFloorDay);
           // 하루 요약·걷기 구간·동기화 상태 표는 1부터 있었고 다시 만든 적이 없어서 어디서 올라와도 열을 더한다.
           // 옛 하루에는 앱 걷기가 없었으니 이동 거리 = 실제 거리 (보너스·앱 걷기 이동 거리·럭은 기본값 0)
+          // (11에서 더한 보너스·앱 걷기 이동 거리 열과 앱 걷기 표는 16에서 물감 길로 바꿨다. 옛 정의라 SQL로 둔다)
           if (from < 11) {
-            await m.addColumn(daySummaries, daySummaries.bonusM);
+            await customStatement(
+                'ALTER TABLE day_summaries ADD COLUMN bonus_m REAL NOT NULL DEFAULT 0.0');
             await m.addColumn(daySummaries, daySummaries.shopM);
             await m.addColumn(daySummaries, daySummaries.travelM);
-            await m.addColumn(daySummaries, daySummaries.walkTravelM);
+            await customStatement(
+                'ALTER TABLE day_summaries ADD COLUMN walk_travel_m REAL NOT NULL DEFAULT 0.0');
             await m.addColumn(daySummaries, daySummaries.coins);
-            await m.addColumn(walkSessions, walkSessions.bonusM);
+            await customStatement(
+                'ALTER TABLE walk_sessions ADD COLUMN bonus_m REAL NOT NULL DEFAULT 0.0');
             await m.addColumn(syncState, syncState.lastAliveUtc);
-            await m.createTable(appWalks);
+            await customStatement('CREATE TABLE IF NOT EXISTS app_walks ('
+                'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, start_utc INTEGER NOT NULL, '
+                'end_utc INTEGER NULL, end_reason TEXT NULL)');
             await m.createTable(coinLedger);
             await customStatement('UPDATE day_summaries SET travel_m = distance_m');
           }
@@ -508,14 +516,69 @@ class AppDb extends _$AppDb {
             await m.createTable(badgesOwned);
             await customStatement('DROP TABLE IF EXISTS wall_slots');
           }
-          // 15: 동행·상점·배. 2 이하에서 올라올 때는 위 createTable(profile)이 지금 정의라 열이 이미 있다
+          // 15: 동행·상점·배. 2 이하에서 올라올 때는 위 createTable(profile)이 지금 정의라 열이 이미 있다.
+          // 상점 사용 기록은 15 정의(app_walk_id)로 만들고 16에서 이름을 바꾼다
           if (from < 15) {
             if (from >= 3) await m.addColumn(profile, profile.boatId);
             await m.createTable(companions);
             await m.createTable(companionStints);
             await m.createTable(shopInventory);
-            await m.createTable(shopUses);
+            await customStatement('CREATE TABLE IF NOT EXISTS shop_uses ('
+                'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, item_id TEXT NOT NULL, '
+                'day TEXT NOT NULL, journey_id TEXT NOT NULL, app_walk_id INTEGER NULL, '
+                'km REAL NOT NULL DEFAULT 0.0)');
             await m.createTable(boatsOwned);
+          }
+          // 16: 물감 길 (M1 명세 v0.5 ⑦). 앱 걷기 창을 물감 길로 옮기고(번호 그대로, finish → idle),
+          // 보너스 열을 지우고 물감 길 거리 열을 더한다. 여행 거리 = 실제 + 상점으로 바로 고치고,
+          // 물감 길 거리·럭은 다음 동기화가 가장 이른 하루 요약부터 다시 계산한다 (recomputeFromDay)
+          if (from < 16) {
+            // 앞 판의 일부 표만 흉내 낸 DB(시험)에서도 돌게 표·열이 있을 때만 고친다
+            Future<bool> has(String table, [String? column]) async => (await customSelect(
+                  column == null
+                      ? "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?"
+                      : 'SELECT name FROM pragma_table_info(?) WHERE name = ?',
+                  variables: [
+                    Variable.withString(table),
+                    if (column != null) Variable.withString(column),
+                  ],
+                ).get())
+                .isNotEmpty;
+            await m.createTable(paintTrails);
+            if (await has('app_walks')) {
+              await customStatement(
+                  'INSERT INTO paint_trails (id, start_utc, end_utc, end_reason) '
+                  "SELECT id, start_utc, end_utc, CASE end_reason WHEN 'finish' THEN 'idle' "
+                  'ELSE end_reason END FROM app_walks');
+              await customStatement('DROP TABLE app_walks');
+            }
+            if (await has('day_summaries')) {
+              for (final column in const ['bonus_m', 'walk_travel_m']) {
+                if (await has('day_summaries', column)) {
+                  await customStatement('ALTER TABLE day_summaries DROP COLUMN $column');
+                }
+              }
+              if (!await has('day_summaries', 'trail_m')) {
+                await m.addColumn(daySummaries, daySummaries.trailM);
+              }
+              if (await has('day_summaries', 'shop_m') && await has('day_summaries', 'travel_m')) {
+                await customStatement('UPDATE day_summaries SET travel_m = distance_m + shop_m');
+              }
+            }
+            if (await has('walk_sessions', 'bonus_m')) {
+              await customStatement('ALTER TABLE walk_sessions DROP COLUMN bonus_m');
+            }
+            if (await has('shop_uses', 'app_walk_id')) {
+              await customStatement(
+                  'ALTER TABLE shop_uses RENAME COLUMN app_walk_id TO paint_trail_id');
+            }
+            if (await has('sync_state')) {
+              await m.addColumn(syncState, syncState.recomputeFromDay);
+              if (await has('day_summaries')) {
+                await customStatement('UPDATE sync_state SET recompute_from_day = '
+                    '(SELECT MIN(day) FROM day_summaries)');
+              }
+            }
           }
         },
       );

@@ -87,23 +87,6 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
-          // 누적 거리 카드 아래 작은 글: 걷는 중 화면에서 걸은 이동 거리 (Snapshot.walkTravelKm)
-          Row(
-            children: [
-              const Expanded(child: SizedBox()),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
-                  child: Text(
-                    '본격 걷기 ${formatKm(snap.walkTravelKm)}',
-                    key: const ValueKey('stat-focus-km'),
-                    style: AppText.label,
-                  ),
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 12),
           Row(
             children: [

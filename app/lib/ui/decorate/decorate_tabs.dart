@@ -13,7 +13,12 @@ const _emptyNames = {'face': '얼굴 소품', 'float': '둥실 소품', 'effect'
 
 /// 내 모습 탭: 눈·눈썹·코·입 줄과 몸 색 (견본 10 + 직접 고르기). 정령에는 머리·피부가 없다
 class MeTab extends StatelessWidget {
-  const MeTab({super.key, required this.look, required this.palette, required this.onChanged});
+  const MeTab({
+    super.key,
+    required this.look,
+    required this.palette,
+    required this.onChanged,
+  });
 
   final Look look;
   final SpiritPalette palette;
@@ -21,17 +26,21 @@ class MeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget row(String title, String key, String selected, Look Function(String) set) =>
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: FacePartRow(
-            keyPrefix: key,
-            title: title,
-            parts: palette.faces[key]!,
-            selected: selected,
-            onPick: (id) => onChanged(set(id)),
-          ),
-        );
+    Widget row(
+      String title,
+      String key,
+      String selected,
+      Look Function(String) set,
+    ) => Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: FacePartRow(
+        keyPrefix: key,
+        title: title,
+        parts: palette.faces[key]!,
+        selected: selected,
+        onPick: (id) => onChanged(set(id)),
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Column(

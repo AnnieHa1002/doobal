@@ -14,7 +14,6 @@ import 'package:doobal/domain/onboarding.dart';
 import 'package:doobal/domain/sigungu.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/domain/sky.dart';
-import 'package:doobal/domain/spirit_look.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/palette.dart';
@@ -355,11 +354,11 @@ void main() {
       expect(xs, orderedEquals([...xs]..sort()));
       // 처음은 눈 탭: 눈 5칸, 한 줄에 4칸
       final eyes = spiritPalette.faces['eyes']!;
-      expect(eyes, hasLength(5));
+      expect(eyes, hasLength(6));
       final ys = [for (final p in eyes) tester.getTopLeft(find.byKey(ValueKey('eyes-${p.id}'))).dy];
       expect(ys.take(4).toSet(), hasLength(1));
       expect(ys[4], greaterThan(ys[0]));
-      expect(find.byKey(const ValueKey('brows-shiba')), findsNothing);
+      expect(find.byKey(const ValueKey('brows-b1')), findsNothing);
       expect(find.byKey(const ValueKey('body-custom')), findsNothing);
       // 눈썹·코·입 탭은 그 부위 칸 전부
       for (final key in ['brows', 'nose', 'mouth']) {
@@ -367,7 +366,7 @@ void main() {
         for (final p in spiritPalette.faces[key]!) {
           expect(find.byKey(ValueKey('$key-${p.id}')), findsOneWidget, reason: '$key ${p.id}');
         }
-        expect(find.byKey(const ValueKey('eyes-dot')), findsNothing);
+        expect(find.byKey(const ValueKey('eyes-e1')), findsNothing);
       }
       // 몸 색 탭: 견본 10개 + 직접 고르기
       await tab(tester, 'body');
@@ -401,16 +400,14 @@ void main() {
         matching: find.byType(SpiritCharacter),
       );
       expect(spirit(), findsOneWidget);
-      expect(
-        tester.widget<SpiritCharacter>(spirit()).look,
-        // 첫 모습: 기본 가방(큰 붓)을 메고 기본 옷 여행복, 크림 몸
-        SpiritLook.base.copyWith(bag: 1, outfit: 1, bodyArgb: 0xFFF3E4C4),
-      );
+      final initialSpirit=tester.widget<SpiritCharacter>(spirit()).look;
+      expect(initialSpirit.bodyArgb,0xFFF3E4C4);
+      expect(initialSpirit.choices['bag'],1);expect(initialSpirit.choices['cloth'],4);
       expect(find.text('크림 · 여행복 카키'), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('eyes-cat')));
+      await tester.tap(find.byKey(const ValueKey('eyes-e3')));
       await tab(tester, 'mouth');
-      await tester.tap(find.byKey(const ValueKey('mouth-smirk')));
+      await tester.tap(find.byKey(const ValueKey('mouth-m6')));
       await tab(tester, 'body');
       await tester.tap(find.byKey(const ValueKey('body-swatch-9')));
       await tab(tester, 'cloth');
@@ -419,7 +416,7 @@ void main() {
       final look = tester.widget<SpiritCharacter>(spirit()).look;
       expect(
         (look.eye, look.mouth, look.bodyArgb, look.bodyBaseArgb),
-        (4, 5, 0xFFC9775A, 0xFFFFF5E2),
+        (2, 5, 0xFFC9775A, 0xFFFFF5E2),
       );
       // 옷 색은 정령 새 방식(T5) 뒤에 보인다. 지금은 여행복 그림 그대로
       expect(look.outfit, 1);
@@ -515,13 +512,13 @@ void main() {
       await openMe(tester, e);
 
       await tester.enterText(find.byType(TextField), ' 화가 ');
-      await tester.tap(find.byKey(const ValueKey('eyes-sleepy')));
+      await tester.tap(find.byKey(const ValueKey('eyes-e4')));
       await tab(tester, 'brows');
-      await tester.tap(find.byKey(const ValueKey('brows-thin')));
+      await tester.tap(find.byKey(const ValueKey('brows-b2')));
       await tab(tester, 'nose');
-      await tester.tap(find.byKey(const ValueKey('nose-dot')));
+      await tester.tap(find.byKey(const ValueKey('nose-n7')));
       await tab(tester, 'mouth');
-      await tester.tap(find.byKey(const ValueKey('mouth-flat')));
+      await tester.tap(find.byKey(const ValueKey('mouth-m7')));
       await tab(tester, 'body');
       await tester.tap(find.byKey(const ValueKey('body-swatch-7')));
       await tab(tester, 'cloth');
@@ -535,10 +532,10 @@ void main() {
       expect(
         Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>),
         const Look(
-          eyes: 'sleepy',
-          brows: 'thin',
-          nose: 'dot',
-          mouth: 'flat',
+          eyes: 'e4',
+          brows: 'b2',
+          nose: 'n7',
+          mouth: 'm7',
           body: SwatchBodyColor(7),
           clothColor: 2,
         ),
@@ -1144,7 +1141,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('"쉼터로 가기" → 첫 여정 "내 동네 스케치"가 정해지고, 쉼터에 알림 점과 말풍선이 뜬다', (tester) async {
+    testWidgets('"쉼터로 가기" → 첫 여정 "내 동네 스케치"가 정해지고, 쉼터에 말풍선이 뜬다', (tester) async {
       final e = UiEnv();
       await openPermission(tester, e);
       // 권한 단계까지는 여정이 없다
@@ -1168,11 +1165,11 @@ void main() {
           inInclusiveRange(rules.firstSketchMinKm - 1e-6, rules.firstSketchMaxKm + 1e-6));
       expect(j.startUtc, e.now.millisecondsSinceEpoch);
 
-      // 쉼터: 상태 알약, 출발하기의 알림 점, 말풍선
+      // 쉼터: 상태 알약, 아래 말풍선 ‘걸으면 출발해요’ (출발하기 버튼 없음, 캔버스 2-1)
       expect(find.textContaining('쉬는 중 · 내 동네 스케치까지 '), findsOneWidget);
-      expect(find.byKey(const ValueKey('depart-dot')), findsOneWidget);
       expect(find.byKey(const ValueKey('first-sketch-bubble')), findsOneWidget);
-      expect(find.textContaining('첫 그림을 그리러 가요. ${home.label}에서 '), findsOneWidget);
+      expect(find.text('걸으면 출발해요'), findsOneWidget);
+      expect(find.text('출발하기'), findsNothing);
       await end(tester, e);
     });
 
@@ -1215,7 +1212,7 @@ void main() {
       noAsking();
 
       await tester.enterText(find.byType(TextField), '나그네');
-      await tester.tap(find.byKey(const ValueKey('eyes-bean')));
+      await tester.tap(find.byKey(const ValueKey('eyes-e2')));
       await tester.tap(find.byKey(const ValueKey('tab-body')));
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('body-swatch-5')));
@@ -1250,7 +1247,7 @@ void main() {
       expect(r.installId, matches(RegExp(r'^[0-9a-f]{32}$')));
       expect(r.nickname, '나그네');
       expect(Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>),
-          const Look(eyes: 'bean', body: SwatchBodyColor(5)));
+          const Look(eyes: 'e2', body: SwatchBodyColor(5)));
       expect((r.homeId, r.homeName, r.homeLat, r.homeLng),
           (suwon.id, '경기 수원시', suwon.lat, suwon.lng));
       expect(r.onboardedAt, e.now.millisecondsSinceEpoch);
@@ -1261,7 +1258,8 @@ void main() {
       // 첫 여정은 그 동네의 내 동네 스케치
       expect(snap.journey!.dest.id, sketchId);
       expect(snap.position, suwon.latLng);
-      expect(find.textContaining('첫 그림을 그리러 가요. 경기 수원시에서 '), findsOneWidget);
+      // 첫날 말풍선 (캔버스 2-1)
+      expect(find.text('걸으면 출발해요'), findsOneWidget);
       await end(tester, e);
     });
   });

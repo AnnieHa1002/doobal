@@ -158,8 +158,12 @@ class Rules {
     required this.liveCadenceWindowSec,
     required this.liveNoticeUpdateSec,
     required this.lapKm,
-    required this.bonusTravelMultiplier,
-    required this.bonusCoinMultiplier,
+    required this.paintTrailStartSteps,
+    required this.paintTrailStartWithinSec,
+    required this.paintTrailIdleEndMin,
+    required this.paintDropCoinsPerKm,
+    required this.paintDropSpacingM,
+    required this.paintDropCoinsPerDrop,
     required this.coinsPerKm,
     required this.coinsDailyCap,
     required this.coinsWelcomeGift,
@@ -215,6 +219,7 @@ class Rules {
     required this.guestbookWindowSteps,
     required this.eventEveryKm,
     required this.eventFlushSec,
+    required this.eventOffScreenCards,
     required this.eventCardSec,
     required this.stampLineSec,
     required this.arrivalProbeSec,
@@ -308,10 +313,21 @@ class Rules {
   /// 걷기 기록의 랩 길이(km) (config record.lapKm)
   final double lapKm;
 
-  /// 본격 걷기 보너스 (config bonus): 앱 걷기 창 안의 걷기 1번 인정 구간은 이동 거리가 실제 거리의
-  /// [bonusTravelMultiplier]배, 럭은 [bonusCoinMultiplier]배로 센다
-  final double bonusTravelMultiplier;
-  final double bonusCoinMultiplier;
+  /// 물감 길 시작 (config paintTrail.startMinSteps): 앱이 앞에 있을 때 [paintTrailStartWithinSec]초 안에
+  /// 센서 걸음이 [paintTrailStartSteps]보 늘면 시작한다 (가안 60초 10보)
+  final int paintTrailStartSteps;
+  final int paintTrailStartWithinSec;
+
+  /// 걸음이 이만큼(분) 멈추면 물감 길이 끝난다 (config paintTrail.idleEndMin, 가안 5분)
+  final int paintTrailIdleEndMin;
+
+  /// 물감 길 실제 1km당 덤 럭 (config paintDrop.coinsPerKm). 하루 상한 coins.dailyCap에 같이 든다
+  final double paintDropCoinsPerKm;
+
+  /// 물감 방울 사이 거리(m, config paintDrop.spacingM, 가안 100)와 방울 하나에 머리 위로 뜨는 럭
+  /// (config paintDrop.coinsPerDrop, 연출 숫자)
+  final double paintDropSpacingM;
+  final int paintDropCoinsPerDrop;
 
   /// 실제 1km당 하루 럭 (config coins.perKm). 기획이 아직 안 정해서 null이면 럭은 늘 0이다
   final double? coinsPerKm;
@@ -439,6 +455,10 @@ class Rules {
   /// 걷는 중 화면이 센서로 센 거리를 이벤트 계산에 넘기는 간격(초) (config events.flushSec)
   final int eventFlushSec;
 
+  /// 화면이 꺼진 동안 넘은 칸 중 다시 켜질 때 보여 줄 카드 수 (config events.offScreenCards, 11/13 1장).
+  /// 넘은 칸은 모두 줄로 남는다
+  final int eventOffScreenCards;
+
   /// 걷는 중 화면에 이정표 카드(config hud.eventCardSec)·새 도장 줄(config hud.stampLineSec)이
   /// 떠 있는 시간(초). 지나면 저절로 사라진다
   final double eventCardSec;
@@ -483,7 +503,9 @@ class Rules {
     final sync = j['sync'] as Map<String, dynamic>;
     final live = j['live'] as Map<String, dynamic>;
     final record = j['record'] as Map<String, dynamic>;
-    final bonus = j['bonus'] as Map<String, dynamic>;
+    final paintTrail = j['paintTrail'] as Map<String, dynamic>;
+    final trailStart = paintTrail['startMinSteps'] as Map<String, dynamic>;
+    final paintDrop = j['paintDrop'] as Map<String, dynamic>;
     final coins = j['coins'] as Map<String, dynamic>;
     final route = j['route'] as Map<String, dynamic>;
     final journey = j['journey'] as Map<String, dynamic>;
@@ -549,21 +571,27 @@ class Rules {
     // 랩 길이가 0 이하면 랩을 끊을 수 없다
     if (_d(record['lapKm']) <= 0) throw const FormatException('record.lapKm는 0보다 커야 한다');
 
-    // 보너스는 늘려 주는 것이라 1배 미만이면 거리·럭이 줄어든다. 구현한 적용 범위는 하나뿐이다
-    if (bonus['appliesTo'] != 'qualifiedSession') {
-      throw FormatException('bonus.appliesTo를 모른다: ${bonus['appliesTo']}');
-    }
-    if (_d(bonus['travelMultiplier']) < 1) {
-      throw const FormatException('bonus.travelMultiplier는 1 이상이어야 한다');
-    }
-    if (_d(bonus['coinMultiplier']) < 1) {
-      throw const FormatException('bonus.coinMultiplier는 1 이상이어야 한다');
-    }
     if (_dn(coins['perKm']) case final perKm? when perKm < 0) {
       throw const FormatException('coins.perKm는 0 이상이거나 null이어야 한다');
     }
     if ((coins['dailyCap'] as int) <= 0) {
       throw const FormatException('coins.dailyCap은 0보다 커야 한다');
+    }
+    if ((trailStart['steps'] as int) <= 0 || (trailStart['withinSec'] as int) <= 0) {
+      throw const FormatException('paintTrail.startMinSteps의 걸음·초는 0보다 커야 한다');
+    }
+    if (((paintTrail['idleEndMin'] as Map)['min'] as int) <= 0) {
+      throw const FormatException('paintTrail.idleEndMin.min은 0보다 커야 한다');
+    }
+    if (_d((paintDrop['spacingM'] as Map)['m']) <= 0) {
+      throw const FormatException('paintDrop.spacingM.m은 0보다 커야 한다');
+    }
+    // 구현한 거리 기준은 하나씩이다 (M1 명세 v0.5 ①·④)
+    if ((j['props'] as Map)['distanceBasis'] != 'actualAll') {
+      throw FormatException('props.distanceBasis를 모른다: ${(j['props'] as Map)['distanceBasis']}');
+    }
+    if (events['distanceBasis'] != 'paintTrailActual') {
+      throw FormatException('events.distanceBasis를 모른다: ${events['distanceBasis']}');
     }
     if ((coins['welcomeGift'] as int) < 0) {
       throw const FormatException('coins.welcomeGift는 0 이상이어야 한다');
@@ -591,8 +619,12 @@ class Rules {
       liveCadenceWindowSec: live['cadenceWindowSec'] as int,
       liveNoticeUpdateSec: live['noticeUpdateSec'] as int,
       lapKm: _d(record['lapKm']),
-      bonusTravelMultiplier: _d(bonus['travelMultiplier']),
-      bonusCoinMultiplier: _d(bonus['coinMultiplier']),
+      paintTrailStartSteps: trailStart['steps'] as int,
+      paintTrailStartWithinSec: trailStart['withinSec'] as int,
+      paintTrailIdleEndMin: (paintTrail['idleEndMin'] as Map)['min'] as int,
+      paintDropCoinsPerKm: _d(paintDrop['coinsPerKm']),
+      paintDropSpacingM: _d((paintDrop['spacingM'] as Map)['m']),
+      paintDropCoinsPerDrop: paintDrop['coinsPerDrop'] as int,
       coinsPerKm: _dn(coins['perKm']),
       coinsDailyCap: coins['dailyCap'] as int,
       coinsWelcomeGift: coins['welcomeGift'] as int,
@@ -690,6 +722,7 @@ class Rules {
       guestbookWindowSteps: guestbook['milestoneWindowSteps'] as int,
       eventEveryKm: _d(events['everyKm']),
       eventFlushSec: events['flushSec'] as int,
+      eventOffScreenCards: events['offScreenCards'] as int,
       eventCardSec: _d(hud['eventCardSec']),
       stampLineSec: _d(hud['stampLineSec']),
       arrivalProbeSec: walk['arrivalProbeSec'] as int,

@@ -52,132 +52,133 @@
   "asOf": "2026-11-06",
   "eyes": [
    {
-    "id": "dot",
-    "name": "점+반짝",
-    "rive": 0
+    "id": "e1",
+    "name": "기본"
    },
    {
-    "id": "bean",
-    "name": "콩 눈",
-    "rive": 1
+    "id": "e2",
+    "name": "부드러운 눈"
    },
    {
-    "id": "sleepy",
-    "name": "졸린 눈",
-    "rive": 2
+    "id": "e3",
+    "name": "장난 눈"
    },
    {
-    "id": "fierce",
-    "name": "사나운 눈",
-    "rive": 3
+    "id": "e4",
+    "name": "졸린 눈"
    },
    {
-    "id": "cat",
-    "name": "고양이 눈",
-    "rive": 4
+    "id": "e5",
+    "name": "감은 눈"
+   },
+   {
+    "id": "e6",
+    "name": "반짝 눈"
    }
   ],
   "brows": [
    {
     "id": "none",
-    "name": "없음",
-    "rive": 0
+    "name": "없음"
    },
    {
-    "id": "shiba",
-    "name": "시바",
-    "rive": 1
+    "id": "b1",
+    "name": "둥근 눈썹"
    },
    {
-    "id": "thin",
-    "name": "가늘고 긴",
-    "rive": 2
+    "id": "b2",
+    "name": "짧은 눈썹"
    },
    {
-    "id": "thick",
-    "name": "두꺼운",
-    "rive": 3
+    "id": "b3",
+    "name": "화난 눈썹"
    },
    {
-    "id": "fierce",
-    "name": "사나운",
-    "rive": 4
+    "id": "b4",
+    "name": "졸린 눈썹"
+   },
+   {
+    "id": "b5",
+    "name": "걱정 눈썹"
+   },
+   {
+    "id": "b6",
+    "name": "미남 눈썹"
    }
   ],
   "nose": [
    {
     "id": "none",
-    "name": "없음",
-    "rive": 3
+    "name": "없음"
    },
    {
-    "id": "ring",
-    "name": "고리",
-    "rive": 0
+    "id": "n1",
+    "name": "빗금"
    },
    {
-    "id": "dot",
-    "name": "점",
-    "rive": 1
+    "id": "n2",
+    "name": "고리"
    },
    {
-    "id": "wide",
-    "name": "넓적",
-    "rive": 2
+    "id": "n3",
+    "name": "위 곡선"
    },
    {
-    "id": "triangle",
-    "name": "삼각",
-    "rive": 4
+    "id": "n4",
+    "name": "아래 곡선"
    },
    {
-    "id": "heart",
-    "name": "하트",
-    "rive": 5
+    "id": "n5",
+    "name": "두 점"
    },
    {
-    "id": "shy",
-    "name": "쑥스러움",
-    "rive": 6
+    "id": "n6",
+    "name": "옆 곡선"
+   },
+   {
+    "id": "n7",
+    "name": "동글"
    }
   ],
   "mouth": [
    {
-    "id": "smile",
-    "name": "미소",
-    "rive": 0
+    "id": "m1",
+    "name": "미소"
    },
    {
-    "id": "omega",
-    "name": "ω",
-    "rive": 1
+    "id": "m2",
+    "name": "오메가"
    },
    {
-    "id": "o",
-    "name": "o",
-    "rive": 2
+    "id": "m3",
+    "name": "송곳니"
    },
    {
-    "id": "flat",
-    "name": "일자",
-    "rive": 3
+    "id": "m4",
+    "name": "벌린 입"
    },
    {
-    "id": "tongue",
-    "name": "혀",
-    "rive": 4
+    "id": "m5",
+    "name": "활짝"
    },
    {
-    "id": "smirk",
-    "name": "삐죽 미소",
-    "rive": 5
+    "id": "m6",
+    "name": "긴 미소"
+   },
+   {
+    "id": "m7",
+    "name": "살짝 미소"
+   },
+   {
+    "id": "m8",
+    "name": "큰 미소"
    }
   ],
   "defaultFace": {
-   "eyes": "dot",
-   "brows": "shiba",
-   "nose": "shy",
-   "mouth": "omega"
+   "eyes": "e1",
+   "brows": "b1",
+   "nose": "n7",
+   "mouth": "m7"
   },
   "expressions": [
    {
@@ -243,7 +244,7 @@
    "teary": 3,
    "angry": 2
   },
-  "note": "11/4 Annie 확정(Codex v24). 얼굴 파츠는 색을 입히지 않음. 화면 이름은 꾸미기 얼굴 탭에 쓰지 않아도 됨(그림만). 졸림은 밤 쉼터·잠자기 동작에서 유지(holdSec 없음). 화남 조건은 config character.tapReaction 11/5 Annie: 꾸미기·정령 만들기에서 눈·눈썹·코·입을 부위별로 고름(묶음 프리셋 없음)."
+  "note": "11/13 T5: 얼굴 부위를 계약 v0.5(customPartsV33) id로 바꿈. 이름은 PSD v20 부위 이름(화면은 그림 칸이 오기 전까지 글자). 11/12 통합 작업의 PSD 이름 id와 옛 v24 id는 face_parts.dart가 읽을 때 옮긴다. 11/4 Annie 확정(Codex v24). 얼굴 파츠는 색을 입히지 않음. 화면 이름은 꾸미기 얼굴 탭에 쓰지 않아도 됨(그림만). 졸림은 밤 쉼터·잠자기 동작에서 유지(holdSec 없음). 화남 조건은 config character.tapReaction 11/5 Annie: 꾸미기·정령 만들기에서 눈·눈썹·코·입을 부위별로 고름(묶음 프리셋 없음)."
  },
  "body": {
   "base": 200,

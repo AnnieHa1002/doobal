@@ -118,9 +118,9 @@ final _hexPattern = RegExp(r'^#[0-9A-Fa-f]{6}$');
 
 /// props.json 전체에서 status가 mvp인 것만. pending(이벤트 소품)은 아직 다루지 않는다
 List<Prop> parseProps(Map<String, dynamic> json) => [
-      for (final p in json['props'] as List)
-        if ((p as Map<String, dynamic>)['status'] == 'mvp') Prop.fromJson(p),
-    ];
+  for (final p in json['props'] as List)
+    if ((p as Map<String, dynamic>)['status'] == 'mvp') Prop.fromJson(p),
+];
 
 /// 지금 얻은 소품 id. 거리 소품은 걷는 중 화면에서 걸은 이동 거리(본격 걷기 보너스 포함, 배 구간 환산 아님)로 센다.
 /// 동료 소품은 동료 이야기를 마칠 때(M4), 상점 소품은 살 때(M4.5) 주므로 여기서 주지 않는다
@@ -143,7 +143,7 @@ Set<String> earnedPropIds(
   };
 }
 
-/// 다음 거리 소품까지 남은 본격 걷기 이동 거리(km): [totalKm]보다 먼 거리 소품 중 가장 가까운 것까지.
+/// 다음 거리 소품까지 남은 거리(km): 설치 뒤 모든 걸음의 실제 거리 [totalKm]보다 먼 거리 소품 중 가장 가까운 것까지.
 /// 거리 소품을 다 얻었으면 null. 무엇인지는 화면에 보이지 않는다 (UI 명세 12장, 16장 11/3)
 double? kmToNextDistanceProp(List<Prop> props, double totalKm) {
   double? next;
@@ -154,15 +154,27 @@ double? kmToNextDistanceProp(List<Prop> props, double totalKm) {
   return next == null ? null : next - totalKm;
 }
 
-/// 꾸미기 소품 칸 위 한 줄: `다음 소품까지 본격 걷기 63km`. 남은 거리는 올림이라 1km보다 적게 남아도
+/// 꾸미기 소품 칸 위 한 줄: `다음 소품까지 63km` (16장 11/13, 기준은 모든 걸음). 남은 거리는 올림이라 1km보다 적게 남아도
 /// 0km로 보이지 않는다 (더한 거리의 소수 오차로 한 칸 더 올라가지 않게 아주 작은 값은 뺀다)
 String nextPropText(double km) =>
-    '다음 소품까지 본격 걷기 ${formatInt(math.max(1, (km - 1e-6).ceil()))}km';
+    '다음 소품까지 ${formatInt(math.max(1, (km - 1e-6).ceil()))}km';
 
 /// 새로 얻은 소품 토스트 한 줄 (가안): `새 소품을 얻었어요 · 지팡이`, 여럿이면 `… · 지팡이 외 1개`
-String newPropToast(List<Prop> props) => '새 소품을 얻었어요 · ${props.first.name}'
+String newPropToast(List<Prop> props) =>
+    '새 소품을 얻었어요 · ${props.first.name}'
     '${props.length > 1 ? ' 외 ${props.length - 1}개' : ''}';
 
 /// 토스트로 알리는 소품인가: 거리·걸음 소품만. 권역 소품은 도착 화면이 따로 알리고,
 /// 기본 소품은 처음부터 가진 것이다 (동행 소품은 이야기 완결 때 동행 동기화가 따로 준다: 그때도 토스트)
-bool announcesProp(Prop p) => p.kind == PropUnlockKind.distance || p.kind == PropUnlockKind.steps;
+bool announcesProp(Prop p) =>
+    p.kind == PropUnlockKind.distance || p.kind == PropUnlockKind.steps;
+
+/// 시작할 때 고른 여행복 색. 소품별 직접 색이 있으면 그 색이 우선이다.
+int? initialClothColor(List<Prop> props, int choice) {
+  for (final p in props) {
+    if (p.id == 'cloth_02' && choice >= 1 && choice <= p.startColors.length) {
+      return p.startColors[choice - 1].argb;
+    }
+  }
+  return null;
+}

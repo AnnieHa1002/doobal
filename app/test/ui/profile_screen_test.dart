@@ -153,7 +153,7 @@ void main() {
       await e.db.into(e.db.profile).insertOnConflictUpdate(ProfileCompanion(
             id: const Value(1),
             nickname: const Value('나그네'),
-            look: const Value('{"eyes":"fierce","mouth":"tongue","body":{"kind":"swatch","i":9}}'),
+            look: const Value('{"eyes":"e4","mouth":"m5","body":{"kind":"swatch","i":9}}'),
           ));
     });
     await _open(tester, e);
@@ -184,7 +184,7 @@ void main() {
     final spirit = find.descendant(
         of: find.byKey(const ValueKey('portrait')), matching: find.byType(SpiritCharacter));
     final look = tester.widget<SpiritCharacter>(spirit).look;
-    expect((look.eye, look.brow, look.nose, look.mouth), (0, 1, 6, 1));
+    expect((look.eye, look.brow, look.nose, look.mouth), (0, 1, 6, 6));
     expect(look.bodyArgb, 0xFFF3E4C4);
     await end(tester, e);
   });

@@ -16,7 +16,6 @@ import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
-import '../walking/walking_screen.dart';
 import 'landmark_card.dart';
 import 'map_geometry.dart';
 import 'map_painter.dart';
@@ -37,7 +36,7 @@ const _bottomReserve = 270.0;
 
 /// 지도 (4-1): 전국 시도 경계 위에 명소·지나온 길·지금 위치를 보여 주고, 명소를 골라 출발한다.
 /// 처음 열면 내 현재 위치 기준으로 확대해서 명소가 3곳 이상 보이게 한다 (domain/map_first_view).
-/// 카드: 주 `출발하기`(어디서 열어도 걷는 중으로, 여정이 없으면 그 명소로 출발해서),
+/// 카드: 주 `출발하기`(여정만 정하고 쉼터로, 16장 11/13: 걷는 중은 걸으면 저절로 열린다),
 /// 보조 `목적지 바꾸기`(다른 명소를 골랐을 때, 시트 하나)·`여정 멈추기`(현재 목적지, 시트).
 /// 첫 여정(내 동네 스케치) 중에는 바꾸기·멈추기를 숨긴다. 뒤로는 쉼터
 class MapScreen extends ConsumerStatefulWidget {
@@ -217,11 +216,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     }
   }
 
-  /// 걷는 중으로 간다 (이 지도 자리를 바꾼다. 어디서 열어도 같다)
-  Future<void> _walk() => Navigator.of(context)
-      .pushReplacement(MaterialPageRoute<void>(builder: (_) => const WalkingScreen()));
+  /// 쉼터로 돌아간다 (지금 목적지의 `출발하기`: 여정은 이미 정해져 있다)
+  Future<void> _toRest() async => Navigator.of(context).popUntil((r) => r.isFirst);
 
-  /// 여정을 시작한다. 바꾸기였으면 쉼터로 돌아가고, 처음 출발이면 걷는 중으로 간다
+  /// 여정을 시작한다 (경비를 더할지 [useFund]). 바꾸기든 처음 출발이든 여정만 정하고 쉼터로 돌아간다
   Future<void> _start(String destId, bool useFund, {required bool change}) async {
     final svc = await ref.read(syncServiceProvider.future);
     try {
@@ -237,10 +235,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       await Navigator.of(context).maybePop();
       return;
     }
-    // 걷는 중이 첫 화면부터 새 여정으로 시작하도록 새 상태가 올 때까지 기다린다
-    await ref.read(snapshotProvider.future);
-    if (!mounted) return;
-    await _walk();
+    await _toRest();
   }
 
   /// 여정 멈추기: 먼저 확인하고, 멈춘 자리에서 다시 출발하게 둔다. 시트를 밖에서 눌러 닫으면 아무 일도 없다
@@ -415,7 +410,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     ];
   }
 
-  /// 고른 명소가 있으면 아래 카드. 주 버튼은 늘 `출발하기`(여정이 있으면 걷는 중으로, 없으면 이 명소로 출발).
+  /// 고른 명소가 있으면 아래 카드. 주 버튼은 늘 `출발하기`(여정이 있으면 쉼터로, 없으면 이 명소로 정하고 쉼터로).
   /// 여정 중이면 보조 버튼: 현재 목적지는 `여정 멈추기`, 다른 명소는 `목적지 바꾸기`.
   /// 첫 여정(내 동네 스케치) 중에는 보조 버튼을 숨긴다 (바꾸기·멈추기 없음)
   List<Widget> _selectedCard(MapGeometry g, MapData data, Snapshot snap) {
@@ -454,7 +449,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
               frame: data.visited[id],
               distance: distance,
               primaryLabel: '출발하기',
-              onPrimary: hasJourney ? _walk : () => _onGo(l, snap, change: false),
+              onPrimary: hasJourney ? _toRest : () => _onGo(l, snap, change: false),
               secondaryLabel: !canChange ? null : (isJourneyDest ? '여정 멈추기' : '목적지 바꾸기'),
               onSecondary: isJourneyDest ? _onStop : () => _onGo(l, snap, change: true),
             ),
