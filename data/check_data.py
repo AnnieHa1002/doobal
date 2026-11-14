@@ -252,6 +252,16 @@ for x in riv_props:
         err(f"props {x['id']}: Rive {x['rive']['choice']} {x['rive']['n']}은 쓰지 않는 번호(16장 11/14 새싹·꽃)")
 if unused.get('hatChoice') != config['character']['rive'].get('unusedChoices', {}).get('hatChoice'):
     err("props rive.unusedChoices ≠ config character.rive.unusedChoices")
+pc = config.get('paintColor')
+if pc:
+    if set(pc['timePhase']) - {'note'} != set(config['scene']['sky']['keys']):
+        err("paintColor.timePhase 키가 scene.sky.keys와 다름")
+    n = (len(set(pc['timePhase']) - {'note'}) + len(set(pc['weather']) - {'note'})) * 2
+    if n != pc['colorCount']:
+        err(f"paintColor.colorCount {pc['colorCount']} ≠ (시간대 + 날씨) × 2 = {n}")
+    lo, hi = pc['tube']['amountWalkMin']
+    if pc['tube']['amountM'] != [lo * pc['tube']['walkMPerMin'], hi * pc['tube']['walkMPerMin']]:
+        err("paintColor.tube.amountM ≠ amountWalkMin × walkMPerMin")
 fx_ids = {x['id'] for x in props_doc['props'] if x['slot'] == 'effect' and x['status'] == 'mvp'}
 if set(config.get('effects', {}).get('items', {})) != fx_ids: err(f"config effects.items {sorted(config.get('effects',{}).get('items',{}))} ≠ props 효과 {sorted(fx_ids)}")
 art_doc = load('scene_art.json')
