@@ -212,8 +212,9 @@ class _PostCard extends StatelessWidget {
 
 /// 걷기 기록 (캔버스 6-3, 16장 11/13): 맨 위 ‘걷기 리포트 ›’(6-4), 그 아래 날짜마다 날짜 줄(그날 걸음·거리,
 /// 누르면 그날 하루 카드 2-3)과 그날 물감 길 줄(누르면 그 물감 길의 걷기 기록 3-3), 최신순.
-/// 날짜는 걸음이 있었던 날과 물감 길이 있는 날이다. 오늘 날짜 줄은 내일 새벽 5시(config report.dayStartHour) 뒤에
-/// 하루 카드가 생겨서 그때부터 누를 수 있다
+/// 날짜는 걸음이 있었던 날과 물감 길이 있는 날 중 하루 카드가 생긴 날만이다: 그날 줄은 다음 날 새벽 5시
+/// (config report.dayStartHour, 하루 카드와 같은 경계 [cardToday]) 뒤에 생긴다 (캔버스 6-3, 16장 11/16 Annie).
+/// 그래서 오늘 줄은 없고, 새벽 0~5시에는 어제 줄도 아직 없다. 줄이 있으면 늘 그날 카드를 연다
 class _WalksTab extends ConsumerWidget {
   const _WalksTab();
 
@@ -225,12 +226,15 @@ class _WalksTab extends ConsumerWidget {
     final trailsByDay = {
       for (final g in groupByKstDay(history.trails, (t) => t.start)) g.day: g.items,
     };
-    final days = {...history.days.keys, ...trailsByDay.keys}.toList()
-      ..sort((a, b) => b.compareTo(a));
+    // 하루 카드가 있는 마지막 날 (카드 어제)
+    final lastCard = addDays(cardToday(ref.watch(clockProvider)(), rules.report), -1);
+    final days = [
+      for (final d in {...history.days.keys, ...trailsByDay.keys})
+        if (d.compareTo(lastCard) <= 0) d,
+    ]..sort((a, b) => b.compareTo(a));
     if (days.isEmpty) {
       return const Center(child: Text('아직 걷기 기록이 없어요', style: AppText.bodySub));
     }
-    final lastCard = addDays(cardToday(ref.watch(clockProvider)(), rules.report), -1);
     // 맨 위 리포트 줄, 그 아래 날짜마다 카드 하나 (날짜 줄 + 그날 물감 길 줄, 캔버스 6-3)
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -244,9 +248,7 @@ class _WalksTab extends ConsumerWidget {
             day: day,
             totals: history.days[day],
             trails: trailsByDay[day] ?? const [],
-            onTap: day.compareTo(lastCard) <= 0
-                ? () => Navigator.of(context).push(DayCardPage.route(day))
-                : null,
+            onTap: () => Navigator.of(context).push(DayCardPage.route(day)),
           ),
         );
       },
@@ -286,25 +288,36 @@ class _DayCard extends StatelessWidget {
   }
 }
 
-/// 한 줄을 그 폭에 맞춘다: 글자 크기를 키워 한 줄에 안 들어가면 줄 전체가 줄어든다
-/// (들어가면 줄 너비만큼 그대로 펴진다)
-Widget _fitRow(List<Widget> children, {double gap = 8}) => LayoutBuilder(
-      builder: (context, box) => FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: SizedBox(
-          width: box.maxWidth,
-          child: Row(
-            children: [
-              for (final (i, c) in children.indexed) ...[
-                if (i > 0) SizedBox(width: gap),
-                c,
-              ],
-            ],
-          ),
+/// 한 줄: [left] 묶음은 왼쪽, [right] 묶음은 오른쪽 끝. 글자 크기를 키워 한 줄에 안 들어가면 줄 전체가
+/// 줄어든다 (들어가면 줄 너비만큼 그대로 펴진다). 두 묶음 사이는 [gap] 이상 떨어진다
+Widget _fitRow({required List<Widget> left, required List<Widget> right, double gap = 8}) {
+  Widget group(List<Widget> items) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (i, c) in items.indexed) ...[
+            if (i > 0) SizedBox(width: gap),
+            c,
+          ],
+        ],
+      );
+  return LayoutBuilder(
+    builder: (context, box) => FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: box.maxWidth),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Padding(padding: EdgeInsets.only(right: gap), child: group(left)),
+            group(right),
+          ],
         ),
       ),
-    );
+    ),
+  );
+}
 
 /// 맨 위 ‘걷기 리포트 ›’ 줄 (잉크 바탕, 캔버스 6-3)
 class _ReportRow extends StatelessWidget {
@@ -358,17 +371,14 @@ class _DayHeader extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 52),
       padding: const EdgeInsets.symmetric(horizontal: _rowInset, vertical: 10),
       alignment: Alignment.centerLeft,
-      child: _fitRow(gap: 10, [
+      child: _fitRow(gap: 10, left: [
         ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 70),
           child: Text(date, style: const TextStyle(fontSize: 13, color: Palette.subInk)),
         ),
-        Expanded(
-          child: Text(
-            t == null ? '' : '${formatInt(t.steps)}보',
-            style: context.display(14, weight: FontWeight.w600),
-          ),
-        ),
+        if (t != null)
+          Text('${formatInt(t.steps)}보', style: context.display(14, weight: FontWeight.w600)),
+      ], right: [
         if (t != null)
           Text(formatKmShort(t.distanceM), style: const TextStyle(fontSize: 13, color: Palette.ink)),
         if (onTap != null) const Icon(Icons.chevron_right, size: 20, color: Palette.ink),
@@ -412,14 +422,13 @@ class _TrailRow extends StatelessWidget {
               constraints: const BoxConstraints(minHeight: 44),
               padding: const EdgeInsets.symmetric(vertical: 6),
               alignment: Alignment.centerLeft,
-              child: _fitRow([
+              child: _fitRow(left: [
                 const CustomPaint(size: Size(22, 10), painter: _BrushIcon()),
-                Expanded(
-                  child: Text(
-                    formatKstClockAmPm(trail.start),
-                    style: const TextStyle(fontSize: 13, color: Palette.subInk),
-                  ),
+                Text(
+                  formatKstClockAmPm(trail.start),
+                  style: const TextStyle(fontSize: 13, color: Palette.subInk),
                 ),
+              ], right: [
                 Text(
                   '물감 길 ${formatKmShort(trail.trailM)}',
                   style: const TextStyle(fontSize: 13, color: Palette.ink),
