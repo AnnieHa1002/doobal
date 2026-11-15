@@ -250,12 +250,16 @@ class ItemCell extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: const TextStyle(fontSize: 12, height: 1.3, color: Palette.ink),
                         ),
+                        // 캔버스 8-1: 11pt·줄 높이 1.35·위 1 아래 2 여백, 폭에 따라 두 줄까지 접힘
                         if (desc case final d?)
-                          Text(
-                            d,
-                            key: const ValueKey('item-desc'),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 11, height: 1.3, color: Palette.subInk),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 1, bottom: 2),
+                            child: Text(
+                              d,
+                              key: const ValueKey('item-desc'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 11, height: 1.35, color: Palette.subInk),
+                            ),
                           ),
                         if (state.isNotEmpty)
                           Text(
