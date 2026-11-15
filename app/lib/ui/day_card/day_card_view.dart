@@ -19,6 +19,7 @@ import '../common/framed_painting.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
 import '../scene/spirit_character.dart';
+import '../scene/spirit_controller.dart' show SpiritMotion;
 import 'walk_report_screen.dart';
 
 // 하루 카드 (캔버스 2-3)와 공유 이미지 (2-4). 카드 종이·테이프는 화집 메모지·테이프 재질을 다시 쓴다
@@ -64,6 +65,13 @@ String dayCardSub(DayCard c, DateTime now) {
   return dayCardTitle(c, now) == '어제'
       ? '${formatMonthDay(dayFromKey(day))} ${weekdayLong(day)}'
       : weekdayLong(day);
+}
+
+/// 걸음이 0인 카드(‘쉬어 간 날’, 16장 11/15)의 글 한 줄. 문구는 가안(기획이 다듬음):
+/// 여러 날이면 ‘지난 n일 동안 쉬어 갔어요’, 어제면 ‘어제는 푹 쉬었어요’, 날짜 카드면 ‘이날은 푹 쉬었어요’
+String restedLine(DayCard c, DateTime now) {
+  if (!c.range.single) return '지난 ${c.range.days}일 동안 쉬어 갔어요';
+  return dayCardTitle(c, now) == '어제' ? '어제는 푹 쉬었어요' : '이날은 푹 쉬었어요';
 }
 
 /// ‘11월 12일 ~ 14일’, 달이 다르면 ‘10월 30일 ~ 11월 2일’
@@ -199,7 +207,7 @@ class _DayCardOverlayState extends ConsumerState<DayCardOverlay> {
       return Stack(
         children: [
           // 공유 이미지 틀은 화면 밖에 그린다 (공유할 때만)
-          if (_sharing)
+          if (_sharing && !widget.card.rested)
             Positioned(
               left: -box.maxWidth - shareFrameWidth,
               top: 0,
@@ -421,13 +429,14 @@ class _PolaroidWithSpirit extends StatelessWidget {
   }
 }
 
-/// 꾸민 정령 (쉼터와 같은 정령, 서 있기)
+/// 꾸민 정령 (쉼터와 같은 정령, 서 있기). [sleeping]이면 잠든 자세(쉬어 간 날 카드, 쉼터 밤과 같은 자세 4)
 class _Spirit extends StatelessWidget {
-  const _Spirit(this.look, {this.onReady, this.renderer});
+  const _Spirit(this.look, {this.onReady, this.renderer, this.sleeping = false});
 
   final SpiritLook look;
   final VoidCallback? onReady;
   final rive.Factory? renderer;
+  final bool sleeping;
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
@@ -436,12 +445,18 @@ class _Spirit extends StatelessWidget {
           share: 0.92,
           footAt: 0.97,
           riveFactory: renderer,
-          onReady: onReady == null ? null : (_) => onReady!(),
+          onReady: onReady == null && !sleeping
+              ? null
+              : (c) {
+                  if (sleeping) c.play(SpiritMotion.sleep);
+                  onReady?.call();
+                },
         ),
       );
 }
 
-/// 하루 카드 종이 (캔버스 2-3): 날짜·제목·공유 아이콘, 그림(있으면)과 정령, 숫자 2×2, 이번 주 막대, 자세히 보기
+/// 하루 카드 종이 (캔버스 2-3): 날짜·제목·공유 아이콘, 그림(있으면)과 정령, 숫자 2×2, 이번 주 막대, 자세히 보기.
+/// 걸음이 0이면 ‘쉬어 간 날’ 카드(16장 11/15): 공유 아이콘·숫자 대신 잠든 정령과 글 한 줄, 막대·자세히 보기는 그대로
 class DayCardPanel extends StatelessWidget {
   const DayCardPanel({
     super.key,
@@ -469,6 +484,7 @@ class DayCardPanel extends StatelessWidget {
     final title = dayCardTitle(card, now);
     final stats = dayCardStats(card);
     final painting = this.painting;
+    final rested = card.rested;
     return Semantics(
       container: true,
       label: '$title 하루 카드',
@@ -493,7 +509,7 @@ class DayCardPanel extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Transform.translate(
+                  if (!rested) Transform.translate(
                     offset: const Offset(6, -6),
                     child: Semantics(
                       button: true,
@@ -531,10 +547,21 @@ class DayCardPanel extends StatelessWidget {
                         spiritSize: const Size(76, 91),
                         spiritOffset: const Offset(26, 30),
                       )
-                    : SizedBox(width: 110, height: 131, child: _Spirit(spirit)),
+                    : SizedBox(width: 110, height: 131, child: _Spirit(spirit, sleeping: rested)),
               ),
               const SizedBox(height: 12),
-              _StatGrid(stats),
+              if (rested)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    restedLine(card, now),
+                    key: const ValueKey('day-card-rested'),
+                    textAlign: TextAlign.center,
+                    style: context.display(17).copyWith(height: 1.35),
+                  ),
+                )
+              else
+                _StatGrid(stats),
               const SizedBox(height: 12),
               const Text('이번 주', style: AppText.label),
               const SizedBox(height: 6),

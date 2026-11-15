@@ -21,19 +21,24 @@ class ReportService {
       (await (db.select(db.syncState)..where((t) => t.id.equals(1))).getSingleOrNull())
           ?.firstRecordDay;
 
-  /// 하루 카드로 보여 주고 닫은 마지막 날. 닫은 적이 없으면 첫 기록일 전날 (처음 설치한 날에는 카드가 없다).
-  /// 첫 기록일도 없으면 null
-  Future<String?> lastShownDay() async {
+  /// [now]에 볼 때 하루 카드로 보여 주고 닫은 마지막 날. 닫은 적이 없으면 첫 기록일 전날 (처음 설치한 날에는 카드가 없다).
+  /// 하루 카드가 없던 판에서 업데이트한 기기(마이그레이션 17이 날 없이 넣은 행)는 카드 그저께까지 본 것으로 봐서
+  /// 첫 카드가 어제 1장이다 (16장 11/15 ②, 첫 기록일 전날보다 앞으로는 가지 않는다). 첫 기록일도 없으면 null
+  Future<String?> lastShownDay(DateTime now) async {
     final row = await (db.select(db.reportState)..where((t) => t.id.equals(1))).getSingleOrNull();
     final day = row?.lastShownDay;
     if (day != null) return day;
     final first = await firstRecordDay();
-    return first == null ? null : initialLastShownDay(first);
+    if (first == null) return null;
+    final initial = initialLastShownDay(first);
+    if (row == null) return initial;
+    final upgraded = addDays(cardToday(now, rules.report), -2);
+    return upgraded.compareTo(initial) > 0 ? upgraded : initial;
   }
 
   /// [now]에 앱을 열 때 보여 줄 하루 카드. 보여 줄 날이 없으면 null
   Future<DayCard?> dueCard(DateTime now) async {
-    final last = await lastShownDay();
+    final last = await lastShownDay(now);
     if (last == null) return null;
     final range = dueCardRange(nowUtc: now, lastShownDay: last, rules: rules.report);
     return range == null ? null : cardFor(range);

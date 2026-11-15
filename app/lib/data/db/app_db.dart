@@ -639,7 +639,12 @@ class AppDb extends _$AppDb {
           }
           // 17: 하루 카드 (M1 명세 v0.5 ⑥). 행은 만들지 않는다: 없으면 첫 기록일 전날로 보니
           // 이미 쓰던 기기는 다음에 열 때 밀린 날(최대 config report.maxMergeDays) 카드가 한 번 뜬다
-          if (from < 17) await m.createTable(reportState);
+          if (from < 17) {
+            await m.createTable(reportState);
+            // 이미 쓰던 기기 표시: 날 없는 행 하나. ReportService가 첫 카드를 어제 1장으로 본다
+            // (16장 11/15 ②, 이전: 첫 기록일부터 최대 ‘지난 30일’ 한 장). 새로 설치한 기기는 행이 없다
+            await into(reportState).insert(const ReportStateCompanion(id: Value(1)));
+          }
           // 18: 물감 색·물감 모으기 (M1 v0.7, 스키마 v10.5). 2 이하·15 이하에서 올라올 때는 위 createTable(profile)·
           // createTable(paintTrails)가 지금 정의라 새 열이 이미 있어 건너뛴다. 옛 물감 길은 칠한 색이 없어 기본 물감이다
           if (from < 18) {

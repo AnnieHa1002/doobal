@@ -1167,7 +1167,7 @@ void main() {
     expect((sync.lastAliveUtc, sync.recomputeFromDay), (400, '2026-11-17'));
   });
 
-  test('스키마 16에서 열면 18로: 하루 카드 상태 표가 빈 채로 생기고 옛 행은 그대로다', () async {
+  test('스키마 16에서 열면 18로: 하루 카드 상태 표에 날 없는 행 하나(이미 쓰던 기기 표시), 옛 행은 그대로다', () async {
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldJourneys(raw);
       raw.execute('''
@@ -1195,15 +1195,16 @@ void main() {
 
     expect(await _userVersion(db), 18);
     expect(await _hasTable(db, 'report_state'), isTrue);
-    // 행은 만들지 않는다 (없으면 첫 기록일 전날로 본다)
-    expect(await db.select(db.reportState).get(), isEmpty);
+    // 날 없는 행 하나: 업데이트한 기기라 첫 카드는 어제 1장 (16장 11/15 ②, 새 설치는 행이 없다)
+    final state = await db.select(db.reportState).getSingle();
+    expect((state.id, state.lastShownDay), (1, null));
     expect(await _columns(db, 'report_state'), ['id', 'last_shown_day']);
     final day = await db.select(db.daySummaries).getSingle();
     expect((day.day, day.steps, day.trailM, day.coins), ('2026-11-18', 1200, 420.0, 14));
     expect((await db.select(db.paintTrails).getSingle()).endReason, PaintTrailEnd.arrived);
     expect((await db.select(db.syncState).getSingle()).firstRecordDay, '2026-11-17');
 
-    await db.into(db.reportState).insert(
+    await db.into(db.reportState).insertOnConflictUpdate(
         ReportStateCompanion.insert(id: const Value(1), lastShownDay: const Value('2026-11-18')));
     expect((await db.select(db.reportState).getSingle()).lastShownDay, '2026-11-18');
   });

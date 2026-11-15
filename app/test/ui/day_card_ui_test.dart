@@ -197,6 +197,90 @@ void main() {
     });
   });
 
+  group('쉬어 간 날 카드 (16장 11/15)', () {
+    Future<void> shownUpTo(UiEnv e, String? day) => e.db.into(e.db.reportState).insert(
+        ReportStateCompanion.insert(id: const Value(1), lastShownDay: Value(day)));
+
+    testWidgets('걸음이 0인 날: 잠든 정령과 글 한 줄, 숫자·공유 없음, 막대·자세히 보기는 그대로', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _walkOn18(e);
+        await shownUpTo(e, '2026-11-18');
+      });
+      await _openApp(tester, e, _kst(11, 20, 7));
+
+      expect(_card, findsOneWidget);
+      expect(find.text('어제'), findsOneWidget);
+      expect(_key('day-card-rested'), findsOneWidget);
+      expect(find.text('어제는 푹 쉬었어요'), findsOneWidget);
+      expect(_key('day-card-share'), findsNothing);
+      expect(find.descendant(of: _card, matching: find.text('걸음')), findsNothing);
+      expect(find.text('이번 주'), findsOneWidget);
+      expect(find.text('자세히 보기 ›'), findsOneWidget);
+      // 이번 주 막대: 걸은 수요일은 그대로, 쉰 목요일은 점선 바닥
+      expect(tester.getSize(_key('week-bar-2026-11-18')).height, 64);
+      expect(tester.getSize(_key('week-bar-2026-11-19')).height, 1.5);
+      await end(tester, e);
+    });
+
+    testWidgets('밀린 날이 모두 0보면 ‘지난 n일 동안 쉬어 갔어요’ 한 장', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _walkOn18(e);
+        await shownUpTo(e, '2026-11-18');
+      });
+      await _openApp(tester, e, _kst(11, 22, 7));
+
+      expect(find.text('지난 3일'), findsOneWidget);
+      expect(find.text('지난 3일 동안 쉬어 갔어요'), findsOneWidget);
+      expect(_key('day-card-share'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('밀린 날 중 하루라도 걸었으면 지금처럼 합계 카드', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _walkOn18(e);
+        await shownUpTo(e, '2026-11-17');
+      });
+      await _openApp(tester, e, _kst(11, 21, 7));
+
+      expect(find.text('지난 3일'), findsOneWidget);
+      expect(_key('day-card-rested'), findsNothing);
+      expect(_key('day-card-share'), findsOneWidget);
+      expect(find.descendant(of: _card, matching: find.text('3,000보')), findsWidgets);
+      await end(tester, e);
+    });
+
+    testWidgets('업데이트한 기기(날 없는 행)는 첫 카드가 어제 1장 (첫 기록일부터 밀린 날이 아님)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _walkOn18(e);
+        await shownUpTo(e, null);
+      });
+      await _openApp(tester, e, _kst(11, 25, 7));
+
+      expect(find.text('어제'), findsOneWidget);
+      expect(find.textContaining('지난 '), findsNothing);
+      expect(find.text('11월 24일 화요일'), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('업데이트한 기기라도 첫 기록일 앞의 날은 카드에 넣지 않는다 (설치 다음 날 업데이트)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _walkOn18(e);
+        await shownUpTo(e, null);
+      });
+      await _openApp(tester, e, _kst(11, 19, 7));
+
+      expect(find.text('어제'), findsOneWidget);
+      expect(find.text('11월 18일 수요일'), findsOneWidget);
+      expect(_key('day-card-rested'), findsNothing);
+      await end(tester, e);
+    });
+  });
+
   group('걷기 리포트 (6-4)', () {
     /// 11월 18일(수) 18:00 30분 × 100보 걷기, 11월 19일(목) 07:00 20분 × 150보 뛰기
     Future<UiEnv> seeded(WidgetTester tester) async {

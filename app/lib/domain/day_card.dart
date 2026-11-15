@@ -143,6 +143,9 @@ class DayCard {
   /// 카드 날들에 얻은 그림 (도착한 명소 id, 첫 그림은 'sketch'), 도착 순서대로. 다시 간 명소도 든다
   final List<String> paintings;
 
+  /// 카드 날들이 모두 0보 = ‘쉬어 간 날’ 카드 (16장 11/15: 숫자·공유 없이 잠든 정령과 글 한 줄)
+  bool get rested => steps <= 0;
+
   /// 하루 평균 걸음·거리 (‘지난 n일’ 카드, 반올림)
   int get avgSteps => (steps / range.days).round();
   double get avgM => actualM / range.days;
