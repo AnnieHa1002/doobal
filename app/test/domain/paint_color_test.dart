@@ -67,6 +67,23 @@ void main() {
       expect(r.paintColor.hexOf('sunset_run'), 0xFFE07397);
     });
 
+    test('모든 색을 쌍으로 주면 intensity가 없어도 되고, 문자열 색이 하나라도 있으면 intensity.run이 있어야 한다', () {
+      Map<String, String> pair(String w, String r) => {'walk': w, 'run': r};
+      final r = _rulesWith((j) {
+        final pc = j['paintColor'] as Map<String, dynamic>;
+        pc.remove('intensity');
+        for (final k in ['dawn', 'morning', 'day', 'sunset', 'night']) {
+          pc['timePhase'][k] = pair('#C0ADE6', '#A18AD0');
+        }
+        for (final k in ['rain', 'snow', 'cloudy']) {
+          pc['weather'][k] = pair('#CEE7EC', '#98C9D2');
+        }
+      });
+      expect(r.paintColor.hexOf('snow_run'), 0xFF98C9D2);
+      expect(() => _rulesWith((j) => (j['paintColor'] as Map<String, dynamic>).remove('intensity')),
+          throwsFormatException);
+    });
+
     test('보상 표 목록(paintDrop.rewards)이 있으면 그것을 읽고, 모르는 kind·확률 합 1 초과는 거부', () {
       final r = _rulesWith((j) {
         j['paintDrop']['rewards'] = [
@@ -220,6 +237,23 @@ void main() {
       // 색을 안 주면 T9처럼 물감 한 구간
       expect(trailSegments(fundKm: 0, minutes: minutes).last,
           const TrailSegment(0.14, 0.56, TrailKind.paint));
+    });
+
+    test('그 분에 칠한 색: 물감 길의 고른 색, 다 쓴 뒤·물감 길 밖·색 없는 옛 물감 길은 기본', () {
+      const trails = [
+        TrailPaint(startMs: 100, endMs: 200, colorId: 'sunset', colorEndMs: 150),
+        TrailPaint(startMs: 300, endMs: 400),
+        TrailPaint(startMs: 500, colorId: 'rain'),
+      ];
+      expect(paintedColorAt(trails, 50, 'basic'), 'basic');
+      expect(paintedColorAt(trails, 100, 'basic'), 'sunset');
+      expect(paintedColorAt(trails, 149, 'basic'), 'sunset');
+      expect(paintedColorAt(trails, 150, 'basic'), 'basic');
+      expect(paintedColorAt(trails, 250, 'basic'), 'basic');
+      expect(paintedColorAt(trails, 350, 'basic'), 'basic');
+      // 열린 물감 길은 끝이 없다
+      expect(paintedColorAt(trails, 99999, 'basic'), 'rain');
+      expect(paintedColorAt(const [], 1, 'basic'), 'basic');
     });
 
     test('가진 통 수 = 주운 차례로 쓴 뒤 다 안 쓴 통', () {

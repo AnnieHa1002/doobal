@@ -469,30 +469,37 @@ class PaintTrailController extends Notifier<PaintTrailState> {
       return Future.value();
     }
     _paintAt = now;
-    return _painting = () async {
-      try {
-        final paint = await ref.read(paintServiceProvider.future);
-        final got = await paint.addPaint(
-          trailId: id,
-          fromM: fromM,
-          toM: toM,
-          now: now,
-          momentColor: _momentColor(rules, now),
-        );
-        if (state.id == id) _paintSentM = toM;
-        if (_disposed) return;
-        // 고른 물감이 줄었거나 다 썼다 (배낭 탭·지도는 다음에 볼 때), 새 통이면 배낭 점
-        ref.invalidate(paintShelfProvider);
-        if (got.isNotEmpty) {
-          ref.invalidate(unseenPaintsProvider);
-          ref.invalidate(paintTubeRoomProvider);
-        }
-      } catch (e) {
-        debugPrint('물감 칠하기 실패: $e');
-      } finally {
-        _painting = null;
+    final run = _paint(rules, id, fromM, toM, now);
+    _painting = run;
+    // 끝나면 비운다 (첫 await 전에 끝나도 대입 뒤에 비우게 여기서)
+    run.whenComplete(() {
+      if (identical(_painting, run)) _painting = null;
+    });
+    return run;
+  }
+
+  /// 물감 길 [id]를 [fromM] → [toM]만큼 칠하고 방울 보상을 받는다. 실패는 기록만 하고 다음 넘김에 다시
+  Future<void> _paint(Rules rules, int id, double fromM, double toM, DateTime now) async {
+    try {
+      final paint = await ref.read(paintServiceProvider.future);
+      final got = await paint.addPaint(
+        trailId: id,
+        fromM: fromM,
+        toM: toM,
+        now: now,
+        momentColor: _momentColor(rules, now),
+      );
+      if (state.id == id) _paintSentM = toM;
+      if (_disposed) return;
+      // 고른 물감이 줄었거나 다 썼다 (배낭 탭·지도는 다음에 볼 때), 새 통이면 배낭 점
+      ref.invalidate(paintShelfProvider);
+      if (got.isNotEmpty) {
+        ref.invalidate(unseenPaintsProvider);
+        ref.invalidate(paintTubeRoomProvider);
       }
-    }();
+    } catch (e) {
+      debugPrint('물감 칠하기 실패: $e');
+    }
   }
 
   /// 이정표에 넘길 이번 물감 길 거리(m): 센서가 센 거리. iOS 메우기를 쓰면 숨어 있던 동안 따라잡은 센서 걸음 대신

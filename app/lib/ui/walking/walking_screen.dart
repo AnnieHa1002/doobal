@@ -410,8 +410,12 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final view = ref.watch(companionsViewProvider).value;
     final companion = _walkingWith = view?.metById(view.walkingWith)?.companion;
     final shownM = meet == null ? _shownM : _meetShownM;
-    // 방울에 곱하는 그 순간 물감 색 (시간대·날씨·뛰기, 16장 11/14)
+    // 방울에 곱하는 그 순간 물감 색 (시간대·날씨·뛰기, 16장 11/14), 방울 보상을 정하는 물감 길 번호,
+    // 그 색 통을 더 주울 수 있는가 (장면 builder 안이 아니라 여기서 읽는다)
     final moment = _momentColor(rules, position, running);
+    final dropColor = rules.paintColor.hexOf(moment);
+    final trailId = ref.watch(paintTrailProvider.select((s) => s.id));
+    final tubeAllowed = ref.watch(paintTubeRoomProvider(moment)).value ?? true;
 
     return Scaffold(
       body: Stack(
@@ -441,9 +445,9 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
               spot: spot,
               shownM: shownM,
               rules: rules,
-              color: rules.paintColor.hexOf(moment),
-              trailId: ref.watch(paintTrailProvider).id,
-              tubeAllowed: ref.watch(paintTubeRoomProvider(moment)).value ?? true,
+              color: dropColor,
+              trailId: trailId,
+              tubeAllowed: tubeAllowed,
             ),
           ),
           // 길 위 만남 동안에는 HUD를 가린다 (상태는 그대로 둔다)

@@ -131,7 +131,8 @@ class PaintColorRules {
   factory PaintColorRules.fromJson(Map<String, dynamic> j, {Map<String, dynamic>? paintDrop}) {
     final def = j['default'] as Map<String, dynamic>;
     if (def['infinite'] != true) throw const FormatException('paintColor.default는 무제한이어야 한다');
-    final run = (j['intensity'] as Map<String, dynamic>)['run'] as Map<String, dynamic>?;
+    // 뛰기 색을 모두 hex 쌍으로 주면(11/15 디자인 기획) intensity는 없어도 된다
+    final run = (j['intensity'] as Map<String, dynamic>?)?['run'] as Map<String, dynamic>?;
     PaintHexPair pair(Object? v, String where) {
       if (v is String) {
         final walk = _hex(v, where);
@@ -345,14 +346,26 @@ class TrailPaint {
 }
 
 /// [ms](분 시작 시각)에 칠한 물감 색 id (M1 v0.7 구간 색). 그 시각이 든 물감 길의 고른 색, 그 색을 다 쓴 뒤거나
-/// 물감 길 밖이면 기본 물감 [defaultId]
+/// 물감 길 밖이면 기본 물감 [defaultId]. [trails]는 시작 순이고 겹치지 않는다 (물감 길은 하나씩 열린다):
+/// [ms] 이하에서 시작한 마지막 물감 길을 이분 탐색으로 본다
 String paintedColorAt(List<TrailPaint> trails, int ms, String defaultId) {
-  for (final t in trails) {
-    final end = t.endMs;
-    if (ms < t.startMs || (end != null && ms >= end)) continue;
-    final colorEnd = t.colorEndMs;
-    if (colorEnd != null && ms >= colorEnd) return defaultId;
-    return t.colorId ?? defaultId;
+  var lo = 0;
+  var hi = trails.length - 1;
+  var at = -1;
+  while (lo <= hi) {
+    final mid = (lo + hi) >> 1;
+    if (trails[mid].startMs <= ms) {
+      at = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
   }
-  return defaultId;
+  if (at < 0) return defaultId;
+  final t = trails[at];
+  final end = t.endMs;
+  if (end != null && ms >= end) return defaultId;
+  final colorEnd = t.colorEndMs;
+  if (colorEnd != null && ms >= colorEnd) return defaultId;
+  return t.colorId ?? defaultId;
 }
