@@ -1,6 +1,7 @@
 import 'color.dart';
 import 'face_parts.dart';
 import 'look.dart';
+import 'screen_rules.dart';
 
 /// palette.json body.swatches의 견본 하나 (번호는 1부터, 이름은 접근성 label)
 class BodySwatch {
@@ -59,12 +60,15 @@ typedef FacePart = ({String id, String name});
 /// 꾸미기·시작 화면이 읽는 palette.json: 몸 색, 얼굴 파츠 이름
 /// (잔디는 쉼터 쪽이 따로 읽는다)
 class SpiritPalette {
-  const SpiritPalette({required this.body, required this.faces});
+  const SpiritPalette({required this.body, required this.faces, this.cues = const SpiritCues({})});
 
   final BodyPalette body;
 
   /// 'eyes'·'brows'·'nose'·'mouth' → 파츠 목록 (palette.json 순서)
   final Map<String, List<FacePart>> faces;
+
+  /// 표정 호출 표 (customPartsV33 expressions·expressionTriggers·holdSec). 없으면 빈 표
+  final SpiritCues cues;
 
 
   /// 모양이 틀리면 FormatException (견본 없음, 기본 견본이 없음, 파츠 id가 코드 표와 다름 …)
@@ -112,6 +116,10 @@ class SpiritPalette {
         'brows': face('brows', browParts),
         'nose': face('nose', noseParts),
         'mouth': face('mouth', mouthParts),
+      },
+      cues: switch (json['customPartsV33']) {
+        final Map<String, dynamic> v33 => SpiritCues.fromJson(v33),
+        _ => const SpiritCues({}),
       },
     );
   }
