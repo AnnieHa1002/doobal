@@ -49,6 +49,7 @@ class ShopItem {
     this.maxHold,
     this.requiresJourney = false,
     this.requires,
+    this.desc,
   });
 
   final String id;
@@ -66,6 +67,9 @@ class ShopItem {
   /// 먼저 가져야 살 수 있는 소품 id. 색 소품의 기본 소품 (props unlock.requires)
   final String? requires;
 
+  /// 상점 칸 이름 아래 설명 한 줄. 여행 효과만 있다 (shop v6 desc, 16장 11/13 화면 글 ②)
+  final String? desc;
+
   factory ShopItem.fromJson(Map<String, dynamic> j) {
     final effect = j['effect'] as Map<String, dynamic>?;
     return ShopItem(
@@ -80,6 +84,7 @@ class ShopItem {
       dailyLimit: j['dailyLimit'] as int?,
       maxHold: j['maxHold'] as int?,
       requiresJourney: j['requiresJourney'] as bool? ?? false,
+      desc: j['desc'] as String?,
     );
   }
 }
@@ -154,7 +159,7 @@ class ShopBlocked extends StateError {
 String coinAmountText(int n, Rules rules) =>
     rules.coinAmountFormat.replaceAll('{n}', formatInt(n));
 
-/// 구매 질문: '지름길을 50 럭에 구매할까요?' (config coins.format.buyQuestion)
+/// 구매 질문 (config coins.format.buyQuestion v16 '구매하시겠습니까?', 16장 11/13). 옛 꼴 '{item}을(를) {n} 럭에'도 채운다
 String buyQuestionText(String item, int price, Rules rules) => rules.coinBuyQuestion
     .replaceAll('{item}을(를)', '$item${josa(item, '을/를')}')
     .replaceAll('{n}', formatInt(price));

@@ -488,7 +488,7 @@ class Rules {
   /// 럭 값 표기 '{n} 럭' (config coins.format.amount)
   final String coinAmountFormat;
 
-  /// 구매 질문 '{item}을(를) {n} 럭에 구매할까요?' (config coins.format.buyQuestion, 조사는 앱이 고른다)
+  /// 구매 질문 '구매하시겠습니까?' (config coins.format.buyQuestion, 16장 11/13. {item}·{n}이 있으면 앱이 채운다)
   final String coinBuyQuestion;
 
   /// 구매 버튼 글 (config coins.format.buyButton)

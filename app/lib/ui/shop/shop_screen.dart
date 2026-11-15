@@ -162,6 +162,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
       cells.add(ItemCell(
         key: ValueKey('shop-item-${item.id}'),
         name: item.name,
+        desc: item.desc,
         art: boat != null
             ? BoatShelfArt(boat: boat)
             : ItemArt(id: item.propId ?? item.id, name: item.name),
