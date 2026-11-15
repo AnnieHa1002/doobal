@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/companion_providers.dart';
+import '../../app/providers.dart';
 import '../rest/rest_slots.dart';
 import 'companion_art.dart';
 import 'companion_screen.dart';
@@ -19,6 +20,8 @@ final companionRestSlotProvider = Provider.autoDispose<RestObjectSlot?>((ref) {
   return RestObjectSlot(
     art: (_) => CompanionRestArt(companion: walking),
     onTap: openCompanions,
-    notice: ref.watch(unreadStoryProvider),
+    // 새 소식 점은 config ui.newDot.on에 동행이 있을 때만 (16장 11/13)
+    notice: (ref.watch(rulesProvider).value?.screen.dotOn('companion') ?? true) &&
+        ref.watch(unreadStoryProvider),
   );
 });

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../app/screen_providers.dart';
 import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/boat.dart';
@@ -39,6 +40,15 @@ class ShopScreen extends ConsumerStatefulWidget {
 
 class _ShopScreenState extends ConsumerState<ShopScreen> {
   ShopTab _tab = ShopTab.travel;
+
+  @override
+  void initState() {
+    super.initState();
+    // 상점을 열면 새 상품을 본 것으로 (쉼터 수레 점이 꺼진다, 16장 11/13)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) markShopSeen(ref);
+    });
+  }
 
   /// 시트를 열거나 사는 중이면 다른 칸을 받지 않는다
   bool _busy = false;
@@ -93,6 +103,13 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     final ownedBoats = ref.watch(ownedBoatIdsProvider).value;
     final props = ref.watch(propsProvider).value;
     final balance = ref.watch(coinBalanceProvider).value;
+    // 연 동안 새로 보이게 된 상품도 본 것으로
+    ref.listen(shopNewsProvider, (_, news) {
+      if (news.isEmpty) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) markShopSeen(ref);
+      });
+    });
     return Scaffold(
       body: SafeArea(
         child: Column(
