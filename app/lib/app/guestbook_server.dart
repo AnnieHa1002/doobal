@@ -44,8 +44,8 @@ class SendClosed extends SendOutcome {
   final String message;
 }
 
-/// 금칙어에 막혔을 때 서버 문구가 없으면 쓰는 문구 (명세 M5)
-const blockedFallback = '이 표현은 방명록에 남길 수 없어요';
+/// 금칙어에 막혔을 때 서버 문구가 없으면 쓰는 문구 (moderation.json v2 message, 16장 11/13 Annie)
+const blockedFallback = '금칙어가 포함되어 있어요';
 
 /// 방명록을 서버와 잇는다 (M5): 남기기, 못 올린 글 다시 올리기, 다른 사람 글 읽기, 하트·신고, 내 글의 하트.
 /// 남기기는 연결돼 있으면 서버에 먼저 올리고 이 기기에 적는다 (금칙어에 막히면 초안을 고치게).

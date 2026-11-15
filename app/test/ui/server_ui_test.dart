@@ -176,11 +176,11 @@ void main() {
           extra: [serverBackendProvider.overrideWithValue(s.backend)],
           ready: () => input.evaluate().isNotEmpty);
       s.api.failNext.add(const ServerError('invalid-argument',
-          reason: 'moderation', message: '이 표현은 방명록에 남길 수 없어요'));
+          reason: 'moderation', message: '금칙어가 포함되어 있어요'));
       await tester.enterText(input, '서버만 아는 말');
       await tester.pump();
       await tester.tap(find.text('남기기'));
-      await settle(tester, () => find.text('이 표현은 방명록에 남길 수 없어요').evaluate().isNotEmpty);
+      await settle(tester, () => find.text('금칙어가 포함되어 있어요').evaluate().isNotEmpty);
 
       expect(find.byType(GuestbookWriteScreen), findsOneWidget);
       expect(find.text('서버만 아는 말'), findsOneWidget);
@@ -190,7 +190,7 @@ void main() {
 
       await tester.enterText(input, '고친 말');
       await tester.pump();
-      expect(find.text('이 표현은 방명록에 남길 수 없어요'), findsNothing);
+      expect(find.text('금칙어가 포함되어 있어요'), findsNothing);
       await tester.tap(find.text('남기기'));
       await settle(tester, () => find.byType(GuestbookReadScreen).evaluate().isNotEmpty, tries: 60);
       await transition(tester);

@@ -84,7 +84,7 @@ describe('postGuestbook', () => {
     const statsRef = db.doc(`stats/moderation_${kstDate(Date.now())}`);
     const before = (await statsRef.get()).data()?.count ?? 0;
     const e = await rejects('postGuestbook', { ticketId, scope, text: '씨 .발 진짜' }, idToken, 'INVALID_ARGUMENT', 'moderation');
-    assert.equal(e.message, '이 표현은 방명록에 남길 수 없어요');
+    assert.equal(e.message, '금칙어가 포함되어 있어요');
     assert.deepEqual(Object.keys(e.details!), ['reason']);
     assert.equal((await db.doc(`guestbook/${uid}_${ticketId}`).get()).exists, false);
     assert.equal((await statsRef.get()).data()!.count, before + 1);
