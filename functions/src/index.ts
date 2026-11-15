@@ -3,3 +3,4 @@ export { deleteAccount } from './account';
 export { postGuestbook, react, readGuestbook } from './guestbook';
 export { kakaoSignIn, kakaoUnlink } from './kakao';
 export { onReviewDecision } from './review';
+export { getWeather } from './weather';

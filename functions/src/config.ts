@@ -41,3 +41,17 @@ function parseGuestbook(data: Record<string, unknown>): GuestbookConfig {
 
 export const loadGuestbookConfig = cached('config/guestbook', parseGuestbook);
 export const loadModeration = cached('config/moderation', (data) => new Moderation(data));
+
+/** config/weather = config.json paintColor.weatherSource (cacheMin: 격자별 캐시 분) */
+export interface WeatherConfig {
+  cacheMin: number;
+}
+
+function parseWeather(data: Record<string, unknown>): WeatherConfig {
+  if (typeof data.cacheMin !== 'number' || data.cacheMin <= 0) {
+    throw new Error('config/weather cacheMin이 0보다 큰 숫자가 아니에요');
+  }
+  return { cacheMin: data.cacheMin };
+}
+
+export const loadWeatherConfig = cached('config/weather', parseWeather);

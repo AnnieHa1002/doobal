@@ -1,4 +1,4 @@
-// 설정 문서 넣기: 앱 데이터(app/assets/data)를 읽어 config/guestbook·config/moderation으로 올린다.
+// 설정 문서 넣기: 앱 데이터(app/assets/data)를 읽어 config/guestbook·config/moderation·config/weather로 올린다.
 // 에뮬레이터: 에뮬레이터를 켠 채 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 // 진짜 프로젝트: GCLOUD_PROJECT=<프로젝트 id> npm run seed -- --real (구글 로그인 필요)
 import { readFileSync } from 'node:fs';
@@ -24,9 +24,15 @@ export function guestbookDoc(): Record<string, any> {
   return load('config.json').guestbook;
 }
 
+/** config/weather = config.json paintColor.weatherSource의 캐시 분 (getWeather 격자별 캐시) */
+export function weatherDoc(): Record<string, any> {
+  return { cacheMin: load('config.json').paintColor.weatherSource.cacheMin };
+}
+
 export async function seedConfig(db: Firestore): Promise<void> {
   await db.doc('config/guestbook').set(guestbookDoc());
   await db.doc('config/moderation').set(moderationDoc());
+  await db.doc('config/weather').set(weatherDoc());
 }
 
 if (require.main === module) {
