@@ -186,6 +186,18 @@ abstract class ServerApi {
 
   /// 서버의 계정·글·반응·백업·연결을 모두 지운다 (Auth 계정도)
   Future<void> deleteAccount();
+
+  /// 그 지점(정령이 있는 지도 위 여정 지점, 위치 권한 없음)의 지금 날씨 (getWeather, 16장 11/14).
+  /// 서버가 기상청 초단기실황을 격자별로 캐시해서 준다
+  Future<WeatherNow> getWeather(double lat, double lng);
+}
+
+/// getWeather 결과: [kind]는 clear·cloudy·rain·snow, [at]은 그 날씨를 잰 시각
+class WeatherNow {
+  const WeatherNow(this.kind, this.at);
+
+  final String kind;
+  final DateTime at;
 }
 
 /// Firestore에 직접 읽고 쓰는 것 (보안 규칙 firestore.rules)

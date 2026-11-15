@@ -36,8 +36,12 @@ SliverGridDelegate paintingGridDelegate(BuildContext context) {
   );
 }
 
-/// `그림` / `소품` / `도장 5 / 20` 탭 셋 (캔버스 Gallery). [propsDot]이면 `소품`, [stampsDot]이면 `도장`
-/// 라벨 오른쪽 위에 알림 점이 붙는다. [stampsLabel]은 도장 탭 글 (받은 수 / 전체)
+/// `그림` / `소품` / `도장 5` / `물감 7` 탭 넷 (캔버스 6-1, 11/15 물감 탭·도장 탭 이름 줄임). [propsDot]이면 `소품`,
+/// [stampsDot]이면 `도장`, [paintsDot]이면 `물감` 라벨 오른쪽 위에 알림 점이 붙는다. [stampsLabel]은 도장 탭 글(받은 수),
+/// [paintsLabel]은 물감 탭 글(가진 색 수, 기본 물감 포함)
+/// 탭 사이 (캔버스 6-1 6px)
+const _tabGap = 6.0;
+
 class AlbumTabs extends StatelessWidget {
   const AlbumTabs({
     super.key,
@@ -46,6 +50,8 @@ class AlbumTabs extends StatelessWidget {
     this.propsDot = false,
     this.stampsDot = false,
     this.stampsLabel = '도장',
+    this.paintsDot = false,
+    this.paintsLabel = '물감',
   });
 
   final int selected;
@@ -53,18 +59,25 @@ class AlbumTabs extends StatelessWidget {
   final bool propsDot;
   final bool stampsDot;
   final String stampsLabel;
+  final bool paintsDot;
+  final String paintsLabel;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(child: _tab(context, 0, '그림', const ValueKey('tab-paintings'))),
-        const SizedBox(width: 8),
+        const SizedBox(width: _tabGap),
         Expanded(child: _tab(context, 1, '소품', const ValueKey('tab-props'), dot: propsDot)),
-        const SizedBox(width: 8),
+        const SizedBox(width: _tabGap),
         Expanded(
           child: _tab(context, 2, stampsLabel, const ValueKey('tab-stamps'),
               dot: stampsDot, dotKey: const ValueKey('stamps-tab-dot')),
+        ),
+        const SizedBox(width: _tabGap),
+        Expanded(
+          child: _tab(context, 3, paintsLabel, const ValueKey('tab-paints'),
+              dot: paintsDot, dotKey: const ValueKey('paints-tab-dot')),
         ),
       ],
     );
@@ -98,7 +111,7 @@ class AlbumTabs extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // 글자를 키워도 세 칸 안에 들어오게 줄인다
+              // 글자를 키워도 네 칸 안에 들어오게 줄인다
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(

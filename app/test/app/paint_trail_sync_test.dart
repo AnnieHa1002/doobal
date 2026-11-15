@@ -403,6 +403,25 @@ void main() {
       expect(map.paintLines.single.last.lng, closeTo(to.lng, 1e-9));
     });
 
+    test('구간 색 (M1 v0.7 ⑦, 스키마 18): 고른 노을을 10분째에 다 쓰면 노을 줄 + 기본 줄, 옛 물감 길은 기본', () async {
+      final e = await _journeyEnv();
+      // 스키마 18 전처럼 색이 없는 물감 길 (기본 물감)
+      await _trailWalk(e, from: _at(0), minutes: 10, spm: 100, syncAt: _at(15), to: _at(10));
+      final id = await _trailWalk(e, from: _at(20), minutes: 20, spm: 100, syncAt: _at(45), to: _at(40));
+      await (e.db.update(e.db.paintTrails)..where((t) => t.id.equals(id))).write(PaintTrailsCompanion(
+          colorId: const Value('sunset'), colorEndUtc: Value(_ms(_at(30)))));
+      final map = await e.svc.mapData(_at(45));
+      // 첫 물감 길(기본 0~0.7km) → 둘째의 노을 → 노을을 다 쓴 뒤 기본. 색이 바뀌는 곳에서 줄이 나뉜다
+      expect(map.paintLineColors, ['basic', 'sunset', 'basic']);
+      expect(map.paintLines, hasLength(3));
+      final route = buildRoute(testHome, _landmarks[_farDest]!.latLng, rules);
+      // 노을은 0.7km(10분) 뒤 20분째부터 30분째까지 = 0.7 ~ 1.4km
+      final sunsetFrom = positionAt(route, 0.7).latLng;
+      final sunsetTo = positionAt(route, 1.4).latLng;
+      expect(map.paintLines[1].first.lat, closeTo(sunsetFrom.lat, 1e-9));
+      expect(map.paintLines[1].last.lng, closeTo(sunsetTo.lng, 1e-9));
+    });
+
     test('물감 길이 없으면 물감 줄도 없다', () async {
       final e = await _journeyEnv();
       e.source.records.add(_walk(_at(0), 30, 100));

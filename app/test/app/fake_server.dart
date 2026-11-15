@@ -237,6 +237,18 @@ class FakeApi implements ServerApi {
     server.store.profiles.remove(uid);
     server.backup.texts.remove(uid);
   }
+
+  /// getWeather가 돌려줄 날씨 (서버 에뮬레이터의 가짜 날씨처럼)와 물어본 지점
+  var weather = 'clear';
+  final weatherAsked = <(double, double)>[];
+
+  @override
+  Future<WeatherNow> getWeather(double lat, double lng) async {
+    await _gate('getWeather');
+    _uid();
+    weatherAsked.add((lat, lng));
+    return WeatherNow(weather, DateTime.utc(2026, 11, 18));
+  }
 }
 
 class FakeRemoteStore implements RemoteStore {

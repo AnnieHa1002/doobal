@@ -329,3 +329,30 @@ int _hex(Object? v, String where) {
 }
 
 double _d(dynamic v) => (v as num).toDouble();
+
+/// 물감 길 하나에 칠한 색 (DB PaintTrails의 colorId·colorEndUtc, 시각은 epoch ms). [endMs]가 null이면 열려 있다
+class TrailPaint {
+  const TrailPaint({required this.startMs, this.endMs, this.colorId, this.colorEndMs});
+
+  final int startMs;
+  final int? endMs;
+
+  /// 연 때 고른 물감. null이면 기본 물감 (스키마 18 전 물감 길)
+  final String? colorId;
+
+  /// 고른 물감을 다 쓴 시각 (그 뒤는 기본 물감)
+  final int? colorEndMs;
+}
+
+/// [ms](분 시작 시각)에 칠한 물감 색 id (M1 v0.7 구간 색). 그 시각이 든 물감 길의 고른 색, 그 색을 다 쓴 뒤거나
+/// 물감 길 밖이면 기본 물감 [defaultId]
+String paintedColorAt(List<TrailPaint> trails, int ms, String defaultId) {
+  for (final t in trails) {
+    final end = t.endMs;
+    if (ms < t.startMs || (end != null && ms >= end)) continue;
+    final colorEnd = t.colorEndMs;
+    if (colorEnd != null && ms >= colorEnd) return defaultId;
+    return t.colorId ?? defaultId;
+  }
+  return defaultId;
+}

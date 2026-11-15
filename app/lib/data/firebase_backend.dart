@@ -343,6 +343,15 @@ class FirebaseServerApi implements ServerApi {
 
   @override
   Future<void> deleteAccount() => _call('deleteAccount');
+
+  @override
+  Future<WeatherNow> getWeather(double lat, double lng) async {
+    final r = await _call('getWeather', {'lat': lat, 'lng': lng});
+    return WeatherNow(
+      r['kind'] as String,
+      DateTime.fromMillisecondsSinceEpoch((r['at'] as num).toInt(), isUtc: true),
+    );
+  }
 }
 
 /// Firestore 직접 읽기·쓰기

@@ -1,5 +1,7 @@
 import 'package:doobal/app/catalog_providers.dart';
 import 'package:doobal/domain/asset_index.dart';
+import 'package:doobal/domain/paint_color.dart';
+import 'package:doobal/ui/common/paint_art.dart';
 import 'package:doobal/ui/scene/scene_view.dart';
 import 'package:doobal/ui/walking/paint_drop_layer.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +24,15 @@ SceneCompanionSpot _spot({int tint = 0xFFFFFFFF}) => SceneCompanionSpot(
       tint: tint,
     );
 
-Future<void> _pump(WidgetTester tester, double shownM, {bool still = false, int? tint}) =>
+Future<void> _pump(
+  WidgetTester tester,
+  double shownM, {
+  bool still = false,
+  int? tint,
+  int? color,
+  int? trailId,
+  bool tubeAllowed = true,
+}) =>
     tester.pumpWidget(ProviderScope(
       overrides: [assetIndexProvider.overrideWith((ref) => AssetIndex(const []))],
       child: MaterialApp(
@@ -34,6 +44,9 @@ Future<void> _pump(WidgetTester tester, double shownM, {bool still = false, int?
                 spot: tint == null ? _spot() : _spot(tint: tint),
                 shownM: shownM,
                 rules: rules,
+                color: color,
+                trailId: trailId,
+                tubeAllowed: tubeAllowed,
               ),
             ),
           ]),
@@ -112,5 +125,56 @@ void main() {
     await _pump(tester, 300, tint: 0xFF8090C0);
     expect(find.ancestor(of: _key('paint-drop-gain'), matching: find.byType(ColorFiltered)),
         findsNothing);
+  });
+
+  group('물감 색·물감 통 (T12, 16장 11/14, M2~M6 v0.20 Y)', () {
+    // 물감 길 번호를 바꿔 가며 첫 통 방울을 찾는다 (방울 보상은 물감 길·방울 번호로 정한다)
+    late int trail;
+    late int k;
+    setUpAll(() {
+      for (trail = 1;; trail++) {
+        final hit = [for (var i = 2; i <= 9; i++) if (rollDrop(trail, i, rules.paintColor).tube) i];
+        final miss = !rollDrop(trail, 1, rules.paintColor).tube;
+        if (hit.isNotEmpty && miss) {
+          k = hit.first;
+          return;
+        }
+      }
+    });
+
+    testWidgets('방울은 그 순간 색, 통이 나오는 방울 바로 뒤(18pt)에 같은 색 통 32pt', (tester) async {
+      await _pump(tester, k * 100.0 - 60, color: 0xFF74C6EA, trailId: trail);
+      // 방울 k는 60m 앞 = 120pt 오른쪽, 통은 그 뒤 18pt
+      final tube = tester.getRect(_key('paint-tube-$k'));
+      expect(tube.center.dx, _foot.dx + 120 + 18);
+      expect(tube.size, const Size(32, 32));
+      expect(tester.widget<PaintTubeArt>(find.descendant(
+              of: _key('paint-tube-$k'), matching: find.byType(PaintTubeArt))).color,
+          const Color(0xFF74C6EA));
+      // 통이 없는 방울에는 통이 없다
+      expect(_key('paint-tube-${k - 1}'), findsNothing);
+      // 그 색 통이 상한이면 통을 보이지 않는다, 물감 길을 모르면 보이지 않는다
+      await _pump(tester, k * 100.0 - 60, color: 0xFF74C6EA, trailId: trail, tubeAllowed: false);
+      expect(_key('paint-tube-$k'), findsNothing);
+      await _pump(tester, k * 100.0 - 60, color: 0xFF74C6EA);
+      expect(_key('paint-tube-$k'), findsNothing);
+    });
+
+    testWidgets('통 방울을 주우면 +1 럭 옆에 통 아이콘 24pt, 통은 정령에 닿을 때까지 남는다', (tester) async {
+      await _pump(tester, k * 100.0 - 5, color: 0xFFF79BB7, trailId: trail);
+      await _pump(tester, k * 100.0, color: 0xFFF79BB7, trailId: trail);
+      expect(find.text('+1 럭'), findsOneWidget);
+      expect(tester.getSize(_key('paint-drop-gain-tube')), const Size(24, 24));
+      expect(_key('paint-tube-$k'), findsOneWidget);
+      await _pump(tester, k * 100.0 + 10, color: 0xFFF79BB7, trailId: trail);
+      expect(_key('paint-tube-$k'), findsNothing);
+      await tester.pump(const Duration(seconds: 2));
+      // 통이 없는 방울을 주우면 +1 럭만
+      final plain = [for (var i = k + 1; i < k + 40; i++) if (!rollDrop(trail, i, rules.paintColor).tube) i].first;
+      await _pump(tester, plain * 100.0 - 5, color: 0xFFF79BB7, trailId: trail);
+      await _pump(tester, plain * 100.0, color: 0xFFF79BB7, trailId: trail);
+      expect(find.text('+1 럭'), findsOneWidget);
+      expect(_key('paint-drop-gain-tube'), findsNothing);
+    });
   });
 }

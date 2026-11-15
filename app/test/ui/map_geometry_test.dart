@@ -1,8 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
+import 'package:doobal/domain/paint_color.dart';
+import 'package:doobal/domain/rules.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/map/map_geometry.dart';
 import 'package:doobal/ui/map/map_painter.dart';
@@ -11,6 +15,10 @@ import 'package:flutter_test/flutter_test.dart';
 import '../domain/helpers.dart';
 
 final _geometry = MapGeometry(projection: mapProjection, regions: mapRegions, landmarks: landmarks);
+
+/// 같은 config로 따로 읽은 규칙 (물감 색 표가 다른 것으로 본다)
+final _rulesOther = Rules.fromJson(
+    jsonDecode(File('assets/data/config.json').readAsStringSync()) as Map<String, dynamic>);
 
 double _pathLength(Path p) => p.computeMetrics().fold(0.0, (sum, m) => sum + m.length);
 
@@ -123,7 +131,10 @@ void main() {
       // 그 길 앞쪽 일부가 물감 길 (연필 선 위에 붓자국)
       paintLines: const [
         [LatLng(37.3, 127.06), LatLng(37.0, 127.15)],
+        [LatLng(37.0, 127.15), LatLng(36.8, 127.2)],
       ],
+      // 앞 구간은 고른 노을, 뒤는 다 써서 기본 물감 (T12 구간 색)
+      paintLineColors: const ['sunset', 'basic'],
       destId: 'kr002',
       position: const LatLng(37.0, 127.0),
       fundKm: 0,
@@ -134,7 +145,7 @@ void main() {
       double zoom = 1,
       MapData? d,
       MapGeometry? g,
-      int? paintColor,
+      PaintColorRules? palette,
     }) =>
         MapPainter(
           geometry: g ?? _geometry,
@@ -142,7 +153,7 @@ void main() {
           selectedId: selected,
           zoom: zoom,
           trail: rules.mapTrail,
-          paintColor: paintColor ?? rules.paintDefaultColor,
+          palette: palette ?? rules.paintColor,
         );
 
     test('여러 확대 배율과 선택 상태로 그려도 오류가 없다', () {
@@ -164,7 +175,7 @@ void main() {
     test('shouldRepaint: 확대·선택·데이터·물감 색이 바뀔 때만', () {
       final base = painter();
       expect(base.shouldRepaint(painter()), isFalse);
-      expect(base.shouldRepaint(painter(paintColor: 0xFF6FA8C9)), isTrue);
+      expect(base.shouldRepaint(painter(palette: _rulesOther.paintColor)), isTrue);
       expect(base.shouldRepaint(painter(zoom: 1.5)), isTrue);
       expect(base.shouldRepaint(painter(selected: 'kr002')), isTrue);
       expect(base.shouldRepaint(painter(selected: null)), isTrue);

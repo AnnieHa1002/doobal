@@ -20,6 +20,7 @@ import '../domain/journey.dart';
 import '../domain/landmark.dart';
 import '../domain/laps.dart';
 import '../domain/notification_policy.dart';
+import '../domain/paint_color.dart' show TrailPaint, paintedColorAt;
 import '../domain/paint_trail.dart';
 import '../domain/prop.dart';
 import '../domain/restore_floor.dart';
@@ -482,6 +483,7 @@ class MapData {
     required this.fundKm,
     this.destPoint,
     this.paintLines = const [],
+    this.paintLineColors = const [],
   });
 
   /// 그림을 얻은 명소 id → 지금 액자 (내 동네 스케치는 명소가 아니라 넣지 않는다)
@@ -492,6 +494,9 @@ class MapData {
 
   /// 지나온 길 중 물감 길 구간 (trailSegments의 paint, 여정 경로 위 점 목록). [paths] 위에 수채 붓자국으로 덧그린다
   final List<List<LatLng>> paintLines;
+
+  /// [paintLines] 줄마다 칠한 물감 색 id (같은 차례·같은 길이, M1 v0.7 구간 색: 고른 색이나 기본 물감)
+  final List<String> paintLineColors;
 
   /// 진행 중인 여정의 목적지. 여정이 없으면 null (내 동네 스케치면 'sketch')
   final String? destId;
@@ -1896,10 +1901,15 @@ class SyncService {
 
     final paths = <List<LatLng>>[];
     final paintLines = <List<LatLng>>[];
+    final paintLineColors = <String>[];
     final windows = await _windows();
+    final trailPaints = await _trailPaints();
     for (final r in rows) {
       // 물감 길 구간은 여정을 시작할 때의 경로(목적지까지) 위에 덧그린다
-      paintLines.addAll(await _paintLinesOf(r, windows, now));
+      for (final (line, color) in await _paintLinesOf(r, windows, trailPaints, now)) {
+        paintLines.add(line);
+        paintLineColors.add(color);
+      }
       // 진행 중인 여정은 자기 경로를 지금 지점에서 자른다 (배 위에 있어도 항구를 거친다)
       if (r.status == JourneyStatus.active) {
         final route = here.journey!.route;
@@ -1929,6 +1939,7 @@ class SyncService {
       },
       paths: paths,
       paintLines: paintLines,
+      paintLineColors: paintLineColors,
       destId: active?.destId,
       position: here.position,
       fundKm: (await _fund()).km,
@@ -1939,9 +1950,10 @@ class SyncService {
   /// 여정 [r]의 물감 길 구간을 경로 위 점 목록으로 (M1 명세 v0.5 ⑤ trailSegments의 paint만).
   /// 경로는 여정을 시작할 때의 경로(출발지 → 목적지)이고, 진행 km는 경비 + 상점 효과(앞의 연필) + 분마다 실제 거리
   /// × 디버그 거리 배수다. 끝난 여정은 끝난 시각까지의 분만, 도착한 여정은 경로 끝에서 자른다
-  Future<List<List<LatLng>>> _paintLinesOf(
+  Future<List<(List<LatLng>, String)>> _paintLinesOf(
     JourneyRow r,
     List<PaintTrailWindow> windows,
+    List<TrailPaint> trailPaints,
     DateTime now,
   ) async {
     if (windows.isEmpty) return const [];
@@ -1962,12 +1974,24 @@ class SyncService {
       minutes: minutes,
       scale: distanceScale,
       totalKm: route.totalEffectiveKm,
+      paintAt: (minute) => paintedColorAt(
+          trailPaints, minute * Duration.millisecondsPerMinute, rules.paintColor.defaultId),
     );
     return [
       for (final seg in segments)
-        if (seg.kind == TrailKind.paint) routeSlice(route, seg.fromKm, seg.toKm),
+        if (seg.kind == TrailKind.paint)
+          (routeSlice(route, seg.fromKm, seg.toKm), seg.colorId ?? rules.paintColor.defaultId),
     ];
   }
+
+  /// 물감 길마다 칠한 색 (지도 구간 색, 스키마 18)
+  Future<List<TrailPaint>> _trailPaints() async => [
+        for (final r in await (db.select(db.paintTrails)
+              ..orderBy([(t) => OrderingTerm(expression: t.startUtc)]))
+            .get())
+          TrailPaint(
+              startMs: r.startUtc, endMs: r.endUtc, colorId: r.colorId, colorEndMs: r.colorEndUtc),
+      ];
 
   /// [destId]로 지금 자리에서 가면 환산 거리와 며칠 걸리는지. 동기화·저장은 하지 않는다.
   /// 출발지는 진행 중인 여정의 지금 지점, 없으면 쉬는 자리. 둘 다 없으면 StateError(startJourney와 같다)
