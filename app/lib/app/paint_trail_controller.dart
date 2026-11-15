@@ -454,6 +454,7 @@ class PaintTrailController extends Notifier<PaintTrailState> {
       final svc = await ref.read(syncServiceProvider.future);
       final now = _now();
       await svc.sync(now);
+      await _endIfArrivedElsewhere(svc);
       if (_disposed || state.id != id || !tracker.active) return;
       final minutes = await svc.stepMinutes(before, now);
       final after = tracker.backfill(minutes) ?? before;
@@ -479,6 +480,17 @@ class PaintTrailController extends Notifier<PaintTrailState> {
       _backfilling = false;
       _graceUntil = _now().add(Duration(seconds: rules.paintTrailStartWithinSec));
     }
+  }
+
+  /// 열린 물감 길이 DB에서 도착으로 닫혀 있으면 여기서도 끝낸다: 다른 엔진에서 돈 동기화(안드로이드 백그라운드
+  /// 동기화, background_sync.dart)가 도착을 처리하면 [SyncService.arrivalEnds] 알림이 이 앱에 오지 않는다
+  Future<void> _endIfArrivedElsewhere(SyncService svc) async {
+    final id = state.id;
+    if (id == null || _disposed) return;
+    final row = await svc.paintTrailRow(id);
+    final end = row?.endUtc;
+    if (row == null || end == null || row.endReason != PaintTrailEnd.arrived) return;
+    await _onArrivalEnd(ArrivalTrailEnd(id, _utc(end)));
   }
 
   /// 동기화가 도착으로 물감 길 [e]를 닫았다 (config paintTrail.endOnArrival): 판정기를 비우고 알림을 끈다.
@@ -511,6 +523,7 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     try {
       final svc = await ref.read(syncServiceProvider.future);
       await svc.sync(now);
+      await _endIfArrivedElsewhere(svc);
       final record = await svc.walkRecord(start, now, live: live?.minutes ?? const []);
       if (_disposed) return;
       ref.invalidate(snapshotProvider);

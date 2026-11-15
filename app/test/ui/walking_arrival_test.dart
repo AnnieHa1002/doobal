@@ -1,4 +1,5 @@
 import 'package:doobal/app/paint_trail_controller.dart';
+import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/domain/paint_trail.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../app/helpers.dart';
+import '../domain/helpers.dart' show milestones, props;
 import 'ui_env.dart';
 
 // 걷는 중 100% → 도착 (11/4), 닫으면 쉼터 (11/13). 진행 기준은 언제나 health 동기화 값이다:
@@ -133,6 +135,39 @@ void main() {
     await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
     expect(find.byType(WalkingScreen), findsOneWidget);
     expect(find.byType(ArrivalScreen), findsNothing);
+    await end(tester, e);
+  });
+
+  testWidgets('다른 엔진의 동기화(안드로이드 백그라운드)가 도착으로 닫았으면 다음 동기화 때 끝내고 도착 화면',
+      (tester) async {
+    final e = await openWalking(tester);
+    final c = ProviderScope.containerOf(tester.element(find.byType(WalkingScreen)));
+    final id = c.read(paintTrailProvider).id!;
+    // 백그라운드 동기화를 흉내: 같은 DB를 쓰는 다른 SyncService가 도착을 처리한다 (이 앱에 알림이 안 온다)
+    final other = SyncService(
+      db: e.db,
+      source: e.source,
+      rules: e.appRules,
+      allowedSources: const [],
+      landmarks: byId,
+      props: props,
+      milestones: milestones,
+    );
+    await tester.runAsync(() => other.sync(e.now));
+    final row = (await tester.runAsync(() => e.db.select(e.db.paintTrails).getSingle()))!;
+    expect((row.id, row.endReason), (id, PaintTrailEnd.arrived));
+    expect(c.read(paintTrailProvider).active, isTrue);
+
+    await tester.runAsync(() => c.read(paintTrailProvider.notifier).refreshNow());
+    await tester.pump();
+    expect(c.read(paintTrailProvider).active, isFalse);
+    expect(c.read(paintTrailProvider).endedBy, PaintTrailEnd.arrived);
+    for (var i = 0; i < 20 && find.byType(ArrivalScreen).evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
+    }
+    expect(find.byType(ArrivalScreen), findsOneWidget);
+    expect(find.textContaining('를 그렸어요'), findsNothing);
     await end(tester, e);
   });
 
