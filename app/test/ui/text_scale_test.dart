@@ -759,9 +759,14 @@ void main() {
       await _tap(tester, _key('tab-walks'));
       await settle(tester, () => find.textContaining('4,800보').evaluate().isNotEmpty);
       expect(find.textContaining('4,800보'), findsWidgets);
-      // 목록은 보이는 줄만 그린다 (작은 화면·큰 글자면 한 줄뿐일 수 있다)
-      expect(find.text('물감 길'), findsWidgets);
+      expect(find.text('걷기 리포트'), findsOneWidget);
       fit.check('걷기 기록 탭');
+      // 목록은 보이는 줄만 그린다 (작은 화면·큰 글자면 맨 위 리포트 줄과 날짜 줄뿐일 수 있어 내려 본다)
+      // 맨 위 날짜(가장 최근)의 물감 길 줄
+      await tester.scrollUntilVisible(_key('trail-3'), 100, scrollable: find.byType(Scrollable).first);
+      await tester.pump();
+      expect(find.text('물감 길'), findsWidgets);
+      fit.check('걷기 기록 탭 (내려서)');
       await end(tester, e);
     });
   });
