@@ -8,6 +8,8 @@ import '../../domain/landmark.dart';
 import '../../domain/rest_camera.dart';
 import '../../domain/rules.dart';
 import '../../domain/scene.dart';
+import '../../domain/screen_rules.dart';
+import '../../domain/sky.dart';
 import '../../domain/spirit_look.dart';
 import '../../domain/time_tint.dart';
 import 'doobal_character.dart';
@@ -42,6 +44,9 @@ class SceneView extends StatelessWidget {
     this.sceneAbove = const [],
     this.walkCompanion,
     this.walkGround,
+    this.restPose,
+    this.spiritCue,
+    this.spiritCues,
   });
 
   final SceneMode mode;
@@ -90,6 +95,16 @@ class SceneView extends StatelessWidget {
   /// 걷는 중 장면의 땅 위 층 (땅과 같이 흐르는 물감 방울, 정령·동행 뒤). 장면이 자리를 넘겨 부른다
   final Widget Function(SceneCompanionSpot spot)? walkGround;
 
+  /// 쉼터 정령의 지금 자세 (쉼터가 config restSwap으로 20~40초마다 바꾼다). null이면 쉼터 첫 자세.
+  /// 밤에는 이것 대신 잠들기 (config restSwap.night)
+  final int? restPose;
+
+  /// 잠깐 보일 정령 표정 (만남·새 소품 …). 다른 객체로 바뀔 때 한 번 울린다
+  final SpiritCue? spiritCue;
+
+  /// 정령 표정 호출 표 (밤 쉼터 졸림·누르기 행복·연타 화남). 없으면 표정 없이 동작만
+  final SpiritCues? spiritCues;
+
   @override
   Widget build(BuildContext context) {
     final look = sceneLook(nowUtc, position, onSea, landmarks, rules);
@@ -101,6 +116,7 @@ class SceneView extends StatelessWidget {
         ? DoobalPose.sitting
         : DoobalPose.standing;
     final tint = tintFactorAt(look.mix, rules, character: true);
+    final stand = _stand(look, rest, speed);
     ScenePainter painter(ScenePass pass) => ScenePainter(
       look: look,
       mode: mode,
@@ -127,12 +143,12 @@ class SceneView extends StatelessWidget {
           restFarWidth: stage?.farWidth,
           builder: (context, art, clock) {
             if (stage != null) {
-              return _restStage(stage, art, clock, look, pose, speed, tint, painter);
+              return _restStage(stage, art, clock, look, pose, speed, tint, stand, painter);
             }
             return ValueListenableBuilder<double>(
               valueListenable: clock,
               builder: (context, elapsed, _) =>
-                  _walkStage(size, art, elapsed, look, pose, speed, tint, painter),
+                  _walkStage(size, art, elapsed, look, pose, speed, tint, stand, painter),
             );
           },
         );
@@ -149,6 +165,7 @@ class SceneView extends StatelessWidget {
     DoobalPose pose,
     double speed,
     int tint,
+    _SpiritStand stand,
     ScenePainter Function(ScenePass) painter,
   ) {
     final artLayout = art == null
@@ -197,7 +214,7 @@ class SceneView extends StatelessWidget {
                 : companion(spot!),
           ),
         ),
-        _character(foot, figureHeight, speed, pose, tint),
+        _character(foot, figureHeight, speed, pose, tint, stand),
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(painter: layer(ScenePass.foreground)),
@@ -236,8 +253,33 @@ class SceneView extends StatelessWidget {
     );
   }
 
+  /// 화면별 정령 자세·방향·표정 (config character.rive.screens·restSwap·flipSideOn, 정령 계약 3·4장):
+  /// 쉼터는 [restPose](밤에는 잠들기 + 졸림), 걷는 중은 옆 이동·멈추면 둥둥 옆이고 좌우로 뒤집는다.
+  /// 배 위는 지금처럼 장면이 정한다 (config에 배 자세가 없다)
+  _SpiritStand _stand(SceneLook look, bool rest, double speed) {
+    final stage = rules.screen.spirit;
+    if (rest) {
+      final night = look.phase == SkyPhase.night;
+      return (
+        pose: night ? stage.restSwap.night : restPose ?? stage.poseOf('rest'),
+        mirrored: false,
+        expression: night ? spiritCues?.of('nightRest')?.expr ?? 0 : 0,
+      );
+    }
+    if (onSea) return (pose: null, mirrored: false, expression: 0);
+    final screen = speed > 0 ? 'walking' : 'walkingIdle';
+    return (pose: stage.poseOf(screen), mirrored: stage.flips(screen), expression: 0);
+  }
+
   /// 정령 (발 [foot], 키 [figureHeight]). 정령의 머리 위 y150~발바닥 y440을 키로 본다
-  Widget _character(Offset foot, double figureHeight, double speed, DoobalPose pose, int tint) {
+  Widget _character(
+    Offset foot,
+    double figureHeight,
+    double speed,
+    DoobalPose pose,
+    int tint,
+    _SpiritStand stand,
+  ) {
     final scale = figureHeight / (440 - 150);
     return Positioned(
       left: foot.dx - 300 * scale,
@@ -253,6 +295,11 @@ class SceneView extends StatelessWidget {
             spirit: spirit,
             // 쉼터에서만 정령을 연타하면 화낸다
             tapRules: mode == SceneMode.rest ? rules : null,
+            posePick: stand.pose,
+            mirrored: stand.mirrored,
+            expression: stand.expression,
+            cue: spiritCue,
+            cues: spiritCues,
           ),
         ),
       ),
@@ -269,6 +316,7 @@ class SceneView extends StatelessWidget {
     DoobalPose pose,
     double speed,
     int tint,
+    _SpiritStand stand,
     ScenePainter Function(ScenePass) fallback,
   ) {
     final near = Size(stage.sceneWidth, stage.height);
@@ -351,7 +399,7 @@ class SceneView extends StatelessWidget {
                       ),
                     ),
                   ...sceneBehind,
-                  _character(foot, figureHeight, speed, pose, tint),
+                  _character(foot, figureHeight, speed, pose, tint, stand),
                   ...sceneBeside,
                   if (art != null) ...[
                     Positioned.fill(
@@ -429,3 +477,6 @@ class SceneTinted extends StatelessWidget {
 /// 배율 [zoom]으로 키운 뒤 ([x], [y])만큼 옮기는 행렬
 Matrix4 _matrix(double x, double y, double zoom) =>
     Matrix4.diagonal3Values(zoom, zoom, 1)..setTranslationRaw(x, y, 0);
+
+/// 장면 정령의 자세 번호(null이면 장면 속도·앉기로)·좌우 뒤집기·늘 두는 표정
+typedef _SpiritStand = ({int? pose, bool mirrored, int expression});
