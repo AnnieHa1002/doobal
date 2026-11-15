@@ -1,6 +1,6 @@
 {
- "version": 22,
- "changes": "v22 (11/14 개발 기획, 16장 11/14 물감 모으기·날씨 색 Annie 결정): paintColor 새로(색 = 시간대 5·날씨 3 × 걷기/뛰기, 물감 통 확률·양·보관·기본 물감·날씨 서버). paintDrop.pickup.colors는 paintColor로 옮김. v21 (11/14 개발 기획, 16장 11/14 새싹·꽃·물감 길 세부, 정령_v36·물감길 개발인계): character.rive 파일 spirit_v36.riv·bodyBox v36 계산값(474px)·screenScale 0.726/0.546·unusedChoices hat 5·6, paintTrail.endOnArrival·iosBackfillPaint, paintDrop 확정(100m·+1)·pickup 연출 시간·방울 색, mapTrail 두께. v20 (11/13 개발 기획, 꾸밈효과_개발인계): effects 새로(입자 5종 개수·속도·크기·수명 가안, 공통 제외 구역, 밤 그리기 순서, 반딧불 빛, 동작 줄이기, 물감 4색). v19 (11/13 개발 기획, R34 정령_v33_개발인계): character.rive.bodyBox를 디자인 기획 실측으로(머리~발바닥 y 71~559·489px, 발 디딤점 (244,559) = 아트보드 48.7%·93.2%, 아트보드 높이 = 몸 키 × 1.227). v18 (11/13 개발 기획, 16장 11/13 화면 세부 4건): hud.eventCardSec 7→8, ui.orientation(가로는 걷는 중만), ui.newDot(배낭·동행·행상 수레 새 상품, 노트 없음), character.rive.customizePreview(밀어서 정면·옆·뒤, 표정 버튼 없음). v17 (11/13 개발 기획, v33 납품 대조): character.rive pending false·fileId·designApproval pending·exprDraft 0·bodyBox(몸 키 실측 489px)·screenScale 0.703/0.530(추정)·fallback crop 44/252, character.float pending false. v16 (11/13 개발 기획, 16장 11/13 Annie): coins.format.buyQuestion '구매하시겠습니까?'(상품 이름·값 없이). v15 (11/13 개발 기획, 물감 길·하루 카드): bonus 배수 1.0(없앰, 키는 코드 때문에 남김), paintTrail·paintDrop·report 새로, events.distanceBasis paintTrailActual, props.distanceBasis actualAll. v14 (11/13 개발 기획): character.rive 새로(spirit_v33.riv·Spirit·WardrobeController·WardrobeColors, 자세 7, 화면별 자세, 쉼터 떠 있기↔앉기 20~40초·밤 잠들기, 트리거 6, 누름 가안), anim mode rive, float는 키 규칙만. v13 (11/13 개발 기획): album.bigView share false·saveWith gal(공유 보류). 글꼴 Noto Sans KR은 PR #2가 ui.font를 바꿈. v12 (11/10 개발 기획): character.facing fall·sit 삭제(둥둥 정령), character.float 새로(정령 키 = 동행 × 0.75·떠 있는 높이 0.15·화면 키 가안 344/259px, T5 전까지 pending), anim.file spirit_float.json, album.bigView 새로(그림 크게 보기 2배·저장 토스트 1.5초). v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
+ "version": 23,
+ "changes": "v23 (11/16 개발 기획, 물감색_개발인계·물감색_계절지역·T12 넘김): paintColor 16색 확정 hex를 {walk, run} 쌍으로(intensity 지움), names, season(64색), region(지역 7색·chancePerTube 0.15), weatherSource.askMin 30, paintDrop.rewards. v22 (11/14 개발 기획, 16장 11/14 물감 모으기·날씨 색 Annie 결정): paintColor 새로(색 = 시간대 5·날씨 3 × 걷기/뛰기, 물감 통 확률·양·보관·기본 물감·날씨 서버). paintDrop.pickup.colors는 paintColor로 옮김. v21 (11/14 개발 기획, 16장 11/14 새싹·꽃·물감 길 세부, 정령_v36·물감길 개발인계): character.rive 파일 spirit_v36.riv·bodyBox v36 계산값(474px)·screenScale 0.726/0.546·unusedChoices hat 5·6, paintTrail.endOnArrival·iosBackfillPaint, paintDrop 확정(100m·+1)·pickup 연출 시간·방울 색, mapTrail 두께. v20 (11/13 개발 기획, 꾸밈효과_개발인계): effects 새로(입자 5종 개수·속도·크기·수명 가안, 공통 제외 구역, 밤 그리기 순서, 반딧불 빛, 동작 줄이기, 물감 4색). v19 (11/13 개발 기획, R34 정령_v33_개발인계): character.rive.bodyBox를 디자인 기획 실측으로(머리~발바닥 y 71~559·489px, 발 디딤점 (244,559) = 아트보드 48.7%·93.2%, 아트보드 높이 = 몸 키 × 1.227). v18 (11/13 개발 기획, 16장 11/13 화면 세부 4건): hud.eventCardSec 7→8, ui.orientation(가로는 걷는 중만), ui.newDot(배낭·동행·행상 수레 새 상품, 노트 없음), character.rive.customizePreview(밀어서 정면·옆·뒤, 표정 버튼 없음). v17 (11/13 개발 기획, v33 납품 대조): character.rive pending false·fileId·designApproval pending·exprDraft 0·bodyBox(몸 키 실측 489px)·screenScale 0.703/0.530(추정)·fallback crop 44/252, character.float pending false. v16 (11/13 개발 기획, 16장 11/13 Annie): coins.format.buyQuestion '구매하시겠습니까?'(상품 이름·값 없이). v15 (11/13 개발 기획, 물감 길·하루 카드): bonus 배수 1.0(없앰, 키는 코드 때문에 남김), paintTrail·paintDrop·report 새로, events.distanceBasis paintTrailActual, props.distanceBasis actualAll. v14 (11/13 개발 기획): character.rive 새로(spirit_v33.riv·Spirit·WardrobeController·WardrobeColors, 자세 7, 화면별 자세, 쉼터 떠 있기↔앉기 20~40초·밤 잠들기, 트리거 6, 누름 가안), anim mode rive, float는 키 규칙만. v13 (11/13 개발 기획): album.bigView share false·saveWith gal(공유 보류). 글꼴 Noto Sans KR은 PR #2가 ui.font를 바꿈. v12 (11/10 개발 기획): character.facing fall·sit 삭제(둥둥 정령), character.float 새로(정령 키 = 동행 × 0.75·떠 있는 높이 0.15·화면 키 가안 344/259px, T5 전까지 pending), anim.file spirit_float.json, album.bigView 새로(그림 크게 보기 2배·저장 토스트 1.5초). v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
  "gait": {
   "walkMaxSpm": 130,
   "runMinSpm": 140,
@@ -65,7 +65,13 @@
    "reducedMotion": "removeAndGainOnly",
    "night": "sameAsSpirit",
    "note": "디자인기획/물감길_개발인계 2장: 방울(A·B 무작위)이 정령 가운데 x에 닿으면 C(눌린 방울)로 바꾸고 pressedSec 뒤 튐 1장 splashSec, 동시에 +1 럭이 머리 위로 gainFloatSec(토스트 없음). pressedSec 0.12는 개발 기획 결정(제안 0.1~0.15). 한 방울 안 A·B·C·튐은 같은 색(paintColor로 정한 그 순간 색). 동작 줄이기: C·튐 없이 지우고 +1만. 밤: 정령과 같은 시간대 보정(꾸밈 효과의 밤 필터 밖 규칙 아님)"
-  }
+  },
+  "rewards": [
+   {
+    "kind": "tube",
+    "chance": 0.1
+   }
+  ]
  },
  "props": {
   "distanceBasis": "actualAll",
@@ -590,7 +596,12 @@
    "hit": {
     "approx": true,
     "headTopRatio": 0.45,
-    "note": "아트보드 위에서 45% 안을 누르면 tapHead, 그 아래 정령 몸은 tapBelly(가안, 폰에서 확인). 자세별 실측이 오면 바꿈"
+    "note": "아트보드 위에서 45% 안을 누르면 tapHead, 그 아래 정령 몸은 tapBelly(가안, 폰에서 확인). 자세별 실측이 오면 바꿈",
+    "pet": {
+     "pending": true,
+     "trigger": "tapPet",
+     "note": "16장 11/15 미니 친구: 다음 정령 Rive 판에서 자세별 미니 친구 상자를 실측해 넣음(계약 v0.8 2-1장). 그전엔 없음"
+    }
    },
    "note": "계약 v0.7(16장 11/11 Rive·11/13 v32). 입력은 모두 뷰 모델 속성. 자세는 poseChoice만 바꾸면 riv가 전환(겹쳐 흐리기 금지, 같은 인스턴스 유지). 11/14 기준 v36(입력 59개, v33과 같음). 앱 연결은 개발 T5",
    "fileId": "1xyrThvsfzjW7dFB2ktbshyv1Icib1Usl",
@@ -997,7 +1008,13 @@
    "cap": "map_trail_drops_cap_v02",
    "tint": "segmentColor",
    "heightPt": 10,
-   "capPt": 12
+   "capPt": 12,
+   "border": {
+    "color": "#3E2C22",
+    "alpha": 0.25,
+    "extraPt": 1,
+    "note": "11/15 파스텔 때문에: 방울 선 아래 같은 모양을 잉크 25%로 1pt 더 크게 먼저 깖(확대해도 1pt)"
+   }
   },
   "pencil": {
    "tile": "map_trail_pencil_tile_v01",
@@ -1015,26 +1032,42 @@
    "intensity"
   ],
   "timePhase": {
-   "dawn": "#B9A9D6",
-   "morning": "#F2B48A",
-   "day": "#6FA8C9",
-   "sunset": "#C97B54",
-   "night": "#5F6F9E",
-   "note": "시간대 = scene.sky 키 구간(night·dawn·morning·day·sunset)"
+   "dawn": {
+    "walk": "#C0ADE6",
+    "run": "#A18AD0"
+   },
+   "morning": {
+    "walk": "#FCC989",
+    "run": "#DDA75F"
+   },
+   "day": {
+    "walk": "#74C6EA",
+    "run": "#3CA6CF"
+   },
+   "sunset": {
+    "walk": "#F79BB7",
+    "run": "#E07397"
+   },
+   "night": {
+    "walk": "#8AA0D5",
+    "run": "#6081C1"
+   },
+   "note": "시간대 = scene.sky 키 구간. 11/15 디자인 기획 확정 파스텔(물감색_개발인계 1장)"
   },
   "weather": {
-   "rain": "#7E97A8",
-   "snow": "#E4E9EE",
-   "cloudy": "#A7A39A",
-   "note": "맑음이면 시간대 색. 비·눈·흐림이면 이 색이 시간대 색을 대신함"
-  },
-  "intensity": {
-   "run": {
-    "darken": 0.18,
-    "saturate": 0.15
+   "rain": {
+    "walk": "#85D5C5",
+    "run": "#50B6A5"
    },
-   "walk": null,
-   "note": "뛰기(gait 140 이상)면 같은 색을 진하게 = 다른 물감 색으로 셈"
+   "snow": {
+    "walk": "#CEE7EC",
+    "run": "#98C9D2"
+   },
+   "cloudy": {
+    "walk": "#DEC1A7",
+    "run": "#C39F7E"
+   },
+   "note": "맑음이면 시간대 색. 비·눈·흐림이면 이 색이 시간대 색을 대신함"
   },
   "colorCount": 16,
   "default": {
@@ -1054,7 +1087,12 @@
     770,
     1540
    ],
-   "note": "물감 방울(100m마다, +1 럭)마다 10% 확률로 물감 통이 함께 나옴(평균 약 1km마다 1통). 양은 걷기 10~20분 칠할 거리에서 무작위(분당 110보 × 0.7m = 77m 추정). 통 색 = 주운 순간의 색"
+   "note": "물감 방울(100m마다, +1 럭)마다 10% 확률로 물감 통이 함께 나옴(평균 약 1km마다 1통). 양은 걷기 10~20분 칠할 거리에서 무작위(분당 110보 × 0.7m = 77m 추정). 통 색 = 주운 순간의 색 / 11/16: 확률은 paintDrop.rewards가 우선(앱은 rewards가 있으면 chancePerDrop을 안 읽음)",
+   "sprites": {
+    "road": "ui_paint_tube_road_v01",
+    "icon": "ui_paint_tube_icon_v01",
+    "tint": "multiplyRgb"
+   }
   },
   "stock": {
    "maxTubesPerColor": 999,
@@ -1074,8 +1112,230 @@
    "cacheMin": 60,
    "offline": "timePhase",
    "secret": "Secret Manager KMA_SERVICE_KEY",
-   "note": "위치 권한 없음(10/29): 날씨 지점 = 정령이 지금 있는 지도 위 여정 지점(위경도 → 기상청 격자). 서버가 격자별 1시간 캐시. 인터넷이 없거나 실패하면 시간대 색. 키는 앱·리포에 두지 않음"
+   "note": "위치 권한 없음(10/29): 날씨 지점 = 정령이 지금 있는 지도 위 여정 지점(위경도 → 기상청 격자). 서버가 격자별 1시간 캐시. 인터넷이 없거나 실패하면 시간대 색. 키는 앱·리포에 두지 않음",
+   "askMin": 30
   },
-  "note": "16장 11/14 Annie: 물감 길 색은 그 순간 시간대·날씨·강도로 정해지고, 걸으며 물감 통을 모아 쉼터 배낭에서 고른 색을 다 쓸 때까지 칠함. 지도 물감 길은 구간마다 칠한 색으로 남음. 색 hex는 디자인 기획 가안 확정 전 개발 기획 가안"
+  "note": "16장 11/14 Annie: 물감 길 색은 그 순간 시간대·날씨·강도로 정해지고, 걸으며 물감 통을 모아 쉼터 배낭에서 고른 색을 다 쓸 때까지 칠함. 지도 물감 길은 구간마다 칠한 색으로 남음. 색 hex는 11/15 디자인 기획 확정(파스텔), 계절 64·지역 7은 11/15 Annie",
+  "names": {
+   "dawn": "새벽",
+   "morning": "아침",
+   "day": "낮",
+   "sunset": "노을",
+   "night": "밤",
+   "rain": "비",
+   "snow": "눈",
+   "cloudy": "흐림",
+   "runPrefix": "진한",
+   "basic": "기본",
+   "note": "화면 이름. 뛰기는 앞에 ‘진한’, 계절 색은 앞에 계절(‘가을 진한 노을’)"
+  },
+  "season": {
+   "monthsFrom": "seasons",
+   "names": {
+    "spring": "봄",
+    "summer": "여름",
+    "autumn": "가을",
+    "winter": "겨울"
+   },
+   "hex": {
+    "spring": {
+     "dawn": {
+      "walk": "#D1AFEB",
+      "run": "#B48AD3"
+     },
+     "morning": {
+      "walk": "#FFCA8D",
+      "run": "#EEA763"
+     },
+     "day": {
+      "walk": "#78CBF8",
+      "run": "#42AADD"
+     },
+     "sunset": {
+      "walk": "#FF9EBD",
+      "run": "#EA759D"
+     },
+     "night": {
+      "walk": "#98A3DE",
+      "run": "#7283C9"
+     },
+     "rain": {
+      "walk": "#89DCC2",
+      "run": "#3DBDB4"
+     },
+     "snow": {
+      "walk": "#CDEEF7",
+      "run": "#96CFDF"
+     },
+     "cloudy": {
+      "walk": "#EBC4AA",
+      "run": "#D0A181"
+     }
+    },
+    "summer": {
+     "dawn": {
+      "walk": "#BCA6E9",
+      "run": "#9C83D3"
+     },
+     "morning": {
+      "walk": "#FBC278",
+      "run": "#DBA04E"
+     },
+     "day": {
+      "walk": "#54C2EE",
+      "run": "#00A3D3"
+     },
+     "sunset": {
+      "walk": "#FA90B2",
+      "run": "#E36792"
+     },
+     "night": {
+      "walk": "#7E9BDA",
+      "run": "#507CC6"
+     },
+     "rain": {
+      "walk": "#6DD2BF",
+      "run": "#2BB3A0"
+     },
+     "snow": {
+      "walk": "#B9E4ED",
+      "run": "#80C6D3"
+     },
+     "cloudy": {
+      "walk": "#DFBA97",
+      "run": "#C3986F"
+     }
+    },
+    "autumn": {
+     "dawn": {
+      "walk": "#C9A7DD",
+      "run": "#AD83C5"
+     },
+     "morning": {
+      "walk": "#FFC28B",
+      "run": "#E59F62"
+     },
+     "day": {
+      "walk": "#69C5E1",
+      "run": "#28A5C6"
+     },
+     "sunset": {
+      "walk": "#F798A8",
+      "run": "#E07087"
+     },
+     "night": {
+      "walk": "#959AD0",
+      "run": "#707BBB"
+     },
+     "rain": {
+      "walk": "#8AD2B9",
+      "run": "#5AB398"
+     },
+     "snow": {
+      "walk": "#CBE5E7",
+      "run": "#95C7CA"
+     },
+     "cloudy": {
+      "walk": "#DDBDA5",
+      "run": "#C29B7D"
+     }
+    },
+    "winter": {
+     "dawn": {
+      "walk": "#BFB9EA",
+      "run": "#9D96D6"
+     },
+     "morning": {
+      "walk": "#F9D598",
+      "run": "#DAB46D"
+     },
+     "day": {
+      "walk": "#8ACDE9",
+      "run": "#58ADCD"
+     },
+     "sunset": {
+      "walk": "#F5A8C7",
+      "run": "#DE81A9"
+     },
+     "night": {
+      "walk": "#8FAAD5",
+      "run": "#628BC1"
+     },
+     "rain": {
+      "walk": "#97DBD4",
+      "run": "#64BCB4"
+     },
+     "snow": {
+      "walk": "#E2EDF0",
+      "run": "#AECED8"
+     },
+     "cloudy": {
+      "walk": "#DECCB7",
+      "run": "#C2AA8D"
+     }
+    }
+   },
+   "stockKey": "<season>.<colorId>",
+   "note": "16장 11/15: 물감 통을 주운 날(한국 날짜)의 계절(config seasons, 봄 3~5 가안)로 16색이 달라져 따로 쌓임 = 64색. 걷는 중 방울·통 색도 그날 계절 hex. 보관 키 예 autumn.sunset_run, 이름 ‘가을 진한 노을’. timePhase·weather hex는 계절 없는 기준(지도 범례·이전 보관 칸 읽기용). 디자인기획/물감색_계절지역 1장"
+  },
+  "region": {
+   "chancePerTube": 0.15,
+   "by": "nearestLandmarkRegion",
+   "stockKey": "region.<id>",
+   "colors": {
+    "capital": {
+     "id": "kr.capital",
+     "name": "수도권 단청 주홍",
+     "hex": "#EF937C"
+    },
+    "gangwon": {
+     "id": "kr.gangwon",
+     "name": "강원 솔잎",
+     "hex": "#82B887"
+    },
+    "chungcheong": {
+     "id": "kr.chungcheong",
+     "name": "충청 호수",
+     "hex": "#329EAA"
+    },
+    "jeolla": {
+     "id": "kr.jeolla",
+     "name": "전라 유채",
+     "hex": "#F5DD72"
+    },
+    "gyeongsang": {
+     "id": "kr.gyeongsang",
+     "name": "경상 연꽃",
+     "hex": "#DC9CD4"
+    },
+    "jeju": {
+     "id": "kr.jeju",
+     "name": "제주 귤빛",
+     "hex": "#FF8F65"
+    },
+    "ulleung": {
+     "id": "kr.ulleung",
+     "name": "울릉 나리 초록",
+     "hex": "#C7D991"
+    }
+   },
+   "note": "16장 11/15: 물감 통이 나오면 그중 15%가 지금 권역(가장 가까운 명소의 landmarks region)의 지역 색(계절 변주 없음, 방울 100개에 약 1.5통 = 걷기 약 6.7km에 1통, 계산). 키는 landmarks region 값, id는 나라.권역(지역이 늘면 이 표에 한 줄 + 색 하나). 디자인기획/물감색_계절지역 2장"
+  },
+  "backpack": {
+   "tab": "album.paints",
+   "order": [
+    "basic",
+    "recent",
+    "season",
+    "region"
+   ],
+   "recentCount": 3,
+   "groupsCollapsible": true,
+   "openOnStart": "currentSeason",
+   "remainUnit": "km",
+   "remainStep": 0.1,
+   "remainRound": "floor",
+   "note": "화집 네 번째 탭 ‘물감 n’(가진 색 수, 기본 포함). 기본 맨 앞 고정 → 최근 3칸 → 계절 색(봄·여름·가을·겨울, 가진 계절만) → 지역 색(나라 > 권역, 가진 것만). 묶음은 접힘, 처음엔 지금 계절만 펼침. 꼬리표 = 색 이름 + 남은 거리 0.1km 내림(기본은 없음). 물감색_개발인계 4장·물감색_계절지역 3장"
+  }
  }
 }

@@ -224,6 +224,7 @@
      "hex": "#D3C6E6"
     }
    ],
+   "startPick": "random",
    "icon": "item_travel_vest_khaki_v01",
    "rive": {
     "choice": "clothChoice",
