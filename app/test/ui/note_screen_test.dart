@@ -3,6 +3,7 @@ import 'package:doobal/domain/guestbook.dart';
 import 'package:doobal/domain/paint_trail.dart';
 import 'package:doobal/ui/guestbook/guestbook_read_screen.dart';
 import 'package:doobal/ui/guestbook/guestbook_write_screen.dart';
+import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/note/note_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
@@ -216,7 +217,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('최신순으로, 날짜 줄(걸음·거리) 아래 물감 길 줄(시각·물감 길 km)', (tester) async {
+    testWidgets('최신순으로, 날짜마다 카드 하나: 날짜 줄(걸음·거리) 아래 물감 길 줄(붓·오전/오후 시각·물감 길 km)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         // 한국 11월 18일 10:00, 12:00, 11월 19일 20:00 (설치 뒤, 일부러 섞어 넣는다)
@@ -225,28 +226,36 @@ void main() {
         await _trail(e, DateTime.utc(2026, 11, 19, 11), 30, 100);
       });
       await _open(tester, e);
-      await _openWalksTab(tester, waitFor: '12:00');
+      await _openWalksTab(tester, waitFor: '오후 12:00');
 
-      // 물감 길 거리: 2,400보 × 0.7 = 1.68km, 1,500보 = 1.05km, 3,000보 = 2.1km
-      expect(find.text('1.7 km'), findsOneWidget);
-      expect(find.text('1.1 km'), findsOneWidget);
-      expect(find.text('2.1 km'), findsOneWidget);
-      expect(find.text('물감 길'), findsNWidgets(3));
-      // 날짜 줄: 그날 걸음·거리
-      expect(find.text('3,900보 · 2.7 km'), findsOneWidget);
-      expect(find.text('3,000보 · 2.1 km'), findsOneWidget);
+      // 물감 길 거리: 2,400보 × 0.7 = 1.68km, 1,500보 = 1.05km, 3,000보 = 2.1km (띄어 쓰지 않음, 캔버스 6-3)
+      expect(find.text('물감 길 1.7km'), findsOneWidget);
+      expect(find.text('물감 길 1.1km'), findsOneWidget);
+      // 날짜 줄: 그날 걸음·거리 (11월 19일은 물감 길과 같은 3,000보·2.1km)
+      expect(find.text('3,900보'), findsOneWidget);
+      expect(find.text('2.7km'), findsOneWidget);
+      expect(find.text('3,000보'), findsOneWidget);
+      expect(find.text('물감 길 2.1km'), findsOneWidget);
+      expect(find.text('2.1km'), findsOneWidget);
 
-      // 위에서 아래로: 11월 19일 → 20:00 → 11월 18일 → 12:00 → 10:00
+      // 위에서 아래로: 11월 19일 → 오후 8:00 → 11월 18일 → 오후 12:00 → 오전 10:00
       final order = [
         _y(tester, find.text('11월 19일')),
-        _y(tester, find.text('20:00')),
+        _y(tester, find.text('오후 8:00')),
         _y(tester, find.text('11월 18일')),
-        _y(tester, find.text('12:00')),
-        _y(tester, find.text('10:00')),
+        _y(tester, find.text('오후 12:00')),
+        _y(tester, find.text('오전 10:00')),
       ];
       for (var i = 1; i < order.length; i++) {
         expect(order[i], greaterThan(order[i - 1]), reason: '$i번째 줄');
       }
+      // 같은 날의 날짜 줄과 물감 길 줄은 한 카드 안, 물감 길 줄마다 붓 아이콘
+      final card18 = find.byKey(const ValueKey('day-card-2026-11-18'));
+      expect(find.descendant(of: card18, matching: find.text('오후 12:00')), findsOneWidget);
+      expect(find.descendant(of: card18, matching: find.text('오전 10:00')), findsOneWidget);
+      expect(find.descendant(of: card18, matching: find.text('오후 8:00')), findsNothing);
+      final dark = tester.widget<Text>(find.text('11월 18일')).style!.color;
+      expect(dark, Palette.subInk);
       await end(tester, e);
     });
 
@@ -262,7 +271,7 @@ void main() {
       // 열 때 시계가 훌쩍 지나 있어도 동기화하지 않는다 (마지막 동기화 시각이 그대로)
       e.now = t1.add(const Duration(minutes: 90));
       await _open(tester, e);
-      await _openWalksTab(tester, waitFor: '10:00');
+      await _openWalksTab(tester, waitFor: '오전 10:00');
 
       final id = (await tester.runAsync(() => e.db.select(e.db.paintTrails).getSingle()))!.id;
       await tester.tap(find.byKey(ValueKey('trail-$id')));
@@ -300,7 +309,7 @@ void main() {
       await transition(tester);
       expect(find.byType(WalkRecordScreen), findsNothing);
       expect(find.text('노트'), findsOneWidget);
-      expect(find.text('10:00'), findsOneWidget);
+      expect(find.text('오전 10:00'), findsOneWidget);
       await end(tester, e);
     });
 
@@ -315,7 +324,7 @@ void main() {
       // 이틀 뒤에 노트를 연다
       e.now = t1.add(const Duration(days: 2));
       await _open(tester, e);
-      await _openWalksTab(tester, waitFor: '10:00');
+      await _openWalksTab(tester, waitFor: '오전 10:00');
 
       Future<void> view(String clock, String line) async {
         await tester.tap(find.text(clock));
@@ -329,10 +338,10 @@ void main() {
       }
 
       // 앞 셋은 그날의 1·2·3번째 인정, 넷째는 하루 최대를 채운 뒤라 인정 못 받는다
-      await view('10:00', '11월 18일 함께 걷기 1/3');
-      await view('10:30', '11월 18일 함께 걷기 2/3');
-      await view('11:00', '11월 18일 함께 걷기 3/3');
-      await view('11:30', '11월 18일은 3/3번을 다 채웠어요');
+      await view('오전 10:00', '11월 18일 함께 걷기 1/3');
+      await view('오전 10:30', '11월 18일 함께 걷기 2/3');
+      await view('오전 11:00', '11월 18일 함께 걷기 3/3');
+      await view('오전 11:30', '11월 18일은 3/3번을 다 채웠어요');
       await end(tester, e);
     });
   });

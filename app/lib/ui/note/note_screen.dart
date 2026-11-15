@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -229,29 +231,80 @@ class _WalksTab extends ConsumerWidget {
       return const Center(child: Text('아직 걷기 기록이 없어요', style: AppText.bodySub));
     }
     final lastCard = addDays(cardToday(ref.watch(clockProvider)(), rules.report), -1);
-    // 리포트 줄, 날짜 줄과 그 날의 물감 길을 한 줄로 펴서 늘어놓는다 (null = 리포트 줄, String = 날짜 줄)
-    final items = <Object?>[
-      null,
-      for (final d in days) ...[d, ...?trailsByDay[d]],
-    ];
+    // 맨 위 리포트 줄, 그 아래 날짜마다 카드 하나 (날짜 줄 + 그날 물감 길 줄, 캔버스 6-3)
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      itemCount: items.length,
-      itemBuilder: (context, i) => switch (items[i]) {
-        null => const _ReportRow(),
-        final String day => _DayHeader(
-            day,
-            history.days[day],
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      itemCount: days.length + 1,
+      itemBuilder: (context, i) {
+        if (i == 0) return const _ReportRow();
+        final day = days[i - 1];
+        return Padding(
+          padding: const EdgeInsets.only(top: _cardGap),
+          child: _DayCard(
+            day: day,
+            totals: history.days[day],
+            trails: trailsByDay[day] ?? const [],
             onTap: day.compareTo(lastCard) <= 0
                 ? () => Navigator.of(context).push(DayCardPage.route(day))
                 : null,
           ),
-        final PaintTrailView t => _TrailRow(t),
-        _ => throw StateError('알 수 없는 걷기 기록 줄'),
+        );
       },
     );
   }
 }
+
+/// 걷기 기록 줄 사이 (캔버스 6-3 gap 8)
+const _cardGap = 8.0;
+
+/// 줄 안 왼쪽·오른쪽 여백 (캔버스 6-3 14)
+const _rowInset = 14.0;
+
+/// 날짜 하나의 카드: 날짜 줄과 그날 물감 길 줄 (종이색 카드, 테두리 없이 모서리 16, 캔버스 6-3)
+class _DayCard extends StatelessWidget {
+  const _DayCard({required this.day, required this.totals, required this.trails, this.onTap});
+
+  final String day;
+  final ({int steps, double distanceM})? totals;
+  final List<PaintTrailView> trails;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: ValueKey('day-card-$day'),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(color: Palette.card, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _DayHeader(day, totals, onTap: onTap),
+          for (final t in trails) _TrailRow(t),
+        ],
+      ),
+    );
+  }
+}
+
+/// 한 줄을 그 폭에 맞춘다: 글자 크기를 키워 한 줄에 안 들어가면 줄 전체가 줄어든다
+/// (들어가면 줄 너비만큼 그대로 펴진다)
+Widget _fitRow(List<Widget> children, {double gap = 8}) => LayoutBuilder(
+      builder: (context, box) => FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: box.maxWidth,
+          child: Row(
+            children: [
+              for (final (i, c) in children.indexed) ...[
+                if (i > 0) SizedBox(width: gap),
+                c,
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
 
 /// 맨 위 ‘걷기 리포트 ›’ 줄 (잉크 바탕, 캔버스 6-3)
 class _ReportRow extends StatelessWidget {
@@ -260,7 +313,7 @@ class _ReportRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.zero,
       child: Semantics(
         button: true,
         child: GestureDetector(
@@ -288,7 +341,8 @@ class _ReportRow extends StatelessWidget {
   }
 }
 
-/// 날짜 줄: 날짜와 그날 걸음·거리. [onTap]이 있으면 그날 하루 카드를 연다 (오른쪽 화살표)
+/// 날짜 줄: 날짜(옅게)·그날 걸음·거리 (‘4월 14일  7,912보  5.6km ›’, 캔버스 6-3).
+/// [onTap]이 있으면 그날 하루 카드를 연다 (오른쪽 화살표)
 class _DayHeader extends StatelessWidget {
   const _DayHeader(this.day, this.totals, {this.onTap});
 
@@ -299,30 +353,31 @@ class _DayHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = totals;
+    final date = formatMonthDay(dayFromKey(day));
     final row = Container(
-      constraints: BoxConstraints(minHeight: onTap == null ? 0 : 44),
-      padding: const EdgeInsets.only(top: 12, bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(formatMonthDay(dayFromKey(day)), style: context.display(15)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: t == null
-                ? const SizedBox()
-                : Text(
-                    '${formatInt(t.steps)}보 · ${formatKm(t.distanceM / 1000)}',
-                    style: AppText.bodySub,
-                  ),
+      constraints: const BoxConstraints(minHeight: 52),
+      padding: const EdgeInsets.symmetric(horizontal: _rowInset, vertical: 10),
+      alignment: Alignment.centerLeft,
+      child: _fitRow(gap: 10, [
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 70),
+          child: Text(date, style: const TextStyle(fontSize: 13, color: Palette.subInk)),
+        ),
+        Expanded(
+          child: Text(
+            t == null ? '' : '${formatInt(t.steps)}보',
+            style: context.display(14, weight: FontWeight.w600),
           ),
-          if (onTap != null) const Icon(Icons.chevron_right, color: Palette.ink),
-        ],
-      ),
+        ),
+        if (t != null)
+          Text(formatKmShort(t.distanceM), style: const TextStyle(fontSize: 13, color: Palette.ink)),
+        if (onTap != null) const Icon(Icons.chevron_right, size: 20, color: Palette.ink),
+      ]),
     );
     if (onTap == null) return row;
     return Semantics(
       button: true,
-      label: '${formatMonthDay(dayFromKey(day))} 하루 카드',
+      label: '$date 하루 카드',
       child: GestureDetector(
         key: ValueKey('day-$day'),
         behavior: HitTestBehavior.opaque,
@@ -333,7 +388,7 @@ class _DayHeader extends StatelessWidget {
   }
 }
 
-/// 물감 길 한 줄: 시작 시각, ‘물감 길 n km’ (캔버스 6-3)
+/// 물감 길 한 줄 (날짜 카드 안, 위에 점선): 붓 아이콘, 시작 시각 ‘오전 8:05’, ‘물감 길 1.2km’, 화살표 (캔버스 6-3)
 class _TrailRow extends StatelessWidget {
   const _TrailRow(this.trail);
 
@@ -341,76 +396,84 @@ class _TrailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Semantics(
-        button: true,
-        child: GestureDetector(
-          key: ValueKey('trail-${trail.id}'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-            builder: (_) => WalkRecordScreen(start: trail.start, end: trail.end),
-          )),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 52),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Palette.card,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Palette.ink, width: InkLine.panel),
-            ),
-            // 시각·걸음은 왼쪽, 거리·화살표는 오른쪽 끝. 글자 크기를 키워 한 줄에 안 들어가면
-            // 줄 전체가 줄어든다 (들어가면 줄 너비만큼 그대로 펴진다)
-            child: LayoutBuilder(
-              builder: (context, box) => FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minWidth: box.maxWidth),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // 오른쪽 거리와 8pt 이상 떨어진다
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // 시각 칸은 56pt가 최소다 (글자가 커지면 시각 + 8pt까지 넓어진다)
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(minWidth: 56),
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: Text(
-                                  formatKstClock(trail.start),
-                                  style: context.display(15),
-                                ),
-                              ),
-                            ),
-                            Text('물감 길', style: AppText.body),
-                          ],
-                        ),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            formatKm(trail.trailM / 1000),
-                            style: AppText.bodySub,
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right, color: Palette.ink),
-                        ],
-                      ),
-                    ],
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        key: ValueKey('trail-${trail.id}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => WalkRecordScreen(start: trail.start, end: trail.end),
+        )),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: _rowInset),
+          child: CustomPaint(
+            painter: const _DashedTopLine(),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 44),
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              alignment: Alignment.centerLeft,
+              child: _fitRow([
+                const CustomPaint(size: Size(22, 10), painter: _BrushIcon()),
+                Expanded(
+                  child: Text(
+                    formatKstClockAmPm(trail.start),
+                    style: const TextStyle(fontSize: 13, color: Palette.subInk),
                   ),
                 ),
-              ),
+                Text(
+                  '물감 길 ${formatKmShort(trail.trailM)}',
+                  style: const TextStyle(fontSize: 13, color: Palette.ink),
+                ),
+                const Icon(Icons.chevron_right, size: 20, color: Palette.subInk),
+              ]),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+/// 줄 위 1pt 점선 (캔버스 6-3 border-top 1px dashed --line)
+class _DashedTopLine extends CustomPainter {
+  const _DashedTopLine();
+
+  static const _dash = 4.0;
+  static const _gap = 3.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Palette.line
+      ..strokeWidth = 1;
+    for (var x = 0.0; x < size.width; x += _dash + _gap) {
+      canvas.drawLine(Offset(x, 0.5), Offset(math.min(x + _dash, size.width), 0.5), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedTopLine oldDelegate) => false;
+}
+
+/// 붓 아이콘 22×10: 넓은 옅은 획 위에 좁은 진한 획 (캔버스 6-3 SVG: #C97B54 40% 굵기 7, #B5603A 80% 굵기 3)
+class _BrushIcon extends CustomPainter {
+  const _BrushIcon();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final y = size.height / 2;
+    for (final (color, width) in const [(Color(0x66C97B54), 7.0), (Color(0xCCB5603A), 3.0)]) {
+      canvas.drawLine(
+        Offset(2, y),
+        Offset(size.width - 2, y),
+        Paint()
+          ..color = color
+          ..strokeWidth = width
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BrushIcon oldDelegate) => false;
 }

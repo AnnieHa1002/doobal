@@ -765,7 +765,7 @@ void main() {
       // 맨 위 날짜(가장 최근)의 물감 길 줄
       await tester.scrollUntilVisible(_key('trail-3'), 100, scrollable: find.byType(Scrollable).first);
       await tester.pump();
-      expect(find.text('물감 길'), findsWidgets);
+      expect(find.textContaining('물감 길'), findsWidgets);
       fit.check('걷기 기록 탭 (내려서)');
       await end(tester, e);
     });
