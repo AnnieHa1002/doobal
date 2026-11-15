@@ -90,4 +90,30 @@ void main() {
       '$dir/obj_rest_cart_v01_clean.webp',
     );
   });
+
+  group('물감 길 그림 (config paintDrop.pickup.sprites, assets/ui/)', () {
+    test('config 이름의 버전·_clean이 달라도 찾고, 새 버전·WebP가 먼저, 없으면 null', () {
+      final index = AssetIndex([
+        'assets/ui/ui_paint_pickup_a_v01.png',
+        'assets/ui/ui_paint_pickup_a_v02_clean.webp',
+        'assets/ui/ui_paint_pickup_b_v01_clean.png',
+        'assets/ui/fx_paint_splash_v01_clean.png',
+        'assets/items/icons/ui_paint_pickup_c_v02.png',
+      ]);
+      expect(index.sprite('ui_paint_pickup_a_v01'), 'assets/ui/ui_paint_pickup_a_v02_clean.webp');
+      expect(index.sprite('ui_paint_pickup_b_v01'), 'assets/ui/ui_paint_pickup_b_v01_clean.png');
+      expect(index.sprite('fx_paint_splash_v01'), 'assets/ui/fx_paint_splash_v01_clean.png');
+      // 다른 폴더·다른 이름은 안 된다
+      expect(index.sprite('ui_paint_pickup_c_v02'), isNull);
+      expect(AssetIndex(['assets/ui/ui_paint_pickup_ab_v01.png']).sprite('ui_paint_pickup_a_v01'),
+          isNull);
+    });
+
+    test('실제 앱 파일: 방울 줍기 그림은 아직 없다 (납품 전, 코드로 그린 임시)', () {
+      final p = rules.paintPickup;
+      for (final name in [...p.dropSprites, p.pressedSprite, p.splashSprite]) {
+        expect(assetIndex.sprite(name), isNull, reason: name);
+      }
+    });
+  });
 }

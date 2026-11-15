@@ -13,8 +13,13 @@ class AssetIndex {
   static const _gemDir = 'assets/ui/';
   static const _gemStem = 'ui_gem_sky';
 
+  /// 물감 길 그림 폴더 (pubspec에 등록): 방울 줍기 `ui_paint_pickup_*`·튐 `fx_paint_splash_*`
+  /// (디자인기획/물감길_개발인계 2장, config paintDrop.pickup.sprites)
+  static const paintDir = 'assets/ui/';
+
   final List<String> _paths;
   final _icons = <String, String?>{};
+  final _sprites = <String, String?>{};
   late final Set<String> _set = _paths.toSet();
 
   bool has(String path) => _set.contains(path);
@@ -27,6 +32,13 @@ class AssetIndex {
         final inIcons = RegExp('(^|_)$name(_icon)?(_v\\d+)?(_clean)?\\.(webp|png)\$');
         final elsewhere = RegExp('(^|_)${name}_icon(_v\\d+)?(_clean)?\\.(webp|png)\$');
         return _best(iconDir, inIcons) ?? _best(_itemsDir, elsewhere);
+      });
+
+  /// config에 적힌 그림 이름 [name](예 `ui_paint_pickup_a_v01`, 확장자 없이)의 파일. 버전·`_clean`이 달라도
+  /// 찾는다 (새 버전·WebP 먼저). 아직 없으면 null (그동안은 코드로 그린 임시)
+  String? sprite(String name) => _sprites.putIfAbsent(name, () {
+        final stem = RegExp.escape(name.replaceFirst(RegExp(r'_v\d+$'), ''));
+        return _best(paintDir, RegExp('^$stem(_v\\d+)?(_clean)?\\.(webp|png)\$'));
       });
 
   /// 럭 보석 그림. 버전이 올라도 그대로 찾는다
