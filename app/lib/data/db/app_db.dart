@@ -14,7 +14,8 @@ part 'app_db.g.dart';
 // + 스키마 11 (본격 걷기: 앱 걷기 창·이동 거리·럭 장부) + 스키마 13 (길 위 이벤트·도장, 화집 벽 표 삭제)
 // + 스키마 15 (동행·상점 보관함·상점 사용 기록·얻은 배, 프로필: 고른 배)
 // + 스키마 16 (물감 길: 앱 걷기 창 → 물감 길, 보너스·앱 걷기 이동 거리 열 → 물감 길 거리)
-// + 스키마 17 (하루 카드: 보여 준 마지막 날).
+// + 스키마 17 (하루 카드: 보여 준 마지막 날)
+// + 스키마 18 (물감 색·물감 모으기: 물감 보관·주운 물감 통, 물감 길의 칠한 색, 프로필: 고른 물감).
 // 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
@@ -205,6 +206,10 @@ class Profile extends Table {
   /// 고른 배 (boats.json id, 스키마 15). null이면 기본 배 (shop.json defaultBoat)
   TextColumn get boatId => text().nullable()();
 
+  /// 쉼터 배낭 ‘물감’ 탭에서 고른 물감 색 id (스키마 18, 스키마 v10.5 Profile.paintColorId).
+  /// null이면 기본 물감. 고른 색을 다 쓰면 null로 돌아간다
+  TextColumn get paintColorId => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -282,11 +287,17 @@ class NotificationSettings extends Table {
 /// 다음 실행에서 마지막으로 살아 있던 시각) 닫힌다 ([startUtc, endUtc), epoch ms).
 /// endUtc가 null이면 열려 있다 (앱이 살아 있는 동안은 지금까지로 센다)
 @DataClassName('PaintTrailRow')
+///
+/// 칠한 색 (스키마 18, M1 v0.7 구간 색): colorId는 이 물감 길을 연 때 고른 물감(없으면 기본 물감 id)이고,
+/// 그 색을 다 쓴 시각이 colorEndUtc다 (그 뒤는 기본 물감). 걷는 중에는 물감을 고르지 않아서
+/// 물감 길 하나는 많아야 두 구간이다. colorId가 null인 옛 물감 길은 기본 물감
 class PaintTrails extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get startUtc => integer()();
   IntColumn get endUtc => integer().nullable()();
   TextColumn get endReason => textEnum<PaintTrailEnd>().nullable()();
+  TextColumn get colorId => text().nullable()();
+  IntColumn get colorEndUtc => integer().nullable()();
 }
 
 /// 럭 장부 행의 종류: earn은 걸어서 번 것(하루 한 행, 다시 계산하면 덮어쓴다), ad는 광고 보상,
@@ -411,6 +422,36 @@ class ReportState extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// 물감 보관 (스키마 18, 스키마 v10.5 PaintStock): 물감 색 id마다 가진 통 수(0~config paintColor.stock.maxTubesPerColor)와
+/// 남은 거리 remainM(m). 기본 물감은 무제한이라 줄이 없다. firstGotAt·lastGotAt은 그 색 통을 처음·마지막으로 주운 시각
+/// (배낭 ‘최근’ 칸), seen이 false면 배낭에 새 색 표시. 남은 거리가 0이 되면 통 수도 0 (줄은 남는다)
+@DataClassName('PaintStockRow')
+class PaintStock extends Table {
+  TextColumn get colorId => text()();
+  IntColumn get tubes => integer()();
+  RealColumn get remainM => real()();
+  IntColumn get firstGotAt => integer()();
+  IntColumn get lastGotAt => integer()();
+  BoolColumn get seen => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {colorId};
+}
+
+/// 주운 물감 통 (스키마 18): 물감 길 trailId의 dropNo번째 방울에서 나온 통 하나. 방울 보상은 물감 길·방울 번호로
+/// 정하는 무작위라 같은 방울을 다시 넘겨도 이 키로 한 번만 받는다. 통 수(가진 통)는 이 줄을 주운 차례로 쓴 것으로 센다
+@DataClassName('PaintTubeRow')
+class PaintTubes extends Table {
+  IntColumn get trailId => integer()();
+  IntColumn get dropNo => integer()();
+  TextColumn get colorId => text()();
+  RealColumn get amountM => real()();
+  IntColumn get atUtc => integer()();
+
+  @override
+  Set<Column> get primaryKey => {trailId, dropNo};
+}
+
 @DriftDatabase(
   tables: [
     StepMinutes,
@@ -436,13 +477,15 @@ class ReportState extends Table {
     ShopUses,
     BoatsOwned,
     ReportState,
+    PaintStock,
+    PaintTubes,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -597,6 +640,31 @@ class AppDb extends _$AppDb {
           // 17: 하루 카드 (M1 명세 v0.5 ⑥). 행은 만들지 않는다: 없으면 첫 기록일 전날로 보니
           // 이미 쓰던 기기는 다음에 열 때 밀린 날(최대 config report.maxMergeDays) 카드가 한 번 뜬다
           if (from < 17) await m.createTable(reportState);
+          // 18: 물감 색·물감 모으기 (M1 v0.7, 스키마 v10.5). 2 이하·15 이하에서 올라올 때는 위 createTable(profile)·
+          // createTable(paintTrails)가 지금 정의라 새 열이 이미 있어 건너뛴다. 옛 물감 길은 칠한 색이 없어 기본 물감이다
+          if (from < 18) {
+            await m.createTable(paintStock);
+            await m.createTable(paintTubes);
+            // 앞 판의 일부 표만 흉내 낸 DB(시험)에서도 돌게 표가 있고 열이 없을 때만 더한다
+            Future<bool> lacks(String table, String column) async =>
+                (await customSelect(
+                  "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+                  variables: [Variable.withString(table)],
+                ).get())
+                    .isNotEmpty &&
+                (await customSelect(
+                  'SELECT name FROM pragma_table_info(?) WHERE name = ?',
+                  variables: [Variable.withString(table), Variable.withString(column)],
+                ).get())
+                    .isEmpty;
+            if (await lacks('paint_trails', 'color_id')) {
+              await m.addColumn(paintTrails, paintTrails.colorId);
+              await m.addColumn(paintTrails, paintTrails.colorEndUtc);
+            }
+            if (await lacks('profile', 'paint_color_id')) {
+              await m.addColumn(profile, profile.paintColorId);
+            }
+          }
         },
       );
 }

@@ -1,4 +1,5 @@
 import 'geo.dart';
+import 'paint_color.dart';
 
 /// 시간대 색 입히기 한 단계 (config scene.tint: bg·char). 곱하기로 입힌다
 class TimeTint {
@@ -368,10 +369,14 @@ class Rules {
     required this.adsRewardedPerDay,
     required this.adsMaxRewardCoins,
     required this.report,
+    required this.paintColor,
   });
 
   /// 하루 카드·걷기 리포트 (config report)
   final ReportRules report;
+
+  /// 물감 색·물감 모으기 (config paintColor, 보상 표는 paintDrop.rewards가 있으면 그것, 16장 11/14·M1 v0.7)
+  final PaintColorRules paintColor;
 
   /// 설치 뒤 며칠까지 둘째·셋째 동행을 꼭 만나는지 (config companions.guaranteeByDay)
   final List<int> companionGuaranteeDays;
@@ -467,8 +472,8 @@ class Rules {
   /// 지도 물감 길·연필 선 (config mapTrail)
   final MapTrailRules mapTrail;
 
-  /// 기본 물감 색 (config paintColor.default.hex, 테라코타). 물감 색 고르기(T12) 전에는 방울·지도 물감 길이
-  /// 모두 이 색이다
+  /// 기본 물감 색 (config paintColor.default.hex, 테라코타). 고른 물감이 없거나 다 쓰면 이 색이다
+  /// ([paintColor].defaultHex와 같다)
   final int paintDefaultColor;
 
   /// 실제 1km당 하루 럭 (config coins.perKm). 기획이 아직 안 정해서 null이면 럭은 늘 0이다
@@ -936,6 +941,7 @@ class Rules {
       adsRewardedPerDay: ads['rewardedPerDay'] as int,
       adsMaxRewardCoins: ads['maxRewardCoins'] as int,
       report: ReportRules.fromJson(j['report'] as Map<String, dynamic>),
+      paintColor: PaintColorRules.fromJson(paintColor, paintDrop: paintDrop),
     );
   }
 }
