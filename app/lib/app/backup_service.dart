@@ -62,6 +62,9 @@ class BackupService {
     db.shopInventory: {},
     db.shopUses: {},
     db.boatsOwned: {},
+    // 하루 카드를 닫은 마지막 날 (스키마 17, M1 v0.5 ⑦): 새 기기에서 본 카드를 다시 띄우지 않게.
+    // 이 표가 없는 옛 백업을 복원하면 비어서 첫 기록일 전날로 본다
+    db.reportState: {},
     db.profile: {
       db.profile.ageConfirmedAt.$name,
       db.profile.onboardedAt.$name,

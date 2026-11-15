@@ -125,7 +125,7 @@ Future<void> _insertNotice(AppDb db) async {
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
-  test('새 DB는 스키마 16으로 열리고 새 표를 바로 쓸 수 있다', () async {
+  test('새 DB는 스키마 17로 열리고 새 표를 바로 쓸 수 있다', () async {
     final db = AppDb(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -133,7 +133,7 @@ void main() {
     expect(await db.select(db.propsOwned).get(), isEmpty);
     expect(await db.select(db.profile).get(), isEmpty);
     expect(await _hasTable(db, 'wall_slots'), isFalse);
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
 
     await db.into(db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
           landmarkId: 'kr001',
@@ -290,7 +290,7 @@ void main() {
     expect(await row(), (4, true));
   });
 
-  test('스키마 1(여정 표만 있던 때)에서 열면 16으로 올라가고 옛 행이 남는다', () async {
+  test('스키마 1(여정 표만 있던 때)에서 열면 17로 올라가고 옛 행이 남는다', () async {
     // 스키마 1의 journeys 표와 행 둘(도착, 멈춤)을 직접 만들어 두고 user_version = 1로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldSyncState(raw);
@@ -308,7 +308,7 @@ void main() {
     addTearDown(db.close);
 
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     expect(rows.keys, {'j1', 'j2'});
     // 동기화 상태는 그대로이고 새 열은 비어 있다
     final sync = await db.select(db.syncState).getSingle();
@@ -357,7 +357,7 @@ void main() {
     expect(await _columns(db, 'paintings_owned'), _paintingColumns);
   });
 
-  test('스키마 2(프로필 표가 없던 때)에서 열면 16으로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 2(프로필 표가 없던 때)에서 열면 17로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 2의 journeys 표(새 열 포함)·그림·소품 표와 행을 직접 만들어 두고 user_version = 2로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldSyncState(raw);
@@ -394,7 +394,7 @@ void main() {
     addTearDown(db.close);
 
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     expect(rows.keys, {'j1', 'j2'});
     expect(rows['j1']!.status, JourneyStatus.arrived);
     expect(rows['j1']!.newFrame, Frame.wood);
@@ -427,7 +427,7 @@ void main() {
     expect(await _hasTable(db, 'wall_slots'), isFalse);
   });
 
-  test('스키마 3(화집 벽 표가 없던 때)에서 열면 16으로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 3(화집 벽 표가 없던 때)에서 열면 17로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 3의 journeys·그림·소품·프로필 표와 행을 직접 만들어 두고 user_version = 3으로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldSyncState(raw);
@@ -467,7 +467,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     final j = await db.select(db.journeys).getSingle();
     expect((j.id, j.status, j.visitNo, j.newFrame, j.arrivalShown),
         ('j1', JourneyStatus.arrived, 1, Frame.wood, false));
@@ -487,7 +487,7 @@ void main() {
     expect(await _hasTable(db, 'wall_slots'), isFalse);
   });
 
-  test('스키마 4(그림 표에 seen 열이 없던 때)에서 열면 16으로 올라가고 옛 그림은 본 것이다', () async {
+  test('스키마 4(그림 표에 seen 열이 없던 때)에서 열면 17로 올라가고 옛 그림은 본 것이다', () async {
     // 스키마 4의 journeys·그림·소품·프로필·벽 표와 행을 직접 만들어 두고 user_version = 4로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldSyncState(raw);
@@ -532,7 +532,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     // 옛 그림은 모두 본 것으로 두고, 다른 열은 그대로
     final paintings = {for (final r in await db.select(db.paintingsOwned).get()) r.landmarkId: r};
     expect(paintings.keys, {'kr001', 'kr002'});
@@ -569,7 +569,7 @@ void main() {
     expect(all, {'kr001': true, 'kr002': true, 'kr003': false, 'kr004': true});
   });
 
-  test('스키마 5(프로필에 시작 흐름 열이 없던 때)에서 열면 16으로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 5(프로필에 시작 흐름 열이 없던 때)에서 열면 17로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 5의 여정·그림·프로필·벽 표와 행을 직접 만들어 두고 user_version = 5로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldSyncState(raw);
@@ -608,7 +608,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     // 옛 프로필 행은 그대로고 새 열 여덟 개는 비어 있다
     var profile = await db.select(db.profile).getSingle();
     expect((profile.id, profile.homeName, profile.homeLat, profile.homeLng),
@@ -651,7 +651,7 @@ void main() {
     expect(profile.look, '{"hair":1}');
   });
 
-  test('스키마 6(가상 목적지·스케치 열이 없던 때)에서 열면 16으로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 6(가상 목적지·스케치 열이 없던 때)에서 열면 17로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 6의 여정·그림·프로필 표와 행을 직접 만들어 두고 user_version = 6으로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldSyncState(raw);
@@ -689,7 +689,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     // 옛 행은 그대로고 새 열은 비어 있다
     var journey = await db.select(db.journeys).getSingle();
     expect((journey.id, journey.destId, journey.status, journey.visitNo, journey.arrivalShown),
@@ -722,7 +722,7 @@ void main() {
     expect((painting.visits, painting.frame, painting.seen), (1, Frame.wood, false));
   });
 
-  test('스키마 7(방명록 표가 없던 때)에서 열면 16으로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 7(방명록 표가 없던 때)에서 열면 17로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 7의 여정·그림·프로필 표와 행을 직접 만들어 두고 user_version = 7로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldSyncState(raw);
@@ -761,7 +761,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     // 옛 행은 그대로 (v8은 새 표만 더한다)
     final journey = await db.select(db.journeys).getSingle();
     expect((journey.id, journey.destId, journey.status, journey.destLat),
@@ -790,7 +790,7 @@ void main() {
     expect((await db.select(db.guestbookPosts).getSingle()).status, PostStatus.pending);
   });
 
-  test('스키마 8(알림 표가 없던 때)에서 열면 16으로 올라가고 옛 행이 그대로 남는다', () async {
+  test('스키마 8(알림 표가 없던 때)에서 열면 17로 올라가고 옛 행이 그대로 남는다', () async {
     // 스키마 8의 방명록 표와 행을 직접 만들어 두고 user_version = 8로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldJourneys(raw);
@@ -814,7 +814,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     // 옛 행은 그대로 (v9는 새 표만 더한다)
     final ticket = await db.select(db.guestbookTickets).getSingle();
     expect((ticket.id, ticket.kind, ticket.openedUtc), ('m:100', TicketKind.milestone, 5));
@@ -835,7 +835,7 @@ void main() {
     expect((settings.allOn, settings.n1On, settings.n3On), (false, true, false));
   });
 
-  test('스키마 9(동기화 상태에 복원한 마지막 날 열이 없던 때)에서 열면 16으로 올라가고 옛 행이 그대로 남는다',
+  test('스키마 9(동기화 상태에 복원한 마지막 날 열이 없던 때)에서 열면 17로 올라가고 옛 행이 그대로 남는다',
       () async {
     // 스키마 9의 동기화 상태·하루 요약·걷기 구간 표와 행을 직접 만들어 두고 user_version = 9로 연다
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
@@ -848,7 +848,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     expect(await _columns(db, 'sync_state'), [
       'id',
       'last_fetched_utc',
@@ -876,7 +876,7 @@ void main() {
     expect((sync.lastFetchedUtc, sync.restoreFloorDay), (900, '2026-11-18'));
   });
 
-  test('스키마 10(본격 걷기 열·표가 없던 때)에서 열면 16으로 올라가고 옛 하루의 이동 거리는 실제 거리가 된다',
+  test('스키마 10(본격 걷기 열·표가 없던 때)에서 열면 17로 올라가고 옛 하루의 이동 거리는 실제 거리가 된다',
       () async {
     // 스키마 10의 동기화 상태(복원한 마지막 날 열 있음)·하루 요약·걷기 구간 표와 행을 직접 만들고
     // user_version = 10으로 연다
@@ -897,7 +897,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     expect(await _columns(db, 'day_summaries'), [
       'day',
       'steps',
@@ -961,7 +961,7 @@ void main() {
         [(1, CoinKind.earn, 40, null), (2, CoinKind.ad, 5, 'ad-1')]);
   });
 
-  test('스키마 11(표시 글꼴 열이 없던 때)에서 열면 16으로 올라가고 프로필은 그대로, 글꼴은 비어 있다', () async {
+  test('스키마 11(표시 글꼴 열이 없던 때)에서 열면 17로 올라가고 프로필은 그대로, 글꼴은 비어 있다', () async {
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldJourneys(raw);
       _createOldProfile(raw);
@@ -970,13 +970,13 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     expect(await _columns(db, 'profile'), isNot(contains('display_font')));
     final row = await db.select(db.profile).getSingle();
     expect((row.nickname, row.homeName), ('화가', '서울 종로구'));
   });
 
-  test('스키마 13(표시 글꼴 열이 있던 때)에서 열면 16으로 올라가고 그 열만 지운다', () async {
+  test('스키마 13(표시 글꼴 열이 있던 때)에서 열면 17로 올라가고 그 열만 지운다', () async {
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldJourneys(raw);
       _createOldProfile(raw);
@@ -987,13 +987,13 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     expect(await _columns(db, 'profile'), isNot(contains('display_font')));
     final row = await db.select(db.profile).getSingle();
     expect((row.nickname, row.homeName), ('화가', '서울 종로구'));
   });
 
-  test('스키마 12(길 위 이벤트·도장이 없던 때)에서 열면 16으로 올라가고 기존 데이터가 그대로 남는다', () async {
+  test('스키마 12(길 위 이벤트·도장이 없던 때)에서 열면 17로 올라가고 기존 데이터가 그대로 남는다', () async {
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldSyncState(raw);
       _createOldProfile(raw);
@@ -1026,7 +1026,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     // 기존 여정은 그대로고 새 열 eventM은 0이다
     final rows = {for (final r in await db.select(db.journeys).get()) r.id: r};
     expect(rows.keys, {'j0', 'j1'});
@@ -1080,7 +1080,7 @@ void main() {
     expect((await db.select(db.badgesOwned).getSingle()).seen, isFalse);
   });
 
-  test('스키마 14에서 열면 16으로 올라가고 프로필에 고른 배 열, 새 표 다섯이 생긴다', () async {
+  test('스키마 14에서 열면 17로 올라가고 프로필에 고른 배 열, 새 표 다섯이 생긴다', () async {
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldProfile(raw);
       raw.execute("INSERT INTO profile (id, nickname) VALUES (1, '화가')");
@@ -1088,7 +1088,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     final row = await db.select(db.profile).getSingle();
     expect((row.nickname, row.boatId), ('화가', null));
     expect(await db.select(db.companions).get(), isEmpty);
@@ -1098,7 +1098,7 @@ void main() {
     expect(await db.select(db.boatsOwned).get(), isEmpty);
   });
 
-  test('스키마 15에서 열면 16으로: 앱 걷기 창 → 물감 길(finish → idle), 보너스 열을 지우고 물감 길 거리 열',
+  test('스키마 15에서 열면 17로: 앱 걷기 창 → 물감 길(finish → idle), 보너스 열을 지우고 물감 길 거리 열',
       () async {
     final db = AppDb(NativeDatabase.memory(setup: (raw) {
       _createOldJourneys(raw);
@@ -1143,7 +1143,7 @@ void main() {
     }));
     addTearDown(db.close);
 
-    expect(await _userVersion(db), 16);
+    expect(await _userVersion(db), 17);
     expect(await _hasTable(db, 'app_walks'), isFalse);
     final trails = await db.select(db.paintTrails).get();
     expect([for (final t in trails) (t.id, t.startUtc, t.endUtc, t.endReason)], [
@@ -1164,6 +1164,47 @@ void main() {
     expect((await db.select(db.shopUses).getSingle()).paintTrailId, 3);
     final sync = await db.select(db.syncState).getSingle();
     expect((sync.lastAliveUtc, sync.recomputeFromDay), (400, '2026-11-17'));
+  });
+
+  test('스키마 16에서 열면 17로: 하루 카드 상태 표가 빈 채로 생기고 옛 행은 그대로다', () async {
+    final db = AppDb(NativeDatabase.memory(setup: (raw) {
+      _createOldJourneys(raw);
+      raw.execute('''
+        CREATE TABLE sync_state (
+          id INTEGER NOT NULL, last_fetched_utc INTEGER NULL, first_record_day TEXT NOT NULL,
+          install_utc INTEGER NOT NULL, restore_floor_day TEXT NULL, last_alive_utc INTEGER NULL,
+          recompute_from_day TEXT NULL, PRIMARY KEY (id))
+      ''');
+      raw.execute("INSERT INTO sync_state VALUES (1, 500, '2026-11-17', 100, NULL, 400, NULL)");
+      raw.execute('''
+        CREATE TABLE day_summaries (
+          day TEXT NOT NULL, steps INTEGER NOT NULL, distance_m REAL NOT NULL,
+          counted_sessions INTEGER NOT NULL, shop_m REAL NOT NULL DEFAULT 0.0,
+          travel_m REAL NOT NULL DEFAULT 0.0, trail_m REAL NOT NULL DEFAULT 0.0,
+          coins INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day))
+      ''');
+      raw.execute(
+          "INSERT INTO day_summaries VALUES ('2026-11-18', 1200, 840.0, 1, 0.0, 840.0, 420.0, 14)");
+      raw.execute('CREATE TABLE paint_trails (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+          'start_utc INTEGER NOT NULL, end_utc INTEGER NULL, end_reason TEXT NULL)');
+      raw.execute("INSERT INTO paint_trails VALUES (3, 100, 200, 'arrived')");
+      raw.execute('PRAGMA user_version = 16');
+    }));
+    addTearDown(db.close);
+
+    expect(await _userVersion(db), 17);
+    expect(await _hasTable(db, 'report_state'), isTrue);
+    // 행은 만들지 않는다 (없으면 첫 기록일 전날로 본다)
+    expect(await db.select(db.reportState).get(), isEmpty);
+    expect(await _columns(db, 'report_state'), ['id', 'last_shown_day']);
+    final day = await db.select(db.daySummaries).getSingle();
+    expect((day.day, day.steps, day.trailM, day.coins), ('2026-11-18', 1200, 420.0, 14));
+    expect((await db.select(db.paintTrails).getSingle()).endReason, PaintTrailEnd.arrived);
+    expect((await db.select(db.syncState).getSingle()).firstRecordDay, '2026-11-17');
+
+    await db.into(db.reportState).insert(
+        ReportStateCompanion.insert(id: const Value(1), lastShownDay: const Value('2026-11-18')));
+    expect((await db.select(db.reportState).getSingle()).lastShownDay, '2026-11-18');
   });
 
   test('동행·상점·배 표: 기본값과 키', () async {

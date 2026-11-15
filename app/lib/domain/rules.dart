@@ -39,6 +39,64 @@ class RestRules {
   final double snapSec;
 }
 
+/// 하루 카드·걷기 리포트 (config report, 16장 11/13·M1 v0.5 ⑥·M2~M6 v0.17 U)
+class ReportRules {
+  const ReportRules({
+    required this.dayStartHour,
+    required this.maxMergeDays,
+    required this.weekStartsMonday,
+    required this.detailDays,
+    required this.defaultDetailDays,
+    required this.shareImageWidthPx,
+    required this.shareImageHeightPx,
+  });
+
+  /// 하루 카드가 어제를 넣기 시작하는 한국 시각(시). 이 시각 전에 열면 어제는 아직 카드에 안 들어간다
+  final int dayStartHour;
+
+  /// 밀린 날을 한 장으로 모을 때 가장 많은 날 수 (가안)
+  final int maxMergeDays;
+
+  /// 이번 주 7일 막대가 월요일에 시작하는가 (아니면 일요일, 가안)
+  final bool weekStartsMonday;
+
+  /// 걷기 리포트에서 고를 수 있는 기간(일)과 처음 기간
+  final List<int> detailDays;
+  final int defaultDetailDays;
+
+  /// 공유 이미지 크기(px, 4:5)
+  final int shareImageWidthPx;
+  final int shareImageHeightPx;
+
+  factory ReportRules.fromJson(Map<String, dynamic> j) {
+    final merge = j['maxMergeDays'] as Map<String, dynamic>;
+    final week = j['weekStartsMonday'] as Map<String, dynamic>;
+    final detail = j['detailDays'] as Map<String, dynamic>;
+    final size = ((j['shareImagePx'] as Map<String, dynamic>)['size'] as List).cast<int>();
+    final options = (detail['options'] as List).cast<int>();
+    final first = detail['default'] as int;
+    final hour = j['dayStartHour'] as int;
+    final days = merge['days'] as int;
+    if (hour < 0 || hour > 23) throw const FormatException('report.dayStartHour는 0~23이어야 한다');
+    if (days < 1) throw const FormatException('report.maxMergeDays.days는 1 이상이어야 한다');
+    if (options.isEmpty || options.any((d) => d < 1) || !options.contains(first)) {
+      throw const FormatException('report.detailDays: options는 1 이상이고 default가 그 안에 있어야 한다');
+    }
+    if (size.length != 2 || size.any((v) => v <= 0)) {
+      throw const FormatException('report.shareImagePx.size는 [가로, 세로]여야 한다');
+    }
+    return ReportRules(
+      dayStartHour: hour,
+      maxMergeDays: days,
+      weekStartsMonday: week['value'] as bool,
+      detailDays: options,
+      defaultDetailDays: first,
+      shareImageWidthPx: size[0],
+      shareImageHeightPx: size[1],
+    );
+  }
+}
+
 /// 장면 레이어 이름 (config scene.layers, 6역할 + 하늘). 그리는 순서는 painter가 정한다
 enum SceneLayerId { sky, backdrop, grove, roadside, meadow, ground, foreground }
 
@@ -309,7 +367,11 @@ class Rules {
     required this.shopMaxHoldPerItem,
     required this.adsRewardedPerDay,
     required this.adsMaxRewardCoins,
+    required this.report,
   });
+
+  /// 하루 카드·걷기 리포트 (config report)
+  final ReportRules report;
 
   /// 설치 뒤 며칠까지 둘째·셋째 동행을 꼭 만나는지 (config companions.guaranteeByDay)
   final List<int> companionGuaranteeDays;
@@ -873,6 +935,7 @@ class Rules {
       shopMaxHoldPerItem: shop['maxHoldPerItem'] as int,
       adsRewardedPerDay: ads['rewardedPerDay'] as int,
       adsMaxRewardCoins: ads['maxRewardCoins'] as int,
+      report: ReportRules.fromJson(j['report'] as Map<String, dynamic>),
     );
   }
 }
