@@ -21,8 +21,9 @@ class SpiritCharacter extends StatefulWidget {
     this.expression = 0,
     this.onReady,
   });
-  /// 앱용 정령 Rive v33 (16장 11/13, 아트보드 `Spirit` 502×600, 바탕 투명, 입력은 v32 inputs.md와 같다)
-  static const asset = 'assets/rive/spirit_v33.riv';
+  /// 앱용 정령 Rive v36 (16장 11/14 정령 기준, 아트보드 `Spirit` 502×600, 바탕 투명, 입력은 v33과 같다.
+  /// 머리 선택 5 새싹·6 꽃은 riv에만 있고 앱은 보내지 않는다)
+  static const asset = 'assets/rive/spirit_v36.riv';
   @visibleForTesting
   static rive.Factory renderer = rive.Factory.rive;
   final double speed, lookX, lookY;
@@ -41,8 +42,16 @@ class SpiritCharacter extends StatefulWidget {
   State<SpiritCharacter> createState() => _SpiritCharacterState();
 }
 
-/// 600 캔버스에서 Rive 그림 1px의 크기 (11/12 통합본이 잘라 쓰던 배율 328.16 / 560)
-const _scale = 328.16 / 560;
+/// v33을 600 캔버스에 놓던 배율 (11/12 통합본이 잘라 쓰던 배율 328.16 / 560, v33 원점은 v32 판의 (44, 252))
+const _v33Scale = 328.16 / 560;
+
+/// 발 디딤점(아트보드 (244, 559), v33·v36 같음)이 600 캔버스에 놓이는 자리. v33 때 자리 그대로
+const _footX = 133 + (44 + 244) * _v33Scale;
+const _footY = 68 + (252 - 180 + 559) * _v33Scale;
+
+/// 600 캔버스에서 v36 그림 1px의 크기. v36은 그림 전체가 v33의 0.97배라(v35 표시 여유) 몸 키가
+/// v33과 같게 키운다: 자세 0·여행복·소품 없음 첫 장면 실측(11/15) 몸 키 v33 488.5px ÷ v36 473.5px
+const _scale = _v33Scale * 488.5 / 473.5;
 
 class _SpiritCharacterState extends State<SpiritCharacter>
     with WidgetsBindingObserver {
@@ -134,9 +143,8 @@ class _SpiritCharacterState extends State<SpiritCharacter>
   Widget build(BuildContext context) {
     final controller = _controller;
     if (controller == null) return const SizedBox.expand();
-    // v33 `Spirit` 아트보드(502×600)를 기존 600 캔버스(머리 위 y150~발 y440 잣대)에 놓는다.
-    // 자리는 11/12 통합본(v32와 같은 1500×1100 시험 판에서 잘라 쓰던 것)과 픽셀까지 같게 맞췄다(11/13 그려서 대조):
-    // 잘라 쓰던 배율 0.586, v33 원점은 v32 판의 (44, 252)
+    // v36 `Spirit` 아트보드(502×600)를 기존 600 캔버스(머리 위 y150~발 y440 잣대)에 놓는다.
+    // 발 디딤점과 몸 키를 v33 자리(11/12 통합본과 픽셀까지 같게 맞춘 것)와 같게 둔다
     final view = FittedBox(
       fit: BoxFit.contain,
       child: SizedBox(
@@ -145,8 +153,8 @@ class _SpiritCharacterState extends State<SpiritCharacter>
         child: Stack(
           children: [
             Positioned(
-              left: 133 + 44 * _scale,
-              top: 68 + (252 - 180) * _scale,
+              left: _footX - 244 * _scale,
+              top: _footY - 559 * _scale,
               width: 502 * _scale,
               height: 600 * _scale,
               child: rive.RiveWidget(controller: controller, fit: rive.Fit.contain),

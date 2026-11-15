@@ -30,7 +30,7 @@ void main() {
       c.dispose();
       f.dispose();
     });
-    // 앱용 v33: 정령 전용 아트보드 Spirit 502×600 (11/13)
+    // 앱용 v36(11/14 정령 기준, v33과 같은 아트보드): 정령 전용 아트보드 Spirit 502×600
     expect(c.artboard.name, 'Spirit');
     expect(c.artboard.width, 502);
     expect(c.artboard.height, 600);
