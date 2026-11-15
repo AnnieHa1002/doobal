@@ -545,6 +545,40 @@ void main() {
       await end(tester, e);
     });
 
+    testWidgets('처음 골라져 있는 옷 색은 시작 색 4개 중 무작위, 그대로 두면 그 색이 저장된다 (16장 11/15)', (tester) async {
+      final e = UiEnv();
+      final counts = <int>[];
+      e.clothPick = (n) {
+        counts.add(n);
+        return 2;
+      };
+      await openMe(tester, e);
+      // props cloth_02.startColors 4색에서 한 번만 고른다
+      expect(counts, [4]);
+      expect(find.text('크림 · 여행복 살구'), findsOneWidget);
+      await tab(tester, 'cloth');
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('cloth-3'))).flagsCollection.isSelected,
+        Tristate.isTrue,
+      );
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('cloth-1'))).flagsCollection.isSelected,
+        Tristate.isFalse,
+      );
+      // 다른 탭을 오가고 다시 그려도 다시 고르지 않는다
+      await tab(tester, 'eyes');
+      await tab(tester, 'cloth');
+      expect(counts, [4]);
+
+      await tester.enterText(find.byType(TextField), '화가');
+      await tester.pump();
+      await _tapButton(tester, '이 모습으로');
+      await _arrive(tester, HomePickScreen);
+      final r = await _profile(tester, e);
+      expect(Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>).clothColor, 3);
+      await end(tester, e);
+    });
+
     testWidgets('아무것도 안 고르면 기본 모습(기본 얼굴, 크림)이 저장된다', (tester) async {
       final e = UiEnv();
       await openMe(tester, e);
