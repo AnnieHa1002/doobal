@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
 
-// M1 명세 v0.5 ⑧ (테스트 27~35 대체). 34 하루 카드는 T10 몫이라 여기 없다.
+// M1 명세 v0.5 ⑧ (테스트 27~35 대체), v0.6 ①~③ (도착하면 끝·iOS 화면 꺼짐 메우기). 34 하루 카드는 T10 몫이라 여기 없다.
 // 한국 시간 2026-11-18 10:00 = UTC 01:00. 보폭은 걷기 0.7m·뛰기 1.0m
 final _t10 = DateTime.utc(2026, 11, 18, 1);
 DateTime _at(int minutesAfter10, [int sec = 0]) =>
@@ -57,6 +57,31 @@ void main() {
       expect(rules.eventOffScreenCards, 1);
       expect(rules.coinsPerKm, 10);
       expect(rules.coinsDailyCap, 400);
+    });
+
+    test('data-v13 v21 값: 도착하면 끝·iOS 메우기·줍기 연출·지도 선·기본 물감', () {
+      expect(rules.paintTrailEndOnArrival, isTrue);
+      expect(rules.paintTrailIosBackfill, isTrue);
+      final p = rules.paintPickup;
+      expect((p.sizePt, p.pressedSec, p.splashSec, p.splashScaleFrom, p.splashScaleTo, p.gainFloatSec),
+          (28, 0.12, 0.6, 0.6, 1.2, 1.2));
+      expect(p.dropSprites, ['ui_paint_pickup_a_v01', 'ui_paint_pickup_b_v01']);
+      expect((p.pressedSprite, p.splashSprite), ('ui_paint_pickup_c_v02', 'fx_paint_splash_v01'));
+      final m = rules.mapTrail;
+      expect((m.paintHeightPt, m.paintCapPt, m.pencilWidthPt, m.pencilColor), (10, 12, 2, 0xFF7A6A5C));
+      expect((m.paintTile, m.paintCap, m.pencilTile),
+          ('map_trail_drops_tile_v02', 'map_trail_drops_cap_v02', 'map_trail_pencil_tile_v01'));
+      expect(rules.paintDefaultColor, 0xFFB5603A);
+    });
+
+    test('모르는 줍기·지도 규칙은 거부한다', () {
+      Map<String, dynamic> pickup(Map<String, dynamic> j) =>
+          (j['paintDrop'] as Map<String, dynamic>)['pickup'] as Map<String, dynamic>;
+      expect(() => _rulesWith((j) => pickup(j)['reducedMotion'] = 'slow'), throwsFormatException);
+      expect(() => _rulesWith((j) => pickup(j)['night'] = 'own'), throwsFormatException);
+      expect(() => _rulesWith((j) => pickup(j)['splashScale'] = [1]), throwsFormatException);
+      expect(() => _rulesWith((j) => (j['mapTrail'] as Map)['nonScaling'] = false),
+          throwsFormatException);
     });
 
     test('모르는 거리 기준·0 이하 값은 거부한다', () {
@@ -240,6 +265,118 @@ void main() {
       expect(t.close(_at(8), PaintTrailEnd.idle),
           PaintTrailWindow(_at(0), _at(8), PaintTrailEnd.idle));
       expect(t.active, isFalse);
+    });
+  });
+
+  group('도착하면 물감 길이 끝난다 (M1 v0.6, 16장 11/14)', () {
+    test('① 물감 길 중 도착 → 그 창의 끝 = 도착 시각(arrived), trailM은 도착까지', () {
+      final walk = _gains(0, 10, 100);
+      final w = paintTrailWindows(walk, arrivals: [_at(6, 45)], now: _at(30), rules: rules);
+      // 도착 뒤 10:07:30의 100보로 새 창이 열리고, 걸음이 멈춰 10:10에 끝난다
+      expect(w, [
+        PaintTrailWindow(_at(0), _at(6, 45), PaintTrailEnd.arrived),
+        PaintTrailWindow(_at(7), _at(10), PaintTrailEnd.idle),
+      ]);
+      // 분 시작이 도착 전인 10:00~10:06 7분 × 100보 × 0.7m
+      expect(trailM(classifyGait(_walk(10, 100), rules), [w.first], now: _at(30), rules: rules),
+          closeTo(490, 1e-9));
+    });
+
+    test('② 도착 뒤 60초에 9보 → 새 창 없음, 10보 → 새 창 (도착 직전 걸음은 세지 않는다)', () {
+      final events = [
+        ..._gains(0, 5, 100),
+        // 도착 직전 5보 + 도착 뒤 4보: 합하면 9보 (도착 전 걸음은 새 창 판정에 안 든다)
+        SensorGain(_at(4, 50), 5),
+        SensorGain(_at(5, 20), 4),
+        SensorGain(_at(5, 50), 5),
+      ];
+      final nine = paintTrailWindows(events, arrivals: [_at(5)], now: _at(6), rules: rules);
+      expect(nine, [PaintTrailWindow(_at(0), _at(5), PaintTrailEnd.arrived)]);
+      final ten = paintTrailWindows([...events, SensorGain(_at(6, 10), 1)],
+          arrivals: [_at(5)], now: _at(7), rules: rules);
+      expect(ten, [
+        PaintTrailWindow(_at(0), _at(5), PaintTrailEnd.arrived),
+        PaintTrailWindow(_at(5)),
+      ]);
+    });
+
+    test('도착이 분 가운데면 새 창은 도착 시각부터 (창이 겹치지 않는다)', () {
+      final events = [..._gains(0, 5, 100), SensorGain(_at(5, 40), 12)];
+      expect(paintTrailWindows(events, arrivals: [_at(5, 10)], now: _at(6), rules: rules), [
+        PaintTrailWindow(_at(0), _at(5, 10), PaintTrailEnd.arrived),
+        PaintTrailWindow(_at(5, 10)),
+      ]);
+    });
+
+    test('도착 전에 걸음이 멈춰 끝난 창은 idle 그대로, 열린 창이 없을 때 도착은 아무것도 안 한다', () {
+      final walk = _gains(0, 3, 100);
+      expect(paintTrailWindows(walk, arrivals: [_at(20)], now: _at(30), rules: rules),
+          [PaintTrailWindow(_at(0), _at(3), PaintTrailEnd.idle)]);
+      expect(paintTrailWindows(const [], arrivals: [_at(20)], now: _at(30), rules: rules), isEmpty);
+    });
+  });
+
+  group('iOS 화면 꺼짐 메우기 (M1 v0.6, 16장 11/14)', () {
+    /// 10:00~10:09 앞에서 걸어 연 판정기 (마지막 걸음 10:09:30), 10:10에 화면을 껐다
+    PaintTrailTracker opened() {
+      final t = PaintTrailTracker(rules);
+      for (final g in _gains(0, 10, 100)) {
+        t.add(g);
+      }
+      expect((t.start, t.lastStep), (_at(0), _at(9, 30)));
+      return t;
+    }
+
+    test('③ 화면 끈 20분 1,500보 → 같은 물감 길에 1.05km 더해짐, 방울 10개분 10럭', () {
+      final hidden = minutesFrom(_at(10), List.filled(20, 75));
+      // 메우지 않으면 꺼지기 전 마지막 걸음 분 끝(10:10)에 끝난다
+      expect(opened().idleEnd(_at(31)), _at(10));
+      final t = opened();
+      expect(t.backfill(hidden), _at(29));
+      expect(t.idleEnd(_at(31)), isNull);
+      expect(t.idleEnd(_at(35)), _at(30));
+
+      final health = classifyGait([..._walk(10, 100), ...hidden], rules);
+      double trail(DateTime end) => trailM(health, [PaintTrailWindow(_at(0), end, PaintTrailEnd.idle)],
+          now: _at(40), rules: rules);
+      final added = trail(_at(30)) - trail(_at(10));
+      expect(added, closeTo(1050, 1e-9));
+      expect(paintDrops(added, rules) * rules.paintDropCoinsPerDrop, 10);
+      expect(trailCoins(actualM: 0, trailM: added, rules: rules), 10);
+    });
+
+    test('꺼진 동안 5분 넘게 빈 곳이 있으면 거기서 끝나고 그 뒤 걸음은 이 물감 길이 아니다', () {
+      // 10:10~10:14 걷고 10:15~10:19 5분 비고 10:20~10:29 다시 걸음
+      final hidden = [
+        ...minutesFrom(_at(10), List.filled(5, 75)),
+        ...minutesFrom(_at(20), List.filled(10, 75)),
+      ];
+      final t = opened();
+      expect(t.backfill(hidden), _at(14));
+      expect(t.idleEnd(_at(31)), _at(15));
+    });
+
+    test('4분만 비면 이어진다, 걸음 0인 분·이미 센 분은 보지 않는다', () {
+      final hidden = [
+        ...minutesFrom(_at(9), [500]),
+        ...minutesFrom(_at(10), List.filled(5, 75)),
+        ...minutesFrom(_at(15), List.filled(4, 0)),
+        ...minutesFrom(_at(19), List.filled(11, 75)),
+      ];
+      expect(extendLastStep(_at(9, 30), hidden, rules), _at(29));
+      expect(extendLastStep(_at(9, 30), minutesFrom(_at(10), [0, 0]), rules), _at(9, 30));
+      // 첫 걸음 분이 이미 5분 넘게 떨어져 있으면 늘리지 않는다
+      expect(extendLastStep(_at(9, 30), minutesFrom(_at(15), [80]), rules), _at(9, 30));
+      expect(extendLastStep(_at(9, 30), minutesFrom(_at(14), [80]), rules), _at(14));
+      expect(PaintTrailTracker(rules).backfill(hidden), isNull);
+    });
+
+    test('숨었다 돌아와 한꺼번에 들어온 걸음은 마지막 걸음을 옮기지 않는다', () {
+      final t = opened()..add(SensorGain(_at(31), 1500, catchUp: true));
+      expect(t.lastStep, _at(9, 30));
+      expect(t.idleEnd(_at(31)), _at(10));
+      t.add(SensorGain(_at(31, 20), 20));
+      expect(t.lastStep, _at(31, 20));
     });
   });
 

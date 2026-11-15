@@ -12,8 +12,9 @@ import 'time_kst.dart';
 // 물감 길 안의 실제 거리(trail)는 럭 덤·길 위 이벤트·지도 물감 구간에만 쓴다.
 
 /// 물감 길이 끝난 까닭: idle은 걸음이 config paintTrail.idleEndMin 동안 멈춤, appEnded는 앱이 끝나서
-/// 다음 실행에서 마지막으로 살아 있던 시각에 닫음
-enum PaintTrailEnd { idle, appEnded }
+/// 다음 실행에서 마지막으로 살아 있던 시각에 닫음, arrived는 명소에 도착해서 도착을 판정한 시각에 닫음
+/// (config paintTrail.endOnArrival, 16장 11/14·M1 v0.6)
+enum PaintTrailEnd { idle, appEnded, arrived }
 
 /// 물감 길 창 하나 ([start] 이상 [end] 미만). [end]가 null이면 아직 열려 있다 (지금까지로 센다)
 class PaintTrailWindow {
@@ -52,10 +53,13 @@ class SensorGain {
 
 /// 센서 걸음으로 물감 길의 시작·끝을 가리는 판정기 (화면·DB 없이 순수하게, 시각은 부르는 쪽이 넘긴다).
 /// - 시작: 열린 물감 길이 없고 앱이 앞에 있을 때, 최근 config paintTrail.startMinSteps.withinSec초 안에
-///   늘어난 걸음이 steps 이상이면 그 걸음들 중 첫 걸음의 분(분 시작)에 연다.
+///   늘어난 걸음이 steps 이상이면 그 걸음들 중 첫 걸음의 분(분 시작)에 연다
+///   (앞 창이 그 분 가운데에 끝났으면 앞 창의 끝에).
 ///   숨어 있던 걸음이 한꺼번에 들어온 것(catchUp)과 숨어 있을 때 센 걸음은 시작에 세지 않는다.
 /// - 끝: 마지막 걸음이 든 분의 끝 뒤로 걸음 없이 idleEndMin분이 지나면 그 분의 끝에 닫는다 (idle).
-///   열려 있는 동안은 숨어 있어도 걸음을 센다 (화면을 꺼도 앱이 살아 있으면 이어진다)
+///   열려 있는 동안은 숨어 있어도 걸음을 센다 (화면을 꺼도 앱이 살아 있으면 이어진다).
+///   숨었다 돌아와 한꺼번에 들어온 걸음(catchUp)은 언제 걸었는지 몰라 마지막 걸음을 옮기지 않는다
+///   (iOS는 다시 켤 때 health 분 걸음으로 [backfill]한다)
 class PaintTrailTracker {
   PaintTrailTracker(this.rules);
 
@@ -64,6 +68,9 @@ class PaintTrailTracker {
   DateTime? _start;
   DateTime? _lastStep;
   var _lastStartSteps = 0;
+
+  /// 마지막으로 닫은 창의 끝. 새 창은 이보다 앞에서 시작하지 않는다 (도착 시각은 분 가운데일 수 있다)
+  DateTime? _closedAt;
 
   /// 마지막으로 물감 길을 연 걸음들의 합 (시작 판정 창 안에서 늘어난 걸음)
   int get lastStartSteps => _lastStartSteps;
@@ -89,7 +96,7 @@ class PaintTrailTracker {
     if (g.steps <= 0) return null;
     if (_start != null) {
       final last = _lastStep;
-      if (last == null || g.at.isAfter(last)) _lastStep = g.at;
+      if (!g.catchUp && (last == null || g.at.isAfter(last))) _lastStep = g.at;
       return null;
     }
     if (!g.foreground || g.catchUp) {
@@ -102,7 +109,9 @@ class PaintTrailTracker {
       ..add(g);
     final sum = _recent.fold(0, (a, r) => a + r.steps);
     if (sum < rules.paintTrailStartSteps) return null;
-    final start = minuteStart(_recent.first.at);
+    final first = minuteStart(_recent.first.at);
+    final floor = _closedAt;
+    final start = floor != null && first.isBefore(floor) ? floor : first;
     _start = start;
     _lastStartSteps = sum;
     _lastStep = g.at;
@@ -120,6 +129,15 @@ class PaintTrailTracker {
     return now.isBefore(due) ? null : end;
   }
 
+  /// 앱이 멈춰 센서 값이 오지 않던 동안(iOS 화면 꺼짐)의 health 분 걸음 [minutes]로 마지막 걸음을 늘린다
+  /// (config paintTrail.iosBackfillPaint, M1 v0.6). 규칙은 [extendLastStep]. 열린 물감 길이 없으면 null,
+  /// 있으면 새 마지막 걸음 (늘지 않았으면 그대로). 끝났는지는 그 뒤 [idleEnd]가 본다
+  DateTime? backfill(Iterable<StepMinute> minutes) {
+    final last = _lastStep;
+    if (_start == null || last == null) return null;
+    return _lastStep = extendLastStep(last, minutes, rules);
+  }
+
   /// 열린 물감 길을 [end]에 [reason]으로 닫고 그 창을 돌려준다. 끝이 시작보다 앞이면 시작에 닫는다.
   /// 열린 것이 없으면 null
   PaintTrailWindow? close(DateTime end, PaintTrailEnd reason) {
@@ -128,29 +146,47 @@ class PaintTrailTracker {
     _start = null;
     _lastStep = null;
     _recent.clear();
-    return PaintTrailWindow(start, end.isBefore(start) ? start : end, reason);
+    final at = end.isBefore(start) ? start : end;
+    _closedAt = at;
+    return PaintTrailWindow(start, at, reason);
   }
 }
 
 /// 센서 걸음 [events](시각순이 아니어도 된다)로 낸 물감 길 창 목록 (M1 명세 v0.5 ②의 순수 함수).
 /// [aliveUtc]는 앱이 끝났을 때 마지막으로 살아 있던 시각이다: 주면 그 뒤의 걸음은 보지 않고, 그때까지 걸음이
 /// 멈춰 끝나지 않은 창은 그 시각에 appEnded로 닫는다. 없으면 앱이 [now]까지 살아 있어서
-/// 그때까지 끝나지 않은 창은 열린 채(end null) 돌려준다
+/// 그때까지 끝나지 않은 창은 열린 채(end null) 돌려준다.
+/// [arrivals]는 여정 엔진이 도착을 판정한 시각들이다 (M1 v0.6): 열린 창은 그 시각에 arrived로 닫고,
+/// 그 뒤 걸음은 startMinSteps를 다시 넘어야 새 창이 된다
 List<PaintTrailWindow> paintTrailWindows(
   List<SensorGain> events, {
   DateTime? aliveUtc,
+  List<DateTime> arrivals = const [],
   required DateTime now,
   required Rules rules,
 }) {
   final sorted = [...events]..sort((a, b) => a.at.compareTo(b.at));
   final limit = aliveUtc != null && aliveUtc.isBefore(now) ? aliveUtc : now;
+  final arrive = [...arrivals.where((a) => !a.isAfter(limit))]..sort();
   final tracker = PaintTrailTracker(rules);
   final out = <PaintTrailWindow>[];
+  var next = 0;
+  // [at]까지(그 시각 포함) 도착을 처리한다: 그 전에 걸음이 멈춰 끝났으면 idle, 아니면 도착 시각에 arrived
+  void arrivalsUpTo(DateTime at) {
+    for (; next < arrive.length && !arrive[next].isAfter(at); next++) {
+      final a = arrive[next];
+      if (tracker.idleEnd(a) case final end?) out.add(tracker.close(end, PaintTrailEnd.idle)!);
+      if (tracker.active) out.add(tracker.close(a, PaintTrailEnd.arrived)!);
+    }
+  }
+
   for (final e in sorted) {
     if (e.at.isAfter(limit)) break;
+    arrivalsUpTo(e.at);
     if (tracker.idleEnd(e.at) case final end?) out.add(tracker.close(end, PaintTrailEnd.idle)!);
     tracker.add(e);
   }
+  arrivalsUpTo(limit);
   if (tracker.idleEnd(limit) case final end?) {
     out.add(tracker.close(end, PaintTrailEnd.idle)!);
   } else if (tracker.active) {
@@ -159,6 +195,27 @@ List<PaintTrailWindow> paintTrailWindows(
         : tracker.close(limit, PaintTrailEnd.appEnded)!);
   }
   return out;
+}
+
+/// 마지막 걸음 [lastStep] 뒤의 health 분 걸음 [minutes](시각순이 아니어도 된다)로 늘린 마지막 걸음
+/// (iOS 화면 꺼짐 메우기, M1 v0.6). [lastStep]이 든 분 뒤의 걸음 있는 분을 시간순으로 보며, 앞 걸음 분의 끝에서
+/// config paintTrail.idleEndMin분이 지나기 전에 시작한 분이면 이어 걸은 것으로 보고 마지막 걸음을 그 분으로 옮긴다.
+/// 처음으로 idleEndMin분 넘게 빈 곳에서 멈춘다 (거기서 물감 길이 끝나고, 그 뒤 걸음은 이 물감 길이 아니다).
+/// 늘어난 마지막 걸음은 그 분의 시작 시각이다 (분 안 어디서 걸었는지 모른다)
+DateTime extendLastStep(DateTime lastStep, Iterable<StepMinute> minutes, Rules rules) {
+  final sorted = [
+    for (final m in minutes)
+      if (m.steps > 0 && m.minute > epochMinute(lastStep)) m.minute,
+  ]..sort();
+  var last = epochMinute(lastStep);
+  var moved = false;
+  for (final m in sorted) {
+    // 앞 걸음 분 끝(last + 1)부터 idleEndMin분이 지나면 끝났다
+    if (m >= last + 1 + rules.paintTrailIdleEndMin) break;
+    last = m;
+    moved = true;
+  }
+  return moved ? StepMinute(last, 0).startUtc : lastStep;
 }
 
 /// 열려 있던 물감 길을 닫을 시각: 마지막으로 살아 있던 시각([lastAlive]), 그게 없거나 시작보다

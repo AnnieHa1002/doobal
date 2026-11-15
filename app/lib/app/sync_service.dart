@@ -131,6 +131,17 @@ class WalkRecord {
   final int countedToday;
 }
 
+/// 도착으로 닫은 물감 길: 번호와 닫은 시각 (= 도착을 판정한 시각)
+class ArrivalTrailEnd {
+  const ArrivalTrailEnd(this.id, this.end);
+
+  final int id;
+  final DateTime end;
+
+  @override
+  String toString() => 'ArrivalTrailEnd($id, $end)';
+}
+
 /// 지난 물감 길 한 줄 (노트 걷기 기록): 시작·끝과 물감 길 안 실제 거리(m)
 class PaintTrailView {
   const PaintTrailView({
@@ -582,6 +593,12 @@ class SyncService {
   /// 어느 화면에서 동기화했든 새로 얻은 보상 배([SyncReport.newBoats])가 있으면 흘려보낸다
   Stream<List<Boat>> get newBoats => _newBoats.stream;
 
+  final _arrivalEnds = StreamController<ArrivalTrailEnd>.broadcast();
+
+  /// 도착으로 닫은 물감 길 (config paintTrail.endOnArrival). 동기화가 도착을 처리하고 저장을 마친 뒤 흘려보낸다.
+  /// PaintTrailController가 듣고 판정기를 비운다 (도착 뒤 걸음은 새 물감 길)
+  Stream<ArrivalTrailEnd> get arrivalEnds => _arrivalEnds.stream;
+
   Future<SyncReport> sync(DateTime now) async {
     final state = await _ensureState(now);
     final install = _utc(state.installUtc);
@@ -604,6 +621,7 @@ class SyncService {
     var newProps = <Prop>[];
     var newBadges = <Badge>[];
     var newBoats = <Boat>[];
+    var arrivalEnds = <ArrivalTrailEnd>[];
     await db.transaction(() async {
       final activeBefore = await _activeJourney();
       final progressBefore = await _progressOf(activeBefore, to);
@@ -625,7 +643,7 @@ class SyncService {
         await (db.update(db.syncState)..where((t) => t.id.equals(1)))
             .write(const SyncStateCompanion(recomputeFromDay: Value(null)));
       }
-      await _advanceJourney(to);
+      arrivalEnds = await _advanceJourney(to);
       newProps = await _unlockProps(to);
       newBoats = await _unlockBoats(to);
       final companion = await _syncCompanions(to);
@@ -670,6 +688,7 @@ class SyncService {
     if (newProps.isNotEmpty) _newProps.add(newProps);
     if (newBadges.isNotEmpty) _newBadges.add(newBadges);
     if (newBoats.isNotEmpty) _newBoats.add(newBoats);
+    arrivalEnds.forEach(_arrivalEnds.add);
     return _report(raw, kept,
         advancedKm: advancedKm,
         notices: candidates,
@@ -1735,6 +1754,10 @@ class SyncService {
         return open.length;
       });
 
+  /// 저장된 분 걸음 중 [from]이 든 분부터 [upTo]가 든 분까지 (시간순, iOS 화면 꺼짐 메우기가 읽는다)
+  Future<List<StepMinute>> stepMinutes(DateTime from, DateTime upTo) =>
+      _minutesFrom(epochMinute(from), beforeMinute: epochMinute(upTo) + 1);
+
   /// 분 시작이 [from] 이상이고 [upTo]가 속한 분까지인 저장된 걸음의 합
   Future<int> stepsFrom(DateTime from, DateTime upTo) async {
     final fromMin = (from.millisecondsSinceEpoch + Duration.millisecondsPerMinute - 1) ~/
@@ -2176,11 +2199,13 @@ class SyncService {
 
   /// 여정이 있으면 진행·도착을 계산하고 넘친 거리를 경비로, 없으면 그동안 걸은 실제 거리를 경비로 (상한 있음).
   /// 진행·넘친 거리는 여행 거리(실제 + 상점 효과)이고, 경비와 도착할 때의 액자 등급은 실제 거리로 가린다
-  Future<void> _advanceJourney(DateTime to) async {
+  /// 여정을 [to]까지 나아가게 한다 (도착·넘침·경비). 도착으로 닫은 물감 길을 돌려준다
+  Future<List<ArrivalTrailEnd>> _advanceJourney(DateTime to) async {
     final fund = await _fund();
     final toMin = epochMinute(to);
     var km = fund.km;
     var fundedUntil = to.millisecondsSinceEpoch;
+    var ended = const <ArrivalTrailEnd>[];
 
     final active = await _activeJourney();
     if (active != null) {
@@ -2190,6 +2215,7 @@ class SyncService {
       if (p.arrived) {
         await _arrive(active, to,
             frameKm: frameBasisKm(j.fundKm, walked.actualKm, j.route.totalEffectiveKm));
+        ended = await _endTrailsOnArrival(to);
         // 넘친 거리는 디버그 배수를 곱하기 전 걸은 거리로 되돌려 경비에 넣는다 (상점 효과는 경비에 안 더한다)
         km = addToFund(km, await _withoutShopKm(active.id, p.overflowKm) / distanceScale, rules);
         // 도착한 분까지는 여정의 걸음(넘친 거리에 들어 있다)이라 경비는 다음 분부터
@@ -2203,6 +2229,25 @@ class SyncService {
     // 멈춤으로 앞서 둔 다음 분 경계는 되돌리지 않는다 (같은 분 안에서 또 동기화해도 두 번 세지 않게)
     await (db.update(db.travelFund)..where((t) => t.id.equals(1))).write(TravelFundCompanion(
         km: Value(km), fundedUntilUtc: Value(math.max(fundedUntil, fund.fundedUntilUtc))));
+    return ended;
+  }
+
+  /// 도착하면 그 물감 길이 끝난다 (config paintTrail.endOnArrival, 16장 11/14·M1 v0.6): 열린 물감 길을
+  /// 도착을 판정한 시각 [at](= 여정의 arrivedUtc)에 arrived로 닫는다. 이번 동기화는 열린 창을 [at]까지로
+  /// 이미 셌으니 하루 요약은 다시 계산하지 않는다. 닫은 것을 돌려준다
+  Future<List<ArrivalTrailEnd>> _endTrailsOnArrival(DateTime at) async {
+    if (!rules.paintTrailEndOnArrival) return const [];
+    final atMs = at.toUtc().millisecondsSinceEpoch;
+    final out = <ArrivalTrailEnd>[];
+    for (final r in await _openTrailRows()) {
+      final end = math.max(r.startUtc, atMs);
+      await (db.update(db.paintTrails)..where((t) => t.id.equals(r.id))).write(PaintTrailsCompanion(
+        endUtc: Value(end),
+        endReason: const Value(PaintTrailEnd.arrived),
+      ));
+      out.add(ArrivalTrailEnd(r.id, _utc(end)));
+    }
+    return out;
   }
 
   Future<List<StepMinute>> _minutesFrom(int fromMinute, {int? beforeMinute}) async {

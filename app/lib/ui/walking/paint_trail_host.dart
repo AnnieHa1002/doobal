@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/auto_sync.dart' show scaffoldMessengerKey;
 import '../../app/paint_trail_controller.dart';
+import '../../domain/paint_trail.dart' show PaintTrailEnd;
 import '../common/toast.dart';
 import 'walking_screen.dart';
 
@@ -97,6 +98,8 @@ void openWalking(NavigatorState navigator) {
 ///   떠 있으면 닫힐 때까지 기다린다 (가안). 기다리는 사이 물감 길이 끝나면 넘어가지 않는다.
 /// - 걸음이 멈춰 물감 길이 끝나면 걷는 중 화면이 맨 위일 때 쉼터로 돌아가고, 토스트
 ///   `물감 길 n km를 그렸어요`를 띄운다 (다른 화면을 보고 있으면 토스트만).
+/// - 명소에 도착해 끝났으면(config paintTrail.endOnArrival) 아무것도 하지 않는다: 걷는 중이 도착 화면으로 바꾸고
+///   (걷는 중이 아니면 AutoSync가 띄운다), 도착 화면을 닫으면 쉼터다. 토스트는 없다.
 /// 물감 길 판정 자체는 PaintTrailController가 한다 (이 위젯이 그 상태를 붙잡아 살려 둔다)
 class PaintTrailHost extends ConsumerStatefulWidget {
   const PaintTrailHost({super.key, required this.child});
@@ -153,8 +156,9 @@ class _PaintTrailHostState extends ConsumerState<PaintTrailHost> {
     });
   }
 
-  /// 물감 길이 끝났다: 걷는 중이 맨 위면 쉼터로, 토스트 한 줄
+  /// 물감 길이 끝났다: 걷는 중이 맨 위면 쉼터로, 토스트 한 줄. 도착으로 끝났으면 도착 화면이 맡는다
   void _onEnded(PaintTrailState s) {
+    if (s.endedBy == PaintTrailEnd.arrived) return;
     if (topRouteObserver.walkingOnTop) Navigator.of(context).popUntil((r) => r.isFirst);
     final km = s.endedKm;
     final messenger = scaffoldMessengerKey.currentState;

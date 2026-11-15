@@ -1,9 +1,12 @@
+import 'package:doobal/app/paint_trail_controller.dart';
+import 'package:doobal/domain/paint_trail.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../app/helpers.dart';
@@ -11,6 +14,7 @@ import 'ui_env.dart';
 
 // 걷는 중 100% → 도착 (11/4), 닫으면 쉼터 (11/13). 진행 기준은 언제나 health 동기화 값이다:
 // 센서 미리보기가 남은 거리를 넘으면 동기화를 바로 돌려 보고, 도착이 확정돼야 넘어간다.
+// 도착하면 그 물감 길은 끝나고(16장 11/14, config paintTrail.endOnArrival), 도착 뒤 걸음은 새 물감 길이다.
 
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
@@ -46,6 +50,25 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
   }
 
+  /// 센서로 남은 거리(약 1km = 약 1,430보)를 넘을 때까지 100보씩 걷고, 도착으로 물감 길이 끝나면 걸음을 멈춘 채
+  /// 도착 화면이 뜨길 기다린다. 걸은 걸음의 누적값을 돌려준다
+  Future<int> walkToArrival(WidgetTester tester, UiEnv e, {int from = 0}) async {
+    final c = ProviderScope.containerOf(tester.element(find.byType(WalkingScreen)));
+    bool arrived() => c.read(paintTrailProvider).endedBy == PaintTrailEnd.arrived;
+    var steps = from;
+    while (steps < 2000 && !arrived()) {
+      steps += 100;
+      await sensorSteps(tester, e, 50000, steps);
+    }
+    for (var i = 0; i < 30 && find.byType(ArrivalScreen).evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
+    }
+    expect(find.byType(ArrivalScreen), findsOneWidget);
+    await transition(tester);
+    return steps;
+  }
+
   testWidgets('센서 미리보기가 남은 거리를 넘으면 30초 주기를 기다리지 않고 동기화해 도착으로 넘어간다',
       (tester) async {
     final e = await openWalking(tester);
@@ -58,26 +81,57 @@ void main() {
     expect(find.byType(ArrivalScreen), findsNothing);
     expect(find.byType(WalkingScreen), findsOneWidget);
 
-    // 남은 거리(약 1km = 약 1,430보)를 넘는다
-    for (var i = 0; i < 12 && find.byType(ArrivalScreen).evaluate().isEmpty; i++) {
-      steps += 100;
-      await sensorSteps(tester, e, 50000, steps);
-    }
-    for (var i = 0; i < 20 && find.byType(ArrivalScreen).evaluate().isEmpty; i++) {
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
-    }
-    expect(find.byType(ArrivalScreen), findsOneWidget);
-    await transition(tester);
+    await walkToArrival(tester, e, from: steps);
     expect(find.byType(WalkingScreen, skipOffstage: false), findsNothing);
 
-    // 도착 화면을 닫으면 쉼터 (11/13: 걷기 기록을 거치지 않고, 물감 길은 이어진다)
+    // 물감 길은 도착 시각에 arrived로 끝났고 끝 토스트는 없다
+    final c = ProviderScope.containerOf(tester.element(find.byType(ArrivalScreen)));
+    expect(c.read(paintTrailProvider).active, isFalse);
+    expect(c.read(paintTrailProvider).endedBy, PaintTrailEnd.arrived);
+    final row = (await tester.runAsync(() => e.db.select(e.db.paintTrails).getSingle()))!;
+    expect(row.endReason, PaintTrailEnd.arrived);
+    final journey = (await tester.runAsync(() => e.db.select(e.db.journeys).get()))!
+        .firstWhere((j) => j.arrivedUtc != null);
+    expect(row.endUtc, journey.arrivedUtc);
+    expect(find.textContaining('를 그렸어요'), findsNothing);
+    expect(e.walkNotice.running, isFalse);
+
+    // 도착 화면을 닫으면 쉼터 (11/13: 걷기 기록을 거치지 않는다). 그 뒤 걸음이 없으니 걷는 중으로 안 간다
     await tester.tap(find.byTooltip('닫기'));
     await transition(tester);
     await settle(tester, () => find.byType(RestScreen).evaluate().isNotEmpty);
     await transition(tester);
     expect(find.byType(RestScreen), findsOneWidget);
     expect(find.byType(WalkRecordScreen), findsNothing);
+    expect(find.byType(ArrivalScreen), findsNothing);
+    expect(find.byType(WalkingScreen), findsNothing);
+    await end(tester, e);
+  });
+
+  testWidgets('도착 뒤 60초 10보면 새 물감 길: 도착 화면이 떠 있는 동안은 기다렸다가 닫으면 걷는 중',
+      (tester) async {
+    final e = await openWalking(tester);
+    final steps = await walkToArrival(tester, e);
+    final c = ProviderScope.containerOf(tester.element(find.byType(ArrivalScreen)));
+    expect(c.read(paintTrailProvider).active, isFalse);
+
+    // 도착 화면을 보며 9보: 그대로, 1보 더(60초 안 10보): 새 물감 길이 열리지만 도착 화면은 그대로
+    await sensorSteps(tester, e, 50000, steps + 9);
+    await settle(tester, () => false, tries: 6);
+    expect(c.read(paintTrailProvider).active, isFalse);
+    await sensorSteps(tester, e, 50000, steps + 10);
+    await settle(tester, () => c.read(paintTrailProvider).active, tries: 40);
+    expect(c.read(paintTrailProvider).active, isTrue);
+    expect(find.byType(ArrivalScreen), findsOneWidget);
+    expect(find.byType(WalkingScreen), findsNothing);
+    final rows = (await tester.runAsync(() => e.db.select(e.db.paintTrails).get()))!;
+    expect(rows.map((r) => r.endReason), [PaintTrailEnd.arrived, null]);
+    expect(rows[1].startUtc, greaterThanOrEqualTo(rows[0].endUtc!));
+
+    await tester.tap(find.byTooltip('닫기'));
+    await transition(tester);
+    await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+    expect(find.byType(WalkingScreen), findsOneWidget);
     expect(find.byType(ArrivalScreen), findsNothing);
     await end(tester, e);
   });

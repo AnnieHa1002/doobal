@@ -283,16 +283,17 @@ Future<void> startTrailNow(WidgetTester tester) async {
   await transition(tester);
 }
 
-/// 앱 전체(DoobalApp = 시작 관문 → AutoSync + 쉼터)를 폰 크기로 띄운다
+/// 앱 전체(DoobalApp = 시작 관문 → AutoSync + 쉼터)를 폰 크기로 띄운다 ([extra]는 더 덮어쓸 provider)
 Future<void> pumpDoobal(
   WidgetTester tester,
   UiEnv e,
   Widget app, {
   double width = 390,
   double height = 844,
+  List<Override> extra = const [],
 }) async {
   phone(tester, width: width, height: height);
-  await tester.pumpWidget(ProviderScope(overrides: e.overrides, child: app));
+  await tester.pumpWidget(ProviderScope(overrides: [...e.overrides, ...extra], child: app));
 }
 
 /// '열기' 버튼 하나뿐인 첫 화면에서 [screen]을 연다 (앱 첫 화면 위에 쌓이는 것과 같다)
