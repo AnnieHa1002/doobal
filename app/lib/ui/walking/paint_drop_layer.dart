@@ -4,21 +4,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/catalog_providers.dart';
+import '../../domain/paint_color.dart';
 import '../../domain/paint_trail.dart';
 import '../../domain/rules.dart';
 import '../common/app_text.dart';
+import '../common/paint_art.dart';
 import '../common/palette.dart';
 import '../scene/scene_view.dart' show SceneCompanionSpot, SceneTinted;
 
 /// 주운 럭이 머리 위로 떠오르는 높이 (정령 키 비율, 화면 구성값)
 const _gainRise = 0.2;
 
+/// 물감 통 (지시서 codex_paint_tube_v01·캔버스 3-1 메모, 화면 구성값): 길 위 통 32pt를 방울 바로 뒤(오른쪽 18pt)에,
+/// 주우면 `+1 럭` 옆에 통 아이콘 24pt
+const _tubeRoadPt = 32.0;
+const _tubeBehindPt = 18.0;
+const _tubeIconPt = 24.0;
+
 /// 걷는 중 땅 위 물감 방울 (M2~M6 명세 v0.17 T②, 캔버스 3-1, 디자인기획/물감길_개발인계 2장): 이번 물감 길 거리
 /// config paintDrop.spacingM마다 방울 하나(그림 A·B 중 방울 번호로 고른 것)가 땅과 같이 흘러온다.
 /// 정령 가운데 x에 닿으면 config paintDrop.pickup대로: 눌린 방울(C)이 pressedSec초, 그 뒤 튐이 splashSec초 동안
 /// splashScale 배율로 퍼지며 사라지고, 닿은 순간부터 `+n 럭`(paintDrop.coinsPerDrop)이 gainFloatSec초 동안 머리 위로
 /// 떠오른다 (토스트 없음). 동작 줄이기면 눌린 방울·튐 없이 지우고 `+n 럭`만 제자리에서 흐려진다.
-/// 방울 그림은 회색 그림에 물감 색을 곱하고(tint multiplyRgb, 물감 색 고르기 T12 전에는 기본 물감 색),
+/// 방울 그림은 회색 그림에 그 순간 물감 색 [color]를 곱하고(tint multiplyRgb, 시간대·날씨·뛰기 16색, 16장 11/14),
+/// 보상 표에서 물감 통이 나오는 방울(물감 길 [trailId]·방울 번호로 정함, M1 v0.7)은 바로 뒤에 같은 색 물감 통을 놓고
+/// 주울 때 `+n 럭` 옆에 통 아이콘이 함께 떠오른다 ([tubeAllowed]가 false면, 그 색 통이 상한이라 안 나온다).
 /// 밤에는 정령과 같은 시간대 보정을 받는다 (night sameAsSpirit). 글자는 보정하지 않는다.
 /// 연출만이고 저장하지 않는다 (럭은 물감 길 거리로 따로 센다, M1 v0.5 ③).
 /// 그림(assets/ui/의 ui_paint_pickup_a·b·c, fx_paint_splash)이 오기 전에는 코드로 그린 임시다 (파일만 넣으면 읽는다)
@@ -28,9 +38,21 @@ class PaintDropLayer extends ConsumerStatefulWidget {
     required this.spot,
     required this.shownM,
     required this.rules,
+    this.color,
+    this.trailId,
+    this.tubeAllowed = true,
   });
 
   final SceneCompanionSpot spot;
+
+  /// 그 순간 물감 색 (불투명 ARGB). null이면 기본 물감 색
+  final int? color;
+
+  /// 이번 물감 길 번호 (방울 보상을 정한다). null이면 물감 통을 보이지 않는다
+  final int? trailId;
+
+  /// 그 순간 색 통을 더 주울 수 있는가 (가진 통이 config paintColor.stock.maxTubesPerColor 아래)
+  final bool tubeAllowed;
 
   /// 화면에 보이는 이번 물감 길 거리(m). 방울 k는 k × spacingM에 있다
   final double shownM;
@@ -47,6 +69,15 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
 
   /// 지금 줍는 연출 중인가 (닿은 순간부터 눌린 방울·튐·`+n 럭`이 다 끝날 때까지)
   var _picking = false;
+
+  /// 줍는 연출 중인 방울에 물감 통이 있었나 (`+n 럭` 옆 통 아이콘)
+  var _pickedTube = false;
+
+  /// [k]번째 방울에 물감 통이 있는가
+  bool _tubeAt(int k) {
+    final id = widget.trailId;
+    return id != null && widget.tubeAllowed && rollDrop(id, k, widget.rules.paintColor).tube;
+  }
 
   @override
   void initState() {
@@ -76,6 +107,7 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
     // 처음 보거나(화면을 다시 열었다) 줄었으면 줍는 연출 없이 맞춘다
     if (last != null && picked > last) {
       _picking = true;
+      _pickedTube = [for (var k = last + 1; k <= picked; k++) _tubeAt(k)].any((t) => t);
       _pick
         ..duration = Duration(microseconds: (_totalSec * Duration.microsecondsPerSecond).round())
         ..forward(from: 0);
@@ -92,7 +124,7 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
     final size = pickup.sizePt;
     final r = size / 2;
     final foot = spot.spiritFoot;
-    final color = Color(rules.paintDefaultColor);
+    final color = Color(widget.color ?? rules.paintDefaultColor);
     final still = MediaQuery.disableAnimationsOf(context);
     final assets = ref.watch(assetIndexProvider).value;
     final drops = [for (final name in pickup.dropSprites) assets?.sprite(name)];
@@ -103,6 +135,20 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
     final ground = <Widget>[];
     final spacing = rules.paintDropSpacingM;
     if (spacing > 0 && spot.groundPtPerM > 0) {
+      // 물감 통은 방울 뒤라 방금 주운 방울의 통이 아직 정령에 안 닿았을 수 있다 (닿으면 사라진다)
+      for (var k = math.max(1, picked);; k++) {
+        final x = foot.dx + (k * spacing - widget.shownM) * spot.groundPtPerM + _tubeBehindPt;
+        if (x - _tubeRoadPt / 2 > spot.size.width) break;
+        if (x < foot.dx || !_tubeAt(k)) continue;
+        ground.add(Positioned(
+          key: ValueKey('paint-tube-$k'),
+          left: x - _tubeRoadPt / 2,
+          top: foot.dy - _tubeRoadPt,
+          width: _tubeRoadPt,
+          height: _tubeRoadPt,
+          child: PaintTubeArt(color: color, road: true),
+        ));
+      }
       for (var k = picked + 1;; k++) {
         final x = foot.dx + (k * spacing - widget.shownM) * spot.groundPtPerM;
         if (x - r > spot.size.width) break;
@@ -182,10 +228,24 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
                 child: Opacity(
                   opacity: 1 - g,
                   child: Center(
-                    child: Text(
-                      '+${rules.paintDropCoinsPerDrop} 럭',
-                      key: const ValueKey('paint-drop-gain'),
-                      style: context.display(16, color: Palette.ink),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '+${rules.paintDropCoinsPerDrop} 럭',
+                          key: const ValueKey('paint-drop-gain'),
+                          style: context.display(16, color: Palette.ink),
+                        ),
+                        if (_pickedTube) ...[
+                          const SizedBox(width: 4),
+                          SizedBox(
+                            key: const ValueKey('paint-drop-gain-tube'),
+                            width: _tubeIconPt,
+                            height: _tubeIconPt,
+                            child: PaintTubeArt(color: color),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),

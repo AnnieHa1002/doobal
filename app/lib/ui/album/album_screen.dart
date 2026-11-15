@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/paint_providers.dart';
+import '../../app/paint_trail_controller.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/badge.dart' as stamp;
@@ -12,6 +14,7 @@ import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 import 'album_diary.dart';
+import 'album_paints.dart';
 import 'album_stamps.dart';
 import 'album_widgets.dart';
 import 'painting_viewer.dart';
@@ -22,8 +25,8 @@ const albumFirstOnlyHint = '걸어서 명소에 닿으면 여기에 걸려요';
 /// 소품 탭에 얻은 소품이 하나도 없을 때의 한 줄. 가안
 const albumNoPropsLine = '아직 모은 소품이 없어요';
 
-/// 화집: 그림 탭(얻은 그림만: 첫 그림 + 얻은 명소)과 소품 탭(얻은 소품만). 위 배경·벽 액자는 없다 (11/4).
-/// 그림 탭은 ‘일기 · 전체’ 두 보기이고 기본은 일기다 (캔버스 6-1, 16장 11/2)
+/// 화집: 그림 탭(얻은 그림만: 첫 그림 + 얻은 명소)·소품 탭(얻은 소품만)·도장 탭·물감 탭(가진 물감, 고르기, 11/15).
+/// 위 배경·벽 액자는 없다 (11/4). 그림 탭은 ‘일기 · 전체’ 두 보기이고 기본은 일기다 (캔버스 6-1, 16장 11/2)
 class AlbumScreen extends ConsumerStatefulWidget {
   const AlbumScreen({super.key});
 
@@ -53,6 +56,21 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     setState(() => _tab = i);
     if (i == 1) _seeProps();
     if (i == 2) _seeStamps();
+    if (i == 3) _seePaints();
+  }
+
+  /// 물감 탭을 열면 새 색 표시(배낭의 점)를 지운다
+  Future<void> _seePaints() async {
+    final paint = await ref.read(paintServiceProvider.future);
+    await paint.markSeen();
+    if (mounted) ref.invalidate(unseenPaintsProvider);
+  }
+
+  /// 물감을 고른다 (누르면 바로 ‘쓰는 중’, 캔버스 6-1)
+  Future<void> _choosePaint(String colorId) async {
+    final paint = await ref.read(paintServiceProvider.future);
+    await paint.choose(colorId);
+    if (mounted) ref.invalidate(paintShelfProvider);
   }
 
   /// 도장 탭을 열면 새 도장 표시(배낭의 점)를 지운다
@@ -123,9 +141,13 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     final stampsDot = (snap?.unseenBadges ?? 0) > 0 && _tab != 2;
     final badges = ref.watch(badgeCatalogProvider).value?.badges;
     final ownedBadges = ref.watch(ownedBadgesProvider).value;
+    // 탭이 넷이라 받은 수만 (캔버스 6-1 11/15 ‘도장 n’)
     final stampsLabel = badges == null || ownedBadges == null
         ? '도장'
-        : '도장 ${badges.where((b) => ownedBadges.containsKey(b.id)).length} / ${badges.length}';
+        : '도장 ${badges.where((b) => ownedBadges.containsKey(b.id)).length}';
+    final shelf = ref.watch(paintShelfProvider).value;
+    final paintsLabel = shelf == null ? '물감' : '물감 ${shelf.colors.length}';
+    final paintsDot = (ref.watch(unseenPaintsProvider).value ?? 0) > 0 && _tab != 3;
     const gutter = EdgeInsets.symmetric(horizontal: 16);
     return CustomScrollView(
       slivers: [
@@ -141,6 +163,8 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
                   propsDot: propsDot,
                   stampsDot: stampsDot,
                   stampsLabel: stampsLabel,
+                  paintsDot: paintsDot,
+                  paintsLabel: paintsLabel,
                 ),
                 const SizedBox(height: 4),
               ],
@@ -154,8 +178,10 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
           if (_diary) ..._diarySlivers(owned) else ..._paintingSlivers(owned, landmarks),
         ] else if (_tab == 1)
           _propSliver()
+        else if (_tab == 2)
+          _stampSliver()
         else
-          _stampSliver(),
+          _paintSliver(),
       ],
     );
   }
@@ -170,6 +196,25 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       sliver: SliverToBoxAdapter(
         child: StampSections(sections: stamp.badgeSections(badges), owned: owned),
+      ),
+    );
+  }
+
+  /// 물감 탭: 가진 물감 선반 (기본 물감이 맨 앞). 걷는 중(물감 길이 열린 동안)에는 고르지 않는다
+  Widget _paintSliver() {
+    final shelf = ref.watch(paintShelfProvider).value;
+    final rules = ref.watch(rulesProvider).value;
+    if (shelf == null || rules == null) return const SliverToBoxAdapter();
+    final walking = ref.watch(paintTrailProvider.select((s) => s.active));
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+      sliver: SliverToBoxAdapter(
+        child: PaintShelves(
+          data: shelf,
+          rules: rules.paintColor,
+          canChoose: rules.paintColor.chooseWhileWalking || !walking,
+          onChoose: _choosePaint,
+        ),
       ),
     );
   }

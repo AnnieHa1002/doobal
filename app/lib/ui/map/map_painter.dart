@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/sync_service.dart';
 import '../../domain/geo.dart';
+import '../../domain/paint_color.dart';
 import '../../domain/rules.dart';
 import '../common/palette.dart';
 import 'map_geometry.dart';
@@ -13,6 +14,10 @@ const _hollowR = 4.5;
 /// 물감 길 방울 타일 임시 그림: 방울 지름 = 타일 높이, 방울 사이 = 지름 × 이 값 (그림 납품 전 화면 구성값)
 const _dropGap = 0.9;
 
+/// 물감 길 아래 테두리 (디자인 기획 11/15, 16장 11/14: 연한 색이 종이에 묻히지 않게 잉크 25%를 방울보다 1pt 크게 먼저 깐다)
+const _outlineAlpha = 0.25;
+const _outlinePt = 1.0;
+
 /// 안 가 본 명소 점의 진하기 (잉크 흐린색)
 const _faintAlpha = 0.3;
 const _visitedR = 5.5;
@@ -23,8 +28,8 @@ const _faceR = 11.0;
 /// 지도 그리기: 시도 경계 → 지나온 길(연필 선, 그 위 물감 길) → 명소 표시 → 캐릭터 얼굴.
 /// [zoom]은 뷰어의 확대 배율이다 (캔버스는 화면 너비에 맞춰 그리고, 그 위에 zoom을 곱해 본다).
 /// 길 두께·색은 config mapTrail (디자인기획/물감길_개발인계 3장): 앱 없이 걸은 곳은 연필 선(widthPt·color),
-/// 물감 길 구간은 방울을 구간 방향으로 늘어놓고(heightPt) 끝에 끝 방울(capPt), 색은 그 구간의 물감 색
-/// (물감 색 고르기 T12 전에는 기본 물감 [paintColor]). 확대해도 두께는 화면 pt 그대로다.
+/// 물감 길 구간은 방울을 구간 방향으로 늘어놓고(heightPt) 끝에 끝 방울(capPt), 색은 그 구간에 칠한 물감 색
+/// ([MapData.paintLineColors]를 [palette]로, 16장 11/14 ④), 그 아래 잉크 25% 1pt 테두리. 확대해도 두께는 화면 pt 그대로다.
 /// 타일 그림(map_trail_drops_tile·cap·pencil_tile)이 오기 전에는 코드로 그린 임시 점·선이다
 class MapPainter extends CustomPainter {
   MapPainter({
@@ -33,7 +38,7 @@ class MapPainter extends CustomPainter {
     required this.selectedId,
     required this.zoom,
     required this.trail,
-    required this.paintColor,
+    required this.palette,
   });
 
   final MapGeometry geometry;
@@ -42,8 +47,8 @@ class MapPainter extends CustomPainter {
   final double zoom;
   final MapTrailRules trail;
 
-  /// 물감 길 색 (불투명 ARGB)
-  final int paintColor;
+  /// 물감 색 id → 색 (config paintColor)
+  final PaintColorRules palette;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -98,27 +103,42 @@ class MapPainter extends CustomPainter {
     for (final path in data.paths) {
       canvas.drawPath(line(path), pencil);
     }
-    // 물감 길: 지름 heightPt 방울을 길을 따라 늘어놓고 끝에 capPt 끝 방울 (임시, 옅은 번짐 + 진한 속)
-    final color = Color(paintColor);
-    final wash = Paint()..color = color.withValues(alpha: 0.35);
-    final core = Paint()..color = color.withValues(alpha: 0.85);
+    // 물감 길: 지름 heightPt 방울을 길을 따라 늘어놓고 끝에 capPt 끝 방울 (임시, 옅은 번짐 + 진한 속).
+    // 구간마다 칠한 물감 색, 모든 구간 아래에 잉크 테두리를 먼저 깐다
     final r = trail.paintHeightPt / 2 * k;
     final step = trail.paintHeightPt * _dropGap * k;
-    void drop(Offset at, double radius) {
-      canvas
-        ..drawCircle(at, radius, wash)
-        ..drawCircle(at, radius * 0.62, core);
-    }
-
-    for (final path in data.paintLines) {
+    final outline = Paint()..color = Palette.ink.withValues(alpha: _outlineAlpha);
+    final drops = [
+      for (final path in data.paintLines) <(Offset, double)>[
+        for (final metric in line(path).computeMetrics()) ...[
+          for (var d = 0.0; d <= metric.length; d += step)
+            (metric.getTangentForOffset(d)!.position, r),
+        ],
+      ],
+    ];
+    for (final (i, path) in data.paintLines.indexed) {
       Offset? end;
       for (final metric in line(path).computeMetrics()) {
-        for (var d = 0.0; d <= metric.length; d += step) {
-          drop(metric.getTangentForOffset(d)!.position, r);
-        }
         end = metric.getTangentForOffset(metric.length)?.position;
       }
-      if (end != null) drop(end, trail.paintCapPt / 2 * k);
+      if (end != null) drops[i].add((end, trail.paintCapPt / 2 * k));
+    }
+    for (final line in drops) {
+      for (final (at, radius) in line) {
+        canvas.drawCircle(at, radius + _outlinePt * k, outline);
+      }
+    }
+    for (final (i, line) in drops.indexed) {
+      final color = Color(i < data.paintLineColors.length
+          ? palette.hexOf(data.paintLineColors[i])
+          : palette.defaultHex);
+      final wash = Paint()..color = color.withValues(alpha: 0.35);
+      final core = Paint()..color = color.withValues(alpha: 0.85);
+      for (final (at, radius) in line) {
+        canvas
+          ..drawCircle(at, radius, wash)
+          ..drawCircle(at, radius * 0.62, core);
+      }
     }
   }
 
@@ -194,5 +214,5 @@ class MapPainter extends CustomPainter {
       !identical(old.data, data) ||
       !identical(old.geometry, geometry) ||
       !identical(old.trail, trail) ||
-      old.paintColor != paintColor;
+      !identical(old.palette, palette);
 }

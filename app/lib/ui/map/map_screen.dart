@@ -349,7 +349,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                 selectedId: _selectedId,
                 zoom: zoom,
                 trail: rules.mapTrail,
-                paintColor: rules.paintDefaultColor,
+                palette: rules.paintColor,
               ),
             ),
           ),

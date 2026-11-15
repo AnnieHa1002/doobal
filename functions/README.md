@@ -1,6 +1,6 @@
 # functions
 
-두발 서버: 방명록, 카카오 로그인, 계정 삭제. 리전 asia-northeast3, Node 24.
+두발 서버: 방명록, 카카오 로그인, 계정 삭제, 물감 색의 날씨. 리전 asia-northeast3, Node 24.
 규칙의 기준은 「두발 프로젝트 요약 (기준)」 6장, 구현은 기술 설계서 5장과 M2~M6 명세 M5·M6.
 
 ## 실행
@@ -11,7 +11,7 @@ Java가 있어야 한다(Firestore 에뮬레이터). 도구는 모두 이 폴더
 npm ci
 ```
 
-금칙어·규칙 계산만 시험(에뮬레이터 없음):
+금칙어·규칙·날씨 계산만 시험(에뮬레이터 없음):
 
 ```bash
 npm run test:unit
@@ -47,10 +47,16 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 | `kakaoSignIn` | `kakaoAccessToken` `confirmSwitch?: bool` | 아래 표 |
 | `kakaoUnlink` | 없음 | `{ unlinked }` (지운 연결 수) |
 | `deleteAccount` | 없음 | `{ deleted: true }` |
+| `getWeather` | `lat` `lng` (정령이 있는 지도 위 여정 지점) | `{ kind: clear\|cloudy\|rain\|snow, at(ms) }` |
 
 - `ticketId`·`scope`는 앱 `domain/guestbook.dart` 꼴 그대로: `a:<여정 id>`와 명소 id·`sketch`, `m:<숫자>`와 `steps:<숫자>`.
 - `readGuestbook`은 내 글을 빼고 준다. 내 글은 앱이 로컬 DB로 보여 주고, 전체 목록이 필요하면 `guestbook where uid == 내 uid`를 직접 읽는다. `total`은 화면의 ‘n명 중 5명’ 값으로, 숨김을 뺀 그 범위의 글 수다(내 글 포함). ‘다른 5개 보기’는 다시 호출하면 된다.
 - `react`는 글 하나에 내 반응 하나만 둔다. `kind`를 바꾸면 옮겨지고 `null`이면 취소다. 프로토타입은 하트와 신고가 따로 켜지지만, 서버는 설계대로 한 값이라 신고하면 내 하트가 빠진다.
+
+`getWeather`(16장 11/14 물감 색, M2~M6 v0.20 Y): 위경도를 기상청 격자로 바꿔(`src/kma.ts`) 초단기실황 강수 형태(PTY)를 보고, 강수가 없으면 초단기예보 하늘 상태(SKY 4 흐림 → `cloudy`)를 본다. 비와 눈이 섞이면 `rain`. 격자마다 `weatherCache/{nx_ny}`에 `config/weather.cacheMin`(config.json `paintColor.weatherSource.cacheMin`, 60분) 동안 둔다. `at`은 그 날씨의 실황 발표 시각이다. 사용자 위치는 받지 않는다(앱이 보내는 것은 여정 지점). 앱은 실패하면 시간대 색으로 칠한다.
+
+- **에뮬레이터는 기상청을 부르지 않는다**: 격자와 한국 시각의 시(時)로 돌아가는 가짜 날씨(`fakeWeather`)를 준다. 한 날씨로 고정해 보려면 `.env.demo-doobal`에 `KMA_FAKE_KIND=rain`처럼 적는다(커밋하지 않고 손으로 볼 때만).
+- 배포 환경은 Secret Manager의 `KMA_SERVICE_KEY`(공공데이터포털 ‘일반 인증키(Decoding)’)를 붙여 부른다. 기상청 응답은 손으로 확인하지 않았다(키를 쓰지 않음, 아래 ‘배포 전 할 일’ 6).
 
 `kakaoSignIn` 결과:
 
@@ -81,6 +87,8 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 | `unauthenticated` | `kakao-token` | 카카오 토큰 만료·거절 |
 | `permission-denied` | `kakao-app` | 다른 앱에서 받은 카카오 토큰 |
 | `unavailable` | `kakao-unavailable` | 카카오 장애. 다시 시도 |
+| `invalid-argument` | `bad-point` | `getWeather` 지점이 숫자가 아니거나 기상청 격자 밖(한국 밖) |
+| `unavailable` | `weather-unavailable` | 기상청 실패. 앱은 시간대 색 |
 
 ## Firestore 구조
 
@@ -95,6 +103,8 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 | `stats/moderation_{yyyy-MM-dd}` | `count` (한국 날짜) | 서버만 |
 | `config/guestbook` | config.json `guestbook`과 같은 키 | `npm run seed` |
 | `config/moderation` | moderation.json + `allow.autoWords`(명소·시군구 이름) | `npm run seed` |
+| `config/weather` | `cacheMin` (config.json `paintColor.weatherSource.cacheMin`) | `npm run seed` |
+| `weatherCache/{nx_ny}` | `kind` `at` `fetchedAt` (기상청 격자별 날씨) | 서버만 |
 
 앱은 `users/{uid}`를 직접 만들고(`createdAt`은 서버 시각만) `nickname`·`totalSteps`를 올려야 한다. 닉네임이 없으면 글을 못 쓰고, `totalSteps`가 없으면 신고가 셈에 들지 않는다.
 
@@ -118,6 +128,13 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 3. Functions 실행 서비스 계정에 `서비스 계정 토큰 생성자` 역할을 준다. `createCustomToken`이 쓴다.
 4. 설정 문서를 넣는다(구글 로그인 필요): `GCLOUD_PROJECT=<프로젝트 id> npm run seed -- --real`
 5. App Check를 켠다(iOS App Attest, 안드로이드 Play Integrity). 앱이 토큰을 붙이기 전에 배포하면 Callable이 모두 거절된다.
+6. 기상청 서비스 키(공공데이터포털 ‘기상청_단기예보 조회서비스’, 일반 인증키 Decoding)를 Secret Manager에 넣는다(Annie, 이미 넣었으면 건너뜀). 값은 리포·채팅에 적지 않는다.
+
+   ```bash
+   firebase functions:secrets:set KMA_SERVICE_KEY
+   ```
+
+   배포한 뒤 한 번 불러서 `weatherCache` 문서가 생기는지, 함수 기록에 `기상청 응답 오류`가 없는지 본다(첫 실제 호출 확인).
 
 금칙어 문서를 바꾸면 인스턴스 캐시(5분) 뒤에 반영된다.
 
@@ -125,5 +142,6 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 
 - `src/moderation.ts`: 금칙어(MIT 고지 포함). `app/lib/domain/moderation.dart`와 같은 코드다. 고치면 양쪽을 같이 고친다.
 - `src/rules.ts`: 규칙 계산(순수 함수). `src/guestbook.ts` `src/review.ts` `src/kakao.ts` `src/account.ts`: 함수.
+- `src/kma.ts`: 기상청 격자 변환·발표 시각·응답 읽기·가짜 날씨(순수 함수). `src/weather.ts`: `getWeather`.
 - `scripts/seed.ts`: 설정 문서 넣기. `test/`: 시험. 카카오는 `test/account.test.ts`의 가짜 서버를 쓰고 값은 `.env.demo-doobal`에 있다.
 - 리포 루트의 `firebase.json` `firestore.rules` `firestore.indexes.json`.

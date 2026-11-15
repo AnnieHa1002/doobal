@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/paint_providers.dart';
 import '../../app/paint_trail_controller.dart';
 import '../../app/providers.dart';
 import '../../app/report_providers.dart';
@@ -79,9 +80,12 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     super.dispose();
   }
 
-  /// 아직 안 본 소품·그림·도장이 있는가 (배낭의 알림 점)
+  /// 아직 안 본 소품·그림·도장·새 물감 색이 있는가 (배낭의 알림 점, 물감은 처음 모은 색만 M2~M6 v0.20 Y)
   bool _hasNew(Snapshot snap) =>
-      snap.unseenProps > 0 || snap.unseenPaintings > 0 || snap.unseenBadges > 0;
+      snap.unseenProps > 0 ||
+      snap.unseenPaintings > 0 ||
+      snap.unseenBadges > 0 ||
+      (ref.read(unseenPaintsProvider).value ?? 0) > 0;
 
   /// 흔들 수 있는 물건과 그 중 알림 점이 있는 물건 (화면에 서 있는 것만)
   ({List<String> all, Set<String> notice}) _wigglePool() {
@@ -112,6 +116,8 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     final landmarks = ref.watch(landmarksProvider).value;
     final camp = ref.watch(campThemeProvider).value;
     final snap = ref.watch(snapshotProvider).value;
+    // 새 물감 색이 생기면 배낭 점 (_hasNew)
+    ref.watch(unseenPaintsProvider);
     final now = ref.watch(minuteClockProvider).value ?? ref.watch(clockProvider)();
     final spirit = ref.watch(spiritLookProvider);
     final slots = ref.watch(restSlotsProvider);

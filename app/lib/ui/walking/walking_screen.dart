@@ -6,16 +6,20 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/companion_providers.dart';
+import '../../app/paint_providers.dart';
 import '../../app/paint_trail_controller.dart';
 import '../../app/providers.dart';
 import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/badge.dart' as stamp;
+import '../../domain/bucket.dart' show epochMinute;
 import '../../domain/companion.dart';
 import '../../domain/companion_pace.dart';
 import '../../domain/follow.dart';
 import '../../domain/gait.dart';
+import '../../domain/geo.dart';
 import '../../domain/milestones.dart';
+import '../../domain/paint_color.dart' show PaintWeather;
 import '../../domain/rules.dart';
 import '../../domain/walk_arrival.dart';
 import '../../domain/walk_record.dart';
@@ -331,6 +335,19 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   }
 
   /// 지금 뛰는 중인가 (화면의 '달리는 중'과 같은 기준)
+  /// 그 순간 물감 색 id: 분·날씨·뛰기가 같으면 다시 계산하지 않는다 (해 뜨고 지는 시각 계산)
+  String _momentColor(Rules rules, LatLng position, bool running) {
+    final weather = ref.watch(paintWeatherProvider).kind;
+    final key = (epochMinute(_now), weather, running, position.lat, position.lng);
+    final cached = _moment;
+    if (cached != null && cached.$1 == key) return cached.$2;
+    final id = momentColorFor(position, _now, weather, running ? Gait.run : Gait.walk, rules);
+    _moment = (key, id);
+    return id;
+  }
+
+  ((int, PaintWeather?, bool, double, double), String)? _moment;
+
   bool _isRunning(WalkSummary? s) => s != null && s.lastSteps > 0 && s.lastGait == Gait.run;
 
   /// 화면을 [end]에 떠났다고 쉼터에 넘기는 일 (한 번만). 뒤처지지 않았으면 늦은 도착 0
@@ -393,6 +410,12 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final view = ref.watch(companionsViewProvider).value;
     final companion = _walkingWith = view?.metById(view.walkingWith)?.companion;
     final shownM = meet == null ? _shownM : _meetShownM;
+    // 방울에 곱하는 그 순간 물감 색 (시간대·날씨·뛰기, 16장 11/14), 방울 보상을 정하는 물감 길 번호,
+    // 그 색 통을 더 주울 수 있는가 (장면 builder 안이 아니라 여기서 읽는다)
+    final moment = _momentColor(rules, position, running);
+    final dropColor = rules.paintColor.hexOf(moment);
+    final trailId = ref.watch(paintTrailProvider.select((s) => s.id));
+    final tubeAllowed = ref.watch(paintTubeRoomProvider(moment)).value ?? true;
 
     return Scaffold(
       body: Stack(
@@ -418,7 +441,14 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
                       pace: _pacer.frame,
                       spot: spot,
                     ),
-            walkGround: (spot) => PaintDropLayer(spot: spot, shownM: shownM, rules: rules),
+            walkGround: (spot) => PaintDropLayer(
+              spot: spot,
+              shownM: shownM,
+              rules: rules,
+              color: dropColor,
+              trailId: trailId,
+              tubeAllowed: tubeAllowed,
+            ),
           ),
           // 길 위 만남 동안에는 HUD를 가린다 (상태는 그대로 둔다)
           Offstage(

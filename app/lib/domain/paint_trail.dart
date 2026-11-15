@@ -400,59 +400,70 @@ double frameBasisKm(double fundKm, double actualWalkedKm, double totalEffectiveK
 /// 지도 여정 길의 구간 종류: paint는 물감 길(앱을 켜고 걸은 곳, 수채 붓자국), pencil은 연필 선
 enum TrailKind { paint, pencil }
 
-/// 여정 길 위 한 구간 (여정 진행 km, [fromKm] 이상 [toKm] 이하)
+/// 여정 길 위 한 구간 (여정 진행 km, [fromKm] 이상 [toKm] 이하). 물감 구간이면 [colorId]는 칠한 물감 색 id
+/// (M1 v0.7, 고른 색이나 기본 물감), 연필 구간이면 null
 class TrailSegment {
-  const TrailSegment(this.fromKm, this.toKm, this.kind);
+  const TrailSegment(this.fromKm, this.toKm, this.kind, [this.colorId]);
 
   final double fromKm;
   final double toKm;
   final TrailKind kind;
+  final String? colorId;
 
   @override
   bool operator ==(Object other) =>
       other is TrailSegment &&
       (other.fromKm - fromKm).abs() < 1e-9 &&
       (other.toKm - toKm).abs() < 1e-9 &&
-      other.kind == kind;
+      other.kind == kind &&
+      other.colorId == colorId;
 
   @override
-  int get hashCode => Object.hash(fromKm.toStringAsFixed(6), toKm.toStringAsFixed(6), kind);
+  int get hashCode =>
+      Object.hash(fromKm.toStringAsFixed(6), toKm.toStringAsFixed(6), kind, colorId);
 
   @override
-  String toString() => 'TrailSegment($fromKm~$toKm ${kind.name})';
+  String toString() => 'TrailSegment($fromKm~$toKm ${kind.name}${colorId == null ? '' : ' $colorId'})';
 }
 
 /// 여정 길을 물감·연필 구간으로 나눈다 (M1 명세 v0.5 ⑤). 여정 진행 km 순서로:
 /// 먼저 경비 [fundKm]와 상점 효과 [shopKm]만큼 연필(앱 밖 걸음·효과는 연필, 효과의 자리는 가안),
 /// 그다음 여정 시작 뒤 분 [minutes](시간순)마다 실제 거리 × [scale](디버그 거리 배수) km를
 /// 물감 길 분이면 물감·아니면 연필로 잇는다. 같은 종류가 이어지면 한 구간으로 합치고, 길이 0인 분은 건너뛴다.
-/// [totalKm]가 있으면 그 거리에서 자른다 (도착 뒤 넘친 걸음은 그리지 않는다)
+/// [totalKm]가 있으면 그 거리에서 자른다 (도착 뒤 넘친 걸음은 그리지 않는다).
+/// [paintAt]은 물감 분(UTC epoch 분)의 칠한 물감 색 id다 (M1 v0.7 구간 색): 색이 바뀌면 물감 구간도 나뉜다.
+/// 없으면 물감 구간의 색은 null
 List<TrailSegment> trailSegments({
   required double fundKm,
   required List<MinuteTravel> minutes,
   double shopKm = 0,
   double scale = 1,
   double? totalKm,
+  String Function(int minute)? paintAt,
 }) {
   final out = <TrailSegment>[];
   var at = 0.0;
-  void add(double km, TrailKind kind) {
+  void add(double km, TrailKind kind, [String? color]) {
     if (!(km > 0)) return;
     final cap = totalKm;
     if (cap != null && at >= cap) return;
     var to = at + km;
     if (cap != null && to > cap) to = cap;
-    if (out.isNotEmpty && out.last.kind == kind) {
-      out[out.length - 1] = TrailSegment(out.last.fromKm, to, kind);
+    if (out.isNotEmpty && out.last.kind == kind && out.last.colorId == color) {
+      out[out.length - 1] = TrailSegment(out.last.fromKm, to, kind, color);
     } else {
-      out.add(TrailSegment(at, to, kind));
+      out.add(TrailSegment(at, to, kind, color));
     }
     at = to;
   }
 
   add(fundKm + shopKm, TrailKind.pencil);
   for (final m in minutes) {
-    add(m.actualM / 1000 * scale, m.inTrail ? TrailKind.paint : TrailKind.pencil);
+    if (m.inTrail) {
+      add(m.actualM / 1000 * scale, TrailKind.paint, paintAt?.call(m.minute));
+    } else {
+      add(m.actualM / 1000 * scale, TrailKind.pencil);
+    }
   }
   return out;
 }

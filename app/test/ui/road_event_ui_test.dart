@@ -214,7 +214,7 @@ void main() {
                     badgeId: x.key, atUtc: x.value, seen: Value(seen)),
             ]));
 
-    testWidgets('도장 5 / 20 탭: 받은 도장은 이름·받은 날, 못 받은 도장은 이름 없는 흐린 칸', (tester) async {
+    testWidgets('도장 n 탭: 받은 도장은 이름·받은 날, 못 받은 도장은 이름 없는 흐린 칸', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => owned(e, {
             'b_first_walk': DateTime.utc(2026, 11, 18, 3).millisecondsSinceEpoch,
@@ -222,8 +222,8 @@ void main() {
           }));
       await openOnTop(tester, e, const AlbumScreen(),
           ready: () => find.byKey(const ValueKey('tab-stamps')).evaluate().isNotEmpty);
-      await settle(tester, () => find.text('도장 2 / 20').evaluate().isNotEmpty);
-      expect(find.text('도장 2 / 20'), findsOneWidget);
+      await settle(tester, () => find.text('도장 2').evaluate().isNotEmpty);
+      expect(find.text('도장 2'), findsOneWidget);
       // 그림 탭에 있는 동안 도장 탭에 알림 점
       expect(find.byKey(const ValueKey('stamps-tab-dot')), findsOneWidget);
 
