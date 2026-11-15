@@ -246,10 +246,14 @@ void main() {
       int? pose() => tester.widget<SpiritCharacter>(find.byType(SpiritCharacter)).pose;
 
       final node = tester.getSemantics(find.bySemanticsLabel('정령 돌려 보기'));
-      tester.binding.pipelineOwner.semanticsOwner!.performAction(node.id, SemanticsAction.increase);
+      expect(node.getSemanticsData().hasAction(SemanticsAction.increase), isTrue);
+      expect(node.getSemanticsData().hasAction(SemanticsAction.decrease), isTrue);
+      final turn = tester.widget<Semantics>(find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.label == '정령 돌려 보기'));
+      turn.properties.onIncrease!();
       await tester.pump();
       expect(pose(), 1);
-      tester.binding.pipelineOwner.semanticsOwner!.performAction(node.id, SemanticsAction.decrease);
+      turn.properties.onDecrease!();
       await tester.pump();
       expect(pose(), 0);
       handle.dispose();
