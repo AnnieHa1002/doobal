@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../domain/day_card.dart' show cardToday;
 import '../../app/sync_service.dart';
 import '../../data/db/app_db.dart' show PostStatus;
 import '../../domain/time_kst.dart';
@@ -10,6 +11,8 @@ import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 import '../common/screen_header.dart';
+import '../day_card/day_card_view.dart' show DayCardPage;
+import '../day_card/walk_report_screen.dart';
 import '../guestbook/guestbook_tag.dart';
 import '../walk_record/walk_record_screen.dart';
 
@@ -205,28 +208,44 @@ class _PostCard extends StatelessWidget {
   }
 }
 
-/// 걷기 기록 (캔버스 6-3, 16장 11/13): 물감 길을 날짜별로, 최신순. 날짜 줄은 그날 걸음·거리,
-/// 그 아래 물감 길 줄을 누르면 그 물감 길의 걷기 기록(3-3)을 본다.
-/// 걷기 리포트 줄·날짜 줄의 하루 카드는 T10 몫이라 아직 없다
+/// 걷기 기록 (캔버스 6-3, 16장 11/13): 맨 위 ‘걷기 리포트 ›’(6-4), 그 아래 날짜마다 날짜 줄(그날 걸음·거리,
+/// 누르면 그날 하루 카드 2-3)과 그날 물감 길 줄(누르면 그 물감 길의 걷기 기록 3-3), 최신순.
+/// 날짜는 걸음이 있었던 날과 물감 길이 있는 날이다. 오늘 날짜 줄은 내일 새벽 5시(config report.dayStartHour) 뒤에
+/// 하루 카드가 생겨서 그때부터 누를 수 있다
 class _WalksTab extends ConsumerWidget {
   const _WalksTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final history = ref.watch(trailHistoryProvider).value;
-    if (history == null) return const SizedBox();
-    if (history.trails.isEmpty) {
+    final rules = ref.watch(rulesProvider).value;
+    if (history == null || rules == null) return const SizedBox();
+    final trailsByDay = {
+      for (final g in groupByKstDay(history.trails, (t) => t.start)) g.day: g.items,
+    };
+    final days = {...history.days.keys, ...trailsByDay.keys}.toList()
+      ..sort((a, b) => b.compareTo(a));
+    if (days.isEmpty) {
       return const Center(child: Text('아직 걷기 기록이 없어요', style: AppText.bodySub));
     }
-    // 날짜 제목과 그 날의 물감 길을 한 줄로 펴서 늘어놓는다 (String = 날짜 제목)
-    final items = <Object>[
-      for (final g in groupByKstDay(history.trails, (t) => t.start)) ...[g.day, ...g.items],
+    final lastCard = addDays(cardToday(ref.watch(clockProvider)(), rules.report), -1);
+    // 리포트 줄, 날짜 줄과 그 날의 물감 길을 한 줄로 펴서 늘어놓는다 (null = 리포트 줄, String = 날짜 줄)
+    final items = <Object?>[
+      null,
+      for (final d in days) ...[d, ...?trailsByDay[d]],
     ];
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       itemCount: items.length,
       itemBuilder: (context, i) => switch (items[i]) {
-        final String day => _DayHeader(day, history.days[day]),
+        null => const _ReportRow(),
+        final String day => _DayHeader(
+            day,
+            history.days[day],
+            onTap: day.compareTo(lastCard) <= 0
+                ? () => Navigator.of(context).push(DayCardPage.route(day))
+                : null,
+          ),
         final PaintTrailView t => _TrailRow(t),
         _ => throw StateError('알 수 없는 걷기 기록 줄'),
       },
@@ -234,33 +253,81 @@ class _WalksTab extends ConsumerWidget {
   }
 }
 
-/// 날짜 줄: 날짜와 그날 걸음·거리
+/// 맨 위 ‘걷기 리포트 ›’ 줄 (잉크 바탕, 캔버스 6-3)
+class _ReportRow extends StatelessWidget {
+  const _ReportRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Semantics(
+        button: true,
+        child: GestureDetector(
+          key: const ValueKey('walk-report-row'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute<void>(builder: (_) => const WalkReportScreen())),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: Palette.ink,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(child: Text('걷기 리포트', style: context.display(15, color: Palette.card))),
+                const Icon(Icons.chevron_right, color: Palette.card),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 날짜 줄: 날짜와 그날 걸음·거리. [onTap]이 있으면 그날 하루 카드를 연다 (오른쪽 화살표)
 class _DayHeader extends StatelessWidget {
-  const _DayHeader(this.day, this.totals);
+  const _DayHeader(this.day, this.totals, {this.onTap});
 
   final String day;
   final ({int steps, double distanceM})? totals;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final t = totals;
-    return Padding(
+    final row = Container(
+      constraints: BoxConstraints(minHeight: onTap == null ? 0 : 44),
       padding: const EdgeInsets.only(top: 12, bottom: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(formatMonthDay(dayFromKey(day)), style: context.display(15)),
-          if (t != null) ...[
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                '${formatInt(t.steps)}보 · ${formatKm(t.distanceM / 1000)}',
-                style: AppText.bodySub,
-              ),
-            ),
-          ],
+          const SizedBox(width: 10),
+          Expanded(
+            child: t == null
+                ? const SizedBox()
+                : Text(
+                    '${formatInt(t.steps)}보 · ${formatKm(t.distanceM / 1000)}',
+                    style: AppText.bodySub,
+                  ),
+          ),
+          if (onTap != null) const Icon(Icons.chevron_right, color: Palette.ink),
         ],
+      ),
+    );
+    if (onTap == null) return row;
+    return Semantics(
+      button: true,
+      label: '${formatMonthDay(dayFromKey(day))} 하루 카드',
+      child: GestureDetector(
+        key: ValueKey('day-$day'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: row,
       ),
     );
   }

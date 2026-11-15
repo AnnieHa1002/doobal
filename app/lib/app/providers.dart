@@ -373,17 +373,18 @@ final recentDaysProvider = FutureProvider.autoDispose<List<DayBar>>((
   return ref.watch(statsServiceProvider).recentDays(snap.today);
 });
 
-/// 감지된 걷기 전부, 최신순 (노트의 걷기 기록)
-/// 노트 걷기 기록: 닫힌 물감 길(최신순)과 그 날들의 하루 걸음·거리
+/// 노트 걷기 기록: 닫힌 물감 길(최신순)과 하루 걸음·거리 (걸음이 있었던 날과 물감 길이 있는 날, 캔버스 6-3)
 final trailHistoryProvider = FutureProvider.autoDispose<
     ({List<PaintTrailView> trails, Map<String, ({int steps, double distanceM})> days})>((
   ref,
 ) async {
   await ref.watch(snapshotProvider.future);
   final trails = await (await ref.watch(syncServiceProvider.future)).paintTrails();
-  final days = await ref
-      .watch(statsServiceProvider)
-      .dayTotals({for (final t in trails) kstDayKey(t.start)});
+  final stats = ref.watch(statsServiceProvider);
+  final days = {
+    ...await stats.dayTotals({for (final t in trails) kstDayKey(t.start)}),
+    ...await stats.walkedDays(),
+  };
   return (trails: trails, days: days);
 });
 

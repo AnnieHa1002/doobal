@@ -13,7 +13,8 @@ part 'app_db.g.dart';
 // + 스키마 9 (알림 기록·알림 켜고 끄기) + 스키마 10 (복원한 하루 요약 지키기: 동기화 상태 열)
 // + 스키마 11 (본격 걷기: 앱 걷기 창·이동 거리·럭 장부) + 스키마 13 (길 위 이벤트·도장, 화집 벽 표 삭제)
 // + 스키마 15 (동행·상점 보관함·상점 사용 기록·얻은 배, 프로필: 고른 배)
-// + 스키마 16 (물감 길: 앱 걷기 창 → 물감 길, 보너스·앱 걷기 이동 거리 열 → 물감 길 거리).
+// + 스키마 16 (물감 길: 앱 걷기 창 → 물감 길, 보너스·앱 걷기 이동 거리 열 → 물감 길 거리)
+// + 스키마 17 (하루 카드: 보여 준 마지막 날).
 // 시각은 모두 UTC 정수
 // (epoch ms, 걸음은 epoch 분), 날짜 계산만 kstDayKey로 한다.
 // 행 클래스는 domain 이름과 겹치지 않게 ~Row로 둔다
@@ -398,6 +399,18 @@ class BoatsOwned extends Table {
   Set<Column> get primaryKey => {boatId};
 }
 
+/// 하루 카드 상태 1행(id = 1, 스키마 17, M1 명세 v0.5 ⑥ ReportState). lastShownDay는 하루 카드로 보여 주고
+/// 닫은 마지막 날(한국 날짜 키 'YYYY-MM-DD'). 행이 없으면 첫 기록일(설치한 날) 전날로 본다
+/// (처음 설치한 날에는 카드가 없다). 백업에 넣는다 (새 기기에서 본 카드를 다시 띄우지 않게)
+@DataClassName('ReportStateRow')
+class ReportState extends Table {
+  IntColumn get id => integer()();
+  TextColumn get lastShownDay => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     StepMinutes,
@@ -422,13 +435,14 @@ class BoatsOwned extends Table {
     ShopInventory,
     ShopUses,
     BoatsOwned,
+    ReportState,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -580,6 +594,9 @@ class AppDb extends _$AppDb {
               }
             }
           }
+          // 17: 하루 카드 (M1 명세 v0.5 ⑥). 행은 만들지 않는다: 없으면 첫 기록일 전날로 보니
+          // 이미 쓰던 기기는 다음에 열 때 밀린 날(최대 config report.maxMergeDays) 카드가 한 번 뜬다
+          if (from < 17) await m.createTable(reportState);
         },
       );
 }

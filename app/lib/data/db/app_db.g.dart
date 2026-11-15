@@ -9194,6 +9194,214 @@ class BoatsOwnedCompanion extends UpdateCompanion<BoatOwnedRow> {
   }
 }
 
+class $ReportStateTable extends ReportState
+    with TableInfo<$ReportStateTable, ReportStateRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReportStateTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastShownDayMeta = const VerificationMeta(
+    'lastShownDay',
+  );
+  @override
+  late final GeneratedColumn<String> lastShownDay = GeneratedColumn<String>(
+    'last_shown_day',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, lastShownDay];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'report_state';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReportStateRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('last_shown_day')) {
+      context.handle(
+        _lastShownDayMeta,
+        lastShownDay.isAcceptableOrUnknown(
+          data['last_shown_day']!,
+          _lastShownDayMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReportStateRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReportStateRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      lastShownDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_shown_day'],
+      ),
+    );
+  }
+
+  @override
+  $ReportStateTable createAlias(String alias) {
+    return $ReportStateTable(attachedDatabase, alias);
+  }
+}
+
+class ReportStateRow extends DataClass implements Insertable<ReportStateRow> {
+  final int id;
+  final String? lastShownDay;
+  const ReportStateRow({required this.id, this.lastShownDay});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || lastShownDay != null) {
+      map['last_shown_day'] = Variable<String>(lastShownDay);
+    }
+    return map;
+  }
+
+  ReportStateCompanion toCompanion(bool nullToAbsent) {
+    return ReportStateCompanion(
+      id: Value(id),
+      lastShownDay: lastShownDay == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastShownDay),
+    );
+  }
+
+  factory ReportStateRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReportStateRow(
+      id: serializer.fromJson<int>(json['id']),
+      lastShownDay: serializer.fromJson<String?>(json['lastShownDay']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'lastShownDay': serializer.toJson<String?>(lastShownDay),
+    };
+  }
+
+  ReportStateRow copyWith({
+    int? id,
+    Value<String?> lastShownDay = const Value.absent(),
+  }) => ReportStateRow(
+    id: id ?? this.id,
+    lastShownDay: lastShownDay.present ? lastShownDay.value : this.lastShownDay,
+  );
+  ReportStateRow copyWithCompanion(ReportStateCompanion data) {
+    return ReportStateRow(
+      id: data.id.present ? data.id.value : this.id,
+      lastShownDay: data.lastShownDay.present
+          ? data.lastShownDay.value
+          : this.lastShownDay,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportStateRow(')
+          ..write('id: $id, ')
+          ..write('lastShownDay: $lastShownDay')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, lastShownDay);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReportStateRow &&
+          other.id == this.id &&
+          other.lastShownDay == this.lastShownDay);
+}
+
+class ReportStateCompanion extends UpdateCompanion<ReportStateRow> {
+  final Value<int> id;
+  final Value<String?> lastShownDay;
+  const ReportStateCompanion({
+    this.id = const Value.absent(),
+    this.lastShownDay = const Value.absent(),
+  });
+  ReportStateCompanion.insert({
+    this.id = const Value.absent(),
+    this.lastShownDay = const Value.absent(),
+  });
+  static Insertable<ReportStateRow> custom({
+    Expression<int>? id,
+    Expression<String>? lastShownDay,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (lastShownDay != null) 'last_shown_day': lastShownDay,
+    });
+  }
+
+  ReportStateCompanion copyWith({
+    Value<int>? id,
+    Value<String?>? lastShownDay,
+  }) {
+    return ReportStateCompanion(
+      id: id ?? this.id,
+      lastShownDay: lastShownDay ?? this.lastShownDay,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (lastShownDay.present) {
+      map['last_shown_day'] = Variable<String>(lastShownDay.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportStateCompanion(')
+          ..write('id: $id, ')
+          ..write('lastShownDay: $lastShownDay')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -9226,6 +9434,7 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $ShopInventoryTable shopInventory = $ShopInventoryTable(this);
   late final $ShopUsesTable shopUses = $ShopUsesTable(this);
   late final $BoatsOwnedTable boatsOwned = $BoatsOwnedTable(this);
+  late final $ReportStateTable reportState = $ReportStateTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9253,6 +9462,7 @@ abstract class _$AppDb extends GeneratedDatabase {
     shopInventory,
     shopUses,
     boatsOwned,
+    reportState,
   ];
 }
 
@@ -14261,6 +14471,140 @@ typedef $$BoatsOwnedTableProcessedTableManager =
       BoatOwnedRow,
       PrefetchHooks Function()
     >;
+typedef $$ReportStateTableCreateCompanionBuilder =
+    ReportStateCompanion Function({Value<int> id, Value<String?> lastShownDay});
+typedef $$ReportStateTableUpdateCompanionBuilder =
+    ReportStateCompanion Function({Value<int> id, Value<String?> lastShownDay});
+
+class $$ReportStateTableFilterComposer
+    extends Composer<_$AppDb, $ReportStateTable> {
+  $$ReportStateTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastShownDay => $composableBuilder(
+    column: $table.lastShownDay,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ReportStateTableOrderingComposer
+    extends Composer<_$AppDb, $ReportStateTable> {
+  $$ReportStateTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastShownDay => $composableBuilder(
+    column: $table.lastShownDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReportStateTableAnnotationComposer
+    extends Composer<_$AppDb, $ReportStateTable> {
+  $$ReportStateTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get lastShownDay => $composableBuilder(
+    column: $table.lastShownDay,
+    builder: (column) => column,
+  );
+}
+
+class $$ReportStateTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $ReportStateTable,
+          ReportStateRow,
+          $$ReportStateTableFilterComposer,
+          $$ReportStateTableOrderingComposer,
+          $$ReportStateTableAnnotationComposer,
+          $$ReportStateTableCreateCompanionBuilder,
+          $$ReportStateTableUpdateCompanionBuilder,
+          (
+            ReportStateRow,
+            BaseReferences<_$AppDb, $ReportStateTable, ReportStateRow>,
+          ),
+          ReportStateRow,
+          PrefetchHooks Function()
+        > {
+  $$ReportStateTableTableManager(_$AppDb db, $ReportStateTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReportStateTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReportStateTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReportStateTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String?> lastShownDay = const Value.absent(),
+          }) => ReportStateCompanion(id: id, lastShownDay: lastShownDay),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String?> lastShownDay = const Value.absent(),
+          }) => ReportStateCompanion.insert(id: id, lastShownDay: lastShownDay),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ReportStateTable, ReportStateRow>(table),
+                  BaseReferences<_$AppDb, $ReportStateTable, ReportStateRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ReportStateTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $ReportStateTable,
+      ReportStateRow,
+      $$ReportStateTableFilterComposer,
+      $$ReportStateTableOrderingComposer,
+      $$ReportStateTableAnnotationComposer,
+      $$ReportStateTableCreateCompanionBuilder,
+      $$ReportStateTableUpdateCompanionBuilder,
+      (
+        ReportStateRow,
+        BaseReferences<_$AppDb, $ReportStateTable, ReportStateRow>,
+      ),
+      ReportStateRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -14309,4 +14653,6 @@ class $AppDbManager {
       $$ShopUsesTableTableManager(_db, _db.shopUses);
   $$BoatsOwnedTableTableManager get boatsOwned =>
       $$BoatsOwnedTableTableManager(_db, _db.boatsOwned);
+  $$ReportStateTableTableManager get reportState =>
+      $$ReportStateTableTableManager(_db, _db.reportState);
 }

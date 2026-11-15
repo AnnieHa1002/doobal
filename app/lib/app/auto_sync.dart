@@ -18,6 +18,7 @@ import 'backup_runner.dart';
 import 'companion_providers.dart';
 import 'notification_service.dart';
 import 'providers.dart';
+import 'report_providers.dart';
 import 'shop_providers.dart';
 import 'sync_service.dart';
 
@@ -42,7 +43,8 @@ const _toastMinKm = 0.1;
 /// 동기화한다 (모든 걸음이 같게 세지므로 따로 알리지 않는다).
 /// 어느 화면의 동기화든 소품을 새로 얻으면(SyncService.newProps) 지금 화면 위에 한 줄 토스트를 띄운다.
 /// 알림을 눌러 들어오면(앱이 켜져 있을 때·알림으로 켜졌을 때) 그 알림이 가리키는 화면을 연다.
-/// 켤 때 앱이 닫혀 있어도 동기화하는 주기 작업(backgroundSyncProvider)을 건다
+/// 켤 때 앱이 닫혀 있어도 동기화하는 주기 작업(backgroundSyncProvider)을 건다.
+/// 켤 때·앞으로 올 때 동기화한 뒤 하루 카드(pendingDayCardProvider)를 본다 (쉼터가 위에 띄운다)
 class AutoSync extends ConsumerStatefulWidget {
   const AutoSync({super.key, required this.child});
 
@@ -301,6 +303,8 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     } catch (e) {
       debugPrint('자동 동기화 실패: $e');
     }
+    // 동기화가 실패해도(권한 없음 등) 기기에 있는 날로 하루 카드를 본다 (새벽 5시 뒤 그날 처음 열 때)
+    if (mounted) await ref.read(pendingDayCardProvider.notifier).check();
   }
 
   @override

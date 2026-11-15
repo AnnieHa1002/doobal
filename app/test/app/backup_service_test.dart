@@ -324,6 +324,10 @@ Future<void> _fill(AppDb db) async {
           boatId: 'boat_skiff', atUtc: 3500, colors: const Value('{"hull":1}')),
     );
     b.insert(
+      db.reportState,
+      ReportStateCompanion.insert(id: const Value(1), lastShownDay: const Value('2026-11-18')),
+    );
+    b.insert(
       db.syncState,
       SyncStateCompanion.insert(
         id: const Value(1),
@@ -360,6 +364,7 @@ Future<Map<String, Object?>> _userState(AppDb db) async => {
       'inventory': await db.select(db.shopInventory).get(),
       'shopUses': await db.select(db.shopUses).get(),
       'boats': await db.select(db.boatsOwned).get(),
+      'reportState': await db.select(db.reportState).get(),
       'profile': [
         for (final r in await db.select(db.profile).get())
           r.copyWith(
@@ -430,7 +435,7 @@ void main() {
       final json = _json(await svcA.exportBackup(_now));
       expect(json['format'], 1);
       expect(json['schema'], a.schemaVersion);
-      expect(json['schema'], 16);
+      expect(json['schema'], 17);
       expect(json['createdUtc'], _ms(_now));
       expect(json['syncedUtc'], _ms(_synced));
       expect((json['tables'] as Map<String, dynamic>).keys, svcA.includedTableNames);
@@ -924,7 +929,7 @@ void main() {
     test('이 앱보다 새 스키마면 StateError (DB는 그대로)', () async {
       await _fill(b);
       final before = await _userState(b);
-      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: 17))), throwsStateError);
+      await expectLater(svcB.restoreBackup(_pack(_backupJson(schema: b.schemaVersion + 1))), throwsStateError);
       expect(await _userState(b), before);
     });
 

@@ -20,6 +20,7 @@ class SpiritCharacter extends StatefulWidget {
     this.tapRules,
     this.expression = 0,
     this.onReady,
+    this.riveFactory,
   });
   /// 앱용 정령 Rive v36 (16장 11/14 정령 기준, 아트보드 `Spirit` 502×600, 바탕 투명, 입력은 v33과 같다.
   /// 머리 선택 5 새싹·6 꽃은 riv에만 있고 앱은 보내지 않는다)
@@ -38,6 +39,10 @@ class SpiritCharacter extends StatefulWidget {
   /// 고른 표정 번호 (0 기본·1 행복·2 울먹임·3 놀람·4 졸림·5 화남, 꾸미기 표정 미리보기)
   final int expression;
   final ValueChanged<SpiritController>? onReady;
+
+  /// 이 정령만 다른 그리기로 (없으면 [SpiritCharacter.renderer]). 하루 카드 공유 이미지는 Flutter 그리기로
+  /// 그려야 RepaintBoundary로 뜰 수 있다 (Rive 그리기는 화면 텍스처라 이미지에 안 담길 수 있다)
+  final rive.Factory? riveFactory;
   @override
   State<SpiritCharacter> createState() => _SpiritCharacterState();
 }
@@ -71,7 +76,7 @@ class _SpiritCharacterState extends State<SpiritCharacter>
       await rive.RiveNative.init();
       file = await rive.File.asset(
         SpiritCharacter.asset,
-        riveFactory: SpiritCharacter.renderer,
+        riveFactory: widget.riveFactory ?? SpiritCharacter.renderer,
       );
       if (file == null) throw StateError('정령 파일을 읽지 못했어요');
       if (!mounted) {
@@ -228,11 +233,15 @@ class SpiritStanding extends StatelessWidget {
     this.expression = 0,
     this.tapRules,
     this.onReady,
+    this.riveFactory,
   });
 
   final ValueChanged<SpiritController>? onReady;
   final SpiritLook look;
   final double share, footAt;
+
+  /// [SpiritCharacter.riveFactory]와 같다
+  final rive.Factory? riveFactory;
 
   /// 표정 번호와 연타 화남 규칙 (SpiritCharacter와 같다)
   final int expression;
@@ -259,6 +268,7 @@ class SpiritStanding extends StatelessWidget {
                   expression: expression,
                   tapRules: tapRules,
                   onReady: onReady,
+                  riveFactory: riveFactory,
                 ),
               ),
           ],

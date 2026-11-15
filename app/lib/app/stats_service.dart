@@ -28,6 +28,12 @@ class StatsService {
     return {for (final r in rows) r.day: (steps: r.steps, distanceM: r.distanceM)};
   }
 
+  /// 걸음이 있었던 날 모두의 하루 걸음·실제 거리(m) (노트 걷기 기록의 날짜 줄)
+  Future<Map<String, ({int steps, double distanceM})>> walkedDays() async {
+    final rows = await (db.select(db.daySummaries)..where((t) => t.steps.isBiggerThanValue(0))).get();
+    return {for (final r in rows) r.day: (steps: r.steps, distanceM: r.distanceM)};
+  }
+
   /// 감지된 걷기 전부, 최신순
   Future<List<WalkSession>> walkSessions() async {
     final rows = await (db.select(db.walkSessions)

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/paint_trail_controller.dart';
 import '../../app/providers.dart';
+import '../../app/report_providers.dart';
 import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/camp_theme.dart';
@@ -18,6 +19,7 @@ import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
+import '../day_card/day_card_view.dart';
 import '../debug/debug_screen.dart';
 import '../guestbook/guestbook_write_screen.dart';
 import '../map/map_screen.dart';
@@ -36,7 +38,9 @@ import 'rest_slots.dart';
 /// 첫 여정을 아직 안 걸었으면 아래 가운데 말풍선 ‘걸으면 출발해요’ (캔버스 2-1), 여정이 없으면 지도에 알림 점.
 /// 물감 길이 이어지는 동안(걷는 중에서 쉼터 아이콘으로 왔을 때) 상태 알약은 ‘걷는 중’이고 누르면 걷는 중으로.
 /// 물건은 3~6초마다 하나씩 살짝 흔들린다 (알림 점이 있는 물건 우선, 연출 값은 prop_wiggle.dart).
-/// 불 옆 동행은 알림 점(안 읽은 장)이 있을 때만 흔들림에 든다 (평소에는 캔버스대로 둥실, 그림 쪽 몫)
+/// 불 옆 동행은 알림 점(안 읽은 장)이 있을 때만 흔들림에 든다 (평소에는 캔버스대로 둥실, 그림 쪽 몫).
+/// 새벽 5시 뒤 그날 처음 열면 하루 카드(캔버스 2-3)가 위에 겹쳐 뜬다 (pendingDayCardProvider, 닫으면 본 것으로).
+/// 도착·걷는 중은 그 위에 올라가니 그것을 끝내고 쉼터로 돌아오면 카드가 보인다
 class RestScreen extends ConsumerStatefulWidget {
   const RestScreen({super.key});
 
@@ -123,8 +127,16 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     if (position == null) return const Scaffold(body: SizedBox.expand());
     final firstSketch = _firstSketchHint(snap, rules);
     final trailOn = ref.watch(paintTrailProvider.select((s) => s.active));
+    final dayCard = ref.watch(pendingDayCardProvider);
+    void closeCard() => ref.read(pendingDayCardProvider.notifier).dismiss();
 
-    return Scaffold(
+    return PopScope(
+      // 하루 카드가 떠 있으면 뒤로 가기는 카드를 닫는다
+      canPop: dayCard == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && dayCard != null) closeCard();
+      },
+      child: Scaffold(
       body: LayoutBuilder(builder: (context, box) {
         final stage = RestGeometry(camp, rules.rest, box.maxWidth, box.maxHeight);
         final ticket = snap.guestbookTicket;
@@ -256,9 +268,18 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                   ),
                 ),
               ),
+            if (dayCard != null)
+              Positioned.fill(
+                child: DayCardOverlay(
+                  key: const ValueKey('rest-day-card'),
+                  card: dayCard,
+                  onClose: closeCard,
+                ),
+              ),
           ],
         );
       }),
+      ),
     );
   }
 
