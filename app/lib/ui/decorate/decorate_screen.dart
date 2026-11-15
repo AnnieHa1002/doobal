@@ -18,7 +18,6 @@ import '../common/toast.dart';
 import 'decorate_tabs.dart';
 import 'decorate_widgets.dart';
 import 'figure_preview.dart';
-import '../scene/spirit_controller.dart';
 import '../walking/paint_trail_host.dart';
 
 /// 탭 줄 글자 배율 상한
@@ -46,9 +45,8 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> with HoldsPaint
   /// 지금 탭: 'me' 또는 소품 칸 이름
   var _tab = 'hat';
 
-  /// 표정 미리보기 번호 (저장하지 않는다)
-  var _expression = 0;
-  SpiritController? _previewController;
+  /// 미리보기를 밀어 돌린 자세 차례 (config customizePreview.swipe의 몇 번째, 저장하지 않는다)
+  var _turn = 0;
   var _saving = false;
 
   @override
@@ -204,13 +202,10 @@ class _DecorateScreenState extends ConsumerState<DecorateScreen> with HoldsPaint
           child: SpiritPreview(
             look: spirit,
             summary: _summary(look, props),
-            expression: _expression,
-            onReady: (c) => _previewController = c,
-            onExpression: (v) {
-              setState(() => _expression = v);
-              _previewController?.setExpression(v, force: true);
-            },
+            pose: rules == null ? null : turnedPose(rules.screen.spirit.customizeSwipe, _turn),
+            onTurn: (step) => setState(() => _turn += step),
             tapRules: rules,
+            cues: palette.cues,
           ),
         ),
         // 탭 줄은 옆으로 밀리는 짧은 이름표라 글자를 1.5배까지만 키운다. 작은 화면·큰 글자·동글에서도
