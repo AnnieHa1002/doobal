@@ -140,6 +140,64 @@ class TapReaction {
   final double angryHoldSec;
 }
 
+/// 물감 방울 줍기 연출 (config paintDrop.pickup, 디자인기획/물감길_개발인계 2장).
+/// 방울(그림 [dropSprites] 중 하나)이 정령 가운데 x에 닿으면 [pressedSprite]로 [pressedSec]초,
+/// 그 뒤 [splashSprite]가 [splashSec]초 동안 [splashScaleFrom]→[splashScaleTo]배로 퍼지고,
+/// 닿은 순간부터 `+n 럭`이 [gainFloatSec]초 동안 머리 위로 뜬다. 그림 이름은 버전을 뺀 앞부분으로 찾는다
+class PaintPickupRules {
+  const PaintPickupRules({
+    required this.sizePt,
+    required this.pressedSec,
+    required this.splashSec,
+    required this.splashScaleFrom,
+    required this.splashScaleTo,
+    required this.gainFloatSec,
+    required this.dropSprites,
+    required this.pressedSprite,
+    required this.splashSprite,
+  });
+
+  /// 방울 지름(화면 pt)
+  final double sizePt;
+  final double pressedSec;
+  final double splashSec;
+  final double splashScaleFrom;
+  final double splashScaleTo;
+  final double gainFloatSec;
+
+  /// 그림 이름 (확장자 없이, 예 ui_paint_pickup_a_v01)
+  final List<String> dropSprites;
+  final String pressedSprite;
+  final String splashSprite;
+}
+
+/// 지도 물감 길·연필 선 (config mapTrail, 디자인기획/물감길_개발인계 3장). 두께는 모두 화면 pt라
+/// 확대해도 그대로다 (nonScaling)
+class MapTrailRules {
+  const MapTrailRules({
+    required this.paintHeightPt,
+    required this.paintCapPt,
+    required this.paintTile,
+    required this.paintCap,
+    required this.pencilWidthPt,
+    required this.pencilColor,
+    required this.pencilTile,
+  });
+
+  /// 물감 길 방울 타일 높이(= 선 두께)와 끝 방울 지름
+  final double paintHeightPt;
+  final double paintCapPt;
+
+  /// 방울 타일·끝 방울 그림 이름 (확장자 없이)
+  final String paintTile;
+  final String paintCap;
+
+  /// 연필 선 두께와 색 (불투명 ARGB)
+  final double pencilWidthPt;
+  final int pencilColor;
+  final String pencilTile;
+}
+
 /// config.json의 규칙 숫자. 엔진은 숫자를 코드에 두지 않고 여기서 읽는다
 class Rules {
   const Rules({
@@ -161,9 +219,14 @@ class Rules {
     required this.paintTrailStartSteps,
     required this.paintTrailStartWithinSec,
     required this.paintTrailIdleEndMin,
+    required this.paintTrailEndOnArrival,
+    required this.paintTrailIosBackfill,
     required this.paintDropCoinsPerKm,
     required this.paintDropSpacingM,
     required this.paintDropCoinsPerDrop,
+    required this.paintPickup,
+    required this.mapTrail,
+    required this.paintDefaultColor,
     required this.coinsPerKm,
     required this.coinsDailyCap,
     required this.coinsWelcomeGift,
@@ -321,6 +384,13 @@ class Rules {
   /// 걸음이 이만큼(분) 멈추면 물감 길이 끝난다 (config paintTrail.idleEndMin, 가안 5분)
   final int paintTrailIdleEndMin;
 
+  /// 명소에 도착하면 그 물감 길을 도착을 판정한 시각에 닫는가 (config paintTrail.endOnArrival, 16장 11/14)
+  final bool paintTrailEndOnArrival;
+
+  /// iOS에서 앱이 멈춰 있던 동안(화면 꺼짐) 걸은 구간을 다음에 열 때 health 분 걸음으로 메워
+  /// 물감 길로 칠하는가 (config paintTrail.iosBackfillPaint, 16장 11/14)
+  final bool paintTrailIosBackfill;
+
   /// 물감 길 실제 1km당 덤 럭 (config paintDrop.coinsPerKm). 하루 상한 coins.dailyCap에 같이 든다
   final double paintDropCoinsPerKm;
 
@@ -328,6 +398,16 @@ class Rules {
   /// (config paintDrop.coinsPerDrop, 연출 숫자)
   final double paintDropSpacingM;
   final int paintDropCoinsPerDrop;
+
+  /// 물감 방울 줍기 연출 (config paintDrop.pickup)
+  final PaintPickupRules paintPickup;
+
+  /// 지도 물감 길·연필 선 (config mapTrail)
+  final MapTrailRules mapTrail;
+
+  /// 기본 물감 색 (config paintColor.default.hex, 테라코타). 물감 색 고르기(T12) 전에는 방울·지도 물감 길이
+  /// 모두 이 색이다
+  final int paintDefaultColor;
 
   /// 실제 1km당 하루 럭 (config coins.perKm). 기획이 아직 안 정해서 null이면 럭은 늘 0이다
   final double? coinsPerKm;
@@ -506,6 +586,12 @@ class Rules {
     final paintTrail = j['paintTrail'] as Map<String, dynamic>;
     final trailStart = paintTrail['startMinSteps'] as Map<String, dynamic>;
     final paintDrop = j['paintDrop'] as Map<String, dynamic>;
+    final pickup = paintDrop['pickup'] as Map<String, dynamic>;
+    final pickupSprites = pickup['sprites'] as Map<String, dynamic>;
+    final mapTrail = j['mapTrail'] as Map<String, dynamic>;
+    final mapPaint = mapTrail['paint'] as Map<String, dynamic>;
+    final mapPencil = mapTrail['pencil'] as Map<String, dynamic>;
+    final paintColor = j['paintColor'] as Map<String, dynamic>;
     final coins = j['coins'] as Map<String, dynamic>;
     final route = j['route'] as Map<String, dynamic>;
     final journey = j['journey'] as Map<String, dynamic>;
@@ -586,6 +672,21 @@ class Rules {
     if (_d((paintDrop['spacingM'] as Map)['m']) <= 0) {
       throw const FormatException('paintDrop.spacingM.m은 0보다 커야 한다');
     }
+    // 줍기 연출·지도 선은 구현한 규칙 하나씩이다 (디자인기획/물감길_개발인계 2·3장)
+    final splashScale = (pickup['splashScale'] as List).map(_d).toList();
+    if (splashScale.length != 2 || (pickupSprites['drop'] as List).isEmpty) {
+      throw const FormatException('paintDrop.pickup.splashScale은 2개, sprites.drop은 1개 이상이어야 한다');
+    }
+    for (final (key, known) in [
+      ('tint', 'multiplyRgb'),
+      ('reducedMotion', 'removeAndGainOnly'),
+      ('night', 'sameAsSpirit'),
+    ]) {
+      if (pickup[key] != known) throw FormatException('paintDrop.pickup.$key를 모른다: ${pickup[key]}');
+    }
+    if (mapTrail['nonScaling'] != true || mapPaint['tint'] != 'segmentColor') {
+      throw const FormatException('mapTrail은 nonScaling true·paint.tint segmentColor만 안다');
+    }
     // 구현한 거리 기준은 하나씩이다 (M1 명세 v0.5 ①·④)
     if ((j['props'] as Map)['distanceBasis'] != 'actualAll') {
       throw FormatException('props.distanceBasis를 모른다: ${(j['props'] as Map)['distanceBasis']}');
@@ -622,9 +723,32 @@ class Rules {
       paintTrailStartSteps: trailStart['steps'] as int,
       paintTrailStartWithinSec: trailStart['withinSec'] as int,
       paintTrailIdleEndMin: (paintTrail['idleEndMin'] as Map)['min'] as int,
+      paintTrailEndOnArrival: paintTrail['endOnArrival'] as bool,
+      paintTrailIosBackfill: paintTrail['iosBackfillPaint'] as bool,
       paintDropCoinsPerKm: _d(paintDrop['coinsPerKm']),
       paintDropSpacingM: _d((paintDrop['spacingM'] as Map)['m']),
       paintDropCoinsPerDrop: paintDrop['coinsPerDrop'] as int,
+      paintPickup: PaintPickupRules(
+        sizePt: _d(pickup['sizePt']),
+        pressedSec: _d(pickup['pressedSec']),
+        splashSec: _d(pickup['splashSec']),
+        splashScaleFrom: splashScale[0],
+        splashScaleTo: splashScale[1],
+        gainFloatSec: _d(pickup['gainFloatSec']),
+        dropSprites: (pickupSprites['drop'] as List).cast<String>(),
+        pressedSprite: pickupSprites['pressed'] as String,
+        splashSprite: pickupSprites['splash'] as String,
+      ),
+      mapTrail: MapTrailRules(
+        paintHeightPt: _d(mapPaint['heightPt']),
+        paintCapPt: _d(mapPaint['capPt']),
+        paintTile: mapPaint['tile'] as String,
+        paintCap: mapPaint['cap'] as String,
+        pencilWidthPt: _d(mapPencil['widthPt']),
+        pencilColor: _hex(mapPencil['color'] as String),
+        pencilTile: mapPencil['tile'] as String,
+      ),
+      paintDefaultColor: _hex((paintColor['default'] as Map)['hex'] as String),
       coinsPerKm: _dn(coins['perKm']),
       coinsDailyCap: coins['dailyCap'] as int,
       coinsWelcomeGift: coins['welcomeGift'] as int,

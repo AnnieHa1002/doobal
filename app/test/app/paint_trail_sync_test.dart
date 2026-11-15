@@ -15,9 +15,10 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../domain/helpers.dart';
+import 'helpers.dart' show placeAt;
 
-// 물감 길 엔진의 동기화 쪽 (M1 명세 v0.5 ①~⑤·⑦): 물감 길 기록, 거리 1종, 하루 요약 trailM, 럭, 거리 소품,
-// 앱이 끝난 물감 길 닫기, 걷기 기록, 지도 물감 구간.
+// 물감 길 엔진의 동기화 쪽 (M1 명세 v0.5 ①~⑤·⑦, v0.6 도착하면 끝): 물감 길 기록, 거리 1종, 하루 요약 trailM,
+// 럭, 거리 소품, 앱이 끝난 물감 길 닫기, 도착으로 닫기, 걷기 기록, 지도 물감 구간.
 // 설치 KST 2026-11-18 09:00, 걷기는 그날 10:00(= _t1)부터. 보폭 걷기 0.7m
 
 final _landmarks = {for (final l in landmarks) l.id: l};
@@ -190,6 +191,59 @@ void main() {
       expect(await e.svc.closeStalePaintTrails(_at(70), stale), 1);
       final row = (await e.trails()).single;
       expect((row.endUtc, row.endReason), (_ms(_at(59)), PaintTrailEnd.appEnded));
+    });
+  });
+
+  group('도착하면 물감 길이 끝난다 (M1 v0.6 ①, config paintTrail.endOnArrival)', () {
+    // 경복궁에서 동쪽으로 약 1km
+    const near = LatLng(37.57761, 126.9769 + 0.0113);
+
+    /// 경복궁 근처에서 경복궁으로 _t1에 출발하고 10:00에 물감 길을 연 환경. 분당 100보로 20분(1.4km) 걸어
+    /// 10:20에 동기화하면 도착한다
+    Future<(_Env, int)> arriveEnv({Rules? appRules}) async {
+      final e = await _env(appRules: appRules);
+      await placeAt(e.db, near, _t0);
+      await e.svc.startJourney('kr001', _t1, useFund: false);
+      expect(_routeKm(near, 'kr001'), lessThan(1.4));
+      final id = await e.svc.startPaintTrail(_at(0), _at(0));
+      e.source.records.add(_walk(_at(0), 20, 100));
+      return (e, id);
+    }
+
+    test('도착한 동기화가 열린 물감 길을 도착 시각(arrivedUtc)에 arrived로 닫고 알린다', () async {
+      final (e, id) = await arriveEnv();
+      final ends = <ArrivalTrailEnd>[];
+      final sub = e.svc.arrivalEnds.listen(ends.add);
+      addTearDown(sub.cancel);
+      await e.svc.sync(_at(20));
+      final journey = (await (e.db.select(e.db.journeys)
+                ..where((t) => t.status.equalsValue(JourneyStatus.arrived)))
+              .get())
+          .single;
+      expect(journey.destId, 'kr001');
+      expect(journey.arrivedUtc, _ms(_at(20)));
+      final row = (await e.trails()).single;
+      expect((row.id, row.endUtc, row.endReason), (id, _ms(_at(20)), PaintTrailEnd.arrived));
+      await Future<void>.delayed(Duration.zero);
+      expect(ends.map((x) => (x.id, x.end)), [(id, _at(20))]);
+      expect(await e.svc.openPaintTrail(), isNull);
+    });
+
+    test('trailM은 도착까지: 도착 뒤 걸음은 실제 거리에만 들고 물감 길이 아니다', () async {
+      final (e, _) = await arriveEnv();
+      await e.svc.sync(_at(20));
+      e.source.records.add(_walk(_at(20), 10, 100));
+      await e.svc.sync(_at(35));
+      final day = await e.day();
+      expect(day.distanceM, closeTo(2100, 1e-6));
+      expect(day.trailM, closeTo(1400, 1e-6));
+    });
+
+    test('endOnArrival false면 물감 길은 이어진다 (그 전 규칙)', () async {
+      final (e, _) = await arriveEnv(
+          appRules: _rulesWith((j) => (j['paintTrail'] as Map)['endOnArrival'] = false));
+      await e.svc.sync(_at(20));
+      expect((await e.trails()).single.endUtc, isNull);
     });
   });
 

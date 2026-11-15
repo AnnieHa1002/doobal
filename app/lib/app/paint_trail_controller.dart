@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/walk_notice.dart';
+import '../domain/bucket.dart' show epochMinute;
 import '../domain/gait.dart';
 import '../domain/live_walk.dart';
 import '../domain/paint_trail.dart';
@@ -32,6 +33,7 @@ class PaintTrailState {
     this.flushes = 0,
     this.endedKm,
     this.endedSeq = 0,
+    this.endedBy,
   });
 
   /// 열린 물감 길 번호와 시작 (첫 걸음의 분). 없으면 null
@@ -55,6 +57,10 @@ class PaintTrailState {
   final double? endedKm;
   final int endedSeq;
 
+  /// 방금 끝난 물감 길이 끝난 까닭 (아직 끝난 적이 없으면 null). 도착으로 끝났으면(arrived) 화면 전환은
+  /// 걷는 중·AutoSync의 도착 화면이 하고 토스트는 없다
+  final PaintTrailEnd? endedBy;
+
   bool get active => id != null;
 
   PaintTrailState copyWith({
@@ -67,6 +73,7 @@ class PaintTrailState {
     int? flushes,
     double? Function()? endedKm,
     int? endedSeq,
+    PaintTrailEnd? Function()? endedBy,
   }) =>
       PaintTrailState(
         id: id == null ? this.id : id(),
@@ -78,6 +85,7 @@ class PaintTrailState {
         flushes: flushes ?? this.flushes,
         endedKm: endedKm == null ? this.endedKm : endedKm(),
         endedSeq: endedSeq ?? this.endedSeq,
+        endedBy: endedBy == null ? this.endedBy : endedBy(),
       );
 }
 
@@ -89,6 +97,13 @@ class PaintTrailState {
 /// - 열린 동안 센서가 센 실제 거리(화면이 꺼진 동안 따라잡은 걸음 포함)를 config events.flushSec마다
 ///   길 위 이벤트 계산에 넘기고, 새 이정표 카드를 [PaintTrailState.cards]에 둔다.
 /// - 열린 동안 앱이 앞에 있으면 config sync.walkingRefreshSec마다 동기화하고 이 물감 길의 health 기록을 낸다.
+/// - 명소에 도착하면 동기화가 물감 길을 도착 시각에 닫는다 (config paintTrail.endOnArrival, 16장 11/14). 그러면
+///   판정기를 비워 도착 뒤 걸음은 startMinSteps를 다시 넘어야 새 물감 길이 된다.
+/// - iOS(앱이 뒤로 가면 멈춘다)는 숨어 있는 동안 걸음이 멈췄는지 판정하지 않고, 다시 켜지면 동기화해서
+///   health 분 걸음으로 그 사이 끊김을 다시 판정한다 (config paintTrail.iosBackfillPaint, M1 v0.6). 이어 걸었으면
+///   같은 물감 길에 붙고, idleEndMin분 넘게 빈 곳이 있으면 거기서 끝난다. 그 뒤 startMinSteps.withinSec초 동안은
+///   지금 걷는지 보느라 끝내지 않는다 (health가 늦게 들어와도 걷는 중이면 이어지게). 이정표 거리는 숨어 있던
+///   동안 따라잡은 센서 걸음 대신 메운 health 거리로 센다.
 /// 센서 권한은 묻지 않는다 (시작 흐름 권한 단계가 묻는다). 없으면 물감 길이 열리지 않는다.
 /// 앱을 켠 직후 앞 실행의 물감 길을 닫은 뒤(trailsReadyProvider)에 시작한다
 class PaintTrailController extends Notifier<PaintTrailState> {
@@ -120,6 +135,17 @@ class PaintTrailController extends Notifier<PaintTrailState> {
 
   /// 상시 알림 (정리할 때는 ref를 못 쓰므로 처음에 잡아 둔다)
   WalkNotice? _notice;
+
+  /// 도착으로 닫힌 물감 길 알림 구독
+  StreamSubscription<ArrivalTrailEnd>? _arrivalSub;
+
+  /// iOS 메우기: 앱이 뒤로 가면 멈추는 기기인가, 다시 켜져 메워야 하는가·메우는 중인가, 메운 뒤 지금 걷는지
+  /// 보는 동안(이 시각 전에는 걸음이 멈췄다고 끝내지 않는다), 이번 물감 길에서 메운 health 거리(m, 이정표)
+  var _suspends = false;
+  var _backfillDue = false;
+  var _backfilling = false;
+  DateTime? _graceUntil;
+  var _hiddenHealthM = 0.0;
 
   @override
   PaintTrailState build() {
@@ -176,8 +202,10 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     try {
       final rules = await ref.read(rulesProvider.future);
       _rules = rules;
+      _suspends = ref.read(appSuspendsWhenHiddenProvider);
       final svc = await ref.read(syncServiceProvider.future);
       if (_disposed) return;
+      _arrivalSub = svc.arrivalEnds.listen((e) => unawaited(_onArrivalEnd(e)));
       final tracker = _tracker = PaintTrailTracker(rules);
       final denied = ref.read(liveDeniedProvider.notifier);
       final walker = _walker = LiveWalker(
@@ -187,6 +215,7 @@ class PaintTrailController extends Notifier<PaintTrailState> {
         denied: () => denied.denied,
         onDenied: () => denied.set(true),
         onGain: _onGain,
+        onResume: _onResume,
         onHiddenSteps: (p) => _pushNotice(
           math.max(_noticeSteps, p.steps),
           math.max(_noticeDistanceM, p.distanceM),
@@ -212,6 +241,7 @@ class PaintTrailController extends Notifier<PaintTrailState> {
   void _dispose() {
     _disposed = true;
     _timer?.cancel();
+    _arrivalSub?.cancel();
     _walker?.dispose();
     if (_noticeOn) {
       _noticeOn = false;
@@ -225,7 +255,11 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     final tracker = _tracker;
     if (tracker == null || _disposed) return;
     final wasActive = tracker.active;
-    final start = tracker.add(g);
+    // iOS에서 숨어 있는 동안 온 값은 꺼지기 직전 것이거나 다시 켜질 때 한꺼번에 온 것이라 언제 걸었는지 모른다:
+    // 마지막 걸음으로 보지 않는다 (그 사이는 다시 켤 때 health로 메운다)
+    final start = tracker.add(_backfillOn && !g.foreground
+        ? SensorGain(g.at, g.steps, foreground: false, catchUp: true)
+        : g);
     if (wasActive) {
       // 열린 동안 앞에서 센 걸음은 바로 이정표 계산(events.flushSec 간격)과 알림(live.noticeUpdateSec 간격)에
       if (g.foreground && state.active && _opening == null) {
@@ -252,12 +286,16 @@ class PaintTrailController extends Notifier<PaintTrailState> {
       _eventSentM = 0;
       _eventAt = null;
       _refreshAt = null;
+      _hiddenHealthM = 0;
+      _backfillDue = false;
+      _graceUntil = null;
       state = PaintTrailState(
         id: id,
         start: start,
         cardSeq: state.cardSeq,
         flushes: state.flushes,
         endedSeq: state.endedSeq,
+        endedBy: state.endedBy,
       );
       _startNotice();
       unawaited(_refresh(force: true));
@@ -272,7 +310,7 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     final tracker = _tracker;
     if (tracker == null || _disposed || _opening != null || !state.active) return;
     final now = _now();
-    final end = tracker.idleEnd(now);
+    final end = _waitingForBackfill(now) ? null : tracker.idleEnd(now);
     if (end != null) {
       await _close(end);
       return;
@@ -296,16 +334,23 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     if (id == null) return;
     final now = _now();
     _walker?.feedHidden();
-    final km = math.max(state.record?.actualM ?? 0, live?.distanceM ?? 0) / 1000;
+    final walk = live;
+    // iOS 메우기를 쓰면 health 기록은 끊긴 뒤 걸음까지 들 수 있어 이정표와 같은 거리(앞에서 센 센서 + 메운 health)
+    final km = (_backfillOn
+            ? (walk == null ? 0.0 : _eventDistanceM(walk))
+            : math.max(state.record?.actualM ?? 0, walk?.distanceM ?? 0)) /
+        1000;
     await _flushEvents(_rules!, now, force: true);
     _tracker?.close(end, PaintTrailEnd.idle);
     _stopNotice();
+    _graceUntil = null;
     final seq = state.endedSeq + 1;
     state = PaintTrailState(
       cardSeq: state.cardSeq,
       flushes: state.flushes,
       endedKm: km,
       endedSeq: seq,
+      endedBy: PaintTrailEnd.idle,
     );
     try {
       final svc = await ref.read(syncServiceProvider.future);
@@ -325,7 +370,7 @@ class PaintTrailController extends Notifier<PaintTrailState> {
   Future<void> _flushEvents(Rules rules, DateTime now, {bool force = false}) async {
     final walk = live;
     if (walk == null || _eventBusy) return;
-    final sentM = walk.distanceM;
+    final sentM = _eventDistanceM(walk);
     final delta = sentM - _eventSentM;
     if (delta <= 0) return;
     final last = _eventAt;
@@ -365,6 +410,106 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     }
   }
 
+  /// 이정표에 넘길 이번 물감 길 거리(m): 센서가 센 거리. iOS 메우기를 쓰면 숨어 있던 동안 따라잡은 센서 걸음 대신
+  /// health로 메운 거리를 쓴다 (따라잡은 걸음은 언제 걸었는지 몰라 끊긴 뒤 걸음까지 들어 있을 수 있다)
+  double _eventDistanceM(LiveWalk walk) =>
+      _backfillOn ? walk.foregroundM + _hiddenHealthM : walk.distanceM;
+
+  /// iOS 화면 꺼짐 메우기를 하는가 (앱이 뒤로 가면 멈추는 기기 + config paintTrail.iosBackfillPaint)
+  bool get _backfillOn => _suspends && (_rules?.paintTrailIosBackfill ?? false);
+
+  /// 걸음이 멈췄다고 아직 끝내지 않는다: 메우기를 하는 기기에서 앱이 숨어 있거나(센서 값이 안 온다),
+  /// 다시 켜져 메워야 하거나 메우는 중이거나, 메운 뒤 지금 걷는지 보는 동안
+  bool _waitingForBackfill(DateTime now) {
+    if (!_backfillOn) return false;
+    if ((_walker?.hidden ?? false) || _backfillDue || _backfilling) return true;
+    final grace = _graceUntil;
+    return grace != null && now.isBefore(grace);
+  }
+
+  /// 앱이 다시 앞으로 왔다: 열린 물감 길이 있으면 숨어 있던 동안을 메운다
+  void _onResume() {
+    if (!_backfillOn || !state.active || _disposed) return;
+    _backfillDue = true;
+    unawaited(_backfill());
+  }
+
+  /// iOS 화면 꺼짐 메우기 (M1 v0.6): 동기화해서 마지막 걸음 뒤 health 분 걸음으로 판정기의 마지막 걸음을 늘리고
+  /// ([PaintTrailTracker.backfill]), 숨은 뒤부터 늘린 마지막 걸음 분까지의 health 거리를 이정표에 더한다.
+  /// 끝났는지는 그 뒤 [paintTrailTick]이 본다 (startMinSteps.withinSec초 기다린 뒤). 실패하면 늘리지 않는다
+  Future<void> _backfill() async {
+    final tracker = _tracker;
+    final rules = _rules;
+    final id = state.id;
+    final start = state.start;
+    final before = tracker?.lastStep;
+    if (_backfilling) return;
+    if (tracker == null || rules == null || id == null || start == null || before == null) {
+      _backfillDue = false;
+      return;
+    }
+    _backfilling = true;
+    _backfillDue = false;
+    try {
+      final svc = await ref.read(syncServiceProvider.future);
+      final now = _now();
+      await svc.sync(now);
+      await _endIfArrivedElsewhere(svc);
+      if (_disposed || state.id != id || !tracker.active) return;
+      final minutes = await svc.stepMinutes(before, now);
+      final after = tracker.backfill(minutes) ?? before;
+      final hiddenAt = _walker?.hiddenAt;
+      if (after.isAfter(before) && hiddenAt != null) {
+        // 숨은 분은 센서가 앞에서 센 걸음과 겹칠 수 있어 그다음 분부터 (물감 길 시작 전 분은 빼고)
+        final from = math.max(epochMinute(hiddenAt), epochMinute(start) - 1);
+        final to = epochMinute(after);
+        _hiddenHealthM += distanceM(
+            classifyGait([for (final m in minutes) if (m.minute > from && m.minute <= to) m], rules),
+            rules);
+      }
+      final record = await svc.walkRecord(start, now, live: live?.minutes ?? const []);
+      if (_disposed || state.id != id) return;
+      _refreshAt = now;
+      state = state.copyWith(record: () => record, refreshes: state.refreshes + 1);
+      ref.invalidate(snapshotProvider);
+      ref.invalidate(companionsViewProvider);
+      await _flushEvents(rules, now, force: true);
+    } catch (e) {
+      debugPrint('물감 길 메우기 실패: $e');
+    } finally {
+      _backfilling = false;
+      _graceUntil = _now().add(Duration(seconds: rules.paintTrailStartWithinSec));
+    }
+  }
+
+  /// 열린 물감 길이 DB에서 도착으로 닫혀 있으면 여기서도 끝낸다: 다른 엔진에서 돈 동기화(안드로이드 백그라운드
+  /// 동기화, background_sync.dart)가 도착을 처리하면 [SyncService.arrivalEnds] 알림이 이 앱에 오지 않는다
+  Future<void> _endIfArrivedElsewhere(SyncService svc) async {
+    final id = state.id;
+    if (id == null || _disposed) return;
+    final row = await svc.paintTrailRow(id);
+    final end = row?.endUtc;
+    if (row == null || end == null || row.endReason != PaintTrailEnd.arrived) return;
+    await _onArrivalEnd(ArrivalTrailEnd(id, _utc(end)));
+  }
+
+  /// 동기화가 도착으로 물감 길 [e]를 닫았다 (config paintTrail.endOnArrival): 판정기를 비우고 알림을 끈다.
+  /// 화면은 걷는 중(또는 AutoSync)이 도착 화면으로 바꾸고 토스트는 없다. 여는 중이면 다 연 뒤에 본다
+  Future<void> _onArrivalEnd(ArrivalTrailEnd e) async {
+    await _opening;
+    if (_disposed || state.id != e.id) return;
+    _tracker?.close(e.end, PaintTrailEnd.arrived);
+    _stopNotice();
+    _backfillDue = false;
+    _graceUntil = null;
+    state = PaintTrailState(
+      cardSeq: state.cardSeq,
+      flushes: state.flushes,
+      endedSeq: state.endedSeq + 1,
+      endedBy: PaintTrailEnd.arrived,
+    );
+  }
+
   /// 동기화하고 이 물감 길의 health 기록을 새로 낸다. 앱이 뒤에 있으면 하지 않는다 (건강 앱을 뒤에서 못 읽는다).
   /// 겹쳐 돌지 않는다
   Future<void> _refresh({bool force = false}) async {
@@ -378,6 +523,7 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     try {
       final svc = await ref.read(syncServiceProvider.future);
       await svc.sync(now);
+      await _endIfArrivedElsewhere(svc);
       final record = await svc.walkRecord(start, now, live: live?.minutes ?? const []);
       if (_disposed) return;
       ref.invalidate(snapshotProvider);

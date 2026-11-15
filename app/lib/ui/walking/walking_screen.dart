@@ -40,8 +40,8 @@ import 'walking_hud.dart';
 /// 넘은 칸은 마지막 events.offScreenCards장만). 새 도장을 받으면 걸음 알약 아래 작은 줄이 잠깐 뜬다.
 /// 칸이 이벤트 대신 동행 만남이면(pendingMeeting) HUD를 가리고 길 위 만남(MeetFlow)을 이 화면 위에 띄운다.
 /// 함께 걷는 동행은 장면에서 pace대로 따라온다. 화면을 떠날 때 뒤처진 거리로 쉼터에 늦게 오는 시간을 넘긴다.
-/// 진행이 100%가 되면 도착 화면으로 바꾼다 (물감 길은 이어지고, 닫으면 쉼터). 도착은 늘 health 동기화가
-/// 정한다: 센서 미리보기가 남은 거리를 넘으면 동기화를 바로 돌려 보고 도착이 확정되면 넘어간다.
+/// 진행이 100%가 되면 도착 화면으로 바꾼다 (물감 길은 도착에서 끝나고(config paintTrail.endOnArrival),
+/// 닫으면 쉼터, 도착 뒤 걸음은 새 물감 길). 도착은 늘 health 동기화가 정한다: 센서 미리보기가 남은 거리를 넘으면 동기화를 바로 돌려 보고 도착이 확정되면 넘어간다.
 /// 이 화면이 떠 있는 동안은 walkingActiveProvider로 AutoSync가 도착 화면을 따로 띄우지 않게 한다
 class WalkingScreen extends ConsumerStatefulWidget {
   const WalkingScreen({super.key});
@@ -362,7 +362,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     unawaited(_trail.refreshNow());
   }
 
-  /// 진행 100%: 도착 화면으로 바꾼다 (물감 길은 이어지고, 도착 화면을 닫으면 쉼터).
+  /// 진행 100%: 도착 화면으로 바꾼다 (물감 길은 동기화가 도착 시각에 닫았고, 도착 화면을 닫으면 쉼터).
   /// 이 화면이 맨 위가 아니면(물감 길이 끝나 닫히는 중) 바꾸지 않는다: pushReplacement는 맨 위 경로를
   /// 바꾸므로 쉼터를 바꿔 버린다. 그때는 이 화면이 닫힌 뒤 AutoSync가 도착 화면을 띄운다
   void _toArrival(String journeyId) {

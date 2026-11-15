@@ -294,7 +294,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
             TransformationController(_firstMatrix(geometry, data, rules));
         return Stack(
           children: [
-            Positioned.fill(child: _map(geometry, data, tc)),
+            Positioned.fill(child: _map(geometry, data, tc, rules)),
             _topBar(landmarks, data, geometry),
             ..._searchResults(landmarks),
             ..._selectedCard(geometry, data, snap),
@@ -305,15 +305,22 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
   }
 
   /// 확대·이동할 수 있는 지도. 캔버스는 화면 너비에 맞추고, 처음엔 내 위치 기준 첫 보기
-  Widget _map(MapGeometry g, MapData data, TransformationController tc) {
+  Widget _map(MapGeometry g, MapData data, TransformationController tc, Rules rules) {
     final size = Size(_view.width, _view.width * g.projection.height / g.projection.width);
     return ListenableBuilder(
       listenable: tc,
-      builder: (context, _) => _viewer(g, data, tc, size, tc.value.getMaxScaleOnAxis()),
+      builder: (context, _) => _viewer(g, data, tc, size, tc.value.getMaxScaleOnAxis(), rules),
     );
   }
 
-  Widget _viewer(MapGeometry g, MapData data, TransformationController tc, Size size, double zoom) {
+  Widget _viewer(
+    MapGeometry g,
+    MapData data,
+    TransformationController tc,
+    Size size,
+    double zoom,
+    Rules rules,
+  ) {
     return InteractiveViewer(
       transformationController: tc,
       constrained: false,
@@ -341,6 +348,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                 data: data,
                 selectedId: _selectedId,
                 zoom: zoom,
+                trail: rules.mapTrail,
+                paintColor: rules.paintDefaultColor,
               ),
             ),
           ),

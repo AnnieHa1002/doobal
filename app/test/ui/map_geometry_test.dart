@@ -129,8 +129,21 @@ void main() {
       fundKm: 0,
     );
 
-    MapPainter painter({String? selected = 'kr001', double zoom = 1, MapData? d, MapGeometry? g}) =>
-        MapPainter(geometry: g ?? _geometry, data: d ?? data, selectedId: selected, zoom: zoom);
+    MapPainter painter({
+      String? selected = 'kr001',
+      double zoom = 1,
+      MapData? d,
+      MapGeometry? g,
+      int? paintColor,
+    }) =>
+        MapPainter(
+          geometry: g ?? _geometry,
+          data: d ?? data,
+          selectedId: selected,
+          zoom: zoom,
+          trail: rules.mapTrail,
+          paintColor: paintColor ?? rules.paintDefaultColor,
+        );
 
     test('여러 확대 배율과 선택 상태로 그려도 오류가 없다', () {
       for (final zoom in [1.0, 2.5, 6.0]) {
@@ -148,9 +161,10 @@ void main() {
       recorder.endRecording().dispose();
     });
 
-    test('shouldRepaint: 확대·선택·데이터가 바뀔 때만', () {
+    test('shouldRepaint: 확대·선택·데이터·물감 색이 바뀔 때만', () {
       final base = painter();
       expect(base.shouldRepaint(painter()), isFalse);
+      expect(base.shouldRepaint(painter(paintColor: 0xFF6FA8C9)), isTrue);
       expect(base.shouldRepaint(painter(zoom: 1.5)), isTrue);
       expect(base.shouldRepaint(painter(selected: 'kr002')), isTrue);
       expect(base.shouldRepaint(painter(selected: null)), isTrue);

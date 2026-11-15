@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/sync_service.dart';
 import '../../domain/geo.dart';
+import '../../domain/rules.dart';
 import '../common/palette.dart';
 import 'map_geometry.dart';
 
@@ -9,15 +10,8 @@ import 'map_geometry.dart';
 const _regionLine = 1.2;
 const _hollowR = 4.5;
 
-/// 지나온 길의 연필 선 (앱 없이 걸은 곳은 이 선만 남는다)
-const _pencilLine = 1.6;
-const _pencilAlpha = 0.6;
-
-/// 물감 길 붓자국 (16장 11/13, M1 v0.5 ⑤). Codex codex_paint_trail_v01 납품 전 임시: 옅은 번짐 + 진한 심
-const _paintWashLine = 7.0;
-const _paintCoreLine = 3.0;
-const _paintWash = Color(0x66C97B54);
-const _paintCore = Color(0xCCB5603A);
+/// 물감 길 방울 타일 임시 그림: 방울 지름 = 타일 높이, 방울 사이 = 지름 × 이 값 (그림 납품 전 화면 구성값)
+const _dropGap = 0.9;
 
 /// 안 가 본 명소 점의 진하기 (잉크 흐린색)
 const _faintAlpha = 0.3;
@@ -26,20 +20,30 @@ const _destR = 9.0;
 const _selectedRing = 5.0;
 const _faceR = 11.0;
 
-/// 지도 그리기: 시도 경계 → 지나온 길(연필 선, 그 위 물감 길 붓자국) → 명소 표시 → 캐릭터 얼굴.
-/// [zoom]은 뷰어의 확대 배율이다 (캔버스는 화면 너비에 맞춰 그리고, 그 위에 zoom을 곱해 본다)
+/// 지도 그리기: 시도 경계 → 지나온 길(연필 선, 그 위 물감 길) → 명소 표시 → 캐릭터 얼굴.
+/// [zoom]은 뷰어의 확대 배율이다 (캔버스는 화면 너비에 맞춰 그리고, 그 위에 zoom을 곱해 본다).
+/// 길 두께·색은 config mapTrail (디자인기획/물감길_개발인계 3장): 앱 없이 걸은 곳은 연필 선(widthPt·color),
+/// 물감 길 구간은 방울을 구간 방향으로 늘어놓고(heightPt) 끝에 끝 방울(capPt), 색은 그 구간의 물감 색
+/// (물감 색 고르기 T12 전에는 기본 물감 [paintColor]). 확대해도 두께는 화면 pt 그대로다.
+/// 타일 그림(map_trail_drops_tile·cap·pencil_tile)이 오기 전에는 코드로 그린 임시 점·선이다
 class MapPainter extends CustomPainter {
   MapPainter({
     required this.geometry,
     required this.data,
     required this.selectedId,
     required this.zoom,
+    required this.trail,
+    required this.paintColor,
   });
 
   final MapGeometry geometry;
   final MapData data;
   final String? selectedId;
   final double zoom;
+  final MapTrailRules trail;
+
+  /// 물감 길 색 (불투명 ARGB)
+  final int paintColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -90,17 +94,31 @@ class MapPainter extends CustomPainter {
       return out;
     }
 
-    final pencil = stroke(Palette.ink.withValues(alpha: _pencilAlpha), _pencilLine);
+    final pencil = stroke(Color(trail.pencilColor), trail.pencilWidthPt);
     for (final path in data.paths) {
       canvas.drawPath(line(path), pencil);
     }
-    final wash = stroke(_paintWash, _paintWashLine);
-    final core = stroke(_paintCore, _paintCoreLine);
-    for (final path in data.paintLines) {
-      final p = line(path);
+    // 물감 길: 지름 heightPt 방울을 길을 따라 늘어놓고 끝에 capPt 끝 방울 (임시, 옅은 번짐 + 진한 속)
+    final color = Color(paintColor);
+    final wash = Paint()..color = color.withValues(alpha: 0.35);
+    final core = Paint()..color = color.withValues(alpha: 0.85);
+    final r = trail.paintHeightPt / 2 * k;
+    final step = trail.paintHeightPt * _dropGap * k;
+    void drop(Offset at, double radius) {
       canvas
-        ..drawPath(p, wash)
-        ..drawPath(p, core);
+        ..drawCircle(at, radius, wash)
+        ..drawCircle(at, radius * 0.62, core);
+    }
+
+    for (final path in data.paintLines) {
+      Offset? end;
+      for (final metric in line(path).computeMetrics()) {
+        for (var d = 0.0; d <= metric.length; d += step) {
+          drop(metric.getTangentForOffset(d)!.position, r);
+        }
+        end = metric.getTangentForOffset(metric.length)?.position;
+      }
+      if (end != null) drop(end, trail.paintCapPt / 2 * k);
     }
   }
 
@@ -174,5 +192,7 @@ class MapPainter extends CustomPainter {
       old.zoom != zoom ||
       old.selectedId != selectedId ||
       !identical(old.data, data) ||
-      !identical(old.geometry, geometry);
+      !identical(old.geometry, geometry) ||
+      !identical(old.trail, trail) ||
+      old.paintColor != paintColor;
 }

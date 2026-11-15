@@ -28,6 +28,7 @@ class LiveWalker {
     required this._onDenied,
     this.onHiddenSteps,
     this.onGain,
+    this.onResume,
     this.ask = true,
   }) : walk = LiveWalk(rules);
 
@@ -45,6 +46,9 @@ class LiveWalker {
 
   /// 센서 값이 늘 때마다: 그 증가([SensorGain], 앞에 있었는지·숨었다 돌아와 처음 받은 값인지)와 누적값
   final void Function(SensorGain gain, int total)? onGain;
+
+  /// 앱이 숨었다가 다시 앞으로 왔을 때 (iOS 화면 꺼짐 메우기가 health 분 걸음을 읽으려고)
+  final void Function()? onResume;
 
   /// 권한이 없을 때 묻는가. false면 확인만 하고 없으면 읽지 않는다 (앱을 켤 때마다 묻지 않게)
   final bool ask;
@@ -77,6 +81,10 @@ class LiveWalker {
 
   /// 지금 앱이 뒤에 있는가
   bool get hidden => _hidden;
+
+  /// 마지막으로 앱이 뒤로 간 시각 (다시 앞으로 와도 그대로 둔다, 아직 숨은 적이 없으면 null)
+  DateTime? get hiddenAt => _lastHiddenAt;
+  DateTime? _lastHiddenAt;
 
   /// 마지막으로 받은 누적값 (아직 없으면 null)
   int? get lastTotal => _lastRaw;
@@ -175,7 +183,9 @@ class LiveWalker {
   void _hide() {
     _hidden = true;
     _catchUpNext = true;
-    walk.pause(_clock());
+    final at = _clock();
+    _lastHiddenAt = at;
+    walk.pause(at);
   }
 
   /// 앱이 다시 켜졌다. 숨어 있는 동안 받은 마지막 값이 있으면 받은 시각으로 한 번 먹인다
@@ -194,5 +204,6 @@ class LiveWalker {
     if (_ready && _sub == null) _listen();
     // 묻지 않는 쪽([ask] false)은 권한이 없어 못 읽던 중이면 설정에서 켜고 왔을 수 있어 다시 확인한다
     if (!_ready && !ask && !_failed) unawaited(start());
+    onResume?.call();
   }
 }

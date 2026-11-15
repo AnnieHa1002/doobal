@@ -1,7 +1,8 @@
 import 'dart:io';
 
 import 'package:drift_flutter/drift_flutter.dart';
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugPrint, defaultTargetPlatform, kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/app_settings_opener.dart';
@@ -239,6 +240,11 @@ class AppForeground extends Notifier<bool> {
 final appForegroundProvider = NotifierProvider<AppForeground, bool>(
   AppForeground.new,
 );
+
+/// 앱이 뒤로 가면 곧 멈추는 기기인가 (iOS: 화면을 끄면 센서 값도 타이머도 오지 않는다). 그렇다면 물감 길은
+/// 다시 켤 때 health 분 걸음으로 그 사이를 메운다 (config paintTrail.iosBackfillPaint). 시험이 덮어쓴다
+final appSuspendsWhenHiddenProvider =
+    Provider<bool>((ref) => defaultTargetPlatform == TargetPlatform.iOS);
 
 /// 앱을 켠 직후 앞 실행의 끝나지 않은 물감 길을 닫았는가 (AutoSync가 켠다). 물감 길 판정은 이 뒤에 시작한다
 /// (닫기 전에 새 물감 길을 열면 앞 것과 겹친다)
