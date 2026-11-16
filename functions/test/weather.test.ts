@@ -1,19 +1,21 @@
 // getWeather 흐름 시험 (에뮬레이터: 기상청을 부르지 않고 가짜 날씨)
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
-import { WEATHER_KINDS } from '../src/kma';
+import { kstDateKey, WEATHER_KINDS } from '../src/kma';
 import { db, makeUser, ok, rejects, seed } from './helpers';
 
 before(seed);
 
 describe('getWeather', () => {
-  test('여정 지점의 날씨: 가짜 날씨를 주고 격자별로 캐시한다 (두 번째는 같은 값)', async () => {
+  test('그날 대표 날씨: 가짜 날씨를 주고 격자 + 한국 날짜로 캐시한다 (두 번째는 같은 값)', async () => {
     const { idToken } = await makeUser();
-    await db.doc('weatherCache/60_127').delete();
+    const today = kstDateKey(Date.now());
+    await db.doc(`weatherCache/60_127_${today}`).delete();
     const first = await ok('getWeather', { lat: 37.5665, lng: 126.978 }, idToken);
     assert.ok(WEATHER_KINDS.includes(first.kind));
     assert.equal(typeof first.at, 'number');
-    const doc = (await db.doc('weatherCache/60_127').get()).data()!;
+    assert.equal(first.day, today);
+    const doc = (await db.doc(`weatherCache/60_127_${today}`).get()).data()!;
     assert.equal(doc.kind, first.kind);
     assert.equal(typeof doc.fetchedAt, 'number');
     // 같은 격자 안의 다른 지점도 캐시 값
@@ -21,13 +23,17 @@ describe('getWeather', () => {
     assert.deepEqual(again, first);
   });
 
-  test('캐시가 cacheMin보다 오래되면 새로 받는다', async () => {
+  test('그날 캐시가 있으면 오래돼도 다시 부르지 않고, 어제 캐시는 쓰지 않는다', async () => {
     const { idToken } = await makeUser();
-    await db.doc('weatherCache/98_76').set({ kind: 'snow', at: 1, fetchedAt: Date.now() - 61 * 60 * 1000 });
+    const today = kstDateKey(Date.now());
+    const yesterday = kstDateKey(Date.now() - 24 * 3600 * 1000);
+    await db.doc(`weatherCache/98_76_${today}`).set({ kind: 'snow', at: 2, fetchedAt: Date.now() - 23 * 3600 * 1000 });
+    assert.deepEqual(await ok('getWeather', { lat: 35.1796, lng: 129.0756 }, idToken), { kind: 'snow', at: 2, day: today });
+    await db.doc(`weatherCache/98_76_${today}`).delete();
+    await db.doc(`weatherCache/98_76_${yesterday}`).set({ kind: 'snow', at: 1, fetchedAt: Date.now() - 60 * 1000 });
     const fresh = await ok('getWeather', { lat: 35.1796, lng: 129.0756 }, idToken);
     assert.notEqual(fresh.at, 1);
-    await db.doc('weatherCache/98_76').set({ kind: 'snow', at: 2, fetchedAt: Date.now() - 59 * 60 * 1000 });
-    assert.deepEqual(await ok('getWeather', { lat: 35.1796, lng: 129.0756 }, idToken), { kind: 'snow', at: 2 });
+    assert.equal(fresh.day, today);
   });
 
   test('로그인해야 하고, 지점이 틀리거나 한국 밖이면 bad-point', async () => {

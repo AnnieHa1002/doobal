@@ -3,15 +3,16 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { weatherDoc } from '../scripts/seed';
 import {
-  baseTime,
+  cacheKey,
+  dailyBase,
+  dailyKind,
   fakeWeather,
   gridKey,
   inGrid,
   kmaGrid,
   kmaItems,
+  kstDateKey,
   kstToUtc,
-  precipitationKind,
-  skyKind,
   WEATHER_KINDS,
 } from '../src/kma';
 
@@ -34,22 +35,24 @@ describe('위경도 → 기상청 격자', () => {
   });
 });
 
-describe('발표 시각', () => {
-  test('초단기실황: 매시 정각 발표, 40분부터 그 시각', () => {
-    assert.deepEqual(baseTime(kst(2026, 11, 18, 10, 39), 0, 40), { date: '20261118', time: '0900' });
-    assert.deepEqual(baseTime(kst(2026, 11, 18, 10, 40), 0, 40), { date: '20261118', time: '1000' });
-    // 자정 넘어 40분 전이면 어제 23시
-    assert.deepEqual(baseTime(kst(2026, 11, 19, 0, 10), 0, 40), { date: '20261118', time: '2300' });
+describe('단기예보 발표 시각 (그날 06~21시를 모두 담은 가장 새 발표)', () => {
+  test('05:10 뒤면 그날 05시, 02:10 뒤면 그날 02시, 그 전이면 어제 23시', () => {
+    assert.deepEqual(dailyBase(kst(2026, 11, 18, 15, 0)), { date: '20261118', time: '0500' });
+    assert.deepEqual(dailyBase(kst(2026, 11, 18, 5, 10)), { date: '20261118', time: '0500' });
+    assert.deepEqual(dailyBase(kst(2026, 11, 18, 5, 9)), { date: '20261118', time: '0200' });
+    assert.deepEqual(dailyBase(kst(2026, 11, 18, 2, 10)), { date: '20261118', time: '0200' });
+    assert.deepEqual(dailyBase(kst(2026, 11, 18, 2, 9)), { date: '20261117', time: '2300' });
+    assert.deepEqual(dailyBase(kst(2026, 11, 18, 0, 0)), { date: '20261117', time: '2300' });
+    assert.deepEqual(dailyBase(kst(2026, 11, 18, 23, 59)), { date: '20261118', time: '0500' });
+    // 달·해가 바뀌는 자정 앞
+    assert.deepEqual(dailyBase(kst(2027, 1, 1, 1, 0)), { date: '20261231', time: '2300' });
   });
 
-  test('초단기예보: 매시 30분 발표, 45분부터 그 시각', () => {
-    assert.deepEqual(baseTime(kst(2026, 11, 18, 10, 44), 30, 45), { date: '20261118', time: '0930' });
-    assert.deepEqual(baseTime(kst(2026, 11, 18, 10, 45), 30, 45), { date: '20261118', time: '1030' });
-    assert.deepEqual(baseTime(kst(2026, 11, 18, 10, 5), 30, 45), { date: '20261118', time: '0930' });
-  });
-
-  test('한국 시각 글자 → UTC', () => {
+  test('한국 날짜·시각 글자 ↔ UTC, 캐시 문서 키 = 격자 + 한국 날짜', () => {
     assert.equal(kstToUtc('20261118', '1000'), kst(2026, 11, 18, 10));
+    assert.equal(kstDateKey(kst(2026, 11, 18, 0, 0)), '20261118');
+    assert.equal(kstDateKey(kst(2026, 11, 17, 23, 59)), '20261117');
+    assert.equal(cacheKey({ nx: 60, ny: 127 }, '20261118'), '60_127_20261118');
   });
 });
 
@@ -57,31 +60,54 @@ const ok = (item: unknown[]) => ({
   response: { header: { resultCode: '00', resultMsg: 'NORMAL_SERVICE' }, body: { items: { item } } },
 });
 
-describe('응답 읽기', () => {
-  test('초단기실황 PTY: 비·비/눈·빗방울 → rain, 눈·눈날림 → snow, 없음 → null', () => {
-    const pty = (v: string) => precipitationKind(kmaItems(ok([{ category: 'T1H', obsrValue: '3.1' }, { category: 'PTY', obsrValue: v }])));
-    assert.equal(pty('0'), null);
-    for (const v of ['1', '2', '5', '6']) assert.equal(pty(v), 'rain');
-    for (const v of ['3', '7']) assert.equal(pty(v), 'snow');
-    assert.throws(() => precipitationKind(kmaItems(ok([{ category: 'T1H', obsrValue: '3' }]))));
+/** 그날 06~21시 16시간 예보: [pty] 값과 [sky] 값을 시마다 (모자라면 마지막 값으로) */
+function day(date: string, pty: number[], sky: number[], extra: unknown[] = []) {
+  const items: unknown[] = [...extra];
+  for (let h = 6; h <= 21; h++) {
+    const t = `${String(h).padStart(2, '0')}00`;
+    const i = h - 6;
+    items.push({ category: 'TMP', fcstDate: date, fcstTime: t, fcstValue: '5' });
+    items.push({ category: 'SKY', fcstDate: date, fcstTime: t, fcstValue: String(sky[Math.min(i, sky.length - 1)]) });
+    items.push({ category: 'PTY', fcstDate: date, fcstTime: t, fcstValue: String(pty[Math.min(i, pty.length - 1)]) });
+  }
+  return kmaItems(ok(items));
+}
+
+describe('그날 대표 날씨 (config weatherSource.dailyRule)', () => {
+  const D = '20261118';
+  test('06~21시에 비가 한 시간이라도 있으면 비: 비·비/눈·소나기는 비, 눈은 눈', () => {
+    assert.equal(dailyKind(day(D, [0, 0, 0, 1, 0], [1]), D), 'rain');
+    assert.equal(dailyKind(day(D, [0, 2, 0], [1]), D), 'rain');
+    assert.equal(dailyKind(day(D, [0, 4, 0], [1]), D), 'rain');
+    assert.equal(dailyKind(day(D, [3, 3, 0], [4]), D), 'snow');
   });
 
-  test('초단기예보 SKY: 지금에 가장 가까운 앞 시각, 흐림(4)이면 cloudy, 맑음·구름많음은 clear', () => {
-    const items = kmaItems(ok([
-      { category: 'SKY', fcstDate: '20261118', fcstTime: '1100', fcstValue: '1' },
-      { category: 'SKY', fcstDate: '20261118', fcstTime: '1200', fcstValue: '4' },
-      { category: 'LGT', fcstDate: '20261118', fcstTime: '1100', fcstValue: '0' },
-      { category: 'SKY', fcstDate: '20261118', fcstTime: '1300', fcstValue: '3' },
-    ]));
-    assert.equal(skyKind(items, kst(2026, 11, 18, 11, 50)), 'clear');
-    assert.equal(skyKind(items, kst(2026, 11, 18, 12, 10)), 'cloudy');
-    assert.equal(skyKind(items, kst(2026, 11, 18, 13, 30)), 'clear');
-    // 아직 앞 시각이 없으면 첫 시각
-    assert.equal(skyKind(items, kst(2026, 11, 18, 10, 50)), 'clear');
-    assert.equal(skyKind([], kst(2026, 11, 18, 10)), 'clear');
+  test('비·눈이 둘 다면 시간이 많은 쪽, 같으면 비', () => {
+    assert.equal(dailyKind(day(D, [3, 3, 3, 1, 0], [4]), D), 'snow');
+    assert.equal(dailyKind(day(D, [1, 1, 3, 0], [4]), D), 'rain');
+    assert.equal(dailyKind(day(D, [1, 3, 0], [4]), D), 'rain');
   });
 
-  test('오류 응답(키 오류·모양이 다름)은 Error', () => {
+  test('강수가 없으면 흐림(4) 시간이 절반 이상이면 흐림, 구름많음(3)·맑음(1)은 맑음', () => {
+    const half = [4, 4, 4, 4, 4, 4, 4, 4, 1];
+    assert.equal(dailyKind(day(D, [0], half), D), 'cloudy');
+    assert.equal(dailyKind(day(D, [0], [4, 4, 4, 4, 4, 4, 4, 1]), D), 'clear');
+    assert.equal(dailyKind(day(D, [0], [3]), D), 'clear');
+    assert.equal(dailyKind(day(D, [0], [1]), D), 'clear');
+  });
+
+  test('06시 전·21시 뒤·다른 날 예보는 보지 않는다', () => {
+    const outside = [
+      { category: 'PTY', fcstDate: D, fcstTime: '0500', fcstValue: '1' },
+      { category: 'PTY', fcstDate: D, fcstTime: '2200', fcstValue: '3' },
+      { category: 'PTY', fcstDate: '20261119', fcstTime: '1200', fcstValue: '1' },
+      { category: 'SKY', fcstDate: '20261119', fcstTime: '1200', fcstValue: '4' },
+    ];
+    assert.equal(dailyKind(day(D, [0], [1], outside), D), 'clear');
+  });
+
+  test('그날 PTY가 없으면 Error, 오류 응답(키 오류·모양이 다름)도 Error', () => {
+    assert.throws(() => dailyKind(day(D, [0], [1]), '20261119'));
     assert.throws(() => kmaItems({ response: { header: { resultCode: '30', resultMsg: 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR' } } }));
     assert.throws(() => kmaItems(null));
     assert.deepEqual(kmaItems(ok([])), []);
@@ -89,20 +115,20 @@ describe('응답 읽기', () => {
 });
 
 describe('에뮬레이터 가짜 날씨', () => {
-  test('같은 격자·같은 시면 같고, 시가 바뀌면 돌아가며, 이름을 고정할 수 있다', () => {
+  test('같은 격자·같은 날이면 하루 내내 같고, 날이 바뀌면 돌아가며, 이름을 고정할 수 있다', () => {
     const g = { nx: 60, ny: 127 };
-    const a = fakeWeather(g, kst(2026, 11, 18, 10, 5));
+    const a = fakeWeather(g, kst(2026, 11, 18, 0, 5));
     assert.ok(WEATHER_KINDS.includes(a));
-    assert.equal(fakeWeather(g, kst(2026, 11, 18, 10, 55)), a);
-    const day = new Set(Array.from({ length: 4 }, (_, h) => fakeWeather(g, kst(2026, 11, 18, 10 + h))));
-    assert.equal(day.size, 4);
+    assert.equal(fakeWeather(g, kst(2026, 11, 18, 23, 55)), a);
+    const days = new Set(Array.from({ length: 4 }, (_, d) => fakeWeather(g, kst(2026, 11, 18 + d, 10))));
+    assert.equal(days.size, 4);
     assert.equal(fakeWeather(g, kst(2026, 11, 18, 10), 'snow'), 'snow');
     assert.equal(fakeWeather(g, kst(2026, 11, 18, 10), 'hail'), a);
   });
 });
 
 describe('설정 문서', () => {
-  test('config/weather = config.json paintColor.weatherSource.cacheMin (60분)', () => {
-    assert.deepEqual(weatherDoc(), { cacheMin: 60 });
+  test('config/weather = config.json paintColor.weatherSource.cacheKey (격자 + 한국 날짜)', () => {
+    assert.deepEqual(weatherDoc(), { cacheKey: 'grid+kstDate' });
   });
 });

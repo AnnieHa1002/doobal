@@ -24,9 +24,9 @@ export function guestbookDoc(): Record<string, any> {
   return load('config.json').guestbook;
 }
 
-/** config/weather = config.json paintColor.weatherSource의 캐시 분 (getWeather 격자별 캐시) */
+/** config/weather = config.json paintColor.weatherSource의 캐시 키 모양 (getWeather 격자 + 한국 날짜 캐시, 16장 11/16) */
 export function weatherDoc(): Record<string, any> {
-  return { cacheMin: load('config.json').paintColor.weatherSource.cacheMin };
+  return { cacheKey: load('config.json').paintColor.weatherSource.cacheKey };
 }
 
 export async function seedConfig(db: Firestore): Promise<void> {
