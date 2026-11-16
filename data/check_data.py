@@ -176,7 +176,17 @@ if config['coins'].get('welcomeGift', 0) < cv.get('price', 0):
 
 # 장면 조각·캠프 물건이 그림 목록(scene_art.json)에 있고 상자가 같은가
 scene_doc = load('scene.json')
-art_assets = {v['file'].split('/')[-1]: v for v in load('scene_art.json')['assets'].values()}
+# scene.json·camp_wide.json은 납품 PNG 이름으로 적고, scene_art.json에는 WebP로 넣은 파일도 있다(T6c)
+def art_name(path):
+    name = path.split('/')[-1]
+    return name[:-5] + '.png' if name.endswith('.webp') else name
+art_assets = {art_name(v['file']): v for v in load('scene_art.json')['assets'].values()}
+# scene_art.json이 적은 그림이 앱 폴더에 있는가 (WebP로 바꾼 뒤 옛 PNG 이름이 남지 않게). 앱 데이터 폴더를 볼 때만
+APP_DIR = os.path.normpath(os.path.join(DIR, '..', '..'))
+if os.path.isdir(os.path.join(APP_DIR, 'assets', 'backgrounds')):
+    for key, v in load('scene_art.json')['assets'].items():
+        if not os.path.isfile(os.path.join(APP_DIR, v['file'])):
+            err(f"scene_art.json {key}: 그림 {v['file']}이 앱에 없음")
 for group in ('grove', 'roadside'):
     for piece in scene_doc['pieces'][group]:
         if piece['file'] not in art_assets:
@@ -186,7 +196,7 @@ for obj in camp_doc['objects']:
     art = obj.get('art')
     if not art:
         continue
-    spec = art_assets.get(art['file'].split('/')[-1])
+    spec = art_assets.get(art_name(art['file']))
     if spec is None:
         err(f"쉼터 물건 {obj['id']}: 그림 {art['file']}이 scene_art.json에 없음")
     elif spec['bbox'] != art['bbox']:
