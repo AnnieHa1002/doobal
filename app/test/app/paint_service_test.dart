@@ -111,6 +111,34 @@ void main() {
     expect(await paint.currentColor(), 'autumn.sunset');
   });
 
+  test('16장 11/17 ②: 최근에 고른(쓴) 색 = 지금 고른 색 → 색 구간을 마지막으로 시작한 차례, 기본은 빼고 한 번씩', () async {
+    for (final id in ['autumn.sunset', 'night', 'summer.rain_run', 'autumn.day']) {
+      await stock(id, 1000);
+    }
+    // 주운 것만으로는 최근이 아니다
+    expect((await paint.shelf()).recent, isEmpty);
+
+    // 물감 길 1: 밤으로 열고 30분에 여름 진한 비. 물감 길 2: 기본으로 열고 10분에 밤
+    final a = await openTrail();
+    await paint.choose('night');
+    await paint.beginTrail(a);
+    await paint.choose('summer.rain_run', openTrailId: a, now: _t.add(const Duration(minutes: 30)));
+    final b = await openTrail(_t.add(const Duration(hours: 2)));
+    await paint.choose('basic');
+    await paint.beginTrail(b);
+    await paint.choose('night', openTrailId: b, now: _t.add(const Duration(hours: 2, minutes: 10)));
+    expect((await paint.shelf()).recent, ['night', 'summer.rain_run']);
+
+    // 걷지 않을 때 고른 색은 바로 맨 앞. 칠하기 전에 다시 바꾸면 앞 색은 남지 않는다
+    await paint.choose('autumn.day');
+    expect((await paint.shelf()).recent, ['autumn.day', 'night', 'summer.rain_run']);
+    await paint.choose('autumn.sunset');
+    expect((await paint.shelf()).recent, ['autumn.sunset', 'night', 'summer.rain_run']);
+    // 기본을 고르면 칠한 차례만
+    await paint.choose('basic');
+    expect((await paint.shelf()).recent, ['night', 'summer.rain_run']);
+  });
+
   test('⑦ 남은 300m로 500m 칠하면 300m에서 기본 물감 구간으로 (고른 물감 비움, 다시 줍어도 저절로 안 고름), 남은 0', () async {
     await stock('day_run', 300);
     await paint.choose('day_run');

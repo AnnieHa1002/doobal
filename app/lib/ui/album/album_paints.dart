@@ -28,7 +28,8 @@ const paintGroupTitles = {
 typedef PaintShelfGroup = ({PaintGroup kind, List<PaintStockView> colors});
 
 /// 배낭 물감 탭 묶음 (캔버스 6-1 11/16 ‘묶음 3개’, config paintColor.backpack.order·recentCount):
-/// - 최근: 기본 물감이 늘 맨 앞 + 마지막으로 주운 색 (recentCount − 1)칸 (첫날은 기본 한 칸)
+/// - 최근: 기본 물감이 늘 맨 앞 + 최근에 고른(쓴) 색 (recentCount − 1)칸 (16장 11/17, 캔버스 6-1 ‘최근 쓴’.
+///   차례는 [PaintShelfData.recent]: 지금 고른 색 → 물감 길에 마지막으로 칠한 차례. 고른 적 없으면 기본 한 칸)
 /// - 계절 색: 지금 계절 → 지난 계절 차례(가을이면 가을·여름·봄·겨울), 계절 안은 16색 차례. 계절이 없는 키(1단계에서 모은 것)는
 ///   마지막으로 주운 날의 계절에 든다
 /// - 지역 색: config region.colors 차례
@@ -37,7 +38,8 @@ List<PaintShelfGroup> paintShelfGroups(PaintShelfData data, Rules rules, DateTim
   final pc = rules.paintColor;
   final basic = data.colors.where((c) => c.basic).toList();
   final owned = [for (final c in data.colors) if (!c.basic) c];
-  final recent = [...owned]..sort((a, b) => b.lastGotAt!.compareTo(a.lastGotAt!));
+  final ownedById = {for (final c in owned) c.colorId: c};
+  final recent = [for (final id in data.recent) ?ownedById[id]];
 
   final current = seasonOf(kstDayKey(now), rules);
   // 지금 계절부터 거꾸로

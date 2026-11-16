@@ -302,7 +302,8 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('① 앱을 다시 열 때 물감 길이 열려 있으면 걷는 중 (쉼터 아이콘으로 떠났어도)', (tester) async {
+    testWidgets('① 앱을 다시 열어도 쉼터 아이콘으로 떠난 물감 길 동안은 쉼터 (④가 먼저, 16장 11/17). '
+        '새 물감 길이 열리면 잊고 저절로 걷는 중', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.startSketch);
       await _pumpApp(tester, e);
@@ -315,7 +316,29 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       e.now = e.now.add(const Duration(seconds: 20));
       _show(tester);
-      await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 20);
+      expect(find.byType(WalkingScreen), findsNothing);
+      expect(find.byType(RestScreen), findsOneWidget);
+      expect(pill(), findsOneWidget);
+      final c = ProviderScope.containerOf(tester.element(find.byType(RestScreen)));
+      final first = c.read(paintTrailProvider).id;
+      expect(c.read(paintTrailProvider).active, isTrue);
+
+      // 다시 켠 뒤 걸어도 그 물감 길 동안은 쉼터
+      await _sensor(tester, e, 30, 50060);
+      await _sensor(tester, e, 30, 50110);
+      await settle(tester, () => false, tries: 10);
+      expect(find.byType(WalkingScreen), findsNothing);
+      expect(c.read(paintTrailProvider).id, first);
+
+      // 걸음이 멈춰 물감 길이 닫힌 뒤 새 물감 길이 열리면 잊는다
+      for (var i = 0; i < 80 && c.read(paintTrailProvider).active; i++) {
+        await _elapse(tester, e, 5);
+      }
+      expect(c.read(paintTrailProvider).active, isFalse);
+      await settle(tester, () => false, tries: 4);
+      await _startTrail(tester, e, base: 50200);
+      expect(c.read(paintTrailProvider).id, isNot(first));
       expect(find.byType(WalkingScreen), findsOneWidget);
       await end(tester, e);
     });
