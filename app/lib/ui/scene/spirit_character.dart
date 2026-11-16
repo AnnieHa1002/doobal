@@ -14,7 +14,6 @@ class SpiritCharacter extends StatefulWidget {
     this.speed = 0,
     this.sitting = false,
     this.boat = false,
-    this.capeEnabled = false,
     this.lookX = 0,
     this.lookY = 0,
     this.look = SpiritLook.base,
@@ -33,7 +32,7 @@ class SpiritCharacter extends StatefulWidget {
   @visibleForTesting
   static rive.Factory renderer = rive.Factory.rive;
   final double speed, lookX, lookY;
-  final bool sitting, boat, capeEnabled;
+  final bool sitting, boat;
 
   /// 고른 얼굴, 입은 소품, 몸 색
   final SpiritLook look;
@@ -109,7 +108,6 @@ class _SpiritCharacterState extends State<SpiritCharacter>
         sitting: widget.sitting,
         boat: widget.boat,
       );
-      controller.setCape(widget.capeEnabled);
       controller.setLook(widget.lookX, widget.lookY);
       controller.wear(widget.look);
       controller.tapRules = widget.tapRules;
@@ -132,9 +130,6 @@ class _SpiritCharacterState extends State<SpiritCharacter>
   @override
   void didUpdateWidget(SpiritCharacter oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.capeEnabled != oldWidget.capeEnabled) {
-      _controller?.setCape(widget.capeEnabled);
-    }
     if (widget.speed != oldWidget.speed ||
         widget.sitting != oldWidget.sitting ||
         widget.boat != oldWidget.boat) {

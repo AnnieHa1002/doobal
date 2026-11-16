@@ -11,7 +11,6 @@ import '../../domain/companion_engine.dart' show storyNoticeKey;
 import '../../domain/notification_policy.dart';
 import '../common/palette.dart';
 import '../companion/meet_flow.dart';
-import 'rive_preview_screen.dart';
 
 /// 개발 화면이 띄우는 이야기 알림의 번호 (알림 기록의 번호와 겹치지 않을 만큼 크게)
 const _debugNoticeId = 1 << 30;
@@ -211,12 +210,6 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
               OutlinedButton(
                 onPressed: _busy ? null : () => _run('물감 길', _startTrail),
                 child: const Text('물감 길 지금 열기'),
-              ),
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const RivePreviewScreen()),
-                ),
-                child: const Text('Rive 시험'),
               ),
               OutlinedButton(
                 onPressed: () => Navigator.of(context).push(

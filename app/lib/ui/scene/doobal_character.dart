@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../../domain/rules.dart';
 import '../../domain/screen_rules.dart';
 import '../../domain/spirit_look.dart';
-import 'doobal_controller.dart';
 import 'spirit_character.dart';
-export 'doobal_controller.dart' show DoobalPose;
+
+/// 장면이 고르는 정령 자세. 앉기·배 위는 [SpiritCharacter]의 sitting·boat로 넘긴다
+enum DoobalPose { standing, sitting, boat }
 
 /// 쉼터·이동 장면의 정령. 기존 화면의 속도·자세 호출을 유지한다.
 class DoobalCharacter extends StatelessWidget {
@@ -36,8 +37,6 @@ class DoobalCharacter extends StatelessWidget {
   final int expression;
   final SpiritCue? cue;
   final SpiritCues? cues;
-  // 이전 화가 파일은 기존 소품 시험과 복구용으로 남겨 둔다.
-  static const asset = 'assets/rive/doobal_custom.riv';
   @override
   Widget build(BuildContext context) => SpiritCharacter(
     speed: speed,

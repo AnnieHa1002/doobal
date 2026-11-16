@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:doobal/domain/face_parts.dart';
 import 'package:doobal/domain/unified_wardrobe.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,6 +47,23 @@ void main() {
         for (final id in ['cloth_02', 'cloth_05', 'shoe_01', 'hand_01', 'hand_02', 'hand_05', 'hat_10'])
           (byId[id]!.slot, byId[id]!.choice),
       ], [('cloth', 4), ('cloth', 1), ('shoe', 4), ('bag', 1), ('bag', 5), ('float', 2), ('float', 3)]);
+    });
+
+    // 11/16 T5 정리: 코드 표가 데이터(props.json v8 `rive`, 정령 계약 5장)와 어긋나지 않게 묶는다.
+    // 색 소품(variantOf)은 기본 소품과 같은 칸·번호·색 이름이다
+    test('props.json `rive`의 칸 입력·번호·색 이름과 같다 (색 소품은 기본 소품 값)', () {
+      final raw = jsonDecode(File('assets/data/props.json').readAsStringSync()) as Map<String, dynamic>;
+      final withRive = <String>{};
+      for (final m in (raw['props'] as List).cast<Map<String, dynamic>>()) {
+        final rive = m['rive'] as Map<String, dynamic>?;
+        if (rive == null) continue;
+        final base = byId[m['variantOf'] ?? m['id']];
+        expect(base, isNotNull, reason: '${m['id']}: 코드 표에 없다');
+        expect((rive['choice'], rive['n'], rive['color']), ('${base!.slot}Choice', base.choice, base.colorField),
+            reason: m['id'] as String);
+        withRive.add(base.id);
+      }
+      expect(withRive, byId.keys.toSet());
     });
   });
 

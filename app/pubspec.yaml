@@ -50,7 +50,7 @@ flutter:
   assets:
     - assets/data/
     - assets/data/themes/
-    # Rive 시험 파일 (Drive 두발/rive_test_v01.riv 사본)
+    # 정령 Rive spirit_v36.riv 하나 (lib/ui/scene/spirit_character.dart)
     - assets/rive/
     # 지도 경계 SVG와 위경도 투영 (Drive Assets 폴더의 ui_map_*_v01)
     - assets/map/
@@ -58,6 +58,7 @@ flutter:
     - assets/backgrounds/v11/
     # 명소 풍경화 추천101장 (최종 채택 전 검토본)
     - assets/paintings/
+    # 옛 기본 소품 아이콘 6장만 남음 (칸 그림, domain/asset_index.dart). 입는 조각은 11/16 T5 정리에서 뺌
     - assets/items/basic_v02/
     # 칸 그림(소품·상품 아이콘). 파일만 넣으면 칸이 찾는다 (domain/asset_index.dart)
     - assets/items/icons/
