@@ -18,7 +18,7 @@ final shopCartSlotProvider = Provider.autoDispose<RestObjectSlot>((ref) {
     art: (_) => const ShopCartArt(),
     onTap: openShop,
     label: '상점',
-    notice: onNew && ref.watch(shopNewsProvider).isNotEmpty,
+    notice: onNew && (ref.watch(shopNewsProvider).value?.isNotEmpty ?? false),
   );
 });
 

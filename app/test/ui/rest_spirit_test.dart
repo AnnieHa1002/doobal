@@ -95,7 +95,7 @@ void main() {
   group('새 소식 점 (config ui.newDot, 16장 11/13)', () {
     Finder cartDot() => find.byKey(const ValueKey('cart-dot'));
 
-    testWidgets('수레 점은 처음에는 없고, 기본 소품을 얻어 색 소품이 새로 들어오면 켜지고, 상점을 열면 꺼진다',
+    testWidgets('수레 점은 처음에는 없고, 기본 소품을 얻어 색 소품이 새로 들어오면 켜지고, 앱을 껐다 켜도 남고, 상점을 열면 꺼진다',
         (tester) async {
       final e = UiEnv();
       await e.seed(tester);
@@ -103,24 +103,37 @@ void main() {
       // 첫날: 지금 보이는 상품은 다 본 것
       expect(cartDot(), findsNothing);
 
-      // 여행 모자를 얻으면 색 소품 3개가 상점에 새로 들어온다
+      // 여행 모자를 얻으면(동기화가 알아챈 시각) 색 소품 3개가 상점에 새로 들어온다
       await tester.runAsync(() => e.db.into(e.db.propsOwned).insert(
-            PropsOwnedCompanion.insert(propId: 'hat_02', unlockedUtc: 1),
+            PropsOwnedCompanion.insert(propId: 'hat_02', unlockedUtc: e.now.millisecondsSinceEpoch),
           ));
       _container(tester).invalidate(snapshotProvider);
       await settle(tester, () => cartDot().evaluate().isNotEmpty);
       expect(cartDot(), findsOneWidget);
-      expect(_container(tester).read(shopNewsProvider), hasLength(3));
+      expect(_container(tester).read(shopNewsProvider).value, hasLength(3));
+
+      // 앱을 껐다 켜도 점이 남는다 (DB 19 sync_state.shop_seen_utc)
+      await tester.pumpWidget(const SizedBox());
+      await _open(tester, e);
+      await settle(tester, () => cartDot().evaluate().isNotEmpty);
+      expect(cartDot(), findsOneWidget);
 
       // 상점을 열고 돌아오면 꺼진다
-      final c = _container(tester);
+      e.now = e.now.add(const Duration(minutes: 1));
       Navigator.of(tester.element(find.byType(RestScreen))).push(
           MaterialPageRoute<void>(builder: (_) => const ShopScreen()));
       await settle(tester, () => find.byType(ShopScreen).evaluate().isNotEmpty);
-      await tester.pump();
-      expect(c.read(shopNewsProvider), isEmpty);
+      await settle(tester, () => _container(tester).read(shopNewsProvider).value?.isEmpty ?? false);
       Navigator.of(tester.element(find.byType(ShopScreen))).pop();
       await settle(tester, () => find.byType(ShopScreen).evaluate().isEmpty);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(cartDot(), findsNothing);
+      final seen = (await tester.runAsync(() => e.db.select(e.db.syncState).getSingle()))!.shopSeenUtc;
+      expect(seen, e.now.millisecondsSinceEpoch);
+
+      // 다시 껐다 켜도 꺼진 채
+      await tester.pumpWidget(const SizedBox());
+      await _open(tester, e);
       await tester.pump(const Duration(milliseconds: 400));
       expect(cartDot(), findsNothing);
       await end(tester, e);

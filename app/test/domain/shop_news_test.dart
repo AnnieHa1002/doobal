@@ -1,30 +1,35 @@
+import 'package:doobal/domain/color_props.dart';
 import 'package:doobal/domain/shop_news.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
 
 void main() {
-  test('상점에 보이는 상품: 탭 상품 전부 + 처음부터 가진 기본 소품의 색 소품 9개', () {
-    final shown = shownShopItemIds(shopCatalog, props, const {});
-    for (final i in shopCatalog.items) {
-      expect(shown, contains(i.id));
-    }
-    expect(shown.length, shopCatalog.items.length + 9);
-  });
-
-  test('기본 소품을 얻으면 그 색 소품 3개가 새 상품이 된다 (16장 11/13 수레 점)', () {
-    final before = shownShopItemIds(shopCatalog, props, const {});
-    final after = shownShopItemIds(shopCatalog, props, const {'hat_02'});
-    final news = newShopItems(after, before);
+  test('본 시각 뒤에 얻은 기본 소품의 색 소품 3개가 새 상품 (16장 11/13 수레 점)', () {
+    final news = newShopItems(props, const {'hat_02': 500}, 400);
     expect(news, hasLength(3));
-    for (final id in news) {
-      expect(id, startsWith('hat_02_'));
-    }
-    // 이미 본 것만 있으면 없다
-    expect(newShopItems(after, after), isEmpty);
+    final hatColors = {for (final i in colorShopItems(props)) if (i.requires == 'hat_02') i.id};
+    expect(news, hatColors);
   });
 
-  test('처음(본 목록 없음)에는 새 상품이 없다 (첫날 수레 점 없음)', () {
-    expect(newShopItems(shownShopItemIds(shopCatalog, props, const {'hat_02'}), null), isEmpty);
+  test('본 시각 전·같은 때에 얻은 것은 새 상품이 아니다 (상점을 연 뒤)', () {
+    expect(newShopItems(props, const {'hat_02': 400}, 400), isEmpty);
+    expect(newShopItems(props, const {'hat_02': 300}, 400), isEmpty);
+  });
+
+  test('처음부터 가진 기본 소품(베레모·여행복·갈색 신발)의 색 소품은 새 상품이 아니다 (첫날 점 없음)', () {
+    final initial = {
+      for (final p in props)
+        if (p.kind.name == 'initial') p.id: 1000,
+    };
+    expect(initial, isNotEmpty);
+    expect(newShopItems(props, initial, 0), isEmpty);
+  });
+
+  test('색 소품이 없는 소품이나 본 시각이 없으면 없다', () {
+    expect(newShopItems(props, const {'hat_02': 500}, null), isEmpty);
+    final noColors = props.firstWhere(
+        (p) => p.kind.name != 'initial' && !colorShopItems(props).any((i) => i.requires == p.id));
+    expect(newShopItems(props, {noColors.id: 500}, 400), isEmpty);
   });
 }

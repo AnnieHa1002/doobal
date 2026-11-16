@@ -2571,6 +2571,17 @@ class $SyncStateTable extends SyncState
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _shopSeenUtcMeta = const VerificationMeta(
+    'shopSeenUtc',
+  );
+  @override
+  late final GeneratedColumn<int> shopSeenUtc = GeneratedColumn<int>(
+    'shop_seen_utc',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2580,6 +2591,7 @@ class $SyncStateTable extends SyncState
     restoreFloorDay,
     lastAliveUtc,
     recomputeFromDay,
+    shopSeenUtc,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2651,6 +2663,15 @@ class $SyncStateTable extends SyncState
         ),
       );
     }
+    if (data.containsKey('shop_seen_utc')) {
+      context.handle(
+        _shopSeenUtcMeta,
+        shopSeenUtc.isAcceptableOrUnknown(
+          data['shop_seen_utc']!,
+          _shopSeenUtcMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2688,6 +2709,10 @@ class $SyncStateTable extends SyncState
         DriftSqlType.string,
         data['${effectivePrefix}recompute_from_day'],
       ),
+      shopSeenUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_seen_utc'],
+      ),
     );
   }
 
@@ -2716,6 +2741,11 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
   /// 다음 동기화가 하루 요약을 이 날(한국 날짜 키)부터 다시 계산한다 (스키마 16: 거리 규칙이 바뀐 옛 날).
   /// 다시 계산하면 null로 지운다. 이 기기에만 두는 값
   final String? recomputeFromDay;
+
+  /// 상점의 새 상품을 마지막으로 본 시각 (epoch ms, 스키마 19, 16장 11/13 수레 점·11/16 Annie ‘저장’).
+  /// 이 뒤에 얻은 기본 소품의 색 소품이 새 상품이다. null이면 설치 시각([installUtc])으로 본다 (첫날 점 없음).
+  /// 이 기기에만 두는 값 (백업에 넣지 않는 표)
+  final int? shopSeenUtc;
   const SyncStateRow({
     required this.id,
     this.lastFetchedUtc,
@@ -2724,6 +2754,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     this.restoreFloorDay,
     this.lastAliveUtc,
     this.recomputeFromDay,
+    this.shopSeenUtc,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2742,6 +2773,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     }
     if (!nullToAbsent || recomputeFromDay != null) {
       map['recompute_from_day'] = Variable<String>(recomputeFromDay);
+    }
+    if (!nullToAbsent || shopSeenUtc != null) {
+      map['shop_seen_utc'] = Variable<int>(shopSeenUtc);
     }
     return map;
   }
@@ -2763,6 +2797,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       recomputeFromDay: recomputeFromDay == null && nullToAbsent
           ? const Value.absent()
           : Value(recomputeFromDay),
+      shopSeenUtc: shopSeenUtc == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shopSeenUtc),
     );
   }
 
@@ -2779,6 +2816,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       restoreFloorDay: serializer.fromJson<String?>(json['restoreFloorDay']),
       lastAliveUtc: serializer.fromJson<int?>(json['lastAliveUtc']),
       recomputeFromDay: serializer.fromJson<String?>(json['recomputeFromDay']),
+      shopSeenUtc: serializer.fromJson<int?>(json['shopSeenUtc']),
     );
   }
   @override
@@ -2792,6 +2830,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       'restoreFloorDay': serializer.toJson<String?>(restoreFloorDay),
       'lastAliveUtc': serializer.toJson<int?>(lastAliveUtc),
       'recomputeFromDay': serializer.toJson<String?>(recomputeFromDay),
+      'shopSeenUtc': serializer.toJson<int?>(shopSeenUtc),
     };
   }
 
@@ -2803,6 +2842,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     Value<String?> restoreFloorDay = const Value.absent(),
     Value<int?> lastAliveUtc = const Value.absent(),
     Value<String?> recomputeFromDay = const Value.absent(),
+    Value<int?> shopSeenUtc = const Value.absent(),
   }) => SyncStateRow(
     id: id ?? this.id,
     lastFetchedUtc: lastFetchedUtc.present
@@ -2817,6 +2857,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     recomputeFromDay: recomputeFromDay.present
         ? recomputeFromDay.value
         : this.recomputeFromDay,
+    shopSeenUtc: shopSeenUtc.present ? shopSeenUtc.value : this.shopSeenUtc,
   );
   SyncStateRow copyWithCompanion(SyncStateCompanion data) {
     return SyncStateRow(
@@ -2839,6 +2880,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       recomputeFromDay: data.recomputeFromDay.present
           ? data.recomputeFromDay.value
           : this.recomputeFromDay,
+      shopSeenUtc: data.shopSeenUtc.present
+          ? data.shopSeenUtc.value
+          : this.shopSeenUtc,
     );
   }
 
@@ -2851,7 +2895,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           ..write('installUtc: $installUtc, ')
           ..write('restoreFloorDay: $restoreFloorDay, ')
           ..write('lastAliveUtc: $lastAliveUtc, ')
-          ..write('recomputeFromDay: $recomputeFromDay')
+          ..write('recomputeFromDay: $recomputeFromDay, ')
+          ..write('shopSeenUtc: $shopSeenUtc')
           ..write(')'))
         .toString();
   }
@@ -2865,6 +2910,7 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     restoreFloorDay,
     lastAliveUtc,
     recomputeFromDay,
+    shopSeenUtc,
   );
   @override
   bool operator ==(Object other) =>
@@ -2876,7 +2922,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           other.installUtc == this.installUtc &&
           other.restoreFloorDay == this.restoreFloorDay &&
           other.lastAliveUtc == this.lastAliveUtc &&
-          other.recomputeFromDay == this.recomputeFromDay);
+          other.recomputeFromDay == this.recomputeFromDay &&
+          other.shopSeenUtc == this.shopSeenUtc);
 }
 
 class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
@@ -2887,6 +2934,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
   final Value<String?> restoreFloorDay;
   final Value<int?> lastAliveUtc;
   final Value<String?> recomputeFromDay;
+  final Value<int?> shopSeenUtc;
   const SyncStateCompanion({
     this.id = const Value.absent(),
     this.lastFetchedUtc = const Value.absent(),
@@ -2895,6 +2943,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     this.restoreFloorDay = const Value.absent(),
     this.lastAliveUtc = const Value.absent(),
     this.recomputeFromDay = const Value.absent(),
+    this.shopSeenUtc = const Value.absent(),
   });
   SyncStateCompanion.insert({
     this.id = const Value.absent(),
@@ -2904,6 +2953,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     this.restoreFloorDay = const Value.absent(),
     this.lastAliveUtc = const Value.absent(),
     this.recomputeFromDay = const Value.absent(),
+    this.shopSeenUtc = const Value.absent(),
   }) : firstRecordDay = Value(firstRecordDay),
        installUtc = Value(installUtc);
   static Insertable<SyncStateRow> custom({
@@ -2914,6 +2964,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Expression<String>? restoreFloorDay,
     Expression<int>? lastAliveUtc,
     Expression<String>? recomputeFromDay,
+    Expression<int>? shopSeenUtc,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2923,6 +2974,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       if (restoreFloorDay != null) 'restore_floor_day': restoreFloorDay,
       if (lastAliveUtc != null) 'last_alive_utc': lastAliveUtc,
       if (recomputeFromDay != null) 'recompute_from_day': recomputeFromDay,
+      if (shopSeenUtc != null) 'shop_seen_utc': shopSeenUtc,
     });
   }
 
@@ -2934,6 +2986,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Value<String?>? restoreFloorDay,
     Value<int?>? lastAliveUtc,
     Value<String?>? recomputeFromDay,
+    Value<int?>? shopSeenUtc,
   }) {
     return SyncStateCompanion(
       id: id ?? this.id,
@@ -2943,6 +2996,7 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       restoreFloorDay: restoreFloorDay ?? this.restoreFloorDay,
       lastAliveUtc: lastAliveUtc ?? this.lastAliveUtc,
       recomputeFromDay: recomputeFromDay ?? this.recomputeFromDay,
+      shopSeenUtc: shopSeenUtc ?? this.shopSeenUtc,
     );
   }
 
@@ -2970,6 +3024,9 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     if (recomputeFromDay.present) {
       map['recompute_from_day'] = Variable<String>(recomputeFromDay.value);
     }
+    if (shopSeenUtc.present) {
+      map['shop_seen_utc'] = Variable<int>(shopSeenUtc.value);
+    }
     return map;
   }
 
@@ -2982,7 +3039,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
           ..write('installUtc: $installUtc, ')
           ..write('restoreFloorDay: $restoreFloorDay, ')
           ..write('lastAliveUtc: $lastAliveUtc, ')
-          ..write('recomputeFromDay: $recomputeFromDay')
+          ..write('recomputeFromDay: $recomputeFromDay, ')
+          ..write('shopSeenUtc: $shopSeenUtc')
           ..write(')'))
         .toString();
   }
@@ -11700,6 +11758,7 @@ typedef $$SyncStateTableCreateCompanionBuilder = SyncStateCompanion Function({
   Value<String?> restoreFloorDay,
   Value<int?> lastAliveUtc,
   Value<String?> recomputeFromDay,
+  Value<int?> shopSeenUtc,
 });
 typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<int> id,
@@ -11709,6 +11768,7 @@ typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<String?> restoreFloorDay,
   Value<int?> lastAliveUtc,
   Value<String?> recomputeFromDay,
+  Value<int?> shopSeenUtc,
 });
 
 class $$SyncStateTableFilterComposer
@@ -11752,6 +11812,11 @@ class $$SyncStateTableFilterComposer
 
   ColumnFilters<String> get recomputeFromDay => $composableBuilder(
     column: $table.recomputeFromDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get shopSeenUtc => $composableBuilder(
+    column: $table.shopSeenUtc,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11799,6 +11864,11 @@ class $$SyncStateTableOrderingComposer
     column: $table.recomputeFromDay,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get shopSeenUtc => $composableBuilder(
+    column: $table.shopSeenUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncStateTableAnnotationComposer
@@ -11842,6 +11912,11 @@ class $$SyncStateTableAnnotationComposer
     column: $table.recomputeFromDay,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get shopSeenUtc => $composableBuilder(
+    column: $table.shopSeenUtc,
+    builder: (column) => column,
+  );
 }
 
 class $$SyncStateTableTableManager
@@ -11882,6 +11957,7 @@ class $$SyncStateTableTableManager
                 Value<String?> restoreFloorDay = const Value.absent(),
                 Value<int?> lastAliveUtc = const Value.absent(),
                 Value<String?> recomputeFromDay = const Value.absent(),
+                Value<int?> shopSeenUtc = const Value.absent(),
               }) => SyncStateCompanion(
                 id: id,
                 lastFetchedUtc: lastFetchedUtc,
@@ -11890,6 +11966,7 @@ class $$SyncStateTableTableManager
                 restoreFloorDay: restoreFloorDay,
                 lastAliveUtc: lastAliveUtc,
                 recomputeFromDay: recomputeFromDay,
+                shopSeenUtc: shopSeenUtc,
               ),
           createCompanionCallback:
               ({
@@ -11900,6 +11977,7 @@ class $$SyncStateTableTableManager
                 Value<String?> restoreFloorDay = const Value.absent(),
                 Value<int?> lastAliveUtc = const Value.absent(),
                 Value<String?> recomputeFromDay = const Value.absent(),
+                Value<int?> shopSeenUtc = const Value.absent(),
               }) => SyncStateCompanion.insert(
                 id: id,
                 lastFetchedUtc: lastFetchedUtc,
@@ -11908,6 +11986,7 @@ class $$SyncStateTableTableManager
                 restoreFloorDay: restoreFloorDay,
                 lastAliveUtc: lastAliveUtc,
                 recomputeFromDay: recomputeFromDay,
+                shopSeenUtc: shopSeenUtc,
               ),
           withReferenceMapper: (p0) => p0
               .map(
