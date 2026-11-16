@@ -9,6 +9,7 @@ import '../../domain/time_kst.dart';
 import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/framed_painting.dart';
+import '../common/note_paper.dart';
 import '../common/palette.dart';
 
 /// 일기가 비었을 때(아직 아무 그림도 받지 않았을 때)의 한 줄. 가안
@@ -22,7 +23,6 @@ const _tapes = [
 ];
 
 /// 줄 없는 메모지 (600×600, 가장자리 60px은 늘리지 않는다). 1/3 크기로 그려 모서리가 20pt
-const _notePaper = 'assets/ui/ui_note_paper_plain_9s60_v01_clean.png';
 
 /// 사진 폭 (명세 200pt). 좁은 화면에서는 줄 폭의 55%까지만
 const _photoWidth = 200.0;
@@ -254,13 +254,7 @@ class _Memo extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
       padding: const EdgeInsets.all(14),
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(_notePaper),
-          centerSlice: Rect.fromLTRB(60, 60, 540, 540),
-          scale: 3,
-        ),
-      ),
+      decoration: const BoxDecoration(image: notePaperImage),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: lines),
     );
   }

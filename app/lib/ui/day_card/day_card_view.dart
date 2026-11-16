@@ -16,6 +16,7 @@ import '../album/painting_share.dart' show capturePng;
 import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/framed_painting.dart';
+import '../common/note_paper.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
 import '../scene/spirit_character.dart';
@@ -26,7 +27,6 @@ import 'walk_report_screen.dart';
 // (16장 11/13: 새 그림 없음).
 
 /// 줄 없는 메모지 (600×600, 가장자리 60px은 늘리지 않는다). 1/3 크기로 그려 모서리가 20pt (화집 일기와 같다)
-const _notePaper = 'assets/ui/ui_note_paper_plain_9s60_v01_clean.png';
 const _tape = 'assets/ui/ui_tape_01_v01_clean.png';
 
 /// 막대의 다른 날 (캔버스 2-3·6-4 연두)
@@ -314,13 +314,7 @@ class _Paper extends StatelessWidget {
         children: [
           Container(
             padding: padding,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage(_notePaper),
-                centerSlice: Rect.fromLTRB(60, 60, 540, 540),
-                scale: 3,
-              ),
-            ),
+            decoration: const BoxDecoration(image: notePaperImage),
             child: child,
           ),
           Positioned(
