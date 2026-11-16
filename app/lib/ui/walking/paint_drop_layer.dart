@@ -26,9 +26,10 @@ const _tubeIconPt = 24.0;
 /// 정령 가운데 x에 닿으면 config paintDrop.pickup대로: 눌린 방울(C)이 pressedSec초, 그 뒤 튐이 splashSec초 동안
 /// splashScale 배율로 퍼지며 사라지고, 닿은 순간부터 `+n 럭`(paintDrop.coinsPerDrop)이 gainFloatSec초 동안 머리 위로
 /// 떠오른다 (토스트 없음). 동작 줄이기면 눌린 방울·튐 없이 지우고 `+n 럭`만 제자리에서 흐려진다.
-/// 방울 그림은 회색 그림에 그 순간 물감 색 [color]를 곱하고(tint multiplyRgb, 시간대·날씨·뛰기 16색, 16장 11/14),
+/// 방울 그림은 회색 그림에 그 순간 물감 색 [color]를 곱하고(tint multiplyRgb, 시간대·날씨·뛰기 × 그날 계절, 16장 11/14·11/15),
 /// 보상 표에서 물감 통이 나오는 방울(물감 길 [trailId]·방울 번호로 정함, M1 v0.7)은 바로 뒤에 같은 색 물감 통을 놓고
 /// 주울 때 `+n 럭` 옆에 통 아이콘이 함께 떠오른다 ([tubeAllowed]가 false면, 그 색 통이 상한이라 안 나온다).
+/// 지역 색으로 나오는 통(M1 v0.8)은 지금 권역의 지역 색 [regionColor]다 ([regionAllowed]가 false면 안 나온다).
 /// 밤에는 정령과 같은 시간대 보정을 받는다 (night sameAsSpirit). 글자는 보정하지 않는다.
 /// 연출만이고 저장하지 않는다 (럭은 물감 길 거리로 따로 센다, M1 v0.5 ③).
 /// 그림(assets/ui/의 ui_paint_pickup_a·b·c, fx_paint_splash)이 오기 전에는 코드로 그린 임시다 (파일만 넣으면 읽는다)
@@ -41,6 +42,8 @@ class PaintDropLayer extends ConsumerStatefulWidget {
     this.color,
     this.trailId,
     this.tubeAllowed = true,
+    this.regionColor,
+    this.regionAllowed = true,
   });
 
   final SceneCompanionSpot spot;
@@ -53,6 +56,10 @@ class PaintDropLayer extends ConsumerStatefulWidget {
 
   /// 그 순간 색 통을 더 주울 수 있는가 (가진 통이 config paintColor.stock.maxTubesPerColor 아래)
   final bool tubeAllowed;
+
+  /// 지금 권역의 지역 색 (불투명 ARGB, 없으면 지역 색 통도 그 순간 색)과 그 색 통을 더 주울 수 있는가
+  final int? regionColor;
+  final bool regionAllowed;
 
   /// 화면에 보이는 이번 물감 길 거리(m). 방울 k는 k × spacingM에 있다
   final double shownM;
@@ -70,13 +77,18 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
   /// 지금 줍는 연출 중인가 (닿은 순간부터 눌린 방울·튐·`+n 럭`이 다 끝날 때까지)
   var _picking = false;
 
-  /// 줍는 연출 중인 방울에 물감 통이 있었나 (`+n 럭` 옆 통 아이콘)
-  var _pickedTube = false;
+  /// 줍는 연출 중인 방울의 물감 통 색 (`+n 럭` 옆 통 아이콘, 통이 없으면 null)
+  Color? _pickedTube;
 
-  /// [k]번째 방울에 물감 통이 있는가
-  bool _tubeAt(int k) {
+  /// [k]번째 방울의 물감 통 색 (통이 없거나 그 색 통이 상한이면 null)
+  Color? _tubeAt(int k) {
     final id = widget.trailId;
-    return id != null && widget.tubeAllowed && rollDrop(id, k, widget.rules.paintColor).tube;
+    if (id == null) return null;
+    final roll = rollDrop(id, k, widget.rules.paintColor);
+    if (!roll.tube) return null;
+    final region = widget.regionColor;
+    if (roll.region && region != null) return widget.regionAllowed ? Color(region) : null;
+    return widget.tubeAllowed ? Color(widget.color ?? widget.rules.paintDefaultColor) : null;
   }
 
   @override
@@ -107,7 +119,7 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
     // 처음 보거나(화면을 다시 열었다) 줄었으면 줍는 연출 없이 맞춘다
     if (last != null && picked > last) {
       _picking = true;
-      _pickedTube = [for (var k = last + 1; k <= picked; k++) _tubeAt(k)].any((t) => t);
+      _pickedTube = [for (var k = last + 1; k <= picked; k++) _tubeAt(k)].nonNulls.lastOrNull;
       _pick
         ..duration = Duration(microseconds: (_totalSec * Duration.microsecondsPerSecond).round())
         ..forward(from: 0);
@@ -139,14 +151,15 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
       for (var k = math.max(1, picked);; k++) {
         final x = foot.dx + (k * spacing - widget.shownM) * spot.groundPtPerM + _tubeBehindPt;
         if (x - _tubeRoadPt / 2 > spot.size.width) break;
-        if (x < foot.dx || !_tubeAt(k)) continue;
+        final tube = x < foot.dx ? null : _tubeAt(k);
+        if (tube == null) continue;
         ground.add(Positioned(
           key: ValueKey('paint-tube-$k'),
           left: x - _tubeRoadPt / 2,
           top: foot.dy - _tubeRoadPt,
           width: _tubeRoadPt,
           height: _tubeRoadPt,
-          child: PaintTubeArt(color: color, road: true),
+          child: PaintTubeArt(color: tube, road: true),
         ));
       }
       for (var k = picked + 1;; k++) {
@@ -236,13 +249,13 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
                           key: const ValueKey('paint-drop-gain'),
                           style: context.display(16, color: Palette.ink),
                         ),
-                        if (_pickedTube) ...[
+                        if (_pickedTube case final tube?) ...[
                           const SizedBox(width: 4),
                           SizedBox(
                             key: const ValueKey('paint-drop-gain-tube'),
                             width: _tubeIconPt,
                             height: _tubeIconPt,
-                            child: PaintTubeArt(color: color),
+                            child: PaintTubeArt(color: tube),
                           ),
                         ],
                       ],

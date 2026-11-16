@@ -40,7 +40,8 @@ import 'rest_slots.dart';
 /// 1.5배이고 좌우로 민다. 프로필·설정·상태 알약은 고정이다 (캔버스 2-2).
 /// 출발하기 버튼은 없다 (16장 11/13 물감 길): 앱을 연 채 걸으면 저절로 걷는 중으로 넘어간다 (PaintTrailHost).
 /// 첫 여정을 아직 안 걸었으면 아래 가운데 말풍선 ‘걸으면 출발해요’ (캔버스 2-1), 여정이 없으면 지도에 알림 점.
-/// 물감 길이 이어지는 동안(걷는 중에서 쉼터 아이콘으로 왔을 때) 상태 알약은 ‘걷는 중’이고 누르면 걷는 중으로.
+/// 물감 길이 이어지는 동안(걷는 중에서 쉼터 아이콘으로 왔을 때) 위 가운데는 ‘걷는 중 · 물감 길 n km ›’(지금 물감 색 점,
+/// 44pt, 캔버스 2-2 11/16)이고 누르면 걷는 중으로 (16장 11/16 쉼터↔걷는 중 ④).
 /// 물건은 3~6초마다 하나씩 살짝 흔들린다 (알림 점이 있는 물건 우선, 연출 값은 prop_wiggle.dart).
 /// 불 옆 동행은 알림 점(안 읽은 장)이 있을 때만 흔들림에 든다 (평소에는 캔버스대로 둥실, 그림 쪽 몫).
 /// 새벽 5시 뒤 그날 처음 열면 하루 카드(캔버스 2-3)가 위에 겹쳐 뜬다 (pendingDayCardProvider, 닫으면 본 것으로).
@@ -285,11 +286,10 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _StatusPill(
-                                _statusText(snap, walking: trailOn),
-                                onPressed:
-                                    trailOn ? () => openWalking(Navigator.of(context)) : null,
-                              ),
+                              if (trailOn)
+                                _WalkingPill(onPressed: () => openWalking(Navigator.of(context)))
+                              else
+                                _StatusPill(_statusText(snap)),
                               if (scale != 1) ...[
                                 const SizedBox(height: 6),
                                 _ScaleBadge(distanceScaleBadge(scale)),
@@ -335,11 +335,11 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     );
   }
 
-  /// 상태 알약 글. 물감 길이 이어지는 동안([walking])은 ‘걷는 중’, 아니면 ‘쉬는 중’
-  String _statusText(Snapshot snap, {required bool walking}) {
-    final state = walking ? '걷는 중' : '쉬는 중';
+  /// 상태 알약 글 (물감 길이 닫혀 있을 때): ‘쉬는 중 · 목적지까지 n km’
+  String _statusText(Snapshot snap) {
+    const state = '쉬는 중';
     final j = snap.journey;
-    if (j == null) return walking ? state : '$state · 목적지를 골라 보세요';
+    if (j == null) return '$state · 목적지를 골라 보세요';
     // 첫 여정은 이름이 있는 목적지가 아니라 내 동네 스케치
     final dest = j.dest.id == sketchId ? sketchName : '목적지';
     return '$state · $dest까지 ${formatKm(j.progress.remainingKm)}';
@@ -659,12 +659,79 @@ class _GemPlaceholder extends StatelessWidget {
   }
 }
 
-/// 위쪽 가운데 상태 알약 (카드색 90%). [onPressed]가 있으면(물감 길 중) 누르면 걷는 중으로
+/// 물감 길이 열려 있을 때 위 가운데 알약 (캔버스 2-2 11/16): [지금 물감 색 점] **걷는 중** · 물감 길 1.2km ›.
+/// 높이 44pt 이상, 누르면 걷는 중. 거리는 이번 물감 길 숫자(걷는 중 화면과 같은 값, 이정표를 넘길 때마다 새로)
+class _WalkingPill extends ConsumerWidget {
+  const _WalkingPill({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  /// 물감 색 점 지름
+  static const _dot = 8.0;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 이정표 거리를 넘기거나 기록을 새로 받을 때마다 다시 읽는다 (몇 초마다)
+    ref.watch(paintTrailProvider.select((s) => (s.flushes, s.refreshes)));
+    final summary = ref.read(paintTrailProvider.notifier).summaryAt(ref.read(clockProvider)());
+    final km = formatKmShort(summary?.distanceM ?? 0);
+    final pc = ref.watch(rulesProvider).value?.paintColor;
+    final current = ref.watch(paintShelfProvider).value?.current;
+    final dot = Color(current == null || pc == null ? Palette.terracotta.toARGB32() : pc.hexOf(current));
+    final style = context.display(13);
+    return Semantics(
+      button: true,
+      label: '걷는 중으로 돌아가기, 물감 길 $km',
+      excludeSemantics: true,
+      child: GestureDetector(
+        key: const ValueKey('rest-walking-pill'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.fromLTRB(10, 0, 14, 0),
+          decoration: BoxDecoration(
+            color: Palette.card.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Palette.ink, width: InkLine.panel),
+            boxShadow: const [BoxShadow(color: Palette.shadow, offset: Offset(0, InkLine.shadow))],
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  key: const ValueKey('rest-walking-dot'),
+                  width: _dot,
+                  height: _dot,
+                  decoration: BoxDecoration(
+                    color: dot,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Palette.ink, width: 1),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text('걷는 중', style: style.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(width: 6),
+                Text('· 물감 길 $km', key: const ValueKey('rest-walking-km'),
+                    style: style.copyWith(color: Palette.subInk)),
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_right, size: 16, color: Palette.ink),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 위쪽 가운데 상태 알약 (카드색 90%, 물감 길이 닫혀 있을 때)
 class _StatusPill extends StatelessWidget {
-  const _StatusPill(this.text, {this.onPressed});
+  const _StatusPill(this.text);
 
   final String text;
-  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -683,17 +750,7 @@ class _StatusPill extends StatelessWidget {
         ),
       ),
     );
-    final tap = onPressed;
-    if (tap == null) return pill;
-    return Semantics(
-      button: true,
-      child: GestureDetector(
-        key: const ValueKey('rest-walking-pill'),
-        behavior: HitTestBehavior.opaque,
-        onTap: tap,
-        child: pill,
-      ),
-    );
+    return pill;
   }
 }
 
