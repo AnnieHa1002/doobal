@@ -32,6 +32,8 @@ Future<void> _pump(
   int? color,
   int? trailId,
   bool tubeAllowed = true,
+  int? regionColor,
+  bool regionAllowed = true,
 }) =>
     tester.pumpWidget(ProviderScope(
       overrides: [assetIndexProvider.overrideWith((ref) => AssetIndex(const []))],
@@ -47,6 +49,8 @@ Future<void> _pump(
                 color: color,
                 trailId: trailId,
                 tubeAllowed: tubeAllowed,
+                regionColor: regionColor,
+                regionAllowed: regionAllowed,
               ),
             ),
           ]),
@@ -175,6 +179,46 @@ void main() {
       await _pump(tester, plain * 100.0, color: 0xFFF79BB7, trailId: trail);
       expect(find.text('+1 럭'), findsOneWidget);
       expect(_key('paint-drop-gain-tube'), findsNothing);
+    });
+
+    testWidgets('M1 v0.8: 지역 색으로 나오는 통은 지금 권역의 지역 색 (상한이면 없음), 주우면 아이콘도 그 색', (tester) async {
+      // 지역 색 통이 나오는 방울 하나와 그냥 통 방울 하나를 찾는다
+      late int rt;
+      late int rk;
+      int? plainTube;
+      for (rt = 1;; rt++) {
+        final rolls = {for (var i = 1; i <= 40; i++) i: rollDrop(rt, i, rules.paintColor)};
+        final region = [for (final e in rolls.entries) if (e.value.tube && e.value.region) e.key];
+        final plain = [for (final e in rolls.entries) if (e.value.tube && !e.value.region) e.key];
+        if (region.isNotEmpty && plain.isNotEmpty) {
+          rk = region.first;
+          plainTube = plain.first;
+          break;
+        }
+      }
+      const jeju = 0xFFFF8F65;
+      const day = 0xFF74C6EA;
+      Color tubeColor(int k) => tester
+          .widget<PaintTubeArt>(find.descendant(of: _key('paint-tube-$k'), matching: find.byType(PaintTubeArt)))
+          .color;
+      await _pump(tester, rk * 100.0 - 60, color: day, trailId: rt, regionColor: jeju);
+      expect(tubeColor(rk), const Color(jeju));
+      await _pump(tester, plainTube! * 100.0 - 60, color: day, trailId: rt, regionColor: jeju);
+      expect(tubeColor(plainTube), const Color(day));
+      // 지역 색 통이 상한이면 그 통만 없다, 지역을 모르면 그 순간 색
+      await _pump(tester, rk * 100.0 - 60, color: day, trailId: rt, regionColor: jeju, regionAllowed: false);
+      expect(_key('paint-tube-$rk'), findsNothing);
+      await _pump(tester, rk * 100.0 - 60, color: day, trailId: rt);
+      expect(tubeColor(rk), const Color(day));
+      // 주우면 +1 럭 옆 아이콘도 지역 색
+      await _pump(tester, rk * 100.0 - 5, color: day, trailId: rt, regionColor: jeju);
+      await _pump(tester, rk * 100.0, color: day, trailId: rt, regionColor: jeju);
+      expect(
+          tester
+              .widget<PaintTubeArt>(
+                  find.descendant(of: _key('paint-drop-gain-tube'), matching: find.byType(PaintTubeArt)))
+              .color,
+          const Color(jeju));
     });
   });
 }

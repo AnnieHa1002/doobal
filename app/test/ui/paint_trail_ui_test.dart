@@ -4,6 +4,7 @@ import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/paint_trail.dart';
 import 'package:doobal/domain/route.dart';
 import 'package:doobal/main.dart';
+import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/decorate/decorate_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/walking/paint_drop_layer.dart';
@@ -20,7 +21,8 @@ import 'ui_env.dart';
 
 // 물감 길 화면 (16장 11/13, M2~M6 명세 v0.17 T①·②·⑦, 캔버스 2-1·2-2·3-1):
 // 앱을 연 채 걸으면 저절로 걷는 중, 걸음이 5분 멈추면 저절로 쉼터 + 토스트, 쉼터 아이콘, 상시 알림 N0,
-// 시트·꾸미기 중에는 기다림, 물감 방울, 첫날 말풍선, iOS 화면 꺼짐 메우기(16장 11/14)
+// 시트·꾸미기 중에는 기다림, 물감 방울, 첫날 말풍선, iOS 화면 꺼짐 메우기(16장 11/14),
+// 쉼터↔걷는 중 6규칙(16장 11/16, 8장 3번, 캔버스 2-2 ‘걷는 중 · 물감 길 n km ›’)
 
 /// 앱을 띄우고 쉼터·물감 길 판정이 시작될 때까지 기다린다 (앞 실행의 물감 길 닫기 → 판정 시작).
 /// [suspends]면 iOS처럼 앱이 뒤로 가면 멈추는 기기로 돈다 (화면 꺼짐 메우기)
@@ -136,7 +138,7 @@ void main() {
     await tester.tap(find.byKey(const Key('walk-rest')));
     await transition(tester);
     expect(find.byType(WalkingScreen), findsNothing);
-    expect(find.textContaining('걷는 중 ·'), findsOneWidget);
+    expect(find.text('걷는 중'), findsOneWidget);
     expect(find.byKey(const ValueKey('rest-walking-pill')), findsOneWidget);
     // 물감 길은 그대로 열려 있다
     final c = ProviderScope.containerOf(tester.element(find.byType(RestScreen)));
@@ -221,6 +223,129 @@ void main() {
     await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
     expect(find.byType(WalkingScreen), findsOneWidget);
     await end(tester, e);
+  });
+
+  group('쉼터↔걷는 중 6규칙 (16장 11/16)', () {
+    Finder pill() => find.byKey(const ValueKey('rest-walking-pill'));
+
+    /// 쉼터 위에 [screen]을 연다
+    Future<void> push(WidgetTester tester, Widget screen) async {
+      tester.state<NavigatorState>(find.byType(Navigator).first)
+          .push(MaterialPageRoute<void>(builder: (_) => screen));
+      await transition(tester);
+      await settle(tester, () => false, tries: 6);
+    }
+
+    void pop(WidgetTester tester) => tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+
+    testWidgets('④ 쉼터 아이콘으로 오면 그 물감 길 동안 저절로 돌아가지 않는다 (걸어도, 쉼터에서 연 화면을 닫아도). '
+        '위 가운데 ‘걷는 중 · 물감 길 n km ›’(지금 물감 색 점, 44pt)를 누르면 걷는 중', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, e.startSketch);
+      await _pumpApp(tester, e);
+      await _startTrail(tester, e);
+      await tester.tap(find.byKey(const Key('walk-rest')));
+      await transition(tester);
+      expect(find.byType(WalkingScreen), findsNothing);
+
+      // 쉼터에서 계속 걸어도 그대로, 알약 거리는 이번 물감 길 거리
+      for (var i = 1; i <= 6; i++) {
+        await _sensor(tester, e, 30, 50010 + i * 50);
+        await _elapse(tester, e, 5);
+      }
+      await settle(tester, () => false, tries: 10);
+      expect(find.byType(WalkingScreen), findsNothing);
+      expect(find.byType(RestScreen), findsOneWidget);
+      expect(pill(), findsOneWidget);
+      expect(tester.getSize(pill()).height, greaterThanOrEqualTo(44));
+      expect(find.descendant(of: pill(), matching: find.text('걷는 중')), findsOneWidget);
+      final km = tester.widget<Text>(find.byKey(const ValueKey('rest-walking-km'))).data!;
+      expect(km, matches(RegExp(r'^· 물감 길 \d+\.\dkm$')));
+      expect(km, isNot('· 물감 길 0.0km'));
+      // 점 = 지금 물감 색 (고른 색이 없으니 기본 물감)
+      final dot = tester.widget<Container>(find.byKey(const ValueKey('rest-walking-dot')));
+      expect((dot.decoration as BoxDecoration).color, Color(e.appRules.paintColor.defaultHex));
+      // 물감 길이 열려 있으니 ‘쉬는 중’은 아니다
+      expect(find.textContaining('쉬는 중'), findsNothing);
+
+      // 쉼터에서 다른 화면(화집)을 열었다 닫아도 쉼터
+      await push(tester, const AlbumScreen());
+      pop(tester);
+      await transition(tester);
+      await settle(tester, () => false, tries: 10);
+      expect(find.byType(WalkingScreen), findsNothing);
+
+      await tester.tap(pill());
+      await transition(tester);
+      expect(find.byType(WalkingScreen), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('③ 다른 화면(화집)에서 걷기 시작하면 그 화면 그대로, 닫으면 걷는 중', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, e.startSketch);
+      await _pumpApp(tester, e);
+      await push(tester, const AlbumScreen());
+
+      await _sensor(tester, e, 0, 50000);
+      await _sensor(tester, e, 30, 50010);
+      await settle(tester, () => false, tries: 20);
+      expect(find.byType(AlbumScreen), findsOneWidget);
+      expect(find.byType(WalkingScreen), findsNothing);
+      final c = ProviderScope.containerOf(tester.element(find.byType(AlbumScreen)));
+      expect(c.read(paintTrailProvider).active, isTrue);
+
+      pop(tester);
+      await transition(tester);
+      await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      expect(find.byType(WalkingScreen), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('① 앱을 다시 열 때 물감 길이 열려 있으면 걷는 중 (쉼터 아이콘으로 떠났어도)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, e.startSketch);
+      await _pumpApp(tester, e);
+      await _startTrail(tester, e);
+      await tester.tap(find.byKey(const Key('walk-rest')));
+      await transition(tester);
+      expect(find.byType(WalkingScreen), findsNothing);
+
+      _hide(tester);
+      await tester.pump(const Duration(milliseconds: 100));
+      e.now = e.now.add(const Duration(seconds: 20));
+      _show(tester);
+      await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+      expect(find.byType(WalkingScreen), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('⑤ 물감 길이 끝날 때 다른 화면(화집)이면 화면은 그대로, 토스트만. 그 뒤 닫으면 쉼터 ‘쉬는 중’', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, e.startSketch);
+      await _pumpApp(tester, e);
+      await _startTrail(tester, e);
+      await tester.tap(find.byKey(const Key('walk-rest')));
+      await transition(tester);
+      await push(tester, const AlbumScreen());
+
+      for (var i = 0; i < 80 && (ProviderScope.containerOf(tester.element(find.byType(AlbumScreen)))
+              .read(paintTrailProvider)
+              .active); i++) {
+        await _elapse(tester, e, 5);
+      }
+      await settle(tester, () => false, tries: 4);
+      expect(find.byType(AlbumScreen), findsOneWidget);
+      expect(find.textContaining('를 그렸어요'), findsOneWidget);
+
+      pop(tester);
+      await transition(tester);
+      await settle(tester, () => false, tries: 6);
+      expect(find.byType(WalkingScreen), findsNothing);
+      expect(pill(), findsNothing);
+      expect(find.textContaining('쉬는 중'), findsOneWidget);
+      await end(tester, e);
+    });
   });
 
   testWidgets('물감 방울: 땅 위 층이 있고, 펼친 알약에 ‘물감 길 n km · 물감 방울 n개’', (tester) async {

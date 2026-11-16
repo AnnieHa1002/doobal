@@ -5,6 +5,7 @@ import 'package:doobal/main.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
+import 'package:doobal/ui/walking/paint_trail_host.dart' show topRouteObserver;
 import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -110,7 +111,7 @@ void main() {
     await end(tester, e);
   });
 
-  testWidgets('도착 뒤 60초 10보면 새 물감 길: 도착 화면이 떠 있는 동안은 기다렸다가 닫으면 걷는 중',
+  testWidgets('도착 뒤 60초 10보면 새 물감 길: 도착 화면이 떠 있는 동안은 기다렸다가 닫으면 쉼터를 거치지 않고 바로 걷는 중',
       (tester) async {
     final e = await openWalking(tester);
     final steps = await walkToArrival(tester, e);
@@ -130,11 +131,18 @@ void main() {
     expect(rows.map((r) => r.endReason), [PaintTrailEnd.arrived, null]);
     expect(rows[1].startUtc, greaterThanOrEqualTo(rows[0].endUtc!));
 
+    // 16장 11/16 ③ ‘다른 화면을 닫으면 걷는 중’ (T9 후속 물을 것 1): 닫는 동안 쉼터가 맨 위가 되지 않는다
+    final restOnTop = <bool>[];
+    void watch() => restOnTop.add(topRouteObserver.restOnTop);
+    topRouteObserver.top.addListener(watch);
+    addTearDown(() => topRouteObserver.top.removeListener(watch));
     await tester.tap(find.byTooltip('닫기'));
     await transition(tester);
     await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
     expect(find.byType(WalkingScreen), findsOneWidget);
     expect(find.byType(ArrivalScreen), findsNothing);
+    expect(restOnTop, isNotEmpty);
+    expect(restOnTop, everyElement(isFalse));
     await end(tester, e);
   });
 
