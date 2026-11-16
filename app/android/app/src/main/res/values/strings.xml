@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Health Connect 권한 화면의 처리방침 링크가 여는 주소 (PrivacyPolicyActivity). lib/app/links.dart와 같은 값 -->
+    <string name="privacy_policy_url" translatable="false">https://annieha1002.github.io/doobal-policy/privacy/</string>
+</resources>

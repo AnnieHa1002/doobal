@@ -40,16 +40,21 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Health Connect 권한 화면의 '개인정보 처리방침' 링크 (Android 13 이하) -->
+        </activity>
+        <!-- Health Connect 권한 화면의 '개인정보 처리방침' 링크 (Android 13 이하): 처리방침 웹 페이지를 열고 닫는다 -->
+        <activity
+            android:name=".PrivacyPolicyActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
         </activity>
-        <!-- 같은 링크 (Android 14 이상). 처리방침 화면은 아직 없음 -->
+        <!-- 같은 링크 (Android 14 이상) -->
         <activity-alias
             android:name="ViewPermissionUsageActivity"
             android:exported="true"
-            android:targetActivity=".MainActivity"
+            android:targetActivity=".PrivacyPolicyActivity"
             android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
@@ -92,6 +97,11 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- 앱 정보의 방침·약관·AI 고지 웹 페이지를 브라우저로 연다 (url_launcher) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
         </intent>
         <!-- Health Connect 설치 여부 확인 -->
         <package android:name="com.google.android.apps.healthdata" />

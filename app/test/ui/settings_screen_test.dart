@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:doobal/app/links.dart';
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/notification_permission.dart';
@@ -14,6 +15,7 @@ import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/notice_page.dart';
 import 'package:doobal/ui/debug/debug_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
+import 'package:doobal/ui/settings/settings_about_screen.dart';
 import 'package:doobal/ui/settings/settings_screen.dart';
 import 'package:doobal/ui/start/welcome_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -65,8 +67,8 @@ Future<void> _openNotice(WidgetTester tester, UiEnv e, {List<Override> extra = c
 }
 
 /// 설정에서 `앱 정보` 줄을 눌러 앱 정보 화면을 연다
-Future<void> _openAbout(WidgetTester tester, UiEnv e) async {
-  await _open(tester, e);
+Future<void> _openAbout(WidgetTester tester, UiEnv e, {List<Override> extra = const []}) async {
+  await _open(tester, e, extra: extra);
   await tester.tap(find.text('앱 정보'));
   await transition(tester);
 }
@@ -155,12 +157,51 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('그림 출처·AI 사용 고지·이용약관·개인정보처리방침은 빈 문서 화면', (tester) async {
+    testWidgets('AI 사용 고지·이용약관·개인정보처리방침은 웹 페이지를 브라우저로 연다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      final opened = <Uri>[];
+      await _openAbout(tester, e, extra: [
+        linkOpenerProvider.overrideWithValue((url) async {
+          opened.add(url);
+          return true;
+        }),
+      ]);
+
+      for (final title in ['AI 사용 고지', '이용약관', '개인정보처리방침']) {
+        await tester.tap(find.text(title));
+        await transition(tester);
+      }
+      expect(opened, [aiNoticeUrl, termsUrl, privacyPolicyUrl]);
+      expect(opened.map((u) => u.toString()), [
+        'https://annieha1002.github.io/doobal-policy/ai/',
+        'https://annieha1002.github.io/doobal-policy/terms/',
+        'https://annieha1002.github.io/doobal-policy/privacy/',
+      ]);
+      expect(find.byType(NoticePage), findsNothing);
+      expect(find.text('앱 정보'), findsOneWidget);
+      expect(find.text(linkFailedText), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('웹 페이지를 못 열면 토스트로 알린다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _openAbout(tester, e, extra: [linkOpenerProvider.overrideWithValue((url) async => false)]);
+
+      await tester.tap(find.text('개인정보처리방침'));
+      await transition(tester);
+      expect(find.text(linkFailedText), findsOneWidget);
+      expect(find.text('앱 정보'), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('그림 출처는 빈 문서 화면 (웹 페이지가 아직 없다)', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _openAbout(tester, e);
 
-      for (final title in ['그림 출처', 'AI 사용 고지', '이용약관', '개인정보처리방침']) {
+      for (final title in ['그림 출처']) {
         await tester.tap(find.text(title));
         await transition(tester);
         expect(find.byType(NoticePage), findsOneWidget, reason: title);

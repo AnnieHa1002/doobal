@@ -32,6 +32,8 @@ dependencies:
   firebase_app_check: ^0.5.1
   google_sign_in: ^7.2.0
   gal: ^2.3.3
+  # 앱 정보의 방침·약관·AI 고지 웹 페이지 열기 (11/16 Annie 허락, T6a)
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
