@@ -85,7 +85,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final colors = cloth.startColors;
     if (!_clothPicked && colors.isNotEmpty) {
       _clothPicked = true;
-      _look = _look.copyWith(clothColor: 1 + ref.read(startClothPickProvider)(colors.length));
+      // props startPick random이면 4색 중 무작위, 아니면 첫 색
+      _look = _look.copyWith(
+          clothColor: 1 + (cloth.startPickRandom ? ref.read(startClothPickProvider)(colors.length) : 0));
     }
     final clothColor = colors.isEmpty
         ? null

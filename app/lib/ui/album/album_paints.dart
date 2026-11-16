@@ -1,67 +1,102 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../app/paint_service.dart';
 import '../../domain/paint_color.dart';
-import '../../domain/sky.dart';
+import '../../domain/rules.dart';
+import '../../domain/scene.dart' show Season, seasonOf;
+import '../../domain/time_kst.dart';
 import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/item_cell.dart';
 import '../common/paint_art.dart';
 import '../common/palette.dart';
 
-/// 물감 색 이름 (화면 글): 시간대·날씨 이름, 뛰기면 앞에 ‘진한’(16장 11/15 디자인 기획 ‘진한 ○○’),
-/// 계절이 붙은 id면 계절 이름을 앞에(‘가을 진한 노을’, 16장 11/15). 기본 물감은 ‘기본’
-const _phaseNames = {
-  SkyPhase.dawn: '새벽',
-  SkyPhase.morning: '아침',
-  SkyPhase.day: '낮',
-  SkyPhase.sunset: '노을',
-  SkyPhase.night: '밤',
-};
-const _weatherNames = {
-  PaintWeather.rain: '비',
-  PaintWeather.snow: '눈',
-  PaintWeather.cloudy: '흐림',
-};
-const _seasonNames = {'spring': '봄', 'summer': '여름', 'autumn': '가을', 'winter': '겨울'};
-
-/// 물감 탭 글 (가안: 캔버스에 없는 흐름)
+/// 물감 탭 글 (가안: 캔버스에 없는 흐름). 걷는 중에 못 고르는 안내는 config choose.whileWalking이 false일 때만
 const paintChooseWhileWalkingLine = '걷는 중에는 물감을 고르지 않아요';
 const paintUsingLabel = '쓰는 중';
 
-String paintColorName(String id, PaintColorRules rules) {
-  if (id == rules.defaultId) return '기본';
-  if (id.startsWith('region.')) {
-    // 지역 색 이름은 권역 데이터가 오면 (16장 11/15). 그전에는 권역 이름만
-    final region = id.substring(id.lastIndexOf('.') + 1);
-    return regionLabels[region] ?? '지역 색';
-  }
-  final base = paintBase(id);
-  if (base == null) return id;
-  final name = base.phase != null ? _phaseNames[base.phase]! : _weatherNames[base.weather]!;
-  final dot = id.indexOf('.');
-  final season = dot < 0 ? null : _seasonNames[id.substring(0, dot)];
-  return [?season, if (base.run) '진한', name].join(' ');
+/// 묶음 이름 (캔버스 6-1, 11/16)
+const paintGroupTitles = {
+  PaintGroup.recent: '최근',
+  PaintGroup.season: '계절 색',
+  PaintGroup.region: '지역 색',
+};
+
+/// 배낭 물감 탭 묶음 하나: 묶음 종류와 칸 (차례대로)
+typedef PaintShelfGroup = ({PaintGroup kind, List<PaintStockView> colors});
+
+/// 배낭 물감 탭 묶음 (캔버스 6-1 11/16 ‘묶음 3개’, config paintColor.backpack.order·recentCount):
+/// - 최근: 기본 물감이 늘 맨 앞 + 마지막으로 주운 색 (recentCount − 1)칸 (첫날은 기본 한 칸)
+/// - 계절 색: 지금 계절 → 지난 계절 차례(가을이면 가을·여름·봄·겨울), 계절 안은 16색 차례. 계절이 없는 키(1단계에서 모은 것)는
+///   마지막으로 주운 날의 계절에 든다
+/// - 지역 색: config region.colors 차례
+/// 같은 색이 최근과 계절·지역에 둘 다 있어도 된다 (캔버스 6-1 메모). 빈 묶음은 없다
+List<PaintShelfGroup> paintShelfGroups(PaintShelfData data, Rules rules, DateTime now) {
+  final pc = rules.paintColor;
+  final basic = data.colors.where((c) => c.basic).toList();
+  final owned = [for (final c in data.colors) if (!c.basic) c];
+  final recent = [...owned]..sort((a, b) => b.lastGotAt!.compareTo(a.lastGotAt!));
+
+  final current = seasonOf(kstDayKey(now), rules);
+  // 지금 계절부터 거꾸로
+  final seasonRank = {
+    for (var i = 0; i < Season.values.length; i++)
+      Season.values[(current.index - i) % Season.values.length]: i,
+  };
+  final colorRank = {for (final (i, id) in pc.colorIds.indexed) id: i};
+  Season seasonOfColor(PaintStockView c) =>
+      paintSeason(c.colorId) ?? seasonOf(kstDayKey(c.lastGotAt ?? now), rules);
+  int baseRank(String id) => colorRank[id.substring(id.indexOf('.') + 1)] ?? colorRank.length;
+  final seasonal = [for (final c in owned) if (pc.regionOf(c.colorId) == null) c]
+    ..sort((a, b) {
+      final s = seasonRank[seasonOfColor(a)]!.compareTo(seasonRank[seasonOfColor(b)]!);
+      if (s != 0) return s;
+      final r = baseRank(a.colorId).compareTo(baseRank(b.colorId));
+      return r != 0 ? r : a.colorId.compareTo(b.colorId);
+    });
+
+  final regionRank = {for (final (i, r) in pc.regions.values.indexed) r.stockId: i};
+  final regional = [for (final c in owned) if (pc.regionOf(c.colorId) != null) c]
+    ..sort((a, b) => regionRank[a.colorId]!.compareTo(regionRank[b.colorId]!));
+
+  return [
+    for (final kind in pc.backpack.order)
+      ?switch (kind) {
+        PaintGroup.basic => null,
+        PaintGroup.recent => (
+            kind: kind,
+            colors: [...basic, ...recent.take(math.max(0, pc.backpack.recentCount - basic.length))],
+          ),
+        PaintGroup.season => seasonal.isEmpty ? null : (kind: kind, colors: seasonal),
+        PaintGroup.region => regional.isEmpty ? null : (kind: kind, colors: regional),
+      },
+  ];
 }
 
-/// 배낭 물감 탭 (캔버스 6-1 물감 탭, 16장 11/14·11/15): 가진 색만 선반에, 기본 물감은 늘 맨 앞(무제한, 꼬리표 빈칸).
-/// 칸을 누르면 바로 그 색이 ‘쓰는 중’(확인 없음), 꼬리표 아래 줄은 쓰는 중이면 ‘쓰는 중’, 아니면 남은 거리.
-/// 가진 색이 3개보다 많으면 맨 위에 최근 주운 3칸 선반을 따로 둔다. 묶음은 접을 수 있다
-/// (계절 색·지역 색 묶음은 개발 기획의 config가 오면 이 ‘모은 색’을 나눈다).
-/// 걷는 중(물감 길이 열린 동안)에는 고르지 않는다 (config paintColor.choose.whileWalking)
+/// 배낭 물감 탭 (캔버스 6-1 물감 탭, 16장 11/14·11/15·11/16): 가진 색만 선반에, 기본 물감은 늘 ‘최근’ 맨 앞(무제한,
+/// 꼬리표 아래 줄 빈칸). 칸을 누르면 바로 그 색이 ‘쓰는 중’(확인 없음), 꼬리표 아래 줄은 쓰는 중이면 ‘쓰는 중’, 아니면
+/// 남은 거리(config backpack.remainStep 단위 내림, ‘1.2 km’). 묶음([paintShelfGroups])은 제목을 누르면 접힌다.
+/// 걷는 중(물감 길이 열린 동안)에도 고르고 그 순간부터 그 색으로 칠한다 (16장 11/16, config choose.whileWalking).
+/// [canChoose]가 false면(config가 걷는 중 고르기를 끄면) 칸이 안 눌리고 안내 한 줄
 class PaintShelves extends StatefulWidget {
   const PaintShelves({
     super.key,
     required this.data,
     required this.rules,
+    required this.now,
     required this.canChoose,
     required this.onChoose,
   });
 
   final PaintShelfData data;
-  final PaintColorRules rules;
+  final Rules rules;
 
-  /// 지금 고를 수 있는가 (걷는 중이 아니다)
+  /// 지금 계절을 정하는 시각
+  final DateTime now;
+
+  /// 지금 고를 수 있는가
   final bool canChoose;
   final ValueChanged<String> onChoose;
 
@@ -70,14 +105,18 @@ class PaintShelves extends StatefulWidget {
 }
 
 class _PaintShelvesState extends State<PaintShelves> {
-  /// 접은 묶음 이름
-  final _folded = <String>{};
+  /// 접은 묶음. 처음은 config backpack.openOnStart: none이면 모두 접고, 그 밖은 모두 펼친다
+  /// (캔버스 6-1 11/16은 처음에 모두 펼침, 묶음 안에 계절별 소제목이 없어서 currentSeason도 그대로 펼친다)
+  late final Set<PaintGroup> _folded = {
+    if (widget.rules.paintColor.backpack.collapsible &&
+        widget.rules.paintColor.backpack.openOnStart == PaintOpenOnStart.none)
+      ...PaintGroup.values,
+  };
 
   @override
   Widget build(BuildContext context) {
-    final colors = widget.data.colors;
-    final owned = [for (final c in colors) if (!c.basic) c];
-    final recent = [...owned]..sort((a, b) => b.lastGotAt!.compareTo(a.lastGotAt!));
+    final groups = paintShelfGroups(widget.data, widget.rules, widget.now);
+    final foldable = widget.rules.paintColor.backpack.collapsible;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -91,21 +130,21 @@ class _PaintShelvesState extends State<PaintShelves> {
               style: TextStyle(fontSize: 14, color: Palette.subInk),
             ),
           ),
-        if (owned.length > 3) ...[
-          _group('recent', '최근', recent.take(3).toList(), foldable: false),
-          const SizedBox(height: 10),
+        for (final (i, g) in groups.indexed) ...[
+          if (i > 0) const SizedBox(height: 10),
+          _group(g, foldable: foldable),
         ],
-        _group('all', '모은 색', colors, foldable: owned.isNotEmpty),
       ],
     );
   }
 
-  Widget _group(String key, String title, List<PaintStockView> colors, {required bool foldable}) {
-    final folded = foldable && _folded.contains(key);
+  Widget _group(PaintShelfGroup g, {required bool foldable}) {
+    final key = g.kind.name;
+    final folded = foldable && _folded.contains(g.kind);
     final header = Row(
       children: [
-        Expanded(child: Text(title, style: context.display(14))),
-        Text('${colors.length}', style: AppText.label),
+        Expanded(child: Text(paintGroupTitles[g.kind]!, style: context.display(14))),
+        Text('${g.colors.length}', style: AppText.label),
         if (foldable)
           Icon(folded ? Icons.expand_more : Icons.expand_less, size: 20, color: Palette.subInk),
       ],
@@ -124,7 +163,7 @@ class _PaintShelvesState extends State<PaintShelves> {
               child: GestureDetector(
                 key: ValueKey('paint-fold-$key'),
                 behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() => folded ? _folded.remove(key) : _folded.add(key)),
+                onTap: () => setState(() => folded ? _folded.remove(g.kind) : _folded.add(g.kind)),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(minHeight: 44),
                   child: Align(alignment: Alignment.centerLeft, child: header),
@@ -137,7 +176,7 @@ class _PaintShelvesState extends State<PaintShelves> {
             const SizedBox(height: 8),
             ItemShelf(
               rowGap: 16,
-              cells: [for (final (i, c) in colors.indexed) _cell(key, c, i)],
+              cells: [for (final (i, c) in g.colors.indexed) _cell(key, c, i)],
             ),
           ],
         ],
@@ -146,18 +185,19 @@ class _PaintShelvesState extends State<PaintShelves> {
   }
 
   Widget _cell(String group, PaintStockView c, int i) {
+    final pc = widget.rules.paintColor;
     final using = c.colorId == widget.data.current;
     return ItemCell(
       key: ValueKey('paint-$group-${c.colorId}'),
-      name: paintColorName(c.colorId, widget.rules),
+      name: pc.nameOf(c.colorId),
       art: SizedBox(
         width: 56,
         height: 56,
-        child: PaintTubeArt(color: Color(widget.rules.hexOf(c.colorId))),
+        child: PaintTubeArt(color: Color(pc.hexOf(c.colorId))),
       ),
       tilt: i,
       selected: using,
-      state: using ? paintUsingLabel : (c.basic ? '' : formatKm(c.remainM / 1000)),
+      state: using ? paintUsingLabel : (c.basic ? '' : formatKm(pc.backpack.remainKm(c.remainM))),
       stateColor: using ? Palette.terracotta : Palette.moss,
       onTap: widget.canChoose && !using ? () => widget.onChoose(c.colorId) : null,
     );

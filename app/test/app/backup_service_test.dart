@@ -161,9 +161,7 @@ Future<void> _fill(AppDb db) async {
       PaintTrailsCompanion.insert(
           startUtc: _ms(_synced) - 3600000,
           endUtc: Value(_ms(_synced) - 1800000),
-          endReason: const Value(PaintTrailEnd.idle),
-          colorId: const Value('sunset'),
-          colorEndUtc: Value(_ms(_synced) - 2000000)),
+          endReason: const Value(PaintTrailEnd.idle)),
       PaintTrailsCompanion.insert(
           startUtc: _ms(_synced) - 7200000,
           endUtc: Value(_ms(_synced) - 7000000),
@@ -346,6 +344,12 @@ Future<void> _fill(AppDb db) async {
       PaintTubesCompanion.insert(trailId: 1, dropNo: 4, colorId: 'rain_run', amountM: 990, atUtc: 100),
       PaintTubesCompanion.insert(trailId: 1, dropNo: 9, colorId: 'rain_run', amountM: 1100, atUtc: 200),
     ]);
+    // 물감 길 색 구간 (스키마 20): 첫 물감 길을 노을로 열고 걷는 중에 지역 색, 다 써서 기본
+    b.insertAll(db.paintTrailColors, [
+      PaintTrailColorsCompanion.insert(trailId: 1, fromUtc: _ms(_synced) - 3600000, colorId: 'autumn.sunset'),
+      PaintTrailColorsCompanion.insert(trailId: 1, fromUtc: _ms(_synced) - 3000000, colorId: 'region.kr.capital'),
+      PaintTrailColorsCompanion.insert(trailId: 1, fromUtc: _ms(_synced) - 2000000, colorId: 'basic'),
+    ]);
     b.insert(
       db.syncState,
       SyncStateCompanion.insert(
@@ -386,6 +390,7 @@ Future<Map<String, Object?>> _userState(AppDb db) async => {
       'reportState': await db.select(db.reportState).get(),
       'paintStock': await db.select(db.paintStock).get(),
       'paintTubes': await db.select(db.paintTubes).get(),
+      'paintTrailColors': await db.select(db.paintTrailColors).get(),
       'profile': [
         for (final r in await db.select(db.profile).get())
           r.copyWith(
@@ -456,7 +461,7 @@ void main() {
       final json = _json(await svcA.exportBackup(_now));
       expect(json['format'], 1);
       expect(json['schema'], a.schemaVersion);
-      expect(json['schema'], 19);
+      expect(json['schema'], 20);
       expect(json['createdUtc'], _ms(_now));
       expect(json['syncedUtc'], _ms(_synced));
       expect((json['tables'] as Map<String, dynamic>).keys, svcA.includedTableNames);
@@ -551,10 +556,12 @@ void main() {
       // 본격 걷기 보너스 열은 없다
       expect(dayCols, isNot(anyOf(contains('bonus_m'), contains('walk_travel_m'))));
       expect((tables['walk_sessions'] as Map)['cols'], isNot(contains('bonus_m')));
-      expect((tables['paint_trails'] as Map)['cols'],
-          ['id', 'start_utc', 'end_utc', 'end_reason', 'color_id', 'color_end_utc']);
-      // 물감 보관·주운 통과 고른 물감 (스키마 18)
-      expect(tables.keys, containsAll(['paint_stock', 'paint_tubes']));
+      expect((tables['paint_trails'] as Map)['cols'], ['id', 'start_utc', 'end_utc', 'end_reason']);
+      // 물감 보관·주운 통과 고른 물감 (스키마 18), 물감 길 색 구간 (스키마 20)
+      expect(tables.keys, containsAll(['paint_stock', 'paint_tubes', 'paint_trail_colors']));
+      expect((tables['paint_trail_colors'] as Map)['rows'], hasLength(3));
+      // 그날 날씨는 이 기기에만 둔다 (sync_state)
+      expect(jsonEncode(json), isNot(contains('weather_day')));
       expect((tables['profile'] as Map)['cols'], contains('paint_color_id'));
       expect((tables['coin_ledger'] as Map)['rows'], hasLength(3));
       // 앱이 살아 있던 마지막 시각·다시 계산할 날은 이 기기에만 둔다

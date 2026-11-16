@@ -23,6 +23,7 @@ class Prop {
     this.colorName,
     this.materialArgb,
     this.startColors = const [],
+    this.startPickRandom = false,
   });
 
   final String id;
@@ -58,6 +59,10 @@ class Prop {
   /// 그 밖의 소품은 비어 있다
   final List<PropColor> startColors;
 
+  /// 정령 만들기에서 처음 골라져 있는 시작 색을 무작위로 고르는가 (props cloth_02.startPick random, 16장 11/15).
+  /// false면 첫 색
+  final bool startPickRandom;
+
   bool get isColorVariant => variantOf != null;
 
   factory Prop.fromJson(Map<String, dynamic> j) {
@@ -92,6 +97,11 @@ class Prop {
         for (final c in (j['startColors'] as List?) ?? const [])
           PropColor.fromJson(c as Map<String, dynamic>, j['id'] as String),
       ],
+      startPickRandom: switch (j['startPick']) {
+        null || 'first' => false,
+        'random' => true,
+        final v => throw FormatException('startPick을 모른다: $v (${j['id']})'),
+      },
     );
   }
 }

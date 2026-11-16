@@ -20,7 +20,7 @@ import '../domain/journey.dart';
 import '../domain/landmark.dart';
 import '../domain/laps.dart';
 import '../domain/notification_policy.dart';
-import '../domain/paint_color.dart' show TrailPaint, paintedColorAt;
+import '../domain/paint_color.dart' show PaintSegment, TrailPaint, paintedColorAt;
 import '../domain/paint_trail.dart';
 import '../domain/prop.dart';
 import '../domain/restore_floor.dart';
@@ -1984,14 +1984,21 @@ class SyncService {
     ];
   }
 
-  /// 물감 길마다 칠한 색 (지도 구간 색, 스키마 18)
-  Future<List<TrailPaint>> _trailPaints() async => [
-        for (final r in await (db.select(db.paintTrails)
-              ..orderBy([(t) => OrderingTerm(expression: t.startUtc)]))
-            .get())
-          TrailPaint(
-              startMs: r.startUtc, endMs: r.endUtc, colorId: r.colorId, colorEndMs: r.colorEndUtc),
-      ];
+  /// 물감 길마다 칠한 색 구간 (지도 구간 색, 스키마 20 PaintTrailColors)
+  Future<List<TrailPaint>> _trailPaints() async {
+    final segs = <int, List<PaintSegment>>{};
+    for (final r in await (db.select(db.paintTrailColors)
+          ..orderBy([(t) => OrderingTerm(expression: t.fromUtc)]))
+        .get()) {
+      (segs[r.trailId] ??= []).add(PaintSegment(r.fromUtc, r.colorId));
+    }
+    return [
+      for (final r in await (db.select(db.paintTrails)
+            ..orderBy([(t) => OrderingTerm(expression: t.startUtc)]))
+          .get())
+        TrailPaint(startMs: r.startUtc, endMs: r.endUtc, segments: segs[r.id] ?? const []),
+    ];
+  }
 
   /// [destId]로 지금 자리에서 가면 환산 거리와 며칠 걸리는지. 동기화·저장은 하지 않는다.
   /// 출발지는 진행 중인 여정의 지금 지점, 없으면 쉬는 자리. 둘 다 없으면 StateError(startJourney와 같다)

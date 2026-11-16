@@ -66,9 +66,11 @@ class BackupService {
     // 이 표가 없는 옛 백업을 복원하면 비어서 첫 기록일 전날로 본다
     db.reportState: {},
     // 물감 보관·주운 물감 통 (스키마 18, 16장 11/14 ‘백업 복원에도 같은 결과’): 통 줄이 있어야 같은 방울을 다시 넘겨도
-    // 두 번 받지 않는다. 물감 길의 칠한 색·프로필의 고른 물감은 그 표의 열이라 같이 들어간다
+    // 두 번 받지 않는다. 프로필의 고른 물감은 그 표의 열이라 같이 들어간다
     db.paintStock: {},
     db.paintTubes: {},
+    // 물감 길 색 구간 (스키마 20, 스키마 v10.7). 18~19 백업의 물감 길 색 두 열은 옮기지 않는다 (출시 전, 기본 물감으로)
+    db.paintTrailColors: {},
     db.profile: {
       db.profile.ageConfirmedAt.$name,
       db.profile.onboardedAt.$name,
