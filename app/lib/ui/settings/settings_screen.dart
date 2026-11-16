@@ -17,8 +17,9 @@ import 'settings_account.dart';
 import 'settings_notice_screen.dart';
 import 'settings_rows.dart';
 
-/// 설정 (캔버스 10-1): 계정 연결(M5, settings_account.dart), 걸음 데이터, 알림 ›, 광고 동의 다시 고르기(M4.5), 앱 정보 ›,
-/// 계정 삭제. 개발자 화면은 출시 빌드에 나오지 않는다
+/// 설정 (캔버스 10-1): 계정 연결(M5, settings_account.dart), 걸음 데이터, 알림 ›, 앱 정보 ›, 계정 삭제.
+/// ‘광고 동의 다시 고르기’는 뺐다 (16장 11/16 Annie: 한국 이용자에게 UMP 동의 창이 뜨지 않아 동의 없이 위탁으로,
+/// 맞춤 광고 끄기는 방침의 기기 설정 안내만). 개발자 화면은 출시 빌드에 나오지 않는다
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -152,8 +153,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       value: noticeNote,
                       onTap: () => _push(const SettingsNoticeScreen()),
                     ),
-                    // TODO(M4.5): 광고 SDK를 붙일 때 UMP 동의 창을 다시 연다
-                    const SettingsRow('광고 동의 다시 고르기', note: '준비 중'),
                     SettingsRow('앱 정보', onTap: () => _push(const SettingsAboutScreen())),
                   ]),
                   if (!kReleaseMode) ...[

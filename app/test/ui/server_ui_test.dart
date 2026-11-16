@@ -235,7 +235,7 @@ void main() {
       for (final t in ['구글', '애플', '카카오']) {
         expect(find.text(t), findsOneWidget);
       }
-      expect(find.text('준비 중'), findsOneWidget); // 광고 동의만
+      expect(find.text('준비 중'), findsNothing); // 광고 동의 줄은 16장 11/16에 뺐다
 
       await tester.tap(find.text('구글'));
       await settle(tester, () => _accountText(tester) == '구글로 연결됨');
@@ -260,7 +260,8 @@ void main() {
       s.kakao.available = false;
       await e.seed(tester);
       await _openSettings(tester, e, s);
-      expect(find.text('준비 중'), findsNWidgets(2));
+      // 카카오 한 줄 (광고 동의 줄은 16장 11/16에 뺐다)
+      expect(find.text('준비 중'), findsOneWidget);
       await end(tester, e);
     });
 

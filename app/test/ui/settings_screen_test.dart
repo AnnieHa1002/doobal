@@ -141,8 +141,9 @@ void main() {
       for (final t in ['계정 연결', '구글', '애플', '카카오', '알림']) {
         expect(find.text(t), findsOneWidget, reason: t);
       }
-      // 구글·애플·카카오 세 줄 + 광고 동의 (M4.5)
-      expect(find.text('준비 중'), findsNWidgets(4));
+      // 구글·애플·카카오 세 줄. ‘광고 동의 다시 고르기’는 뺐다 (16장 11/16)
+      expect(find.text('준비 중'), findsNWidgets(3));
+      expect(find.text('광고 동의 다시 고르기'), findsNothing);
       expect(find.text('글꼴 고르기'), findsNothing);
 
       // 눌러도 아무 일도 없다
