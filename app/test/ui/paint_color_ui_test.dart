@@ -61,7 +61,8 @@ void main() {
     await end(tester, e);
   });
 
-  testWidgets('가진 색: 새 색 점 → 탭을 열면 지움, 최근(기본 + 2) → 계절 색(지금 계절부터) → 지역 색, 이름·남은 거리, 누르면 쓰는 중, 접기',
+  testWidgets('가진 색: 새 색 점 → 탭을 열면 지움, 최근(기본 + 최근 쓴 2) → 계절 색(지금 계절부터) → 지역 색, 이름·남은 거리, '
+      '누르면 쓰는 중(최근 맨 앞으로), 접기',
       (tester) async {
     final e = UiEnv();
     int ago(int min) => t1.subtract(Duration(minutes: min)).millisecondsSinceEpoch;
@@ -74,6 +75,21 @@ void main() {
       await _stock(e, 'autumn.day', 2400, lastGotAt: ago(50));
       // 다 쓴 색은 배낭에 없다
       await _stock(e, 'autumn.snow', 0, lastGotAt: ago(5));
+      // 칠한 차례 (물감 길 색 구간, 16장 11/17 ②): 여름 진한 비 마지막 55분 전, 밤 90분 전, 다 쓴 가을 눈 30분 전
+      for (final (id, from, to) in [(1, 100, 80), (2, 60, 25)]) {
+        await e.db.into(e.db.paintTrails).insert(PaintTrailsCompanion.insert(
+            id: Value(id), startUtc: ago(from), endUtc: Value(ago(to))));
+      }
+      for (final (trail, at, color) in [
+        (1, 100, 'summer.rain_run'),
+        (1, 90, 'night'),
+        (2, 60, 'basic'),
+        (2, 55, 'summer.rain_run'),
+        (2, 30, 'autumn.snow'),
+      ]) {
+        await e.db.into(e.db.paintTrailColors)
+            .insert(PaintTrailColorRow(trailId: trail, fromUtc: ago(at), colorId: color));
+      }
     });
     await openOnTop(tester, e, const AlbumScreen(),
         ready: () => _key('tab-paints').evaluate().isNotEmpty);
@@ -94,10 +110,13 @@ void main() {
         isTrue);
     expect(find.descendant(of: _key('paint-group-season'), matching: find.text('계절 색')), findsOneWidget);
     expect(find.descendant(of: _key('paint-group-region'), matching: find.text('지역 색')), findsOneWidget);
-    // 최근 3칸 = 기본 + 마지막으로 주운 둘 (가을 노을 10분 전, 수도권 단청 주홍 20분 전)
-    expect(x('paint-recent-basic') < x('paint-recent-autumn.sunset') &&
-        x('paint-recent-autumn.sunset') < x('paint-recent-region.kr.capital'), isTrue);
-    expect(_key('paint-recent-summer.rain_run'), findsNothing);
+    // 최근 3칸 = 기본 + 최근에 쓴 둘 (여름 진한 비 → 밤). 마지막으로 주운 가을 노을은 아직 안 써서 아니고,
+    // 다 쓴 가을 눈은 없다
+    expect(x('paint-recent-basic') < x('paint-recent-summer.rain_run') &&
+        x('paint-recent-summer.rain_run') < x('paint-recent-night'), isTrue);
+    expect(_key('paint-recent-autumn.sunset'), findsNothing);
+    expect(_key('paint-recent-region.kr.capital'), findsNothing);
+    expect(_key('paint-recent-autumn.snow'), findsNothing);
     // 계절 색: 가을(낮 → 노을 → 밤) → 여름, 3열
     expect(y('paint-season-autumn.day'), y('paint-season-night'));
     expect(x('paint-season-autumn.day') < x('paint-season-autumn.sunset') &&
@@ -123,9 +142,12 @@ void main() {
         .descendant(of: _key('paint-season-autumn.sunset'), matching: find.text(paintUsingLabel))
         .evaluate()
         .isNotEmpty);
-    // 최근의 같은 색도 쓰는 중, 기본은 아님
+    // 고른 색이 최근 맨 앞(기본 다음)에 쓰는 중으로 들고 밤은 밀려난다. 기본은 쓰는 중이 아님
     expect(find.descendant(of: _key('paint-recent-autumn.sunset'), matching: find.text(paintUsingLabel)),
         findsOneWidget);
+    expect(x('paint-recent-basic') < x('paint-recent-autumn.sunset') &&
+        x('paint-recent-autumn.sunset') < x('paint-recent-summer.rain_run'), isTrue);
+    expect(_key('paint-recent-night'), findsNothing);
     expect(find.descendant(of: _key('paint-recent-basic'), matching: find.text(paintUsingLabel)),
         findsNothing);
     final profile = await tester.runAsync(

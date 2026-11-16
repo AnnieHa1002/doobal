@@ -89,7 +89,7 @@ mixin HoldsPaintTrail<T extends ConsumerStatefulWidget> on ConsumerState<T> {
 }
 
 /// 걷는 중 구석 쉼터 아이콘으로 쉼터에 온 물감 길 번호 (16장 11/16 ④): 그 물감 길 동안은 저절로 걷는 중으로
-/// 되돌아가지 않는다 (쉼터에서 연 화면을 닫아도 쉼터). 새 물감 길이 열리거나 앱을 다시 열면(①) 비운다
+/// 되돌아가지 않는다 (쉼터에서 연 화면을 닫아도, 앱을 다시 열어도 쉼터. 11/17 ④가 ①보다 먼저). 새 물감 길이 열리면 비운다
 class WalkingDismissed extends Notifier<int?> {
   @override
   int? build() => null;
@@ -118,12 +118,13 @@ bool walkingDue(WidgetRef ref) {
 
 /// 물감 길 화면 전환 (16장 11/16 ‘쉼터↔걷는 중 화면 흐름’ 6규칙, 8장 3번, 캔버스 2-2·3-1): 쉼터 위에 둔다 (StartGate).
 /// 기준은 물감 길이 열려 있느냐다.
-/// ① 앱을 다시 열 때(앞으로 올 때) 물감 길이 열려 있으면 걷는 중 (쉼터 아이콘으로 떠났어도 다시, 가안).
-///   앱을 새로 켜면 앞 실행의 물감 길은 닫혀 있어(AutoSync appEnded) 쉼터다.
+/// ① 앱을 다시 열 때(앞으로 올 때) 물감 길이 열려 있으면 걷는 중. 단 그 물감 길에서 쉼터 아이콘으로 떠났으면
+///   쉼터 그대로다 (16장 11/17: ④가 ①보다 먼저). 앱을 새로 켜면 앞 실행의 물감 길은 닫혀 있어(AutoSync appEnded) 쉼터다.
 /// ② 쉼터에서 걷기 시작하면 저절로 걷는 중.
 /// ③ 다른 화면(지도·화집·꾸미기·상점·도착 등)이나 시트·다이얼로그가 떠 있으면 그대로 두고, 닫혀서 쉼터가 맨 위가
 ///   되면 걷는 중. 기다리는 사이 물감 길이 끝나면 넘어가지 않는다.
-/// ④ 걷는 중 구석 쉼터 아이콘으로 쉼터에 오면 그 물감 길 동안은 저절로 되돌아가지 않는다 ([walkingDismissedProvider]).
+/// ④ 걷는 중 구석 쉼터 아이콘으로 쉼터에 오면 그 물감 길 동안은 저절로 되돌아가지 않는다 ([walkingDismissedProvider],
+///   앱을 껐다 켜도 그대로. 새 물감 길이 열리면 잊는다).
 ///   쉼터 위 가운데 ‘걷는 중 · 물감 길 n km ›’를 누르면 걷는 중.
 /// ⑤ 걸음이 멈춰 물감 길이 끝나면 걷는 중 화면이 맨 위일 때 쉼터로 돌아가고 토스트 `물감 길 n km를 그렸어요`
 ///   (다른 화면을 보고 있으면 화면은 그대로, 토스트만).
@@ -158,10 +159,9 @@ class _PaintTrailHostState extends ConsumerState<PaintTrailHost> {
         _onEnded(next);
       }
     });
-    // ① 앱을 다시 열면 열린 물감 길로
+    // ① 앱을 다시 열면 열린 물감 길로 (쉼터 아이콘으로 떠난 물감 길이면 walkingDue가 막는다: ④가 먼저)
     ref.listenManual(appForegroundProvider, (prev, next) {
       if (prev == false && next && ref.read(paintTrailProvider).active) {
-        ref.read(walkingDismissedProvider.notifier).set(null);
         _pendingOpen = true;
         _tryOpen();
       }

@@ -31,14 +31,17 @@ class PaintStockView {
   bool get basic => remainM == double.infinity;
 }
 
-/// 배낭 물감 탭 한 번 읽은 것: 가진 색(기본 물감이 맨 앞)과 지금 칠할 물감
+/// 배낭 물감 탭 한 번 읽은 것: 가진 색(기본 물감이 맨 앞)과 지금 칠할 물감, 최근에 고른(쓴) 색 차례
 class PaintShelfData {
-  const PaintShelfData({required this.colors, required this.current});
+  const PaintShelfData({required this.colors, required this.current, this.recent = const []});
 
   final List<PaintStockView> colors;
 
   /// 지금 칠할 물감 id (고른 색이 남았으면 그 색, 아니면 기본 물감)
   final String current;
+
+  /// 최근에 고른(쓴) 색 id, 최근 것부터 (기본 물감 빼고, 다 쓴 색도 들 수 있다). [PaintService.shelf] 참고
+  final List<String> recent;
 }
 
 /// 물감 보관·고르기·칠하기·물감 통 받기 (16장 11/14·11/15·11/16, M1 v0.7·v0.8, 스키마 18·20).
@@ -224,6 +227,7 @@ class PaintService {
       final r = rank(a.colorId).compareTo(rank(b.colorId));
       return r != 0 ? r : a.colorId.compareTo(b.colorId);
     });
+    final current = await currentColor();
     return PaintShelfData(
       colors: [
         PaintStockView(colorId: _pc.defaultId, tubes: 0, remainM: double.infinity),
@@ -237,8 +241,27 @@ class PaintService {
             seen: r.seen,
           ),
       ],
-      current: await currentColor(),
+      current: current,
+      recent: await _recentIds(current),
     );
+  }
+
+  /// 최근에 고른(쓴) 색 id, 최근 것부터 (16장 11/17 ②, 캔버스 6-1 ‘최근 쓴’): 지금 고른 색이 맨 앞, 그 뒤는 물감 길
+  /// 색 구간(PaintTrailColors)을 마지막으로 시작한 시각 차례. 기본 물감은 뺀다. 새 칸 없이 프로필 고른 물감과 색 구간만
+  /// 읽어서, 걷지 않는 사이 골랐다가 칠하기 전에 바꾼 색은 남지 않는다
+  Future<List<String>> _recentIds(String current) async {
+    final t = db.paintTrailColors;
+    final last = t.fromUtc.max();
+    final rows = await (db.selectOnly(t)
+          ..addColumns([t.colorId, last])
+          ..groupBy([t.colorId])
+          ..orderBy([OrderingTerm.desc(last), OrderingTerm.asc(t.colorId)]))
+        .get();
+    return {
+      if (current != _pc.defaultId) current,
+      for (final r in rows)
+        if (r.read(t.colorId) case final id? when id != _pc.defaultId) id,
+    }.toList();
   }
 
   /// 처음 모은 뒤 아직 배낭에서 안 본 색 수 (배낭 새 소식 점)
