@@ -1,35 +1,31 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/rules.dart';
+import '../../domain/screen_rules.dart';
 import '../../domain/spirit_look.dart';
-import '../common/app_text.dart';
 import '../common/palette.dart';
 import '../scene/spirit_character.dart';
 import '../scene/spirit_controller.dart';
-import 'decorate_widgets.dart';
 
-/// 동작 미리보기 단추: (이름, Rive 표정 번호). 저장하지 않는 미리보기다 (palette.json expressions)
-const previewExpressions = [
-  ('기본', 0),
-  ('기쁨', 1),
-  ('인사', 2),
-  ('배 눌림', 3),
-  ('잠들기', 4),
-  ('화남', 5),
-  ('머리 눌림', 6),
-];
+/// 미리보기를 [turn]번 돌린 자세: [order](config customizePreview.swipe, 정면 → 옆 → 뒤)를 돌아 가며
+int turnedPose(List<int> order, int turn) => order[turn % order.length];
 
-/// 꾸미기 위 미리보기: 쉼터와 같은 정령을 정면으로 풀밭 위에 세운다. 머리·배를 누르면 정령이 반응하고
-/// 연타하면 화낸다. 아래에 입고 있는 소품 요약 줄, 오른쪽 위에 동작 미리보기 단추 여섯.
-/// 고르는 대로 얼굴·몸 색이 바뀌고, Rive에 붙은 소품(domain/spirit_look.dart)도 입는다
-class SpiritPreview extends StatelessWidget {
+/// 손가락이 이만큼(pt) 옆으로 가면 한 번 돌린다 (빠르게 튕기면 짧아도 돌린다)
+const _turnDragPt = 32.0;
+const _turnFlingPtPerSec = 300.0;
+
+/// 꾸미기 위 미리보기: 쉼터와 같은 정령을 풀밭 위에 세운다. 좌우로 밀면 정면·옆·뒤로 돌려 보고
+/// (16장 11/13, 왼쪽으로 밀면 다음 자세), 머리·배를 누르면 반응하고 연타하면 화낸다. 표정 미리보기 단추는 없다.
+/// 아래에 입고 있는 소품 요약 줄. 고르는 대로 얼굴·몸 색이 바뀌고, Rive에 붙은 소품(domain/spirit_look.dart)도 입는다
+class SpiritPreview extends StatefulWidget {
   const SpiritPreview({
     super.key,
     required this.look,
     required this.summary,
-    required this.expression,
-    required this.onExpression,
+    required this.onTurn,
+    this.pose,
     this.tapRules,
+    this.cues,
     this.onReady,
   });
 
@@ -38,14 +34,34 @@ class SpiritPreview extends StatelessWidget {
 
   /// 입고 있는 소품 이름을 이은 줄 ("소품 없음"이면 비었다는 뜻)
   final String summary;
-  final int expression;
-  final ValueChanged<int> onExpression;
+
+  /// 지금 보이는 자세 (poseChoice)
+  final int? pose;
+
+  /// 밀어서 돌렸다: +1 다음 자세(왼쪽으로 밂), -1 앞 자세(오른쪽으로 밂)
+  final ValueChanged<int> onTurn;
   final Rules? tapRules;
+  final SpiritCues? cues;
+
+  @override
+  State<SpiritPreview> createState() => _SpiritPreviewState();
+}
+
+class _SpiritPreviewState extends State<SpiritPreview> {
+  var _dragDx = 0.0;
+
+  void _endDrag(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0;
+    final dx = _dragDx;
+    _dragDx = 0;
+    if (dx.abs() >= _turnDragPt || v.abs() >= _turnFlingPtPerSec) {
+      widget.onTurn((dx != 0 ? dx : v) < 0 ? 1 : -1);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 표정 단추 아래에 요약 두 줄 자리를 비운다 (글자를 키우면 같이 넓어진다)
-    final summaryRoom = 20 + MediaQuery.textScalerOf(context).scale(11) * 2.8;
+    final look = widget.look;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: DecoratedBox(
@@ -67,13 +83,28 @@ class SpiritPreview extends StatelessWidget {
                 ),
               ),
               Positioned.fill(
-                // 발이 요약 줄에 가리지 않게 올려 세운다
-                child: SpiritStanding(
-                  look: look,
-                  footAt: 0.82,
-                  expression: expression,
-                  tapRules: tapRules,
-                  onReady: onReady,
+                child: Semantics(
+                  label: '정령 돌려 보기',
+                  onIncrease: () => widget.onTurn(1),
+                  onDecrease: () => widget.onTurn(-1),
+                  child: GestureDetector(
+                    key: const ValueKey('preview-turn'),
+                    // 정령 그림이 없는 자리(풀밭·빈 곳)를 밀어도 돈다
+                    behavior: HitTestBehavior.opaque,
+                    onHorizontalDragStart: (_) => _dragDx = 0,
+                    onHorizontalDragUpdate: (d) => _dragDx += d.primaryDelta ?? 0,
+                    onHorizontalDragEnd: _endDrag,
+                    onHorizontalDragCancel: () => _dragDx = 0,
+                    // 발이 요약 줄에 가리지 않게 올려 세운다
+                    child: SpiritStanding(
+                      look: look,
+                      footAt: 0.82,
+                      pose: widget.pose,
+                      cues: widget.cues,
+                      tapRules: widget.tapRules,
+                      onReady: widget.onReady,
+                    ),
+                  ),
                 ),
               ),
               Positioned(
@@ -91,7 +122,7 @@ class SpiritPreview extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '$summary${expression == 0 ? '' : '  ·  동작 미리보기'}',
+                    widget.summary,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -102,81 +133,7 @@ class SpiritPreview extends StatelessWidget {
                   ),
                 ),
               ),
-              // 미리보기가 낮아도 단추가 잘리지 않게 줄어든다
-              Positioned(
-                right: 8,
-                top: 8,
-                bottom: summaryRoom,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topRight,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      for (final (name, value) in previewExpressions) ...[
-                        if (value > 0) const SizedBox(height: 3),
-                        _ExpressionButton(
-                          key: ValueKey('expr-$value'),
-                          name: name,
-                          selected: expression == value,
-                          onTap: () => onExpression(value),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ExpressionButton extends StatelessWidget {
-  const _ExpressionButton({
-    super.key,
-    required this.name,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String name;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: '동작 $name',
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          // 글자 크기를 키우면 단추도 같이 커진다 (바깥 FittedBox가 칸에 맞춰 줄인다)
-          constraints: const BoxConstraints(minWidth: 56, minHeight: 26),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected
-                ? Palette.ink
-                : Palette.card.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(13),
-            border: Border.all(
-              color: selected ? Palette.ink : lineColor,
-              width: InkLine.pill,
-            ),
-          ),
-          child: Text(
-            name,
-            style: context.display(
-              12,
-              color: selected ? Palette.card : Palette.ink,
-            ),
           ),
         ),
       ),

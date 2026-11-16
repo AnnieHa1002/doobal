@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/main.dart';
+import 'package:doobal/ui/day_card/day_card_view.dart' show DayCardPage;
 import 'package:doobal/ui/day_card/walk_report_screen.dart';
 import 'package:doobal/ui/note/note_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
@@ -337,7 +338,7 @@ void main() {
   });
 
   group('노트 걷기 기록 (6-3)', () {
-    testWidgets('맨 위 리포트 줄, 날짜 줄을 누르면 그날 카드(본 날로 적지 않음), 오늘 줄은 아직 못 누른다',
+    testWidgets('맨 위 리포트 줄, 날짜 줄을 누르면 그날 카드(본 날로 적지 않음), 오늘 줄은 아직 없다',
         (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
@@ -353,14 +354,16 @@ void main() {
       await tester.pump();
 
       expect(_key('walk-report-row'), findsOneWidget);
-      expect(find.text('3,000보 · 2.1 km'), findsOneWidget);
-      // 물감 길이 없어도 걸은 날은 날짜 줄이 있다. 오늘(21일)은 내일 새벽 5시 뒤에 누를 수 있다
-      expect(find.text('11월 21일'), findsOneWidget);
+      final card18 = _key('day-card-2026-11-18');
+      expect(find.descendant(of: card18, matching: find.text('3,000보')), findsOneWidget);
+      expect(find.descendant(of: card18, matching: find.text('2.1km')), findsOneWidget);
+      // 물감 길이 없어도 걸은 날은 날짜 줄이 있다. 오늘(21일) 줄은 내일 새벽 5시 뒤에 생긴다 (16장 11/16)
+      expect(find.text('11월 21일'), findsNothing);
       expect(_key('day-2026-11-21'), findsNothing);
       expect(_key('day-2026-11-18'), findsOneWidget);
       expect(
           tester.getTopLeft(_key('walk-report-row')).dy,
-          lessThan(tester.getTopLeft(find.text('11월 21일')).dy));
+          lessThan(tester.getTopLeft(_key('day-2026-11-18')).dy));
 
       await tester.tap(_key('day-2026-11-18'));
       await settle(tester, () => _key('day-card-close').evaluate().isNotEmpty);
@@ -368,7 +371,9 @@ void main() {
       // 어제가 아니라 날짜가 제목, 작은 줄은 요일
       expect(find.text('11월 18일'), findsWidgets);
       expect(find.text('수요일'), findsOneWidget);
-      expect(find.text('3,000보'), findsOneWidget);
+      // 카드의 걸음 (아래 깔린 노트 날짜 줄에도 ‘3,000보’가 있다)
+      expect(
+          find.descendant(of: find.byType(DayCardPage), matching: find.text('3,000보')), findsOneWidget);
 
       await tester.tap(_key('day-card-close'));
       await transition(tester);

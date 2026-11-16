@@ -169,6 +169,11 @@ class SyncState extends Table {
   /// 다시 계산하면 null로 지운다. 이 기기에만 두는 값
   TextColumn get recomputeFromDay => text().nullable()();
 
+  /// 상점의 새 상품을 마지막으로 본 시각 (epoch ms, 스키마 19, 16장 11/13 수레 점·11/16 Annie ‘저장’).
+  /// 이 뒤에 얻은 기본 소품의 색 소품이 새 상품이다. null이면 설치 시각([installUtc])으로 본다 (첫날 점 없음).
+  /// 이 기기에만 두는 값 (백업에 넣지 않는 표)
+  IntColumn get shopSeenUtc => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -485,12 +490,25 @@ class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          // 앞 판의 일부 표만 흉내 낸 DB(시험)에서도 돌게, 표가 있는지·열이 없는지 본다
+          Future<bool> hasTable(String table) async => (await customSelect(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+                variables: [Variable.withString(table)],
+              ).get())
+                  .isNotEmpty;
+          Future<bool> lacks(String table, String column) async =>
+              await hasTable(table) &&
+              (await customSelect(
+                'SELECT name FROM pragma_table_info(?) WHERE name = ?',
+                variables: [Variable.withString(table), Variable.withString(column)],
+              ).get())
+                  .isEmpty;
           if (from < 2) {
             await m.addColumn(journeys, journeys.endLat);
             await m.addColumn(journeys, journeys.endLng);
@@ -650,18 +668,7 @@ class AppDb extends _$AppDb {
           if (from < 18) {
             await m.createTable(paintStock);
             await m.createTable(paintTubes);
-            // 앞 판의 일부 표만 흉내 낸 DB(시험)에서도 돌게 표가 있고 열이 없을 때만 더한다
-            Future<bool> lacks(String table, String column) async =>
-                (await customSelect(
-                  "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
-                  variables: [Variable.withString(table)],
-                ).get())
-                    .isNotEmpty &&
-                (await customSelect(
-                  'SELECT name FROM pragma_table_info(?) WHERE name = ?',
-                  variables: [Variable.withString(table), Variable.withString(column)],
-                ).get())
-                    .isEmpty;
+            // 표가 있고 열이 없을 때만 더한다
             if (await lacks('paint_trails', 'color_id')) {
               await m.addColumn(paintTrails, paintTrails.colorId);
               await m.addColumn(paintTrails, paintTrails.colorEndUtc);
@@ -669,6 +676,17 @@ class AppDb extends _$AppDb {
             if (await lacks('profile', 'paint_color_id')) {
               await m.addColumn(profile, profile.paintColorId);
             }
+          }
+          // 19: 상점 새 상품을 본 시각 (수레 점, 16장 11/16 Annie). 이미 쓰던 기기는 올린 순간에 점이 생기지 않게
+          // 지금까지 얻은 소품의 마지막 시각(없으면 설치 시각)을 본 시각으로 둔다
+          if (from < 19 && await hasTable('sync_state')) {
+            if (await lacks('sync_state', 'shop_seen_utc')) {
+              await m.addColumn(syncState, syncState.shopSeenUtc);
+            }
+            await customStatement(await hasTable('props_owned')
+                ? 'UPDATE sync_state SET shop_seen_utc = '
+                    'COALESCE((SELECT MAX(unlocked_utc) FROM props_owned), install_utc)'
+                : 'UPDATE sync_state SET shop_seen_utc = install_utc');
           }
         },
       );

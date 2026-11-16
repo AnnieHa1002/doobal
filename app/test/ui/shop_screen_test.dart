@@ -142,6 +142,27 @@ void main() {
       await end(tester, e);
     });
 
+    testWidgets('여행 효과 칸만 이름 아래 설명 한 줄 (shop v6 desc, 16장 11/13)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+
+      Finder desc(String id) =>
+          find.descendant(of: _item(id), matching: find.byKey(const ValueKey('item-desc')));
+      expect(find.descendant(of: _item('fx_shortcut'), matching: find.text('목적지와의 거리가 1km 줄어요')),
+          findsOneWidget);
+      expect(find.descendant(of: _item('fx_tailwind'), matching: find.text('이번 물감 길에서 20% 더 멀리 가요')),
+          findsOneWidget);
+      for (final t in [ShopTab.prop, ShopTab.effect, ShopTab.boat]) {
+        await _goTab(tester, t);
+        for (final item in shopCatalog.inTab(t)) {
+          expect(item.desc, isNull, reason: item.id);
+          expect(desc(item.id), findsNothing, reason: item.id);
+        }
+      }
+      await end(tester, e);
+    });
+
     testWidgets('배 탭: 맨 앞은 처음부터 가진 뗏목, 뒤로 상점 배 6척', (tester) async {
       final e = UiEnv();
       await e.seed(tester);

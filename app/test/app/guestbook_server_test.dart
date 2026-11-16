@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:doobal/app/account_service.dart';
 import 'package:doobal/app/backup_service.dart';
 import 'package:doobal/app/guestbook_server.dart';
@@ -122,11 +125,21 @@ void main() {
       final e = _Env();
       await e.seed();
       e.fake.api.failNext.add(const ServerError('invalid-argument',
-          reason: 'moderation', message: '이 표현은 방명록에 남길 수 없어요'));
+          reason: 'moderation', message: '금칙어가 포함되어 있어요'));
       final r = await e.gb.send('a:j1', '나쁜 말');
-      expect((r as SendBlocked).message, '이 표현은 방명록에 남길 수 없어요');
+      expect((r as SendBlocked).message, '금칙어가 포함되어 있어요');
       expect(await e.posts(), isEmpty);
       expect((await e.ticket('a:j1')).usedUtc, isNull);
+    });
+
+    test('서버 문구가 없으면 moderation.json 안내와 같은 대체 문구 (16장 11/13)', () async {
+      final e = _Env();
+      await e.seed();
+      e.fake.api.failNext.add(const ServerError('invalid-argument', reason: 'moderation'));
+      final r = await e.gb.send('a:j1', '나쁜 말');
+      final doc = jsonDecode(File('assets/data/moderation.json').readAsStringSync()) as Map;
+      expect((r as SendBlocked).message, blockedFallback);
+      expect(blockedFallback, doc['message']);
     });
 
     test('작성 제한 중이면 그 시각을 돌려주고 남기지 않는다', () async {

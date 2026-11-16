@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/providers.dart';
+import '../../app/screen_providers.dart';
 import '../rest/rest_slots.dart';
 import 'shop_art.dart';
 import 'shop_screen.dart';
@@ -8,12 +11,16 @@ import 'shop_screen.dart';
 void openShop(BuildContext context) =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ShopScreen()));
 
-/// 쉼터 수레 자리. 알림 점은 규칙이 정해지면 켠다 (캔버스 ‘새 상품 있음’, 조건 없음)
-final shopCartSlot = RestObjectSlot(
-  art: (_) => const ShopCartArt(),
-  onTap: openShop,
-  label: '상점',
-);
+/// 쉼터 수레 자리. 알림 점은 상점에 새 상품이 들어왔을 때만 (16장 11/13, config ui.newDot cart·cartWhen)
+final shopCartSlotProvider = Provider.autoDispose<RestObjectSlot>((ref) {
+  final onNew = ref.watch(rulesProvider).value?.screen.cartDotOnNewItem ?? false;
+  return RestObjectSlot(
+    art: (_) => const ShopCartArt(),
+    onTap: openShop,
+    label: '상점',
+    notice: onNew && (ref.watch(shopNewsProvider).value?.isNotEmpty ?? false),
+  );
+});
 
 /// 쉼터 럭 보석 자리
 final shopGemSlot = RestGemSlot(art: (_) => const LuckGemArt(), onTap: openShop);

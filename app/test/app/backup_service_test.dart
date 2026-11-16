@@ -456,7 +456,7 @@ void main() {
       final json = _json(await svcA.exportBackup(_now));
       expect(json['format'], 1);
       expect(json['schema'], a.schemaVersion);
-      expect(json['schema'], 18);
+      expect(json['schema'], 19);
       expect(json['createdUtc'], _ms(_now));
       expect(json['syncedUtc'], _ms(_synced));
       expect((json['tables'] as Map<String, dynamic>).keys, svcA.includedTableNames);

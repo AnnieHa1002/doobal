@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rive/rive.dart' as rive;
 
 import '../../domain/rules.dart';
+import '../../domain/screen_rules.dart';
 import '../../domain/spirit_look.dart';
 
 import 'spirit_controller.dart';
@@ -19,6 +20,10 @@ class SpiritCharacter extends StatefulWidget {
     this.look = SpiritLook.base,
     this.tapRules,
     this.expression = 0,
+    this.pose,
+    this.mirrored = false,
+    this.cue,
+    this.cues,
     this.onReady,
     this.riveFactory,
   });
@@ -36,8 +41,20 @@ class SpiritCharacter extends StatefulWidget {
   /// 주면 정령을 연타할 때 화낸다 (쉼터·꾸미기만). config character.tapReaction
   final Rules? tapRules;
 
-  /// 고른 표정 번호 (0 기본·1 행복·2 울먹임·3 놀람·4 졸림·5 화남, 꾸미기 표정 미리보기)
+  /// 늘 두는 표정 Rive expr (0 기본·1 행복·2 놀람·3 울먹임·4 졸림·5 화남, 정령 계약 4장). 밤 쉼터는 졸림
   final int expression;
+
+  /// 화면이 정한 자세 poseChoice (config character.rive.screens·restSwap). null이면 [speed]·[sitting]이 정한다
+  final int? pose;
+
+  /// 좌우로 뒤집는다 (옆모습이 오른쪽을 봐야 하는 걷는 중, config flipSideOn). 발 디딤점을 축으로 뒤집는다
+  final bool mirrored;
+
+  /// 잠깐 보일 표정 신호 (도착·만남·새 소품 …). 다른 객체로 바뀔 때마다 한 번 울린다
+  final SpiritCue? cue;
+
+  /// 누르기 행복·연타 화남 표정 (palette 표정 호출 표). 없으면 동작만
+  final SpiritCues? cues;
   final ValueChanged<SpiritController>? onReady;
 
   /// 이 정령만 다른 그리기로 (없으면 [SpiritCharacter.renderer]). 하루 카드 공유 이미지는 Flutter 그리기로
@@ -53,6 +70,9 @@ const _v33Scale = 328.16 / 560;
 /// 발 디딤점(아트보드 (244, 559), v33·v36 같음)이 600 캔버스에 놓이는 자리. v33 때 자리 그대로
 const _footX = 133 + (44 + 244) * _v33Scale;
 const _footY = 68 + (252 - 180 + 559) * _v33Scale;
+
+/// 좌우 뒤집기 축: 아트보드 발 디딤점 x 244 / 502 (config bodyBox.footPoint). 가운데로 뒤집으면 발이 약 3% 밀린다
+const _footAxis = Alignment(2 * 244 / 502 - 1, 0);
 
 /// 600 캔버스에서 v36 그림 1px의 크기. v36은 그림 전체가 v33의 0.97배라(v35 표시 여유) 몸 키가
 /// v33과 같게 키운다: 자세 0·여행복·소품 없음 첫 장면 실측(11/15) 몸 키 v33 488.5px ÷ v36 473.5px
@@ -93,7 +113,10 @@ class _SpiritCharacterState extends State<SpiritCharacter>
       controller.setLook(widget.lookX, widget.lookY);
       controller.wear(widget.look);
       controller.tapRules = widget.tapRules;
-      controller.setExpression(widget.expression);
+      controller.cues = widget.cues;
+      controller.setPose(widget.pose);
+      controller.setBaseExpression(widget.expression);
+      if (widget.cue case final c?) controller.cue(c);
       setState(() {
         _file = file;
         _controller = controller;
@@ -126,9 +149,12 @@ class _SpiritCharacterState extends State<SpiritCharacter>
     }
     if (widget.look != oldWidget.look) _controller?.wear(widget.look);
     _controller?.tapRules = widget.tapRules;
+    _controller?.cues = widget.cues;
+    if (widget.pose != oldWidget.pose) _controller?.setPose(widget.pose);
     if (widget.expression != oldWidget.expression) {
-      _controller?.setExpression(widget.expression);
+      _controller?.setBaseExpression(widget.expression);
     }
+    if (widget.cue case final c? when !identical(c, oldWidget.cue)) _controller?.cue(c);
   }
 
   @override
@@ -162,7 +188,14 @@ class _SpiritCharacterState extends State<SpiritCharacter>
               top: _footY - 559 * _scale,
               width: 502 * _scale,
               height: 600 * _scale,
-              child: rive.RiveWidget(controller: controller, fit: rive.Fit.contain),
+              child: widget.mirrored
+                  ? Transform(
+                      key: const ValueKey('spirit-mirrored'),
+                      alignment: _footAxis,
+                      transform: Matrix4.diagonal3Values(-1, 1, 1),
+                      child: rive.RiveWidget(controller: controller, fit: rive.Fit.contain),
+                    )
+                  : rive.RiveWidget(controller: controller, fit: rive.Fit.contain),
             ),
           ],
         ),
@@ -231,6 +264,9 @@ class SpiritStanding extends StatelessWidget {
     this.share = 0.6,
     this.footAt = 0.88,
     this.expression = 0,
+    this.pose,
+    this.cue,
+    this.cues,
     this.tapRules,
     this.onReady,
     this.riveFactory,
@@ -243,8 +279,11 @@ class SpiritStanding extends StatelessWidget {
   /// [SpiritCharacter.riveFactory]와 같다
   final rive.Factory? riveFactory;
 
-  /// 표정 번호와 연타 화남 규칙 (SpiritCharacter와 같다)
+  /// 표정·자세·표정 신호와 연타 화남 규칙 (SpiritCharacter와 같다)
   final int expression;
+  final int? pose;
+  final SpiritCue? cue;
+  final SpiritCues? cues;
   final Rules? tapRules;
 
   @override
@@ -266,6 +305,9 @@ class SpiritStanding extends StatelessWidget {
                 child: SpiritCharacter(
                   look: look,
                   expression: expression,
+                  pose: pose,
+                  cue: cue,
+                  cues: cues,
                   tapRules: tapRules,
                   onReady: onReady,
                   riveFactory: riveFactory,

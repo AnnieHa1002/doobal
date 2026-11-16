@@ -146,7 +146,7 @@ class ItemArt extends ConsumerWidget {
   }
 }
 
-/// 선반 위 칸 하나: 그림([art]), 선반, 꼬리표(이름 + [state]). [selected]면 점선 고리.
+/// 선반 위 칸 하나: 그림([art]), 선반, 꼬리표(이름 + [desc] + [state]). [selected]면 점선 고리.
 /// [state]가 비면 상태 줄이 없고, [onTap]이 없으면 눌리지 않는다
 class ItemCell extends StatelessWidget {
   const ItemCell({
@@ -154,6 +154,7 @@ class ItemCell extends StatelessWidget {
     required this.name,
     required this.art,
     required this.tilt,
+    this.desc,
     this.state = '',
     this.stateColor = Palette.moss,
     this.selected = false,
@@ -162,6 +163,9 @@ class ItemCell extends StatelessWidget {
 
   final String name;
   final Widget art;
+
+  /// 이름 아래 설명 한 줄 (상점 여행 효과만, shop v6 desc)
+  final String? desc;
 
   /// 꼬리표 기울기 방향: 짝수 칸 -2도, 홀수 칸 +2도
   final int tilt;
@@ -175,7 +179,7 @@ class ItemCell extends StatelessWidget {
     return Semantics(
       button: onTap != null,
       selected: selected,
-      label: state.isEmpty ? name : '$name, $state',
+      label: [name, ?desc, if (state.isNotEmpty) state].join(', '),
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -246,6 +250,17 @@ class ItemCell extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: const TextStyle(fontSize: 12, height: 1.3, color: Palette.ink),
                         ),
+                        // 캔버스 8-1: 11pt·줄 높이 1.35·위 1 아래 2 여백, 폭에 따라 두 줄까지 접힘
+                        if (desc case final d?)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 1, bottom: 2),
+                            child: Text(
+                              d,
+                              key: const ValueKey('item-desc'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 11, height: 1.35, color: Palette.subInk),
+                            ),
+                          ),
                         if (state.isNotEmpty)
                           Text(
                             state,

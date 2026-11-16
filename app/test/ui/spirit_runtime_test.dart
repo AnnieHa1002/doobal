@@ -1,11 +1,20 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:doobal/domain/look.dart';
+import 'package:doobal/domain/screen_rules.dart';
 import 'package:doobal/domain/spirit_look.dart';
+import 'package:doobal/domain/spirit_palette.dart';
 import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:doobal/ui/scene/spirit_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rive/rive.dart' as rive;
 
 import '../domain/helpers.dart' show rules;
+
+final cues = SpiritPalette.fromJson(
+        jsonDecode(File('assets/data/palette.json').readAsStringSync()) as Map<String, dynamic>)
+    .cues;
 
 Future<(rive.File, SpiritController)> load() async {
   await rive.RiveNative.init();
@@ -105,24 +114,106 @@ void main() {
     expect(c.instance.color('brownShoesColor')!.value.toARGB32(), 0xffc9775a);
     expect(c.instance.color('beretColor')!.value.toARGB32(), 0xffbcd9e8);
   });
-  test('꾸미기 동작 버튼은 같은 인사도 다시 재생하고 잠들기에서 기본으로 돌아간다', () async {
+  test('화면이 정한 자세는 장면보다 앞서고, 반응이 끝나면 그 자세로 돌아간다 (config screens·restSwap)', () async {
     final (f, c) = await load();
     addTearDown(() {
       c.dispose();
       f.dispose();
     });
-    for (var repeat = 0; repeat < 2; repeat++) {
-      c.setExpression(2, force: true);
-      tick(c, 30);
-      final arm = c.artboard.component('Right_arm_pivot')!;
-      expect(arm.rotation.abs(), greaterThan(1));
-      arm.dispose();
-      tick(c, 150);
-    }
-    c.setExpression(4, force: true);
-    expect(c.poseChoice, 4);
-    c.setExpression(0, force: true);
+    c.setScene(speed: 0, sitting: false);
     expect(c.poseChoice, 0);
+    // 쉼터 앉기 옆 → 머리 누르기 반응 중에는 정면 → 끝나면 앉기 옆
+    c.setPose(3);
+    expect(c.poseChoice, 3);
+    c.press(SpiritPress.head);
+    expect(c.poseChoice, 0);
+    c.release();
+    tick(c, 90);
+    expect(c.poseChoice, 3);
+    // 걷는 중 멈춤은 둥둥 옆: 장면 속도가 바뀌어도 화면 자세 그대로
+    c.setPose(1);
+    c.setScene(speed: 0, sitting: false);
+    expect(c.poseChoice, 1);
+    c.setPose(6);
+    expect(c.poseChoice, 6);
+    // 화면 자세를 거두면 장면 자세로
+    c.setPose(null);
+    expect(c.poseChoice, 0);
+    // play는 화면 자세를 거둔다 (하루 카드 잠든 정령)
+    c.setPose(2);
+    c.play(SpiritMotion.sleep);
+    expect(c.poseChoice, 4);
+  });
+  test('표정: 늘 두는 표정과 잠깐 표정(holdSec 뒤 돌아감), 트리거가 있으면 반응도 (정령 계약 4장)', () async {
+    final (f, c) = await load();
+    addTearDown(() {
+      c.dispose();
+      f.dispose();
+    });
+    final expr = c.instance.number('expr')!;
+    expect(expr.value, 0);
+    // 밤 쉼터: 잠들기 + 졸림
+    c.setPose(4);
+    c.setBaseExpression(4);
+    expect((c.poseChoice, expr.value), (4, 4));
+    // 길 위 만남: 놀람 2초 뒤 늘 두는 표정
+    c.setPose(1);
+    c.setBaseExpression(0);
+    c.cue(const SpiritCue(2, holdSec: 2));
+    expect((c.expression, expr.value, c.poseChoice), (2, 2, 1));
+    tick(c, 60);
+    expect(c.expression, 2);
+    tick(c, 70);
+    expect((c.expression, expr.value), (0, 0));
+    // 잠깐 표정 중에 늘 두는 표정이 바뀌면 끝난 뒤 그것으로
+    c.cue(const SpiritCue(1, holdSec: 1));
+    c.setBaseExpression(4);
+    expect(c.expression, 1);
+    tick(c, 70);
+    expect(c.expression, 4);
+    c.setBaseExpression(0);
+    // 도착: 기쁨 트리거 + 행복 1초. 반응 중 정면, 끝나면 화면 자세
+    c.setPose(0);
+    tick(c, 30);
+    final arm = c.artboard.component('Right_arm_pivot')!;
+    final rest = arm.rotation;
+    c.cue(const SpiritCue(1, holdSec: 1, trigger: 'joy'));
+    expect(c.expression, 1);
+    tick(c, 30);
+    expect((arm.rotation - rest).abs(), greaterThan(0.3), reason: '기쁨: 팔을 든다');
+    arm.dispose();
+    tick(c, 150);
+    expect((c.expression, c.poseChoice), (0, 0));
+    // holdSec가 없으면 늘 두는 표정이 된다
+    c.cue(const SpiritCue(4));
+    tick(c, 300);
+    expect(c.expression, 4);
+  });
+  test('누르기는 행복 표정(palette tap 1초), 연타 화남은 화남 표정 2초 (config tapReaction)', () async {
+    final (f, c) = await load();
+    addTearDown(() {
+      c.dispose();
+      f.dispose();
+    });
+    c.tapRules = rules;
+    c.cues = cues;
+    var at = DateTime.utc(2026, 11, 12);
+    c.clock = () => at;
+    c.press(SpiritPress.belly);
+    c.release();
+    expect(c.expression, 1);
+    tick(c, 70);
+    expect(c.expression, 0);
+    for (var i = 0; i < rules.tapReaction.angryTaps; i++) {
+      c.press(SpiritPress.head);
+      c.release();
+      at = at.add(const Duration(milliseconds: 20));
+    }
+    expect(c.expression, 5);
+    tick(c, 60);
+    expect(c.expression, 5);
+    tick(c, 70);
+    expect(c.expression, 0);
   });
   test('연타 화남은 실제 화남 입력을 재생하고 복귀한다', () async {
     final (f, c) = await load();

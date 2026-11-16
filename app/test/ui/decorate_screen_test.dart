@@ -13,6 +13,7 @@ import 'package:doobal/ui/decorate/decorate_screen.dart';
 import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show SemanticsAction;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../domain/helpers.dart';
@@ -202,33 +203,60 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('동작 미리보기 단추 6개: 눌러도 저장할 것은 생기지 않고, 요약 줄에 동작 미리보기가 붙는다', (tester) async {
+    testWidgets('미리보기는 좌우로 밀어 정면·옆·뒤로 돌려 보고 표정 단추는 없다 (16장 11/13)', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
 
-      const names = ['기본', '기쁨', '인사', '배 눌림', '잠들기', '화남','머리 눌림'];
-      for (final (i, n) in names.indexed) {
-        expect(find.descendant(of: _key('expr-$i'), matching: find.text(n)), findsOneWidget);
+      int? pose() => tester.widget<SpiritCharacter>(find.byType(SpiritCharacter)).pose;
+      Future<void> drag(double dx) async {
+        await tester.drag(_key('preview-turn'), Offset(dx, 0));
+        await tester.pump();
       }
-      // 위에서 아래로
-      final ys = [for (var i = 0; i < 6; i++) tester.getTopLeft(_key('expr-$i')).dy];
-      expect(ys, orderedEquals([...ys]..sort()));
-      Finder spirit() => find.byType(SpiritCharacter);
-      expect(tester.widget<SpiritCharacter>(spirit()).expression, 0);
-      expect(_summary(tester), isNot(contains('동작 미리보기')));
 
-      await tester.tap(_key('expr-5'));
+      // 처음은 정면, 표정 미리보기 단추·글은 없다
+      expect(pose(), 0);
+      expect(find.byKey(const ValueKey('expr-0')), findsNothing);
+      expect(find.textContaining('동작 미리보기'), findsNothing);
+      // 왼쪽으로 밀면 옆 → 뒤 → 다시 정면 (config customizePreview.swipe 0·1·5)
+      await drag(-80);
+      expect(pose(), 1);
+      await drag(-80);
+      expect(pose(), 5);
+      await drag(-80);
+      expect(pose(), 0);
+      // 오른쪽으로 밀면 거꾸로
+      await drag(80);
+      expect(pose(), 5);
+      // 조금만 밀면 그대로
+      await tester.timedDrag(_key('preview-turn'), const Offset(-10, 0), const Duration(seconds: 1));
       await tester.pump();
-      expect(tester.widget<SpiritCharacter>(spirit()).expression, 5);
-      expect(_summary(tester), endsWith('동작 미리보기'));
+      expect(pose(), 5);
+      // 돌려 봐도 저장할 것은 없다
       expect(_enabled(tester, '저장'), isFalse);
       expect(_enabled(tester, '되돌리기'), isFalse);
+      await end(tester, e);
+    });
 
-      await tester.tap(_key('expr-0'));
+    testWidgets('미리보기 돌려 보기는 화면 읽기로도 된다', (tester) async {
+      final handle = tester.ensureSemantics();
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      int? pose() => tester.widget<SpiritCharacter>(find.byType(SpiritCharacter)).pose;
+
+      final node = tester.getSemantics(find.bySemanticsLabel('정령 돌려 보기'));
+      expect(node.getSemanticsData().hasAction(SemanticsAction.increase), isTrue);
+      expect(node.getSemanticsData().hasAction(SemanticsAction.decrease), isTrue);
+      final turn = tester.widget<Semantics>(find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.label == '정령 돌려 보기'));
+      turn.properties.onIncrease!();
       await tester.pump();
-      expect(tester.widget<SpiritCharacter>(spirit()).expression, 0);
-      expect(_summary(tester), isNot(contains('동작 미리보기')));
+      expect(pose(), 1);
+      turn.properties.onDecrease!();
+      await tester.pump();
+      expect(pose(), 0);
+      handle.dispose();
       await end(tester, e);
     });
 
@@ -277,7 +305,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('요약 줄은 미리보기 폭을 다 쓰고, 표정 단추·정령 발과 겹치지 않는다', (tester) async {
+    testWidgets('요약 줄은 미리보기 폭을 다 쓰고, 정령 발과 겹치지 않는다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e, height: 800);
@@ -285,7 +313,6 @@ void main() {
       final preview = tester.getRect(_key('preview'));
       final summary = tester.getRect(_key('summary'));
       expect(summary.right, preview.right - 12);
-      expect(tester.getRect(_key('expr-5')).bottom, lessThanOrEqualTo(summary.top));
       // 정령 캔버스 600 안에서 발바닥은 y440이다
       final spirit = tester.getRect(find.byType(SpiritCharacter));
       expect(spirit.top + spirit.height * 440 / 600, lessThanOrEqualTo(summary.top));
@@ -957,11 +984,11 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('동작 미리보기만 바꿔도 확인 없이 나간다 (저장할 것이 아니다)', (tester) async {
+    testWidgets('미리보기를 돌려 보기만 하면 확인 없이 나간다 (저장할 것이 아니다)', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
-      await tester.tap(_key('expr-3'));
+      await tester.drag(_key('preview-turn'), const Offset(-80, 0));
       await tester.pump();
 
       await tester.tap(find.byTooltip('뒤로'));

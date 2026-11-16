@@ -60,6 +60,14 @@ void main() {
     expect(formatDuration(const Duration(seconds: -4)), '0:00');
   });
 
+  test('formatKstClockAmPm: 한국 시간 오전·오후 시각 (캔버스 6-3 ‘오전 8:05’)', () {
+    expect(formatKstClockAmPm(DateTime.utc(2026, 11, 17, 23, 5)), '오전 8:05');
+    expect(formatKstClockAmPm(DateTime.utc(2026, 11, 18, 9, 12)), '오후 6:12');
+    expect(formatKstClockAmPm(DateTime.utc(2026, 11, 17, 15, 5)), '오전 12:05');
+    expect(formatKstClockAmPm(DateTime.utc(2026, 11, 18, 3, 0)), '오후 12:00');
+    expect(formatKstClockAmPm(DateTime.utc(2026, 11, 18, 14, 59)), '오후 11:59');
+  });
+
   test('formatKstClock: 한국 시간 24시간 시각 (자정 넘김 포함)', () {
     expect(formatKstClock(DateTime.utc(2026, 10, 31, 5, 5)), '14:05');
     expect(formatKstClock(DateTime.utc(2026, 10, 31, 15, 0)), '00:00');

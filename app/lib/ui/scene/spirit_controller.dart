@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:rive/rive.dart' as rive;
 
 import '../../domain/rules.dart';
+import '../../domain/screen_rules.dart';
 import '../../domain/spirit_look.dart';
 import '../../domain/tap_mood.dart';
 import '../../domain/unified_wardrobe.dart';
@@ -29,6 +30,10 @@ enum SpiritMotion {
 
 enum SpiritPress { head, belly }
 
+/// 머리·배 눌림 반응 시간(초)과 트리거마다 반응 시간 (riv 클립 길이에 맞춘 값, v25 연결 때부터)
+const _pressSec = 1.2;
+const _triggerSec = {'greet': 2.4, 'joy': 1.8, 'tapHead': _pressSec, 'tapBelly': _pressSec, 'angry': .6};
+
 final class SpiritController extends rive.RiveWidgetController {
   SpiritController(super.file)
     : super(
@@ -36,19 +41,38 @@ final class SpiritController extends rive.RiveWidgetController {
       ) {
     instance = dataBind(rive.DataBind.auto());
     _pose = instance.number('poseChoice')!;
+    _expr = instance.number('expr');
   }
   late final rive.ViewModelInstance instance;
   late final rive.ViewModelInstanceNumber _pose;
+
+  /// 표정 입력 expr (0 기본·1 행복·2 놀람·3 울먹임·4 졸림·5 화남, 정령 계약 2·4장). riv에 없으면 null
+  late final rive.ViewModelInstanceNumber? _expr;
   SpiritMotion _motion = SpiritMotion.idle, _baseline = SpiritMotion.idle;
-  int _direction = 0, _baselineDirection = 0, _expression = 0;
+  int _direction = 0, _baselineDirection = 0;
   bool _head = false, _belly = false, _cape = false;
   double _actionLeft = 0;
+
+  /// 화면이 정한 자세 (config character.rive.screens·restSwap). null이면 장면(속도·앉기)이 정한다
+  int? _fixedPose;
+
+  /// 늘 두는 표정([setBaseExpression])과 지금 표정, 잠깐 표정([cue])이 남은 시간
+  int _baseExpr = 0, _exprNow = 0;
+  double _exprLeft = 0;
+
+  /// 연타 화남 표정이 보이는 중
+  bool _angry = false;
   Rules? tapRules;
+
+  /// 누르기 행복·연타 화남의 표정 (palette customPartsV33 tap·rapidTap). 없으면 동작만
+  SpiritCues? cues;
   DateTime Function() clock = DateTime.now;
   final _taps = <DateTime>[];
   SpiritMotion get motion => _motion;
   int get direction => _direction;
-  int get expression => _expression;
+
+  /// 지금 Rive expr 값
+  int get expression => _exprNow;
   bool get headPressed => _head;
   bool get bellyPressed => _belly;
   bool get capeEnabled => _cape;
@@ -123,8 +147,43 @@ final class SpiritController extends rive.RiveWidgetController {
   void _restore() {
     _motion = _baseline;
     _direction = _baselineDirection;
-    _pose.value = _poseFor(_baseline, _baselineDirection).toDouble();
+    _pose.value = (_fixedPose ?? _poseFor(_baseline, _baselineDirection)).toDouble();
     scheduleRepaint();
+  }
+
+  /// 화면이 정한 자세 번호(poseChoice)를 늘 둔다. null이면 장면(속도·앉기)이 정한 자세로.
+  /// 반응(누르기·기쁨) 중이면 반응이 끝난 뒤 이 자세로 돌아간다
+  void setPose(int? choice) {
+    if (choice == _fixedPose) return;
+    _fixedPose = choice;
+    if (_actionLeft <= 0) _restore();
+  }
+
+  void _setExpr(int value) {
+    _exprNow = value;
+    _expr?.value = value.toDouble();
+    scheduleRepaint();
+  }
+
+  /// 늘 둘 표정 (밤 쉼터 졸림 등, 끝낼 때 0). 잠깐 표정이 보이는 중이면 그것이 끝난 뒤 바뀐다
+  void setBaseExpression(int value) {
+    _baseExpr = value;
+    if (_exprLeft <= 0) _setExpr(value);
+  }
+
+  /// 표정 신호 (도착·만남·새 소품 …, 정령 계약 4장): 트리거가 있으면 울리고, 표정을 holdSec 동안 둔 뒤
+  /// 늘 두는 표정으로 돌아간다. holdSec이 없으면 늘 두는 표정이 된다
+  void cue(SpiritCue c) {
+    if (c.trigger case final t?) _fire(t, _triggerSec[t] ?? _pressSec);
+    _angry = false;
+    final hold = c.holdSec;
+    if (hold == null) {
+      _exprLeft = 0;
+      setBaseExpression(c.expr);
+      return;
+    }
+    _setExpr(c.expr);
+    _exprLeft = hold;
   }
 
   void setScene({
@@ -160,16 +219,17 @@ final class SpiritController extends rive.RiveWidgetController {
     _head = false;
     _belly = false;
     _actionLeft = 0;
+    _fixedPose = null;
     _direction =
         direction ??
         (value == SpiritMotion.walk || value == SpiritMotion.run ? 1 : 0);
     _motion = value;
     if (value == SpiritMotion.wave) {
-      _fire('greet', 2.4);
+      _fire('greet', _triggerSec['greet']!);
       return;
     }
     if (value == SpiritMotion.jump || value == SpiritMotion.laugh) {
-      _fire('joy', 1.8);
+      _fire('joy', _triggerSec['joy']!);
       return;
     }
     instance.trigger('resetMotion')!.trigger();
@@ -178,33 +238,6 @@ final class SpiritController extends rive.RiveWidgetController {
     _baseline = value == SpiritMotion.fall ? SpiritMotion.idle : value;
     _baselineDirection = _direction;
     _restore();
-  }
-
-  void setExpression(int value, {bool force = false}) {
-    if (!force && value == _expression) return;
-    _expression = value.clamp(0, 6);
-    if (value == 1) {
-      _fire('joy', 1.8);
-    } else if (value == 2) {
-      _fire('greet', 2.4);
-    } else if (value == 3) {
-      _fire('tapBelly', 1.2);
-    } else if (value == 6) {
-      _fire('tapHead', 1.2);
-    } else if (value == 5) {
-      _fire('angry', .6);
-    } else if (value == 4) {
-      instance.trigger('resetMotion')!.trigger();
-      stateMachine.advanceAndApply(0);
-      _actionLeft = 0;
-      _pose.value = 4;
-      scheduleRepaint();
-    } else {
-      instance.trigger('resetMotion')!.trigger();
-      stateMachine.advanceAndApply(0);
-      _actionLeft = 0;
-      _restore();
-    }
   }
 
   /// 시선은 눈 파츠 안의 작은 이동에만 연결한다. NaN·무한대는 중앙으로 복귀한다.
@@ -221,7 +254,12 @@ final class SpiritController extends rive.RiveWidgetController {
   void press(SpiritPress region) {
     _head = region == SpiritPress.head;
     _belly = !_head;
-    _fire(_head ? 'tapHead' : 'tapBelly', 1.2);
+    _fire(_head ? 'tapHead' : 'tapBelly', _pressSec);
+    // 한두 번 누르기는 행복 (config tapReaction, palette tap). 화난 동안 누르면 화남 그대로
+    if (cues?.of('tap') case final c? when !_angry) {
+      _setExpr(c.expr);
+      _exprLeft = c.holdSec ?? 0;
+    }
     _countTap();
   }
 
@@ -240,6 +278,12 @@ final class SpiritController extends rive.RiveWidgetController {
     if (tapMood(_taps, now, rules) == TapMood.angry) {
       _taps.clear();
       _fire('angry', .6);
+      // 화남 표정은 config tapReaction.angry.holdSec 동안 (palette rapidTap)
+      if (cues?.of('rapidTap') case final c?) {
+        _setExpr(c.expr);
+        _exprLeft = rules.tapReaction.angryHoldSec;
+        _angry = true;
+      }
     }
   }
 
@@ -252,6 +296,13 @@ final class SpiritController extends rive.RiveWidgetController {
       if (_actionLeft == 0) {
         release();
         _restore();
+      }
+    }
+    if (_exprLeft > 0) {
+      _exprLeft = math.max(0, _exprLeft - dt);
+      if (_exprLeft == 0) {
+        _angry = false;
+        _setExpr(_baseExpr);
       }
     }
     return active;

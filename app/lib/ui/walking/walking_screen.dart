@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/companion_providers.dart';
@@ -21,9 +22,11 @@ import '../../domain/geo.dart';
 import '../../domain/milestones.dart';
 import '../../domain/paint_color.dart' show PaintWeather;
 import '../../domain/rules.dart';
+import '../../domain/screen_rules.dart';
 import '../../domain/walk_arrival.dart';
 import '../../domain/walk_record.dart';
 import '../arrival/arrival_screen.dart';
+import '../common/screen_orientation.dart';
 import '../common/toast.dart';
 import '../companion/companion_pacer.dart';
 import '../companion/companion_walk_layer.dart';
@@ -118,6 +121,20 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   var _arrivalSent = false;
   Rules? _rules;
 
+  /// 정령에 잠깐 보일 표정 (길 위 만남·새 소품, palette 표정 호출 표)과 마지막으로 본 안 본 소품 수
+  SpiritCue? _cue;
+  int? _unseenProps;
+
+  /// 가로로 돌릴 수 있게 풀었는가 (config ui.orientation, 닫을 때 세로로 다시 잠근다)
+  var _orientationOpen = false;
+
+  /// [event]의 표정을 잠깐 보인다 (같은 표정이 이어져도 다시 울리게 새 객체로)
+  void _cueFor(String event, {String? trigger}) {
+    final c = ref.read(spiritPaletteProvider).value?.cues.of(event);
+    if (c == null) return;
+    setState(() => _cue = SpiritCue(c.expr, holdSec: c.holdSec, trigger: trigger ?? c.trigger));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -150,6 +167,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   @override
   void dispose() {
+    if (_orientationOpen) unawaited(SystemChrome.setPreferredOrientations(portraitOnly));
     _badgeSub?.cancel();
     _eventTimer?.cancel();
     _badgeTimer?.cancel();
@@ -229,6 +247,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
       _meetWith = view.metById(view.walkingWith)?.companion;
       _meetShownM = _shownM;
     });
+    // 길 위 만남: 놀람 + 인사 (palette companionMeet, 정령 계약 4장 ‘만남 greet’)
+    _cueFor('companionMeet', trigger: 'greet');
   }
 
   /// 길 위 만남에서 골랐다. 저장에 실패하면 대기로 남아 다음 걷는 중에 다시 나온다
@@ -255,6 +275,14 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   /// 도착이 확정됐으면(동기화가 정한다) 도착 화면으로 바꾼다. 배 구간에 들어설 때마다 한 번만 토스트
   void _onSnapshot(Snapshot s) {
+    // 걷는 중에 소품을 얻으면(안 본 소품 수가 늘면) 잠깐 놀란다 (palette newProp)
+    final before = _unseenProps;
+    _unseenProps = s.unseenProps;
+    if (before != null && s.unseenProps > before) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _cueFor('newProp');
+      });
+    }
     final arrival = s.pendingArrival;
     if (arrival != null && !_ending) {
       _ending = true;
@@ -403,6 +431,11 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     if (rules == null || landmarks == null || snap == null || position == null) {
       return const Scaffold(body: SizedBox.expand());
     }
+    // 가로 화면은 이 화면만 (config ui.orientation.landscape). 규칙을 읽은 첫 화면에서 한 번 푼다
+    if (!_orientationOpen && rules.screen.landscapeScreens.contains('walking')) {
+      _orientationOpen = true;
+      unawaited(lockOrientation(rules.screen, 'walking'));
+    }
     final summary = _trail.summaryAt(_now);
     final running = _isRunning(summary);
     final spirit = ref.watch(spiritLookProvider);
@@ -432,6 +465,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             moving: meet == null && summary != null && summary.lastSteps > 0,
             sceneSeed: snap.journey?.dest.id ?? 'home',
             spirit: spirit,
+            spiritCue: _cue,
+            spiritCues: ref.watch(spiritPaletteProvider).value?.cues,
             boat: ref.watch(sceneBoatProvider).value,
             // 길 위 만남 동안에는 장면에 동행을 두지 않는다 (캔버스 3-4)
             walkCompanion: companion == null || meet != null

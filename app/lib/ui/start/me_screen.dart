@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../app/screen_providers.dart';
 import '../../domain/look.dart';
 import '../../domain/profile.dart';
 import '../../domain/prop.dart';
@@ -17,7 +18,8 @@ import 'start_layout.dart';
 
 /// 시작 ② 나 (캔버스 1-2 v69): 3단계 중 1단계 표시, 제목 `내 정령 만들기`, 정령 미리보기, 닉네임,
 /// 부위 탭(눈·눈썹·코·입·몸 색·옷 색) 한 화면 (16장 11/5·11/8). 옷 색은 기본 옷(여행복)의 시작 색 중 하나다.
-/// 고른 옷 색은 값만 저장하고 정령에 보이는 것은 정령 새 방식(T5) 뒤다 (지금 Rive 정령은 옷 색을 못 바꾼다)
+/// 고른 옷 색은 값만 저장하고 정령에 보이는 것은 정령 새 방식(T5) 뒤다 (지금 Rive 정령은 옷 색을 못 바꾼다).
+/// 처음 골라져 있는 옷 색은 시작 색 중 무작위다 (16장 11/15 A안, 고르는 칸은 그대로)
 class MeScreen extends ConsumerStatefulWidget {
   const MeScreen({super.key, required this.rules});
 
@@ -41,6 +43,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   final _name = TextEditingController();
   var _look = Look.initial;
   var _tab = _tabs.first.$1;
+
+  /// 처음 옷 색을 무작위로 골랐는가 (props를 받은 첫 화면에서 한 번)
+  var _clothPicked = false;
 
   @override
   void dispose() {
@@ -78,6 +83,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     // 기본 옷(여행복)과 시작 색
     final cloth = props.firstWhere((p) => p.id == defaultSlots[alwaysWornSlot]);
     final colors = cloth.startColors;
+    if (!_clothPicked && colors.isNotEmpty) {
+      _clothPicked = true;
+      _look = _look.copyWith(clothColor: 1 + ref.read(startClothPickProvider)(colors.length));
+    }
     final clothColor = colors.isEmpty
         ? null
         : colors[(_look.clothColor - 1).clamp(0, colors.length - 1)];

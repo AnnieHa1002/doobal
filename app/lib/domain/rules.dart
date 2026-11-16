@@ -1,5 +1,6 @@
 import 'geo.dart';
 import 'paint_color.dart';
+import 'screen_rules.dart';
 
 /// 시간대 색 입히기 한 단계 (config scene.tint: bg·char). 곱하기로 입힌다
 class TimeTint {
@@ -370,6 +371,7 @@ class Rules {
     required this.adsMaxRewardCoins,
     required this.report,
     required this.paintColor,
+    required this.screen,
   });
 
   /// 하루 카드·걷기 리포트 (config report)
@@ -377,6 +379,9 @@ class Rules {
 
   /// 물감 색·물감 모으기 (config paintColor, 보상 표는 paintDrop.rewards가 있으면 그것, 16장 11/14·M1 v0.7)
   final PaintColorRules paintColor;
+
+  /// 화면 세부(새 소식 점·화면 방향·꾸미기 미리보기)와 정령 화면별 자세 (config ui·character.rive, 16장 11/11·11/13)
+  final ScreenRules screen;
 
   /// 설치 뒤 며칠까지 둘째·셋째 동행을 꼭 만나는지 (config companions.guaranteeByDay)
   final List<int> companionGuaranteeDays;
@@ -488,7 +493,7 @@ class Rules {
   /// 럭 값 표기 '{n} 럭' (config coins.format.amount)
   final String coinAmountFormat;
 
-  /// 구매 질문 '{item}을(를) {n} 럭에 구매할까요?' (config coins.format.buyQuestion, 조사는 앱이 고른다)
+  /// 구매 질문 '구매하시겠습니까?' (config coins.format.buyQuestion, 16장 11/13. {item}·{n}이 있으면 앱이 채운다)
   final String coinBuyQuestion;
 
   /// 구매 버튼 글 (config coins.format.buyButton)
@@ -942,6 +947,7 @@ class Rules {
       adsMaxRewardCoins: ads['maxRewardCoins'] as int,
       report: ReportRules.fromJson(j['report'] as Map<String, dynamic>),
       paintColor: PaintColorRules.fromJson(paintColor, paintDrop: paintDrop),
+      screen: ScreenRules.fromJson(j),
     );
   }
 }

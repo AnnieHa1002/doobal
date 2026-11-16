@@ -1,6 +1,7 @@
 import 'package:doobal/app/paint_trail_controller.dart';
 import 'package:doobal/app/painting_saver_provider.dart';
 import 'package:doobal/app/providers.dart';
+import 'package:doobal/app/screen_providers.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/app_settings_opener.dart';
 import 'package:doobal/data/db/app_db.dart';
@@ -90,6 +91,9 @@ class UiEnv {
   late final SyncService svc;
   DateTime now;
 
+  /// 정령 만들기 첫 옷 색 고르기(무작위). 기본은 첫 색(카키)
+  PickOne clothPick = (_) => 0;
+
   /// 앱이 보내거나 예약한 시스템 알림 (아무것도 안 띄우는 자리표시가 받은 부름)
   final notifier = PlaceholderNotifier();
 
@@ -132,6 +136,8 @@ class UiEnv {
         liveStepsProvider.overrideWithValue(live),
         walkNoticeProvider.overrideWithValue(walkNotice),
         clockProvider.overrideWithValue(() => now),
+        // 정령 만들기 첫 옷 색은 무작위다. 시험은 [clothPick]으로 고정
+        startClothPickProvider.overrideWithValue(clothPick),
       ];
 
   /// 설치(= t0)하고 출발 동네를 testHome으로 골라 둔다. 시작 흐름도 끝낸 것으로 둔다

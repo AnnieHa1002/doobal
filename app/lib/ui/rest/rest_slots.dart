@@ -50,5 +50,5 @@ final restSlotsProvider = Provider<RestSlots>((ref) {
   final noShop = ref.watch(shopCatalogProvider).value?.items.isEmpty ?? false;
   return noShop
       ? RestSlots(companion: companion)
-      : RestSlots(cart: shopCartSlot, companion: companion, gem: shopGemSlot);
+      : RestSlots(cart: ref.watch(shopCartSlotProvider), companion: companion, gem: shopGemSlot);
 });

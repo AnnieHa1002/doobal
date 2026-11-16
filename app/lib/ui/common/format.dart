@@ -37,6 +37,14 @@ String formatKstClock(DateTime utc) {
   return '${k.hour.toString().padLeft(2, '0')}:${k.minute.toString().padLeft(2, '0')}';
 }
 
+/// 한국 시간 시각을 오전·오후 12시간으로: '오전 8:05', '오후 6:12' (0시는 '오전 12:05', 12시는 '오후 12:05').
+/// 노트 걷기 기록의 물감 길 줄 (캔버스 6-3)
+String formatKstClockAmPm(DateTime utc) {
+  final k = kstDateTime(utc);
+  final h = k.hour % 12 == 0 ? 12 : k.hour % 12;
+  return '${k.hour < 12 ? '오전' : '오후'} $h:${k.minute.toString().padLeft(2, '0')}';
+}
+
 /// 시(0~23)를 말하듯이: 22 → '밤 10시', 8 → '아침 8시', 13 → '낮 1시', 3 → '새벽 3시'
 /// (0시는 '밤 12시', 12시는 '낮 12시')
 String formatHourKo(int hour) {

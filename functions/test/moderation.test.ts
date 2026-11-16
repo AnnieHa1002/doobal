@@ -73,7 +73,7 @@ describe('글 다듬기', () => {
 
 test('규칙은 123개, 막힌 글 안내는 한 줄', () => {
   assert.equal(doc.rules.length, 123);
-  assert.equal(plain.message, '이 표현은 방명록에 남길 수 없어요');
+  assert.equal(plain.message, '금칙어가 포함되어 있어요');
 });
 
 test('모르는 규칙 자리는 오류', () => {

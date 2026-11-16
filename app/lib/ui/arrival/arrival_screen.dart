@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/guestbook.dart';
 import '../../domain/journey.dart' show Frame;
+import '../../domain/screen_rules.dart';
 import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
 import '../common/app_text.dart';
@@ -19,6 +20,7 @@ import '../common/game_button.dart';
 import '../common/palette.dart';
 import '../guestbook/guestbook_write_screen.dart';
 import '../map/map_screen.dart';
+import '../scene/spirit_character.dart';
 import '../walking/paint_trail_host.dart';
 
 /// 그림이 번지는 시간, 그다음 액자가 나타나는 시간
@@ -31,6 +33,10 @@ const _frameDuration = Duration(milliseconds: 400);
 /// 번지기 시작할 때의 흐림 정도 (blur sigma)
 const _maxBlur = 14.0;
 const _frameThickness = 12.0;
+
+/// 액자 오른쪽 아래에 선 작은 정령 자리 (캔버스 3-2 ‘웃는 내 정령’ 56×90, 액자에서 오른쪽 28·아래 18 밖으로)
+const _spiritBox = Size(56, 90);
+const _spiritOut = Offset(28, 18);
 
 /// 도착: 그림이 종이에 먹이 번지듯 나타나고, 이어서 액자와 이름이 붙고, 방문·거리·날짜·걸음 카드가 나온다.
 /// 내 동네 스케치는 '첫 그림'(첫 여행 짐 꾸러미)이 나무 액자에 낀 채로 번지고(액자 단계·등급 라벨 없음),
@@ -180,12 +186,17 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
   late final Animation<double> _painting;
   late final Animation<double> _frame;
 
+  /// 그림이 다 나타나면 정령이 기뻐한다 (palette paintingGet 행복 + joy, 정령 계약 4장)
+  SpiritCue? _cue;
+
   @override
   void initState() {
     super.initState();
     final total = _paintingDuration + _frameDuration;
     final split = _paintingDuration.inMilliseconds / total.inMilliseconds;
-    _controller = AnimationController(vsync: this, duration: total)..forward();
+    _controller = AnimationController(vsync: this, duration: total)
+      ..addStatusListener(_onAnimation)
+      ..forward();
     _painting =
         CurvedAnimation(parent: _controller, curve: Interval(0, split, curve: Curves.easeOut));
     _frame = CurvedAnimation(parent: _controller, curve: Interval(split, 1, curve: Curves.easeIn));
@@ -195,6 +206,37 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onAnimation(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+    final c = ref.read(spiritPaletteProvider).value?.cues.of('paintingGet');
+    if (c != null) setState(() => _cue = c.withTrigger('joy'));
+  }
+
+  /// 액자 오른쪽 아래 작은 정령 (도착 자세 = config screens.arrival). 누르지 않는다 (그림 누르기는 크게 보기)
+  Widget _spirit() {
+    final rules = ref.watch(rulesProvider).value;
+    return Positioned(
+      right: -_spiritOut.dx,
+      bottom: -_spiritOut.dy,
+      width: _spiritBox.width,
+      height: _spiritBox.height,
+      child: IgnorePointer(
+        child: ExcludeSemantics(
+          child: SpiritStanding(
+            key: const ValueKey('arrival-spirit'),
+            look: ref.watch(spiritLookProvider),
+            // 몸 키가 상자 높이의 약 90% (상자 폭 56의 1.45배)
+            share: 1.45,
+            footAt: 0.97,
+            pose: rules?.screen.spirit.poseOf('arrival'),
+            cue: _cue,
+            cues: ref.watch(spiritPaletteProvider).value?.cues,
+          ),
+        ),
+      ),
+    );
   }
 
   /// 이 도착의 방명록 기회로 쓰기 화면을 연다
@@ -277,6 +319,7 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
                   aspectRatio: 4 / 3,
                   child: Stack(
                     fit: StackFit.expand,
+                    clipBehavior: Clip.none,
                     children: [
                       Padding(
                         padding: EdgeInsets.all(frameInset(_frameThickness)),
@@ -304,6 +347,7 @@ class _ArrivalBodyState extends ConsumerState<_ArrivalBody> with SingleTickerPro
                             thickness: _frameThickness,
                           ),
                         ),
+                      _spirit(),
                     ],
                   ),
                 )),

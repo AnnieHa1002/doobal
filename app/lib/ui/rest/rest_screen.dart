@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -8,11 +9,13 @@ import '../../app/paint_providers.dart';
 import '../../app/paint_trail_controller.dart';
 import '../../app/providers.dart';
 import '../../app/report_providers.dart';
+import '../../app/screen_providers.dart';
 import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/rest_camera.dart';
 import '../../domain/rules.dart';
+import '../../domain/screen_rules.dart';
 import '../../domain/sketch.dart';
 import '../album/album_screen.dart';
 import '../common/app_text.dart';
@@ -41,7 +44,10 @@ import 'rest_slots.dart';
 /// 물건은 3~6초마다 하나씩 살짝 흔들린다 (알림 점이 있는 물건 우선, 연출 값은 prop_wiggle.dart).
 /// 불 옆 동행은 알림 점(안 읽은 장)이 있을 때만 흔들림에 든다 (평소에는 캔버스대로 둥실, 그림 쪽 몫).
 /// 새벽 5시 뒤 그날 처음 열면 하루 카드(캔버스 2-3)가 위에 겹쳐 뜬다 (pendingDayCardProvider, 닫으면 본 것으로).
-/// 도착·걷는 중은 그 위에 올라가니 그것을 끝내고 쉼터로 돌아오면 카드가 보인다
+/// 도착·걷는 중은 그 위에 올라가니 그것을 끝내고 쉼터로 돌아오면 카드가 보인다.
+/// 정령은 떠 있기 정면·앉기 정면·앉기 옆을 20~40초마다 바꾸고(같은 자세 연속 없음), 밤에는 잠든다
+/// (config character.rive.restSwap, 16장 11/11). 새 소품이 생기면 잠깐 놀란다 (palette newProp).
+/// 새 소식 점은 config ui.newDot에 있는 자리만 (배낭·동행·수레, 16장 11/13)
 class RestScreen extends ConsumerStatefulWidget {
   const RestScreen({super.key});
 
@@ -67,6 +73,37 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
   late final PropWiggler _wiggler;
   final _camera = ValueNotifier(const RestCamera());
 
+  /// 쉼터 정령 자세 바꾸기 (config restSwap). 규칙을 읽은 첫 화면에서 시작한다
+  Timer? _swapTimer;
+  int? _restPose;
+
+  /// 정령에 잠깐 보일 표정 (새 소품)
+  SpiritCue? _cue;
+
+  void _startSwap(RestSwapRules r) {
+    if (_swapTimer != null) return;
+    _restPose ??= r.poses.first;
+    _scheduleSwap(r);
+  }
+
+  void _scheduleSwap(RestSwapRules r) {
+    final random = ref.read(restSwapRandomProvider);
+    _swapTimer = Timer(nextRestGap(r, random), () {
+      if (!mounted) return;
+      setState(() => _restPose = nextRestPose(r, _restPose, random));
+      _scheduleSwap(r);
+    });
+  }
+
+  /// 얻은 소품이 늘면(안 본 소품 수가 늘면) 정령이 잠깐 놀란다 (처음 읽을 때는 아니다)
+  void _onSnapshot(AsyncValue<Snapshot>? prev, AsyncValue<Snapshot> next) {
+    final before = prev?.value?.unseenProps;
+    final after = next.value?.unseenProps;
+    if (before == null || after == null || after <= before) return;
+    final c = ref.read(spiritPaletteProvider).value?.cues.of('newProp');
+    if (c != null) setState(() => _cue = SpiritCue(c.expr, holdSec: c.holdSec, trigger: c.trigger));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -75,17 +112,20 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
 
   @override
   void dispose() {
+    _swapTimer?.cancel();
     _wiggler.dispose();
     _camera.dispose();
     super.dispose();
   }
 
-  /// 아직 안 본 소품·그림·도장·새 물감 색이 있는가 (배낭의 알림 점, 물감은 처음 모은 색만 M2~M6 v0.20 Y)
+  /// 아직 안 본 소품·그림·도장·새 물감 색이 있는가 (배낭의 알림 점, 물감은 처음 모은 색만 M2~M6 v0.20 Y).
+  /// config ui.newDot.on에 배낭이 없으면 점도 없다
   bool _hasNew(Snapshot snap) =>
-      snap.unseenProps > 0 ||
+      (ref.read(rulesProvider).value?.screen.dotOn('backpack') ?? true) &&
+      (snap.unseenProps > 0 ||
       snap.unseenPaintings > 0 ||
       snap.unseenBadges > 0 ||
-      (ref.read(unseenPaintsProvider).value ?? 0) > 0;
+      (ref.read(unseenPaintsProvider).value ?? 0) > 0);
 
   /// 흔들 수 있는 물건과 그 중 알림 점이 있는 물건 (화면에 서 있는 것만)
   ({List<String> all, Set<String> notice}) _wigglePool() {
@@ -124,10 +164,13 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     final luck = ref.watch(coinBalanceProvider).value ?? 0;
     // 테스트용 거리 배수가 켜져 있으면 알려 준다 (켜 둔 채 잊지 않게)
     final scale = kDebugMode ? ref.watch(debugDistanceScaleProvider) : 1.0;
+    ref.listen(snapshotProvider, _onSnapshot);
+    final cues = ref.watch(spiritPaletteProvider).value?.cues;
     // 데이터가 올 때까지는 종이색 빈 화면
     if (rules == null || landmarks == null || camp == null || snap == null) {
       return const Scaffold(body: SizedBox.expand());
     }
+    _startSwap(rules.screen.spirit.restSwap);
     // 시작 관문이 출발 동네를 먼저 고르게 하므로 위치는 늘 있다 (없으면 빈 화면)
     final position = snap.position;
     if (position == null) return const Scaffold(body: SizedBox.expand());
@@ -172,6 +215,9 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                   sceneSeed: snap.journey?.dest.id ?? 'home',
                   spirit: spirit,
                   seated: false,
+                  restPose: _restPose,
+                  spiritCue: _cue,
+                  spiritCues: cues,
                   camera: _camera,
                   sceneBehind: [
                     if (firstSketch != null) _firstSign(stage, camp.firstSign),

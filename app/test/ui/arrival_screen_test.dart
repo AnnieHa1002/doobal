@@ -10,6 +10,7 @@ import 'package:doobal/ui/common/framed_painting.dart';
 import 'package:doobal/ui/map/map_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
+import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
@@ -185,6 +186,30 @@ void main() {
       expect(_opacity(tester, 'arrival-frame'), 1);
       expect(_opacity(tester, 'arrival-frame-label'), 1);
       expect(find.text('은 액자'), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('액자 오른쪽 아래에 작은 정령(정면), 그림이 다 나타나면 기뻐한다 (캔버스 3-2, palette paintingGet)',
+        (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.insertArrival('j1', 'kr001', _day, frame: Frame.silver));
+      await _openArrival(tester, e, 'j1');
+      await tester.pump();
+
+      final spirit = find.byKey(const ValueKey('arrival-spirit'));
+      SpiritStanding standing() => tester.widget<SpiritStanding>(spirit);
+      expect(spirit, findsOneWidget);
+      expect(standing().pose, 0);
+      expect(standing().cue, isNull);
+      // 캔버스 3-2: 56×90, 액자 오른쪽 28·아래 18 밖으로
+      final frame = tester.getRect(find.byKey(const ValueKey('arrival-open-big')));
+      final box = tester.getRect(spirit);
+      expect(box.size, const Size(56, 90));
+      expect((box.right - frame.right, box.bottom - frame.bottom), (28, 18));
+
+      await _afterAnimation(tester);
+      final cue = standing().cue!;
+      expect((cue.expr, cue.holdSec, cue.trigger), (1, 1, 'joy'));
       await end(tester, e);
     });
 
