@@ -62,6 +62,9 @@ final class SpiritController extends rive.RiveWidgetController {
 
   /// 연타 화남 표정이 보이는 중
   bool _angry = false;
+
+  /// 앱이 뒤로 가 있는 중([setAway])과, 돌아온 뒤 첫 프레임의 지난 시간을 버릴지
+  bool _away = false, _skipGap = false;
   Rules? tapRules;
 
   /// 누르기 행복·연타 화남의 표정 (palette customPartsV33 tap·rapidTap). 없으면 동작만
@@ -262,9 +265,23 @@ final class SpiritController extends rive.RiveWidgetController {
     }
   }
 
+  /// 앱이 뒤로 갔다(true)·돌아왔다(false). 뒤에 있는 동안은 프레임이 없어 그리지 않는데, Rive 타이머는 켜진 채라
+  /// 돌아온 첫 프레임이 뒤에 있던 시간 전체를 들고 온다. 그 한 번을 버려 떠 있기·반응·표정 시간을 멈춘 자리에서 잇는다.
+  /// (다른 화면에 덮이면 Navigator가 TickerMode를 꺼서 Rive 타이머가 멈추고, 다시 켜면 0초부터 잰다)
+  void setAway(bool away) {
+    if (_away && !away) _skipGap = true;
+    _away = away;
+  }
+
   @override
   bool advance(double elapsedSeconds) {
-    final dt = elapsedSeconds.isFinite ? math.max(0.0, elapsedSeconds) : 0.0;
+    var dt = elapsedSeconds.isFinite ? math.max(0.0, elapsedSeconds) : 0.0;
+    if (_away) {
+      dt = 0;
+    } else if (_skipGap && dt > 0) {
+      _skipGap = false;
+      dt = 0;
+    }
     final active = super.advance(dt);
     if (_actionLeft > 0) {
       _actionLeft = math.max(0, _actionLeft - dt);

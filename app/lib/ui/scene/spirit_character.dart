@@ -6,6 +6,7 @@ import '../../domain/screen_rules.dart';
 import '../../domain/spirit_look.dart';
 
 import 'spirit_controller.dart';
+import 'spirit_file.dart';
 
 /// 정령 캔버스 600×600, 기본 머리 위 y150, 발바닥 y440.
 class SpiritCharacter extends StatefulWidget {
@@ -31,6 +32,9 @@ class SpiritCharacter extends StatefulWidget {
   static const asset = 'assets/rive/spirit_v36.riv';
   @visibleForTesting
   static rive.Factory renderer = rive.Factory.rive;
+
+  /// 앱 시작 때 한 번: 기본 그리기로 [asset]을 미리 읽어 앱이 끝날 때까지 두고 모든 정령이 같이 쓴다 (정령 계약 7장)
+  static void preload() => SpiritFile.preload(renderer);
   final double speed, lookX, lookY;
   final bool sitting, boat;
 
@@ -79,30 +83,26 @@ const _scale = _v33Scale * 488.5 / 473.5;
 
 class _SpiritCharacterState extends State<SpiritCharacter>
     with WidgetsBindingObserver {
-  rive.File? _file;
+  /// 빌린 정령 파일 (그리기마다 하나를 모든 정령이 같이 쓴다, [SpiritFile]). 컨트롤러는 이 정령 것
+  late final rive.Factory _factory;
+  late final Future<rive.File> _file;
   SpiritController? _controller;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _factory = widget.riveFactory ?? SpiritCharacter.renderer;
+    _file = SpiritFile.acquire(_factory);
     _load();
   }
 
   Future<void> _load() async {
-    rive.File? file;
     SpiritController? controller;
     try {
-      await rive.RiveNative.init();
-      file = await rive.File.asset(
-        SpiritCharacter.asset,
-        riveFactory: widget.riveFactory ?? SpiritCharacter.renderer,
-      );
-      if (file == null) throw StateError('정령 파일을 읽지 못했어요');
-      if (!mounted) {
-        file.dispose();
-        return;
-      }
+      final file = await _file;
+      if (!mounted) return;
       controller = SpiritController(file);
+      controller.setAway(_away(WidgetsBinding.instance.lifecycleState));
       controller.setScene(
         speed: widget.speed,
         sitting: widget.sitting,
@@ -115,17 +115,20 @@ class _SpiritCharacterState extends State<SpiritCharacter>
       controller.setPose(widget.pose);
       controller.setBaseExpression(widget.expression);
       if (widget.cue case final c?) controller.cue(c);
-      setState(() {
-        _file = file;
-        _controller = controller;
-      });
+      setState(() => _controller = controller);
       widget.onReady?.call(controller);
     } catch (error) {
+      // 파일은 같이 쓰는 것이라 여기서 놓지 않는다 (dispose에서 돌려줌)
       controller?.dispose();
-      file?.dispose();
       debugPrint('정령 로드 실패: $error');
     }
   }
+
+  /// 앱이 뒤로 갔는지 (화면에 안 보임). inactive는 아직 보인다 (알림 창·분할 화면)
+  static bool _away(AppLifecycleState? state) =>
+      state == AppLifecycleState.hidden ||
+      state == AppLifecycleState.paused ||
+      state == AppLifecycleState.detached;
 
   @override
   void didUpdateWidget(SpiritCharacter oldWidget) {
@@ -155,13 +158,14 @@ class _SpiritCharacterState extends State<SpiritCharacter>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) _controller?.release();
+    _controller?.setAway(_away(state));
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
-    _file?.dispose();
+    SpiritFile.release(_factory, _file);
     super.dispose();
   }
 
@@ -231,6 +235,9 @@ class _SpiritCharacterState extends State<SpiritCharacter>
                   final y =
                       (d.localPosition.dy - (box.maxHeight - 600 * scale) / 2) /
                       scale;
+                  // 누름 상자 (600 캔버스, 뒤집기와 상관없이 같은 자리). config character.rive.hit.headTopRatio 0.45(가안)로는
+                  // 못 나타낸다: 지금 머리·배 경계는 아트보드 위에서 55%(y 331/600)이고 좌우·위·아래 끝 키가 없다.
+                  // 키 모양 제안은 docs/트랙/정령성능_T5.md ‘개발 기획에 넘길 것’ (11/17 T5)
                   if (x >= 200 && x <= 400 && y >= 135 && y <= 300) {
                     controller.press(SpiritPress.head);
                   } else if (x >= 230 && x <= 380 && y > 300 && y <= 445) {
