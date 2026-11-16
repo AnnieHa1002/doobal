@@ -50,7 +50,7 @@ final class SpiritController extends rive.RiveWidgetController {
   late final rive.ViewModelInstanceNumber? _expr;
   SpiritMotion _motion = SpiritMotion.idle, _baseline = SpiritMotion.idle;
   int _direction = 0, _baselineDirection = 0;
-  bool _head = false, _belly = false, _cape = false;
+  bool _head = false, _belly = false;
   double _actionLeft = 0;
 
   /// 화면이 정한 자세 (config character.rive.screens·restSwap). null이면 장면(속도·앉기)이 정한다
@@ -75,12 +75,7 @@ final class SpiritController extends rive.RiveWidgetController {
   int get expression => _exprNow;
   bool get headPressed => _head;
   bool get bellyPressed => _belly;
-  bool get capeEnabled => _cape;
   int get poseChoice => _pose.value.round();
-  void setCape(bool enabled) {
-    _cape = enabled;
-  }
-
   void wear(SpiritLook look) {
     for (final entry in {
       'eye': look.eye + 1,
@@ -101,28 +96,8 @@ final class SpiritController extends rive.RiveWidgetController {
       'pet',
       'float',
     ]) {
-      var choice = look.choices[slot] ?? 0;
-      // 이전 디버그 미리보기 호출도 같은 확정 소품으로 대응한다.
-      if (look.choices.isEmpty) {
-        if (slot == 'bag') {
-          choice = look.bag == 1
-              ? 1
-              : look.bag == 2
-              ? 5
-              : 0;
-        }
-        if (slot == 'cloth') {
-          choice = look.outfit == 1
-              ? 4
-              : look.outfit == 2
-              ? 1
-              : _cape
-              ? 1
-              : 0;
-        }
-        if (slot == 'pet') choice = look.companion == 1 ? 5 : 0;
-      }
-      instance.number('${slot}Choice')!.value = choice.toDouble();
+      // 칸 번호는 spiritLookOf가 채운다 (unified_wardrobe.dart). 없는 칸은 안 입음 0
+      instance.number('${slot}Choice')!.value = (look.choices[slot] ?? 0).toDouble();
     }
     instance.color('bodyColor')!.value = Color(look.bodyArgb ?? 0xfff2dfc6);
     for (final p in unifiedProps) {
