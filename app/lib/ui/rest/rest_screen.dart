@@ -671,13 +671,13 @@ class _WalkingPill extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 이정표 거리를 넘기거나 기록을 새로 받을 때마다 다시 읽는다 (몇 초마다)
-    ref.watch(paintTrailProvider.select((s) => (s.flushes, s.refreshes)));
+    // 이정표 거리를 넘기거나 기록을 새로 받을 때마다 다시 읽는다 (몇 초마다). 점 = 그 물감 길이 지금 칠하는 색
+    final current =
+        ref.watch(paintTrailProvider.select((s) => (s.flushes, s.refreshes, s.paintColorId))).$3;
     final summary = ref.read(paintTrailProvider.notifier).summaryAt(ref.read(clockProvider)());
     final km = formatKmShort(summary?.distanceM ?? 0);
     final pc = ref.watch(rulesProvider).value?.paintColor;
-    final current = ref.watch(paintShelfProvider).value?.current;
-    final dot = Color(current == null || pc == null ? Palette.terracotta.toARGB32() : pc.hexOf(current));
+    final dot = Color(pc == null ? Palette.terracotta.toARGB32() : pc.hexOf(current ?? pc.defaultId));
     final style = context.display(13);
     return Semantics(
       button: true,

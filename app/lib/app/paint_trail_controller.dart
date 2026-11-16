@@ -16,6 +16,7 @@ import '../domain/walk_record.dart';
 import 'companion_providers.dart';
 import 'live_walker.dart';
 import 'paint_providers.dart';
+import 'paint_service.dart';
 import 'providers.dart';
 import 'sync_service.dart';
 
@@ -36,6 +37,7 @@ class PaintTrailState {
     this.endedKm,
     this.endedSeq = 0,
     this.endedBy,
+    this.paintColorId,
   });
 
   /// 열린 물감 길 번호와 시작 (첫 걸음의 분). 없으면 null
@@ -63,6 +65,10 @@ class PaintTrailState {
   /// 걷는 중·AutoSync의 도착 화면이 하고 토스트는 없다
   final PaintTrailEnd? endedBy;
 
+  /// 이 물감 길이 지금 칠하는 색 (마지막 색 구간, 16장 11/16). 열고 나서 적기 전이면 null.
+  /// 쉼터 위 ‘걷는 중’ 알약의 점 색 (DB를 다시 읽지 않게 여기 둔다)
+  final String? paintColorId;
+
   bool get active => id != null;
 
   PaintTrailState copyWith({
@@ -76,6 +82,7 @@ class PaintTrailState {
     double? Function()? endedKm,
     int? endedSeq,
     PaintTrailEnd? Function()? endedBy,
+    String? Function()? paintColorId,
   }) =>
       PaintTrailState(
         id: id == null ? this.id : id(),
@@ -88,6 +95,7 @@ class PaintTrailState {
         endedKm: endedKm == null ? this.endedKm : endedKm(),
         endedSeq: endedSeq ?? this.endedSeq,
         endedBy: endedBy == null ? this.endedBy : endedBy(),
+        paintColorId: paintColorId == null ? this.paintColorId : paintColorId(),
       );
 }
 
@@ -212,7 +220,9 @@ class PaintTrailController extends Notifier<PaintTrailState> {
       await _flushPaint(rules, _now(), force: true);
     }
     final ok = await paint.choose(colorId, openTrailId: state.id, now: _now());
-    if (!_disposed) ref.invalidate(paintShelfProvider);
+    if (_disposed) return ok;
+    ref.invalidate(paintShelfProvider);
+    if (ok && id != null && state.id == id) await _readTrailColor(paint, id);
     return ok;
   }
 
@@ -442,11 +452,19 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     }
   }
 
+  /// 물감 길 [id]가 지금 칠하는 색을 상태에 둔다 (바뀌었을 때만)
+  Future<void> _readTrailColor(PaintService paint, int id) async {
+    final color = await paint.trailColor(id);
+    if (_disposed || state.id != id || state.paintColorId == color) return;
+    state = state.copyWith(paintColorId: () => color);
+  }
+
   /// 물감 길 [id]를 연 때: 그 물감 길의 첫 색 구간에 지금 칠할 물감을 적고 날씨를 묻는다 (하루 한 번이면 그날 처음만)
   Future<void> _beginPaint(int id) async {
     try {
       final paint = await ref.read(paintServiceProvider.future);
       await paint.beginTrail(id);
+      await _readTrailColor(paint, id);
     } catch (e) {
       debugPrint('물감 길 색 적기 실패: $e');
     }
@@ -527,6 +545,9 @@ class PaintTrailController extends Notifier<PaintTrailState> {
         regionColor: _regionColor(rules),
       );
       if (state.id == id) _paintSentM = toM;
+      if (_disposed) return;
+      // 고른 물감을 다 써서 기본 물감이 됐을 수 있다 (쉼터 알약 점)
+      if (state.paintColorId != rules.paintColor.defaultId) await _readTrailColor(paint, id);
       if (_disposed) return;
       // 고른 물감이 줄었거나 다 썼다 (배낭 탭·지도는 다음에 볼 때), 새 통이면 배낭 점
       ref.invalidate(paintShelfProvider);

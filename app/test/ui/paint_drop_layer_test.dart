@@ -185,7 +185,7 @@ void main() {
       // 지역 색 통이 나오는 방울 하나와 그냥 통 방울 하나를 찾는다
       late int rt;
       late int rk;
-      int? plainTube;
+      late int plainTube;
       for (rt = 1;; rt++) {
         final rolls = {for (var i = 1; i <= 40; i++) i: rollDrop(rt, i, rules.paintColor)};
         final region = [for (final e in rolls.entries) if (e.value.tube && e.value.region) e.key];
@@ -203,7 +203,7 @@ void main() {
           .color;
       await _pump(tester, rk * 100.0 - 60, color: day, trailId: rt, regionColor: jeju);
       expect(tubeColor(rk), const Color(jeju));
-      await _pump(tester, plainTube! * 100.0 - 60, color: day, trailId: rt, regionColor: jeju);
+      await _pump(tester, plainTube * 100.0 - 60, color: day, trailId: rt, regionColor: jeju);
       expect(tubeColor(plainTube), const Color(day));
       // 지역 색 통이 상한이면 그 통만 없다, 지역을 모르면 그 순간 색
       await _pump(tester, rk * 100.0 - 60, color: day, trailId: rt, regionColor: jeju, regionAllowed: false);
