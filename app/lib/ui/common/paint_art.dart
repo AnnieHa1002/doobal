@@ -3,14 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../app/catalog_providers.dart';
+import '../../app/providers.dart';
 import 'palette.dart';
 
-/// 물감 통 그림 이름 (확장자·버전 없이, assets/ui/ 에 넣으면 AssetIndex.sprite가 찾는다).
-/// 지시서 codex_paint_tube_v01: 길 위 `ui_paint_tube_road`(128px)·배낭과 줍기 아이콘 `ui_paint_tube_icon`(256px).
-/// 캔버스 3-1·6-1(11/15)은 물감 병 `ui_paint_bottle` 한 장을 함께 쓴다. 먼저 있는 것을 쓰고, 없으면 코드로 그린 임시
-const paintTubeRoadSprites = ['ui_paint_tube_road_v01', 'ui_paint_bottle_v01'];
-const paintTubeIconSprites = ['ui_paint_tube_icon_v01', 'ui_paint_bottle_v01'];
+/// 물감 통 그림 이름 (assets/ui/ 에 넣으면 AssetIndex.sprite가 찾는다): 길 위·배낭 아이콘은 config
+/// paintColor.tube.sprites(지시서 codex_paint_tube_v01: road 128px·icon 256px). 캔버스 3-1·6-1(11/15)의 물감 병
+/// `ui_paint_bottle` 한 장도 찾는다. 먼저 있는 것을 쓰고, 없으면 코드로 그린 임시
+const paintBottleSprite = 'ui_paint_bottle_v01';
 
 /// 물감 통 하나: 회색조 그림에 물감 색 [color]를 곱한다 (16장 11/14 디자인 기획: 그림 2장 × 앱 색, 아이콘 16장 안 그림).
 /// [road]면 길 위 그림, 아니면 아이콘 그림. 크기는 부르는 쪽 상자에 맞춘다
@@ -23,8 +22,13 @@ class PaintTubeArt extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final assets = ref.watch(assetIndexProvider).value;
+    final pc = ref.watch(rulesProvider).value?.paintColor;
     String? path;
-    for (final name in road ? paintTubeRoadSprites : paintTubeIconSprites) {
+    for (final name in [
+      (road ? pc?.tubeRoadSprite : pc?.tubeIconSprite) ??
+          (road ? 'ui_paint_tube_road_v01' : 'ui_paint_tube_icon_v01'),
+      paintBottleSprite,
+    ]) {
       path = assets?.sprite(name);
       if (path != null) break;
     }

@@ -242,6 +242,9 @@ class MapTrailRules {
     required this.pencilWidthPt,
     required this.pencilColor,
     required this.pencilTile,
+    this.borderColor = 0xFF3E2C22,
+    this.borderAlpha = 0.25,
+    this.borderExtraPt = 1,
   });
 
   /// 물감 길 방울 타일 높이(= 선 두께)와 끝 방울 지름
@@ -256,6 +259,11 @@ class MapTrailRules {
   final double pencilWidthPt;
   final int pencilColor;
   final String pencilTile;
+
+  /// 물감 길 아래 테두리 (config mapTrail.paint.border, 11/15 파스텔): 같은 모양을 이 색·진하기로 extraPt 더 크게 먼저 깐다
+  final int borderColor;
+  final double borderAlpha;
+  final double borderExtraPt;
 }
 
 /// config.json의 규칙 숫자. 엔진은 숫자를 코드에 두지 않고 여기서 읽는다
@@ -819,6 +827,9 @@ class Rules {
         pencilWidthPt: _d(mapPencil['widthPt']),
         pencilColor: _hex(mapPencil['color'] as String),
         pencilTile: mapPencil['tile'] as String,
+        borderColor: _hex((mapPaint['border'] as Map)['color'] as String),
+        borderAlpha: _d((mapPaint['border'] as Map)['alpha']),
+        borderExtraPt: _d((mapPaint['border'] as Map)['extraPt']),
       ),
       paintDefaultColor: _hex((paintColor['default'] as Map)['hex'] as String),
       coinsPerKm: _dn(coins['perKm']),

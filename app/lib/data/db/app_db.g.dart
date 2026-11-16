@@ -2582,6 +2582,28 @@ class $SyncStateTable extends SyncState
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _weatherDayMeta = const VerificationMeta(
+    'weatherDay',
+  );
+  @override
+  late final GeneratedColumn<String> weatherDay = GeneratedColumn<String>(
+    'weather_day',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _weatherKindMeta = const VerificationMeta(
+    'weatherKind',
+  );
+  @override
+  late final GeneratedColumn<String> weatherKind = GeneratedColumn<String>(
+    'weather_kind',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2592,6 +2614,8 @@ class $SyncStateTable extends SyncState
     lastAliveUtc,
     recomputeFromDay,
     shopSeenUtc,
+    weatherDay,
+    weatherKind,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2672,6 +2696,21 @@ class $SyncStateTable extends SyncState
         ),
       );
     }
+    if (data.containsKey('weather_day')) {
+      context.handle(
+        _weatherDayMeta,
+        weatherDay.isAcceptableOrUnknown(data['weather_day']!, _weatherDayMeta),
+      );
+    }
+    if (data.containsKey('weather_kind')) {
+      context.handle(
+        _weatherKindMeta,
+        weatherKind.isAcceptableOrUnknown(
+          data['weather_kind']!,
+          _weatherKindMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2713,6 +2752,14 @@ class $SyncStateTable extends SyncState
         DriftSqlType.int,
         data['${effectivePrefix}shop_seen_utc'],
       ),
+      weatherDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}weather_day'],
+      ),
+      weatherKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}weather_kind'],
+      ),
     );
   }
 
@@ -2746,6 +2793,12 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
   /// 이 뒤에 얻은 기본 소품의 색 소품이 새 상품이다. null이면 설치 시각([installUtc])으로 본다 (첫날 점 없음).
   /// 이 기기에만 두는 값 (백업에 넣지 않는 표)
   final int? shopSeenUtc;
+
+  /// 그날 날씨 (스키마 20, 16장 11/16 ‘날씨는 그날 하루 하나’): 한국 날짜 키 'YYYY-MM-DD'와 getWeather의 kind
+  /// (clear·cloudy·rain·snow). 그날 처음 물감 길이 열릴 때 받아 두고 그날은 다시 묻지 않는다 (앱을 껐다 켜도).
+  /// 받지 못했으면 그대로 둔다 (다음 물감 길에서 다시). 이 기기에만 두는 값 (백업에 넣지 않는 표)
+  final String? weatherDay;
+  final String? weatherKind;
   const SyncStateRow({
     required this.id,
     this.lastFetchedUtc,
@@ -2755,6 +2808,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     this.lastAliveUtc,
     this.recomputeFromDay,
     this.shopSeenUtc,
+    this.weatherDay,
+    this.weatherKind,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2776,6 +2831,12 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     }
     if (!nullToAbsent || shopSeenUtc != null) {
       map['shop_seen_utc'] = Variable<int>(shopSeenUtc);
+    }
+    if (!nullToAbsent || weatherDay != null) {
+      map['weather_day'] = Variable<String>(weatherDay);
+    }
+    if (!nullToAbsent || weatherKind != null) {
+      map['weather_kind'] = Variable<String>(weatherKind);
     }
     return map;
   }
@@ -2800,6 +2861,12 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       shopSeenUtc: shopSeenUtc == null && nullToAbsent
           ? const Value.absent()
           : Value(shopSeenUtc),
+      weatherDay: weatherDay == null && nullToAbsent
+          ? const Value.absent()
+          : Value(weatherDay),
+      weatherKind: weatherKind == null && nullToAbsent
+          ? const Value.absent()
+          : Value(weatherKind),
     );
   }
 
@@ -2817,6 +2884,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       lastAliveUtc: serializer.fromJson<int?>(json['lastAliveUtc']),
       recomputeFromDay: serializer.fromJson<String?>(json['recomputeFromDay']),
       shopSeenUtc: serializer.fromJson<int?>(json['shopSeenUtc']),
+      weatherDay: serializer.fromJson<String?>(json['weatherDay']),
+      weatherKind: serializer.fromJson<String?>(json['weatherKind']),
     );
   }
   @override
@@ -2831,6 +2900,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       'lastAliveUtc': serializer.toJson<int?>(lastAliveUtc),
       'recomputeFromDay': serializer.toJson<String?>(recomputeFromDay),
       'shopSeenUtc': serializer.toJson<int?>(shopSeenUtc),
+      'weatherDay': serializer.toJson<String?>(weatherDay),
+      'weatherKind': serializer.toJson<String?>(weatherKind),
     };
   }
 
@@ -2843,6 +2914,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     Value<int?> lastAliveUtc = const Value.absent(),
     Value<String?> recomputeFromDay = const Value.absent(),
     Value<int?> shopSeenUtc = const Value.absent(),
+    Value<String?> weatherDay = const Value.absent(),
+    Value<String?> weatherKind = const Value.absent(),
   }) => SyncStateRow(
     id: id ?? this.id,
     lastFetchedUtc: lastFetchedUtc.present
@@ -2858,6 +2931,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
         ? recomputeFromDay.value
         : this.recomputeFromDay,
     shopSeenUtc: shopSeenUtc.present ? shopSeenUtc.value : this.shopSeenUtc,
+    weatherDay: weatherDay.present ? weatherDay.value : this.weatherDay,
+    weatherKind: weatherKind.present ? weatherKind.value : this.weatherKind,
   );
   SyncStateRow copyWithCompanion(SyncStateCompanion data) {
     return SyncStateRow(
@@ -2883,6 +2958,12 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
       shopSeenUtc: data.shopSeenUtc.present
           ? data.shopSeenUtc.value
           : this.shopSeenUtc,
+      weatherDay: data.weatherDay.present
+          ? data.weatherDay.value
+          : this.weatherDay,
+      weatherKind: data.weatherKind.present
+          ? data.weatherKind.value
+          : this.weatherKind,
     );
   }
 
@@ -2896,7 +2977,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           ..write('restoreFloorDay: $restoreFloorDay, ')
           ..write('lastAliveUtc: $lastAliveUtc, ')
           ..write('recomputeFromDay: $recomputeFromDay, ')
-          ..write('shopSeenUtc: $shopSeenUtc')
+          ..write('shopSeenUtc: $shopSeenUtc, ')
+          ..write('weatherDay: $weatherDay, ')
+          ..write('weatherKind: $weatherKind')
           ..write(')'))
         .toString();
   }
@@ -2911,6 +2994,8 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
     lastAliveUtc,
     recomputeFromDay,
     shopSeenUtc,
+    weatherDay,
+    weatherKind,
   );
   @override
   bool operator ==(Object other) =>
@@ -2923,7 +3008,9 @@ class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
           other.restoreFloorDay == this.restoreFloorDay &&
           other.lastAliveUtc == this.lastAliveUtc &&
           other.recomputeFromDay == this.recomputeFromDay &&
-          other.shopSeenUtc == this.shopSeenUtc);
+          other.shopSeenUtc == this.shopSeenUtc &&
+          other.weatherDay == this.weatherDay &&
+          other.weatherKind == this.weatherKind);
 }
 
 class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
@@ -2935,6 +3022,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
   final Value<int?> lastAliveUtc;
   final Value<String?> recomputeFromDay;
   final Value<int?> shopSeenUtc;
+  final Value<String?> weatherDay;
+  final Value<String?> weatherKind;
   const SyncStateCompanion({
     this.id = const Value.absent(),
     this.lastFetchedUtc = const Value.absent(),
@@ -2944,6 +3033,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     this.lastAliveUtc = const Value.absent(),
     this.recomputeFromDay = const Value.absent(),
     this.shopSeenUtc = const Value.absent(),
+    this.weatherDay = const Value.absent(),
+    this.weatherKind = const Value.absent(),
   });
   SyncStateCompanion.insert({
     this.id = const Value.absent(),
@@ -2954,6 +3045,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     this.lastAliveUtc = const Value.absent(),
     this.recomputeFromDay = const Value.absent(),
     this.shopSeenUtc = const Value.absent(),
+    this.weatherDay = const Value.absent(),
+    this.weatherKind = const Value.absent(),
   }) : firstRecordDay = Value(firstRecordDay),
        installUtc = Value(installUtc);
   static Insertable<SyncStateRow> custom({
@@ -2965,6 +3058,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Expression<int>? lastAliveUtc,
     Expression<String>? recomputeFromDay,
     Expression<int>? shopSeenUtc,
+    Expression<String>? weatherDay,
+    Expression<String>? weatherKind,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2975,6 +3070,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       if (lastAliveUtc != null) 'last_alive_utc': lastAliveUtc,
       if (recomputeFromDay != null) 'recompute_from_day': recomputeFromDay,
       if (shopSeenUtc != null) 'shop_seen_utc': shopSeenUtc,
+      if (weatherDay != null) 'weather_day': weatherDay,
+      if (weatherKind != null) 'weather_kind': weatherKind,
     });
   }
 
@@ -2987,6 +3084,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     Value<int?>? lastAliveUtc,
     Value<String?>? recomputeFromDay,
     Value<int?>? shopSeenUtc,
+    Value<String?>? weatherDay,
+    Value<String?>? weatherKind,
   }) {
     return SyncStateCompanion(
       id: id ?? this.id,
@@ -2997,6 +3096,8 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
       lastAliveUtc: lastAliveUtc ?? this.lastAliveUtc,
       recomputeFromDay: recomputeFromDay ?? this.recomputeFromDay,
       shopSeenUtc: shopSeenUtc ?? this.shopSeenUtc,
+      weatherDay: weatherDay ?? this.weatherDay,
+      weatherKind: weatherKind ?? this.weatherKind,
     );
   }
 
@@ -3027,6 +3128,12 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
     if (shopSeenUtc.present) {
       map['shop_seen_utc'] = Variable<int>(shopSeenUtc.value);
     }
+    if (weatherDay.present) {
+      map['weather_day'] = Variable<String>(weatherDay.value);
+    }
+    if (weatherKind.present) {
+      map['weather_kind'] = Variable<String>(weatherKind.value);
+    }
     return map;
   }
 
@@ -3040,7 +3147,9 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
           ..write('restoreFloorDay: $restoreFloorDay, ')
           ..write('lastAliveUtc: $lastAliveUtc, ')
           ..write('recomputeFromDay: $recomputeFromDay, ')
-          ..write('shopSeenUtc: $shopSeenUtc')
+          ..write('shopSeenUtc: $shopSeenUtc, ')
+          ..write('weatherDay: $weatherDay, ')
+          ..write('weatherKind: $weatherKind')
           ..write(')'))
         .toString();
   }
@@ -6268,37 +6377,8 @@ class $PaintTrailsTable extends PaintTrails
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   ).withConverter<PaintTrailEnd?>($PaintTrailsTable.$converterendReasonn);
-  static const VerificationMeta _colorIdMeta = const VerificationMeta(
-    'colorId',
-  );
   @override
-  late final GeneratedColumn<String> colorId = GeneratedColumn<String>(
-    'color_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _colorEndUtcMeta = const VerificationMeta(
-    'colorEndUtc',
-  );
-  @override
-  late final GeneratedColumn<int> colorEndUtc = GeneratedColumn<int>(
-    'color_end_utc',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    startUtc,
-    endUtc,
-    endReason,
-    colorId,
-    colorEndUtc,
-  ];
+  List<GeneratedColumn> get $columns => [id, startUtc, endUtc, endReason];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -6328,21 +6408,6 @@ class $PaintTrailsTable extends PaintTrails
         endUtc.isAcceptableOrUnknown(data['end_utc']!, _endUtcMeta),
       );
     }
-    if (data.containsKey('color_id')) {
-      context.handle(
-        _colorIdMeta,
-        colorId.isAcceptableOrUnknown(data['color_id']!, _colorIdMeta),
-      );
-    }
-    if (data.containsKey('color_end_utc')) {
-      context.handle(
-        _colorEndUtcMeta,
-        colorEndUtc.isAcceptableOrUnknown(
-          data['color_end_utc']!,
-          _colorEndUtcMeta,
-        ),
-      );
-    }
     return context;
   }
 
@@ -6370,14 +6435,6 @@ class $PaintTrailsTable extends PaintTrails
           data['${effectivePrefix}end_reason'],
         ),
       ),
-      colorId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}color_id'],
-      ),
-      colorEndUtc: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}color_end_utc'],
-      ),
     );
   }
 
@@ -6397,15 +6454,11 @@ class PaintTrailRow extends DataClass implements Insertable<PaintTrailRow> {
   final int startUtc;
   final int? endUtc;
   final PaintTrailEnd? endReason;
-  final String? colorId;
-  final int? colorEndUtc;
   const PaintTrailRow({
     required this.id,
     required this.startUtc,
     this.endUtc,
     this.endReason,
-    this.colorId,
-    this.colorEndUtc,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6420,12 +6473,6 @@ class PaintTrailRow extends DataClass implements Insertable<PaintTrailRow> {
         $PaintTrailsTable.$converterendReasonn.toSql(endReason),
       );
     }
-    if (!nullToAbsent || colorId != null) {
-      map['color_id'] = Variable<String>(colorId);
-    }
-    if (!nullToAbsent || colorEndUtc != null) {
-      map['color_end_utc'] = Variable<int>(colorEndUtc);
-    }
     return map;
   }
 
@@ -6439,12 +6486,6 @@ class PaintTrailRow extends DataClass implements Insertable<PaintTrailRow> {
       endReason: endReason == null && nullToAbsent
           ? const Value.absent()
           : Value(endReason),
-      colorId: colorId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(colorId),
-      colorEndUtc: colorEndUtc == null && nullToAbsent
-          ? const Value.absent()
-          : Value(colorEndUtc),
     );
   }
 
@@ -6460,8 +6501,6 @@ class PaintTrailRow extends DataClass implements Insertable<PaintTrailRow> {
       endReason: $PaintTrailsTable.$converterendReasonn.fromJson(
         serializer.fromJson<String?>(json['endReason']),
       ),
-      colorId: serializer.fromJson<String?>(json['colorId']),
-      colorEndUtc: serializer.fromJson<int?>(json['colorEndUtc']),
     );
   }
   @override
@@ -6474,8 +6513,6 @@ class PaintTrailRow extends DataClass implements Insertable<PaintTrailRow> {
       'endReason': serializer.toJson<String?>(
         $PaintTrailsTable.$converterendReasonn.toJson(endReason),
       ),
-      'colorId': serializer.toJson<String?>(colorId),
-      'colorEndUtc': serializer.toJson<int?>(colorEndUtc),
     };
   }
 
@@ -6484,15 +6521,11 @@ class PaintTrailRow extends DataClass implements Insertable<PaintTrailRow> {
     int? startUtc,
     Value<int?> endUtc = const Value.absent(),
     Value<PaintTrailEnd?> endReason = const Value.absent(),
-    Value<String?> colorId = const Value.absent(),
-    Value<int?> colorEndUtc = const Value.absent(),
   }) => PaintTrailRow(
     id: id ?? this.id,
     startUtc: startUtc ?? this.startUtc,
     endUtc: endUtc.present ? endUtc.value : this.endUtc,
     endReason: endReason.present ? endReason.value : this.endReason,
-    colorId: colorId.present ? colorId.value : this.colorId,
-    colorEndUtc: colorEndUtc.present ? colorEndUtc.value : this.colorEndUtc,
   );
   PaintTrailRow copyWithCompanion(PaintTrailsCompanion data) {
     return PaintTrailRow(
@@ -6500,10 +6533,6 @@ class PaintTrailRow extends DataClass implements Insertable<PaintTrailRow> {
       startUtc: data.startUtc.present ? data.startUtc.value : this.startUtc,
       endUtc: data.endUtc.present ? data.endUtc.value : this.endUtc,
       endReason: data.endReason.present ? data.endReason.value : this.endReason,
-      colorId: data.colorId.present ? data.colorId.value : this.colorId,
-      colorEndUtc: data.colorEndUtc.present
-          ? data.colorEndUtc.value
-          : this.colorEndUtc,
     );
   }
 
@@ -6513,16 +6542,13 @@ class PaintTrailRow extends DataClass implements Insertable<PaintTrailRow> {
           ..write('id: $id, ')
           ..write('startUtc: $startUtc, ')
           ..write('endUtc: $endUtc, ')
-          ..write('endReason: $endReason, ')
-          ..write('colorId: $colorId, ')
-          ..write('colorEndUtc: $colorEndUtc')
+          ..write('endReason: $endReason')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, startUtc, endUtc, endReason, colorId, colorEndUtc);
+  int get hashCode => Object.hash(id, startUtc, endUtc, endReason);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6530,9 +6556,7 @@ class PaintTrailRow extends DataClass implements Insertable<PaintTrailRow> {
           other.id == this.id &&
           other.startUtc == this.startUtc &&
           other.endUtc == this.endUtc &&
-          other.endReason == this.endReason &&
-          other.colorId == this.colorId &&
-          other.colorEndUtc == this.colorEndUtc);
+          other.endReason == this.endReason);
 }
 
 class PaintTrailsCompanion extends UpdateCompanion<PaintTrailRow> {
@@ -6540,39 +6564,29 @@ class PaintTrailsCompanion extends UpdateCompanion<PaintTrailRow> {
   final Value<int> startUtc;
   final Value<int?> endUtc;
   final Value<PaintTrailEnd?> endReason;
-  final Value<String?> colorId;
-  final Value<int?> colorEndUtc;
   const PaintTrailsCompanion({
     this.id = const Value.absent(),
     this.startUtc = const Value.absent(),
     this.endUtc = const Value.absent(),
     this.endReason = const Value.absent(),
-    this.colorId = const Value.absent(),
-    this.colorEndUtc = const Value.absent(),
   });
   PaintTrailsCompanion.insert({
     this.id = const Value.absent(),
     required int startUtc,
     this.endUtc = const Value.absent(),
     this.endReason = const Value.absent(),
-    this.colorId = const Value.absent(),
-    this.colorEndUtc = const Value.absent(),
   }) : startUtc = Value(startUtc);
   static Insertable<PaintTrailRow> custom({
     Expression<int>? id,
     Expression<int>? startUtc,
     Expression<int>? endUtc,
     Expression<String>? endReason,
-    Expression<String>? colorId,
-    Expression<int>? colorEndUtc,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (startUtc != null) 'start_utc': startUtc,
       if (endUtc != null) 'end_utc': endUtc,
       if (endReason != null) 'end_reason': endReason,
-      if (colorId != null) 'color_id': colorId,
-      if (colorEndUtc != null) 'color_end_utc': colorEndUtc,
     });
   }
 
@@ -6581,16 +6595,12 @@ class PaintTrailsCompanion extends UpdateCompanion<PaintTrailRow> {
     Value<int>? startUtc,
     Value<int?>? endUtc,
     Value<PaintTrailEnd?>? endReason,
-    Value<String?>? colorId,
-    Value<int?>? colorEndUtc,
   }) {
     return PaintTrailsCompanion(
       id: id ?? this.id,
       startUtc: startUtc ?? this.startUtc,
       endUtc: endUtc ?? this.endUtc,
       endReason: endReason ?? this.endReason,
-      colorId: colorId ?? this.colorId,
-      colorEndUtc: colorEndUtc ?? this.colorEndUtc,
     );
   }
 
@@ -6611,12 +6621,6 @@ class PaintTrailsCompanion extends UpdateCompanion<PaintTrailRow> {
         $PaintTrailsTable.$converterendReasonn.toSql(endReason.value),
       );
     }
-    if (colorId.present) {
-      map['color_id'] = Variable<String>(colorId.value);
-    }
-    if (colorEndUtc.present) {
-      map['color_end_utc'] = Variable<int>(colorEndUtc.value);
-    }
     return map;
   }
 
@@ -6626,9 +6630,7 @@ class PaintTrailsCompanion extends UpdateCompanion<PaintTrailRow> {
           ..write('id: $id, ')
           ..write('startUtc: $startUtc, ')
           ..write('endUtc: $endUtc, ')
-          ..write('endReason: $endReason, ')
-          ..write('colorId: $colorId, ')
-          ..write('colorEndUtc: $colorEndUtc')
+          ..write('endReason: $endReason')
           ..write(')'))
         .toString();
   }
@@ -10404,6 +10406,273 @@ class PaintTubesCompanion extends UpdateCompanion<PaintTubeRow> {
   }
 }
 
+class $PaintTrailColorsTable extends PaintTrailColors
+    with TableInfo<$PaintTrailColorsTable, PaintTrailColorRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PaintTrailColorsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _trailIdMeta = const VerificationMeta(
+    'trailId',
+  );
+  @override
+  late final GeneratedColumn<int> trailId = GeneratedColumn<int>(
+    'trail_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fromUtcMeta = const VerificationMeta(
+    'fromUtc',
+  );
+  @override
+  late final GeneratedColumn<int> fromUtc = GeneratedColumn<int>(
+    'from_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _colorIdMeta = const VerificationMeta(
+    'colorId',
+  );
+  @override
+  late final GeneratedColumn<String> colorId = GeneratedColumn<String>(
+    'color_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [trailId, fromUtc, colorId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'paint_trail_colors';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PaintTrailColorRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('trail_id')) {
+      context.handle(
+        _trailIdMeta,
+        trailId.isAcceptableOrUnknown(data['trail_id']!, _trailIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_trailIdMeta);
+    }
+    if (data.containsKey('from_utc')) {
+      context.handle(
+        _fromUtcMeta,
+        fromUtc.isAcceptableOrUnknown(data['from_utc']!, _fromUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fromUtcMeta);
+    }
+    if (data.containsKey('color_id')) {
+      context.handle(
+        _colorIdMeta,
+        colorId.isAcceptableOrUnknown(data['color_id']!, _colorIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_colorIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {trailId, fromUtc};
+  @override
+  PaintTrailColorRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PaintTrailColorRow(
+      trailId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}trail_id'],
+      )!,
+      fromUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}from_utc'],
+      )!,
+      colorId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color_id'],
+      )!,
+    );
+  }
+
+  @override
+  $PaintTrailColorsTable createAlias(String alias) {
+    return $PaintTrailColorsTable(attachedDatabase, alias);
+  }
+}
+
+class PaintTrailColorRow extends DataClass
+    implements Insertable<PaintTrailColorRow> {
+  final int trailId;
+  final int fromUtc;
+  final String colorId;
+  const PaintTrailColorRow({
+    required this.trailId,
+    required this.fromUtc,
+    required this.colorId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['trail_id'] = Variable<int>(trailId);
+    map['from_utc'] = Variable<int>(fromUtc);
+    map['color_id'] = Variable<String>(colorId);
+    return map;
+  }
+
+  PaintTrailColorsCompanion toCompanion(bool nullToAbsent) {
+    return PaintTrailColorsCompanion(
+      trailId: Value(trailId),
+      fromUtc: Value(fromUtc),
+      colorId: Value(colorId),
+    );
+  }
+
+  factory PaintTrailColorRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PaintTrailColorRow(
+      trailId: serializer.fromJson<int>(json['trailId']),
+      fromUtc: serializer.fromJson<int>(json['fromUtc']),
+      colorId: serializer.fromJson<String>(json['colorId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'trailId': serializer.toJson<int>(trailId),
+      'fromUtc': serializer.toJson<int>(fromUtc),
+      'colorId': serializer.toJson<String>(colorId),
+    };
+  }
+
+  PaintTrailColorRow copyWith({int? trailId, int? fromUtc, String? colorId}) =>
+      PaintTrailColorRow(
+        trailId: trailId ?? this.trailId,
+        fromUtc: fromUtc ?? this.fromUtc,
+        colorId: colorId ?? this.colorId,
+      );
+  PaintTrailColorRow copyWithCompanion(PaintTrailColorsCompanion data) {
+    return PaintTrailColorRow(
+      trailId: data.trailId.present ? data.trailId.value : this.trailId,
+      fromUtc: data.fromUtc.present ? data.fromUtc.value : this.fromUtc,
+      colorId: data.colorId.present ? data.colorId.value : this.colorId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PaintTrailColorRow(')
+          ..write('trailId: $trailId, ')
+          ..write('fromUtc: $fromUtc, ')
+          ..write('colorId: $colorId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(trailId, fromUtc, colorId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PaintTrailColorRow &&
+          other.trailId == this.trailId &&
+          other.fromUtc == this.fromUtc &&
+          other.colorId == this.colorId);
+}
+
+class PaintTrailColorsCompanion extends UpdateCompanion<PaintTrailColorRow> {
+  final Value<int> trailId;
+  final Value<int> fromUtc;
+  final Value<String> colorId;
+  final Value<int> rowid;
+  const PaintTrailColorsCompanion({
+    this.trailId = const Value.absent(),
+    this.fromUtc = const Value.absent(),
+    this.colorId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PaintTrailColorsCompanion.insert({
+    required int trailId,
+    required int fromUtc,
+    required String colorId,
+    this.rowid = const Value.absent(),
+  }) : trailId = Value(trailId),
+       fromUtc = Value(fromUtc),
+       colorId = Value(colorId);
+  static Insertable<PaintTrailColorRow> custom({
+    Expression<int>? trailId,
+    Expression<int>? fromUtc,
+    Expression<String>? colorId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (trailId != null) 'trail_id': trailId,
+      if (fromUtc != null) 'from_utc': fromUtc,
+      if (colorId != null) 'color_id': colorId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PaintTrailColorsCompanion copyWith({
+    Value<int>? trailId,
+    Value<int>? fromUtc,
+    Value<String>? colorId,
+    Value<int>? rowid,
+  }) {
+    return PaintTrailColorsCompanion(
+      trailId: trailId ?? this.trailId,
+      fromUtc: fromUtc ?? this.fromUtc,
+      colorId: colorId ?? this.colorId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (trailId.present) {
+      map['trail_id'] = Variable<int>(trailId.value);
+    }
+    if (fromUtc.present) {
+      map['from_utc'] = Variable<int>(fromUtc.value);
+    }
+    if (colorId.present) {
+      map['color_id'] = Variable<String>(colorId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PaintTrailColorsCompanion(')
+          ..write('trailId: $trailId, ')
+          ..write('fromUtc: $fromUtc, ')
+          ..write('colorId: $colorId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -10439,6 +10708,9 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $ReportStateTable reportState = $ReportStateTable(this);
   late final $PaintStockTable paintStock = $PaintStockTable(this);
   late final $PaintTubesTable paintTubes = $PaintTubesTable(this);
+  late final $PaintTrailColorsTable paintTrailColors = $PaintTrailColorsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10469,6 +10741,7 @@ abstract class _$AppDb extends GeneratedDatabase {
     reportState,
     paintStock,
     paintTubes,
+    paintTrailColors,
   ];
 }
 
@@ -11759,6 +12032,8 @@ typedef $$SyncStateTableCreateCompanionBuilder = SyncStateCompanion Function({
   Value<int?> lastAliveUtc,
   Value<String?> recomputeFromDay,
   Value<int?> shopSeenUtc,
+  Value<String?> weatherDay,
+  Value<String?> weatherKind,
 });
 typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<int> id,
@@ -11769,6 +12044,8 @@ typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
   Value<int?> lastAliveUtc,
   Value<String?> recomputeFromDay,
   Value<int?> shopSeenUtc,
+  Value<String?> weatherDay,
+  Value<String?> weatherKind,
 });
 
 class $$SyncStateTableFilterComposer
@@ -11817,6 +12094,16 @@ class $$SyncStateTableFilterComposer
 
   ColumnFilters<int> get shopSeenUtc => $composableBuilder(
     column: $table.shopSeenUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get weatherDay => $composableBuilder(
+    column: $table.weatherDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get weatherKind => $composableBuilder(
+    column: $table.weatherKind,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11869,6 +12156,16 @@ class $$SyncStateTableOrderingComposer
     column: $table.shopSeenUtc,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get weatherDay => $composableBuilder(
+    column: $table.weatherDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get weatherKind => $composableBuilder(
+    column: $table.weatherKind,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncStateTableAnnotationComposer
@@ -11917,6 +12214,16 @@ class $$SyncStateTableAnnotationComposer
     column: $table.shopSeenUtc,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get weatherDay => $composableBuilder(
+    column: $table.weatherDay,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get weatherKind => $composableBuilder(
+    column: $table.weatherKind,
+    builder: (column) => column,
+  );
 }
 
 class $$SyncStateTableTableManager
@@ -11958,6 +12265,8 @@ class $$SyncStateTableTableManager
                 Value<int?> lastAliveUtc = const Value.absent(),
                 Value<String?> recomputeFromDay = const Value.absent(),
                 Value<int?> shopSeenUtc = const Value.absent(),
+                Value<String?> weatherDay = const Value.absent(),
+                Value<String?> weatherKind = const Value.absent(),
               }) => SyncStateCompanion(
                 id: id,
                 lastFetchedUtc: lastFetchedUtc,
@@ -11967,6 +12276,8 @@ class $$SyncStateTableTableManager
                 lastAliveUtc: lastAliveUtc,
                 recomputeFromDay: recomputeFromDay,
                 shopSeenUtc: shopSeenUtc,
+                weatherDay: weatherDay,
+                weatherKind: weatherKind,
               ),
           createCompanionCallback:
               ({
@@ -11978,6 +12289,8 @@ class $$SyncStateTableTableManager
                 Value<int?> lastAliveUtc = const Value.absent(),
                 Value<String?> recomputeFromDay = const Value.absent(),
                 Value<int?> shopSeenUtc = const Value.absent(),
+                Value<String?> weatherDay = const Value.absent(),
+                Value<String?> weatherKind = const Value.absent(),
               }) => SyncStateCompanion.insert(
                 id: id,
                 lastFetchedUtc: lastFetchedUtc,
@@ -11987,6 +12300,8 @@ class $$SyncStateTableTableManager
                 lastAliveUtc: lastAliveUtc,
                 recomputeFromDay: recomputeFromDay,
                 shopSeenUtc: shopSeenUtc,
+                weatherDay: weatherDay,
+                weatherKind: weatherKind,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -13729,8 +14044,6 @@ typedef $$PaintTrailsTableCreateCompanionBuilder =
       required int startUtc,
       Value<int?> endUtc,
       Value<PaintTrailEnd?> endReason,
-      Value<String?> colorId,
-      Value<int?> colorEndUtc,
     });
 typedef $$PaintTrailsTableUpdateCompanionBuilder =
     PaintTrailsCompanion Function({
@@ -13738,8 +14051,6 @@ typedef $$PaintTrailsTableUpdateCompanionBuilder =
       Value<int> startUtc,
       Value<int?> endUtc,
       Value<PaintTrailEnd?> endReason,
-      Value<String?> colorId,
-      Value<int?> colorEndUtc,
     });
 
 class $$PaintTrailsTableFilterComposer
@@ -13771,16 +14082,6 @@ class $$PaintTrailsTableFilterComposer
     column: $table.endReason,
     builder: (column) => ColumnWithTypeConverterFilters(column),
   );
-
-  ColumnFilters<String> get colorId => $composableBuilder(
-    column: $table.colorId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get colorEndUtc => $composableBuilder(
-    column: $table.colorEndUtc,
-    builder: (column) => ColumnFilters(column),
-  );
 }
 
 class $$PaintTrailsTableOrderingComposer
@@ -13811,16 +14112,6 @@ class $$PaintTrailsTableOrderingComposer
     column: $table.endReason,
     builder: (column) => ColumnOrderings(column),
   );
-
-  ColumnOrderings<String> get colorId => $composableBuilder(
-    column: $table.colorId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get colorEndUtc => $composableBuilder(
-    column: $table.colorEndUtc,
-    builder: (column) => ColumnOrderings(column),
-  );
 }
 
 class $$PaintTrailsTableAnnotationComposer
@@ -13843,14 +14134,6 @@ class $$PaintTrailsTableAnnotationComposer
 
   GeneratedColumnWithTypeConverter<PaintTrailEnd?, String> get endReason =>
       $composableBuilder(column: $table.endReason, builder: (column) => column);
-
-  GeneratedColumn<String> get colorId =>
-      $composableBuilder(column: $table.colorId, builder: (column) => column);
-
-  GeneratedColumn<int> get colorEndUtc => $composableBuilder(
-    column: $table.colorEndUtc,
-    builder: (column) => column,
-  );
 }
 
 class $$PaintTrailsTableTableManager
@@ -13888,15 +14171,11 @@ class $$PaintTrailsTableTableManager
                 Value<int> startUtc = const Value.absent(),
                 Value<int?> endUtc = const Value.absent(),
                 Value<PaintTrailEnd?> endReason = const Value.absent(),
-                Value<String?> colorId = const Value.absent(),
-                Value<int?> colorEndUtc = const Value.absent(),
               }) => PaintTrailsCompanion(
                 id: id,
                 startUtc: startUtc,
                 endUtc: endUtc,
                 endReason: endReason,
-                colorId: colorId,
-                colorEndUtc: colorEndUtc,
               ),
           createCompanionCallback:
               ({
@@ -13904,15 +14183,11 @@ class $$PaintTrailsTableTableManager
                 required int startUtc,
                 Value<int?> endUtc = const Value.absent(),
                 Value<PaintTrailEnd?> endReason = const Value.absent(),
-                Value<String?> colorId = const Value.absent(),
-                Value<int?> colorEndUtc = const Value.absent(),
               }) => PaintTrailsCompanion.insert(
                 id: id,
                 startUtc: startUtc,
                 endUtc: endUtc,
                 endReason: endReason,
-                colorId: colorId,
-                colorEndUtc: colorEndUtc,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -16122,6 +16397,179 @@ typedef $$PaintTubesTableProcessedTableManager =
       PaintTubeRow,
       PrefetchHooks Function()
     >;
+typedef $$PaintTrailColorsTableCreateCompanionBuilder =
+    PaintTrailColorsCompanion Function({
+      required int trailId,
+      required int fromUtc,
+      required String colorId,
+      Value<int> rowid,
+    });
+typedef $$PaintTrailColorsTableUpdateCompanionBuilder =
+    PaintTrailColorsCompanion Function({
+      Value<int> trailId,
+      Value<int> fromUtc,
+      Value<String> colorId,
+      Value<int> rowid,
+    });
+
+class $$PaintTrailColorsTableFilterComposer
+    extends Composer<_$AppDb, $PaintTrailColorsTable> {
+  $$PaintTrailColorsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get trailId => $composableBuilder(
+    column: $table.trailId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fromUtc => $composableBuilder(
+    column: $table.fromUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get colorId => $composableBuilder(
+    column: $table.colorId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PaintTrailColorsTableOrderingComposer
+    extends Composer<_$AppDb, $PaintTrailColorsTable> {
+  $$PaintTrailColorsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get trailId => $composableBuilder(
+    column: $table.trailId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fromUtc => $composableBuilder(
+    column: $table.fromUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get colorId => $composableBuilder(
+    column: $table.colorId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PaintTrailColorsTableAnnotationComposer
+    extends Composer<_$AppDb, $PaintTrailColorsTable> {
+  $$PaintTrailColorsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get trailId =>
+      $composableBuilder(column: $table.trailId, builder: (column) => column);
+
+  GeneratedColumn<int> get fromUtc =>
+      $composableBuilder(column: $table.fromUtc, builder: (column) => column);
+
+  GeneratedColumn<String> get colorId =>
+      $composableBuilder(column: $table.colorId, builder: (column) => column);
+}
+
+class $$PaintTrailColorsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $PaintTrailColorsTable,
+          PaintTrailColorRow,
+          $$PaintTrailColorsTableFilterComposer,
+          $$PaintTrailColorsTableOrderingComposer,
+          $$PaintTrailColorsTableAnnotationComposer,
+          $$PaintTrailColorsTableCreateCompanionBuilder,
+          $$PaintTrailColorsTableUpdateCompanionBuilder,
+          (
+            PaintTrailColorRow,
+            BaseReferences<_$AppDb, $PaintTrailColorsTable, PaintTrailColorRow>,
+          ),
+          PaintTrailColorRow,
+          PrefetchHooks Function()
+        > {
+  $$PaintTrailColorsTableTableManager(_$AppDb db, $PaintTrailColorsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PaintTrailColorsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PaintTrailColorsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PaintTrailColorsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> trailId = const Value.absent(),
+                Value<int> fromUtc = const Value.absent(),
+                Value<String> colorId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PaintTrailColorsCompanion(
+                trailId: trailId,
+                fromUtc: fromUtc,
+                colorId: colorId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int trailId,
+                required int fromUtc,
+                required String colorId,
+                Value<int> rowid = const Value.absent(),
+              }) => PaintTrailColorsCompanion.insert(
+                trailId: trailId,
+                fromUtc: fromUtc,
+                colorId: colorId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PaintTrailColorsTable, PaintTrailColorRow>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDb,
+                    $PaintTrailColorsTable,
+                    PaintTrailColorRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PaintTrailColorsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $PaintTrailColorsTable,
+      PaintTrailColorRow,
+      $$PaintTrailColorsTableFilterComposer,
+      $$PaintTrailColorsTableOrderingComposer,
+      $$PaintTrailColorsTableAnnotationComposer,
+      $$PaintTrailColorsTableCreateCompanionBuilder,
+      $$PaintTrailColorsTableUpdateCompanionBuilder,
+      (
+        PaintTrailColorRow,
+        BaseReferences<_$AppDb, $PaintTrailColorsTable, PaintTrailColorRow>,
+      ),
+      PaintTrailColorRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -16176,4 +16624,6 @@ class $AppDbManager {
       $$PaintStockTableTableManager(_db, _db.paintStock);
   $$PaintTubesTableTableManager get paintTubes =>
       $$PaintTubesTableTableManager(_db, _db.paintTubes);
+  $$PaintTrailColorsTableTableManager get paintTrailColors =>
+      $$PaintTrailColorsTableTableManager(_db, _db.paintTrailColors);
 }

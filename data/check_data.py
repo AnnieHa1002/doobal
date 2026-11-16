@@ -269,6 +269,23 @@ if pc:
     n = (len(set(pc['timePhase']) - {'note'}) + len(set(pc['weather']) - {'note'})) * 2
     if n != pc['colorCount']:
         err(f"paintColor.colorCount {pc['colorCount']} ≠ (시간대 + 날씨) × 2 = {n}")
+    for sea, tbl in pc.get('season', {}).get('hex', {}).items():
+        if sea not in config['seasons']:
+            err(f"paintColor.season.hex {sea}: config seasons에 없음")
+        if set(tbl) != (set(pc['timePhase']) | set(pc['weather'])) - {'note'}:
+            err(f"paintColor.season.hex.{sea}: 16색 id가 timePhase·weather와 다름")
+    if pc.get('season') and len(pc['season']['hex']) * len(pc['season']['hex']['spring']) * 2 != 64:
+        err("paintColor.season: 계절 4 × 16색 = 64가 아님")
+    if pc.get('region'):
+        lm_regions = {l['region'] for l in landmarks.values()}
+        if set(pc['region']['colors']) != lm_regions:
+            err(f"paintColor.region.colors 키 {sorted(pc['region']['colors'])} ≠ landmarks region {sorted(lm_regions)}")
+        rids = [v['id'] for v in pc['region']['colors'].values()]
+        if len(set(rids)) != len(rids):
+            err("paintColor.region.colors id 중복")
+    rw = config['paintDrop'].get('rewards', [])
+    if sum(r['chance'] for r in rw) > 1:
+        err("paintDrop.rewards 확률 합 > 1")
     lo, hi = pc['tube']['amountWalkMin']
     if pc['tube']['amountM'] != [lo * pc['tube']['walkMPerMin'], hi * pc['tube']['walkMPerMin']]:
         err("paintColor.tube.amountM ≠ amountWalkMin × walkMPerMin")

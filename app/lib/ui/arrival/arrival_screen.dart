@@ -105,7 +105,8 @@ class _ArrivalScreenState extends ConsumerState<ArrivalScreen> with HoldsPaintTr
     if (mounted) ref.invalidate(snapshotProvider);
   }
 
-  /// 닫기: 쉼터로. 걷다 왔으면 도착을 본 것으로 적고 쉼터까지 돌아간다
+  /// 닫기: 쉼터로. 걷다 왔으면 도착을 본 것으로 적고 쉼터까지 돌아간다. 이 화면을 보는 사이 걸어서 새 물감 길이
+  /// 열렸으면 쉼터를 거치지 않고 바로 걷는 중 (16장 11/16 ③ ‘다른 화면을 닫으면 걷는 중’, T9 후속 물을 것 1)
   Future<void> _close() async {
     if (_leaving) return;
     _leaving = true;
@@ -115,7 +116,12 @@ class _ArrivalScreenState extends ConsumerState<ArrivalScreen> with HoldsPaintTr
     }
     await _markShown();
     if (!mounted) return;
-    Navigator.of(context).popUntil((r) => r.isFirst);
+    final navigator = Navigator.of(context);
+    if (walkingDue(ref)) {
+      openWalking(navigator);
+    } else {
+      navigator.popUntil((r) => r.isFirst);
+    }
   }
 
   /// 다음 목적지: 지도로 바꿔 연다 (지도에서 뒤로 가면 쉼터)

@@ -248,6 +248,7 @@ def build_props():
     for bid, colors in START_COLORS.items():
         assert base[bid]['unlock']['kind'] == 'default', f'시작 색은 기본 소품만: {bid}'
         base[bid]['startColors'] = [{'name': n, 'hex': h} for n, h in colors]
+        base[bid]['startPick'] = 'random'  # 16장 11/15: 정령 만들기에서 처음 골라져 있는 색은 4색 중 무작위(고르기는 그대로)
         assert base[bid]['material']['hex'] == colors[0][1], f'기본 색(material.hex) = 시작 첫 색: {bid}'
     for bid, colors in COLOR_VARIANTS.items():
         assert bid in MATERIAL, f'색을 바꿀 수 없는 소품: {bid}'

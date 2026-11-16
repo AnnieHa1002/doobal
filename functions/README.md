@@ -47,15 +47,15 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 | `kakaoSignIn` | `kakaoAccessToken` `confirmSwitch?: bool` | 아래 표 |
 | `kakaoUnlink` | 없음 | `{ unlinked }` (지운 연결 수) |
 | `deleteAccount` | 없음 | `{ deleted: true }` |
-| `getWeather` | `lat` `lng` (정령이 있는 지도 위 여정 지점) | `{ kind: clear\|cloudy\|rain\|snow, at(ms) }` |
+| `getWeather` | `lat` `lng` (정령이 있는 지도 위 여정 지점) | `{ kind: clear\|cloudy\|rain\|snow, at(ms), day(yyyymmdd) }` |
 
 - `ticketId`·`scope`는 앱 `domain/guestbook.dart` 꼴 그대로: `a:<여정 id>`와 명소 id·`sketch`, `m:<숫자>`와 `steps:<숫자>`.
 - `readGuestbook`은 내 글을 빼고 준다. 내 글은 앱이 로컬 DB로 보여 주고, 전체 목록이 필요하면 `guestbook where uid == 내 uid`를 직접 읽는다. `total`은 화면의 ‘n명 중 5명’ 값으로, 숨김을 뺀 그 범위의 글 수다(내 글 포함). ‘다른 5개 보기’는 다시 호출하면 된다.
 - `react`는 글 하나에 내 반응 하나만 둔다. `kind`를 바꾸면 옮겨지고 `null`이면 취소다. 프로토타입은 하트와 신고가 따로 켜지지만, 서버는 설계대로 한 값이라 신고하면 내 하트가 빠진다.
 
-`getWeather`(16장 11/14 물감 색, M2~M6 v0.20 Y): 위경도를 기상청 격자로 바꿔(`src/kma.ts`) 초단기실황 강수 형태(PTY)를 보고, 강수가 없으면 초단기예보 하늘 상태(SKY 4 흐림 → `cloudy`)를 본다. 비와 눈이 섞이면 `rain`. 격자마다 `weatherCache/{nx_ny}`에 `config/weather.cacheMin`(config.json `paintColor.weatherSource.cacheMin`, 60분) 동안 둔다. `at`은 그 날씨의 실황 발표 시각이다. 사용자 위치는 받지 않는다(앱이 보내는 것은 여정 지점). 앱은 실패하면 시간대 색으로 칠한다.
+`getWeather`(16장 11/14 물감 색·11/16 ‘날씨는 그날 하루 하나’, M2~M6 v0.22 AA, 기술 설계서 v0.9): 위경도를 기상청 격자로 바꿔(`src/kma.ts`) **단기예보**(`getVilageFcst`)에서 그날(한국 날짜) 대표 날씨 하나를 낸다(config.json `paintColor.weatherSource.dailyRule`, 가안): 06~21시 예보 중 강수(PTY 1 비·2 비/눈·4 소나기 → 비, 3 → 눈) 시간이 하나라도 있으면 그 강수(둘 다면 시간이 많은 쪽, 같으면 비), 없으면 하늘 상태가 흐림(SKY 4)인 시간이 절반 이상이면 `cloudy`, 아니면 `clear`. 발표는 그날 06~21시를 모두 담은 가장 새 것(05:10 뒤 그날 05시, 02:10 뒤 그날 02시, 그 전은 어제 23시). 격자 + 한국 날짜로 `weatherCache/{nx_ny}_{yyyymmdd}`에 두고 그날 안에는 다시 부르지 않는다(격자마다 하루 1번). `at`은 쓴 발표 시각, `day`는 한국 날짜다. 사용자 위치는 받지 않는다(앱이 보내는 것은 여정 지점). 앱은 그날 처음 물감 길을 열 때 한 번 묻고, 실패하면 시간대 색으로 칠한 뒤 다음 물감 길에서 다시 묻는다.
 
-- **에뮬레이터는 기상청을 부르지 않는다**: 격자와 한국 시각의 시(時)로 돌아가는 가짜 날씨(`fakeWeather`)를 준다. 한 날씨로 고정해 보려면 `.env.demo-doobal`에 `KMA_FAKE_KIND=rain`처럼 적는다(커밋하지 않고 손으로 볼 때만).
+- **에뮬레이터는 기상청을 부르지 않는다**: 격자와 한국 날짜로 돌아가는 가짜 날씨(`fakeWeather`, 같은 격자·같은 날이면 같음)를 준다. 한 날씨로 고정해 보려면 `.env.demo-doobal`에 `KMA_FAKE_KIND=rain`처럼 적는다(커밋하지 않고 손으로 볼 때만).
 - 배포 환경은 Secret Manager의 `KMA_SERVICE_KEY`(공공데이터포털 ‘일반 인증키(Decoding)’)를 붙여 부른다. 기상청 응답은 손으로 확인하지 않았다(키를 쓰지 않음, 아래 ‘배포 전 할 일’ 6).
 
 `kakaoSignIn` 결과:
@@ -103,8 +103,8 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 | `stats/moderation_{yyyy-MM-dd}` | `count` (한국 날짜) | 서버만 |
 | `config/guestbook` | config.json `guestbook`과 같은 키 | `npm run seed` |
 | `config/moderation` | moderation.json + `allow.autoWords`(명소·시군구 이름) | `npm run seed` |
-| `config/weather` | `cacheMin` (config.json `paintColor.weatherSource.cacheMin`) | `npm run seed` |
-| `weatherCache/{nx_ny}` | `kind` `at` `fetchedAt` (기상청 격자별 날씨) | 서버만 |
+| `config/weather` | `cacheKey` (config.json `paintColor.weatherSource.cacheKey`, `grid+kstDate`만 안다) | `npm run seed` |
+| `weatherCache/{nx_ny}_{yyyymmdd}` | `kind` `at` `fetchedAt` (기상청 격자·한국 날짜별 그날 대표 날씨) | 서버만 |
 
 앱은 `users/{uid}`를 직접 만들고(`createdAt`은 서버 시각만) `nickname`·`totalSteps`를 올려야 한다. 닉네임이 없으면 글을 못 쓰고, `totalSteps`가 없으면 신고가 셈에 들지 않는다.
 
@@ -142,6 +142,6 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-doobal npm run seed
 
 - `src/moderation.ts`: 금칙어(MIT 고지 포함). `app/lib/domain/moderation.dart`와 같은 코드다. 고치면 양쪽을 같이 고친다.
 - `src/rules.ts`: 규칙 계산(순수 함수). `src/guestbook.ts` `src/review.ts` `src/kakao.ts` `src/account.ts`: 함수.
-- `src/kma.ts`: 기상청 격자 변환·발표 시각·응답 읽기·가짜 날씨(순수 함수). `src/weather.ts`: `getWeather`.
+- `src/kma.ts`: 기상청 격자 변환·단기예보 발표 시각·그날 대표 날씨·응답 읽기·가짜 날씨(순수 함수). `src/weather.ts`: `getWeather`.
 - `scripts/seed.ts`: 설정 문서 넣기. `test/`: 시험. 카카오는 `test/account.test.ts`의 가짜 서버를 쓰고 값은 `.env.demo-doobal`에 있다.
 - 리포 루트의 `firebase.json` `firestore.rules` `firestore.indexes.json`.

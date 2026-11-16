@@ -8,6 +8,7 @@ import '../data/walk_notice.dart';
 import '../domain/bucket.dart' show epochMinute;
 import '../domain/gait.dart';
 import '../domain/live_walk.dart';
+import '../domain/paint_color.dart' show regionPaintAt;
 import '../domain/paint_trail.dart';
 import '../domain/road_event.dart' show EventLive;
 import '../domain/rules.dart';
@@ -15,6 +16,7 @@ import '../domain/walk_record.dart';
 import 'companion_providers.dart';
 import 'live_walker.dart';
 import 'paint_providers.dart';
+import 'paint_service.dart';
 import 'providers.dart';
 import 'sync_service.dart';
 
@@ -35,6 +37,7 @@ class PaintTrailState {
     this.endedKm,
     this.endedSeq = 0,
     this.endedBy,
+    this.paintColorId,
   });
 
   /// 열린 물감 길 번호와 시작 (첫 걸음의 분). 없으면 null
@@ -62,6 +65,10 @@ class PaintTrailState {
   /// 걷는 중·AutoSync의 도착 화면이 하고 토스트는 없다
   final PaintTrailEnd? endedBy;
 
+  /// 이 물감 길이 지금 칠하는 색 (마지막 색 구간, 16장 11/16). 열고 나서 적기 전이면 null.
+  /// 쉼터 위 ‘걷는 중’ 알약의 점 색 (DB를 다시 읽지 않게 여기 둔다)
+  final String? paintColorId;
+
   bool get active => id != null;
 
   PaintTrailState copyWith({
@@ -75,6 +82,7 @@ class PaintTrailState {
     double? Function()? endedKm,
     int? endedSeq,
     PaintTrailEnd? Function()? endedBy,
+    String? Function()? paintColorId,
   }) =>
       PaintTrailState(
         id: id == null ? this.id : id(),
@@ -87,6 +95,7 @@ class PaintTrailState {
         endedKm: endedKm == null ? this.endedKm : endedKm(),
         endedSeq: endedSeq ?? this.endedSeq,
         endedBy: endedBy == null ? this.endedBy : endedBy(),
+        paintColorId: paintColorId == null ? this.paintColorId : paintColorId(),
       );
 }
 
@@ -100,9 +109,10 @@ class PaintTrailState {
 /// - 열린 동안 앱이 앞에 있으면 config sync.walkingRefreshSec마다 동기화하고 이 물감 길의 health 기록을 낸다.
 /// - 명소에 도착하면 동기화가 물감 길을 도착 시각에 닫는다 (config paintTrail.endOnArrival, 16장 11/14). 그러면
 ///   판정기를 비워 도착 뒤 걸음은 startMinSteps를 다시 넘어야 새 물감 길이 된다.
-/// - 열린 동안 이정표와 같은 센서 거리로 물감을 칠한다 (T12, M1 v0.7): 고른 색 남은 양을 줄이고, 새로 넘은 방울마다
-///   보상 표를 굴려 물감 통이면 그 순간 색(시간대·날씨·뛰기)으로 보관에 더한다. 날씨는 열 때와
-///   config paintColor.weatherSource.askMin마다 묻는다.
+/// - 열린 동안 이정표와 같은 센서 거리로 물감을 칠한다 (T12, M1 v0.7·v0.8): 지금 구간 색 남은 양을 줄이고, 새로 넘은
+///   방울마다 보상 표를 굴려 물감 통이면 그 순간 색(시간대·날씨·뛰기 × 그날 계절) 또는 지금 권역의 지역 색으로
+///   보관에 더한다. 걷는 중에도 배낭에서 물감을 바꾸면 그 순간부터 새 구간이다 ([choosePaint], 16장 11/16).
+///   날씨는 그날 처음 물감 길이 열릴 때 한 번 묻는다 (config weatherSource.per kstDay, 아니면 열 때와 askMin마다).
 /// - iOS(앱이 뒤로 가면 멈춘다)는 숨어 있는 동안 걸음이 멈췄는지 판정하지 않고, 다시 켜지면 동기화해서
 ///   health 분 걸음으로 그 사이 끊김을 다시 판정한다 (config paintTrail.iosBackfillPaint, M1 v0.6). 이어 걸었으면
 ///   같은 물감 길에 붙고, idleEndMin분 넘게 빈 곳이 있으면 거기서 끝난다. 그 뒤 startMinSteps.withinSec초 동안은
@@ -198,6 +208,22 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     final rules = _rules;
     if (rules == null || !state.active || _opening != null) return;
     unawaited(_flushEvents(rules, now));
+  }
+
+  /// 쓸 물감을 고른다 (쉼터 배낭 물감 탭, 16장 11/16: 걷는 중에도 바로). 물감 길이 열려 있으면 앞 색으로 칠한 만큼을
+  /// 먼저 넘기고, 그 순간부터 고른 색으로 칠한다 (새 구간). 고르지 못했으면(가진 적 없거나 다 쓴 색) false
+  Future<bool> choosePaint(String colorId) async {
+    final rules = _rules;
+    final id = state.id;
+    final paint = await ref.read(paintServiceProvider.future);
+    if (rules != null && id != null && _opening == null) {
+      await _flushPaint(rules, _now(), force: true);
+    }
+    final ok = await paint.choose(colorId, openTrailId: state.id, now: _now());
+    if (_disposed) return ok;
+    ref.invalidate(paintShelfProvider);
+    if (ok && id != null && state.id == id) await _readTrailColor(paint, id);
+    return ok;
   }
 
   /// 보여 준 카드를 치운다 (화면이 카드를 띄웠으면 부른다)
@@ -329,7 +355,8 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     }
     final rules = _rules!;
     _flushEvents(rules, now);
-    _askWeather(rules, now);
+    // 하루 한 번이면 물감 길을 열 때만 묻는다 (실패하면 다음 물감 길에서 다시, M2~M6 v0.22 AA)
+    if (!rules.paintColor.weatherPerDay) _askWeather(rules, now);
     final summary = summaryAt(now);
     if (summary != null && !(_walker?.hidden ?? false)) {
       _pushNotice(summary.steps, summary.distanceM, isRunning: _isRunning(summary));
@@ -425,33 +452,60 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     }
   }
 
-  /// 물감 길 [id]를 연 때: 그 물감 길에 지금 칠할 물감을 적고 날씨를 새로 묻는다
+  /// 물감 길 [id]가 지금 칠하는 색을 상태에 둔다 (바뀌었을 때만)
+  Future<void> _readTrailColor(PaintService paint, int id) async {
+    final color = await paint.trailColor(id);
+    if (_disposed || state.id != id || state.paintColorId == color) return;
+    state = state.copyWith(paintColorId: () => color);
+  }
+
+  /// 물감 길 [id]를 연 때: 그 물감 길의 첫 색 구간에 지금 칠할 물감을 적고 날씨를 묻는다 (하루 한 번이면 그날 처음만)
   Future<void> _beginPaint(int id) async {
     try {
       final paint = await ref.read(paintServiceProvider.future);
       await paint.beginTrail(id);
+      await _readTrailColor(paint, id);
     } catch (e) {
       debugPrint('물감 길 색 적기 실패: $e');
     }
     final rules = _rules;
-    if (rules != null && !_disposed) _askWeather(rules, _now(), force: true);
+    if (rules == null || _disposed) return;
+    // 지점을 아직 못 읽었으면 동기화 상태를 기다린다 (하루 한 번이라 이때 못 물으면 그 물감 길은 시간대 색)
+    if (ref.read(snapshotProvider).value?.position == null) {
+      try {
+        await ref.read(snapshotProvider.future);
+      } catch (_) {
+        // 못 읽으면 아래에서 그냥 넘어간다
+      }
+      if (_disposed) return;
+    }
+    _askWeather(rules, _now(), force: true);
   }
 
-  /// 정령이 있는 지도 위 여정 지점의 날씨를 묻는다 (askMin 간격, [force]면 바로)
+  /// 정령이 있는 지도 위 여정 지점의 날씨를 묻는다 (하루 한 번이면 그날 받았으면 안 묻고, 아니면 askMin 간격,
+  /// [force]면 바로)
   void _askWeather(Rules rules, DateTime now, {bool force = false}) {
     final at = ref.read(snapshotProvider).value?.position;
     if (at == null) return;
     unawaited(ref.read(paintWeatherProvider.notifier).ask(at, now, rules, force: force));
   }
 
-  /// 그 순간 물감 색 (시간대·날씨·뛰기): 물감 통의 색
+  /// 그 순간 물감 색 (시간대·날씨·뛰기 × 그날 계절): 물감 통의 색
   String _momentColor(Rules rules, DateTime now) => momentColorFor(
         ref.read(snapshotProvider).value?.position,
         now,
-        ref.read(paintWeatherProvider).kind,
+        ref.read(paintWeatherProvider).kindFor(now, state.start),
         _isRunning(summaryAt(now)) ? Gait.run : Gait.walk,
         rules,
       );
+
+  /// 지금 권역의 지역 색 키 (가장 가까운 명소의 권역, M1 v0.8). 지점·명소를 모르면 null (그 순간 색)
+  String? _regionColor(Rules rules) {
+    final at = ref.read(snapshotProvider).value?.position;
+    final landmarks = ref.read(landmarksProvider).value;
+    if (at == null || landmarks == null) return null;
+    return regionPaintAt(at, landmarks, rules)?.stockId;
+  }
 
   /// 센서 거리 중 아직 안 넘긴 만큼으로 물감을 칠하고 방울 보상을 받는다 (config events.flushSec 간격,
   /// [force]면 바로). 넘기는 중이면 그것을 돌려준다
@@ -488,8 +542,12 @@ class PaintTrailController extends Notifier<PaintTrailState> {
         toM: toM,
         now: now,
         momentColor: _momentColor(rules, now),
+        regionColor: _regionColor(rules),
       );
       if (state.id == id) _paintSentM = toM;
+      if (_disposed) return;
+      // 고른 물감을 다 써서 기본 물감이 됐을 수 있다 (쉼터 알약 점)
+      if (state.paintColorId != rules.paintColor.defaultId) await _readTrailColor(paint, id);
       if (_disposed) return;
       // 고른 물감이 줄었거나 다 썼다 (배낭 탭·지도는 다음에 볼 때), 새 통이면 배낭 점
       ref.invalidate(paintShelfProvider);

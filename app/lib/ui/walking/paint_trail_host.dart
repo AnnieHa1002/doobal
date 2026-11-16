@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/auto_sync.dart' show scaffoldMessengerKey;
 import '../../app/paint_trail_controller.dart';
+import '../../app/providers.dart' show appForegroundProvider;
 import '../../domain/paint_trail.dart' show PaintTrailEnd;
 import '../common/toast.dart';
 import 'walking_screen.dart';
@@ -36,12 +37,15 @@ class TopRouteObserver extends NavigatorObserver {
 
   /// 맨 위가 걷는 중 화면인가
   bool get walkingOnTop => top.value?.settings.name == walkingRouteName;
+
+  /// 맨 위가 쉼터(루트, 시트·다이얼로그 없이)인가
+  bool get restOnTop => top.value?.isFirst ?? false;
 }
 
 final topRouteObserver = TopRouteObserver();
 
-/// 물감 길이 시작돼도 걷는 중으로 넘어가지 않고 기다리게 하는 화면 수 (방명록 쓰기·꾸미기·도착, 가안).
-/// 닫히면 0이 되고 그때 넘어간다
+/// 물감 길이 시작돼도 걷는 중으로 넘어가지 않고 기다리게 하는 화면 수 (방명록 쓰기·꾸미기·도착).
+/// 16장 11/16 ③부터는 쉼터가 맨 위일 때만 넘어가서 이 화면들도 저절로 기다린다 (남겨 둔 겹 막기)
 class TrailHold extends Notifier<int> {
   @override
   int build() => 0;
@@ -84,22 +88,48 @@ mixin HoldsPaintTrail<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   }
 }
 
-/// 걷는 중 화면을 쉼터 바로 위에 연다 (다른 화면은 닫는다. 쉼터 = 루트)
-void openWalking(NavigatorState navigator) {
-  navigator.popUntil((r) => r.isFirst);
-  navigator.push(MaterialPageRoute<void>(
-    settings: const RouteSettings(name: walkingRouteName),
-    builder: (_) => const WalkingScreen(),
-  ));
+/// 걷는 중 구석 쉼터 아이콘으로 쉼터에 온 물감 길 번호 (16장 11/16 ④): 그 물감 길 동안은 저절로 걷는 중으로
+/// 되돌아가지 않는다 (쉼터에서 연 화면을 닫아도 쉼터). 새 물감 길이 열리거나 앱을 다시 열면(①) 비운다
+class WalkingDismissed extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  void set(int? trailId) => state = trailId;
 }
 
-/// 물감 길 화면 전환 (M2~M6 명세 v0.17 T①, 캔버스 2-2·3-1): 쉼터 위에 둔다 (StartGate).
-/// - 물감 길이 열리면 어느 화면에서든 걷는 중으로 넘어간다. 시트·다이얼로그·방명록 쓰기·꾸미기·도착 화면이
-///   떠 있으면 닫힐 때까지 기다린다 (가안). 기다리는 사이 물감 길이 끝나면 넘어가지 않는다.
-/// - 걸음이 멈춰 물감 길이 끝나면 걷는 중 화면이 맨 위일 때 쉼터로 돌아가고, 토스트
-///   `물감 길 n km를 그렸어요`를 띄운다 (다른 화면을 보고 있으면 토스트만).
-/// - 명소에 도착해 끝났으면(config paintTrail.endOnArrival) 아무것도 하지 않는다: 걷는 중이 도착 화면으로 바꾸고
-///   (걷는 중이 아니면 AutoSync가 띄운다), 도착 화면을 닫으면 쉼터다. 토스트는 없다.
+final walkingDismissedProvider = NotifierProvider<WalkingDismissed, int?>(WalkingDismissed.new);
+
+/// 걷는 중 화면을 쉼터 바로 위에 연다 (그 위 다른 화면은 닫는다. 쉼터 = 루트). 쉼터를 거치지 않고 바로 바뀐다
+void openWalking(NavigatorState navigator) {
+  navigator.pushAndRemoveUntil(
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: walkingRouteName),
+      builder: (_) => const WalkingScreen(),
+    ),
+    (r) => r.isFirst,
+  );
+}
+
+/// 물감 길이 열려 있고 쉼터 아이콘으로 떠나지 않았으면 걷는 중으로 가야 한다 (16장 11/16 ③: 다른 화면을 닫으면 걷는 중)
+bool walkingDue(WidgetRef ref) {
+  final s = ref.read(paintTrailProvider);
+  return s.active && ref.read(walkingDismissedProvider) != s.id;
+}
+
+/// 물감 길 화면 전환 (16장 11/16 ‘쉼터↔걷는 중 화면 흐름’ 6규칙, 8장 3번, 캔버스 2-2·3-1): 쉼터 위에 둔다 (StartGate).
+/// 기준은 물감 길이 열려 있느냐다.
+/// ① 앱을 다시 열 때(앞으로 올 때) 물감 길이 열려 있으면 걷는 중 (쉼터 아이콘으로 떠났어도 다시, 가안).
+///   앱을 새로 켜면 앞 실행의 물감 길은 닫혀 있어(AutoSync appEnded) 쉼터다.
+/// ② 쉼터에서 걷기 시작하면 저절로 걷는 중.
+/// ③ 다른 화면(지도·화집·꾸미기·상점·도착 등)이나 시트·다이얼로그가 떠 있으면 그대로 두고, 닫혀서 쉼터가 맨 위가
+///   되면 걷는 중. 기다리는 사이 물감 길이 끝나면 넘어가지 않는다.
+/// ④ 걷는 중 구석 쉼터 아이콘으로 쉼터에 오면 그 물감 길 동안은 저절로 되돌아가지 않는다 ([walkingDismissedProvider]).
+///   쉼터 위 가운데 ‘걷는 중 · 물감 길 n km ›’를 누르면 걷는 중.
+/// ⑤ 걸음이 멈춰 물감 길이 끝나면 걷는 중 화면이 맨 위일 때 쉼터로 돌아가고 토스트 `물감 길 n km를 그렸어요`
+///   (다른 화면을 보고 있으면 화면은 그대로, 토스트만).
+/// ⑥ 명소에 도착해 끝났으면(config paintTrail.endOnArrival) 아무것도 하지 않는다: 걷는 중이 도착 화면으로 바꾸고
+///   (걷는 중이 아니면 AutoSync가 띄운다), 도착 화면을 닫으면 쉼터(그사이 새 물감 길이 열렸으면 바로 걷는 중). 토스트는 없다.
+/// 걷는 중은 늘 쉼터 바로 위 한 겹이다 (쉼터를 그 위에 올리지 않는다: 걷는 중만 가로라서 닫히면 세로로 돌아온다).
 /// 물감 길 판정 자체는 PaintTrailController가 한다 (이 위젯이 그 상태를 붙잡아 살려 둔다)
 class PaintTrailHost extends ConsumerStatefulWidget {
   const PaintTrailHost({super.key, required this.child});
@@ -111,19 +141,29 @@ class PaintTrailHost extends ConsumerStatefulWidget {
 }
 
 class _PaintTrailHostState extends ConsumerState<PaintTrailHost> {
-  /// 열린 물감 길로 아직 넘어가지 않았다 (막혀서 기다리는 중)
+  /// 열린 물감 길로 아직 넘어가지 않았다 (쉼터가 맨 위가 아니라서 기다리는 중)
   var _pendingOpen = false;
 
   @override
   void initState() {
     super.initState();
     ref.listenManual(paintTrailProvider, (prev, next) {
-      if (prev?.active != true && next.active) {
+      if (next.active && next.id != prev?.id) {
+        // 새 물감 길: 앞 물감 길에서 쉼터로 떠난 것은 잊는다
+        ref.read(walkingDismissedProvider.notifier).set(null);
         _pendingOpen = true;
         _tryOpen();
       } else if (prev?.active == true && !next.active) {
         _pendingOpen = false;
         _onEnded(next);
+      }
+    });
+    // ① 앱을 다시 열면 열린 물감 길로
+    ref.listenManual(appForegroundProvider, (prev, next) {
+      if (prev == false && next && ref.read(paintTrailProvider).active) {
+        ref.read(walkingDismissedProvider.notifier).set(null);
+        _pendingOpen = true;
+        _tryOpen();
       }
     });
     ref.listenManual(trailHoldProvider, (_, _) => _tryOpen());
@@ -136,22 +176,18 @@ class _PaintTrailHostState extends ConsumerState<PaintTrailHost> {
     super.dispose();
   }
 
-  /// 기다리던 물감 길이 있고 막는 화면이 없으면 걷는 중으로 넘어간다
+  /// 기다리던 물감 길이 있고 쉼터가 맨 위이면 걷는 중으로 넘어간다
   void _tryOpen() {
     if (!_pendingOpen || !mounted) return;
-    if (!ref.read(paintTrailProvider).active) {
+    if (!walkingDue(ref) || topRouteObserver.walkingOnTop) {
       _pendingOpen = false;
       return;
     }
-    if (topRouteObserver.popupOnTop || ref.read(trailHoldProvider) > 0) return;
-    if (topRouteObserver.walkingOnTop) {
-      _pendingOpen = false;
-      return;
-    }
+    if (!topRouteObserver.restOnTop || ref.read(trailHoldProvider) > 0) return;
     _pendingOpen = false;
     // 화면을 짓거나 경로를 바꾸는 중일 수 있어서 이번 프레임이 끝난 뒤에
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !ref.read(paintTrailProvider).active) return;
+      if (!mounted || !walkingDue(ref) || topRouteObserver.walkingOnTop) return;
       openWalking(Navigator.of(context));
     });
   }

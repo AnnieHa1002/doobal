@@ -42,16 +42,17 @@ function parseGuestbook(data: Record<string, unknown>): GuestbookConfig {
 export const loadGuestbookConfig = cached('config/guestbook', parseGuestbook);
 export const loadModeration = cached('config/moderation', (data) => new Moderation(data));
 
-/** config/weather = config.json paintColor.weatherSource (cacheMin: 격자별 캐시 분) */
+/** config/weather = config.json paintColor.weatherSource (cacheKey: 캐시 키 모양, 16장 11/16 grid+kstDate) */
 export interface WeatherConfig {
-  cacheMin: number;
+  cacheKey: 'grid+kstDate';
 }
 
 function parseWeather(data: Record<string, unknown>): WeatherConfig {
-  if (typeof data.cacheMin !== 'number' || data.cacheMin <= 0) {
-    throw new Error('config/weather cacheMin이 0보다 큰 숫자가 아니에요');
+  // 그날 하루 날씨 하나 (격자 + 한국 날짜). 다른 모양이면 함수 코드도 바꿔야 해서 멈춘다
+  if (data.cacheKey !== 'grid+kstDate') {
+    throw new Error(`config/weather cacheKey를 모르겠어요: ${String(data.cacheKey)}`);
   }
-  return { cacheMin: data.cacheMin };
+  return { cacheKey: data.cacheKey };
 }
 
 export const loadWeatherConfig = cached('config/weather', parseWeather);

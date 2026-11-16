@@ -403,13 +403,15 @@ void main() {
       expect(map.paintLines.single.last.lng, closeTo(to.lng, 1e-9));
     });
 
-    test('구간 색 (M1 v0.7 ⑦, 스키마 18): 고른 노을을 10분째에 다 쓰면 노을 줄 + 기본 줄, 옛 물감 길은 기본', () async {
+    test('구간 색 (M1 v0.7 ⑦, 스키마 20): 고른 노을을 10분째에 다 쓰면 노을 줄 + 기본 줄, 옛 물감 길은 기본', () async {
       final e = await _journeyEnv();
       // 스키마 18 전처럼 색이 없는 물감 길 (기본 물감)
       await _trailWalk(e, from: _at(0), minutes: 10, spm: 100, syncAt: _at(15), to: _at(10));
       final id = await _trailWalk(e, from: _at(20), minutes: 20, spm: 100, syncAt: _at(45), to: _at(40));
-      await (e.db.update(e.db.paintTrails)..where((t) => t.id.equals(id))).write(PaintTrailsCompanion(
-          colorId: const Value('sunset'), colorEndUtc: Value(_ms(_at(30)))));
+      await e.db.batch((b) => b.insertAll(e.db.paintTrailColors, [
+            PaintTrailColorsCompanion.insert(trailId: id, fromUtc: _ms(_at(20)), colorId: 'sunset'),
+            PaintTrailColorsCompanion.insert(trailId: id, fromUtc: _ms(_at(30)), colorId: 'basic'),
+          ]));
       final map = await e.svc.mapData(_at(45));
       // 첫 물감 길(기본 0~0.7km) → 둘째의 노을 → 노을을 다 쓴 뒤 기본. 색이 바뀌는 곳에서 줄이 나뉜다
       expect(map.paintLineColors, ['basic', 'sunset', 'basic']);
@@ -420,6 +422,23 @@ void main() {
       final sunsetTo = positionAt(route, 1.4).latLng;
       expect(map.paintLines[1].first.lat, closeTo(sunsetFrom.lat, 1e-9));
       expect(map.paintLines[1].last.lng, closeTo(sunsetTo.lng, 1e-9));
+    });
+
+    test('구간 색 여럿 (16장 11/16): 걷는 중에 노을 → 지역 색 → 가을 비로 바꾸면 한 물감 길에 줄 셋', () async {
+      final e = await _journeyEnv();
+      final id = await _trailWalk(e, from: _at(0), minutes: 30, spm: 100, syncAt: _at(35), to: _at(30));
+      await e.db.batch((b) => b.insertAll(e.db.paintTrailColors, [
+            PaintTrailColorsCompanion.insert(trailId: id, fromUtc: _ms(_at(0)), colorId: 'autumn.sunset'),
+            PaintTrailColorsCompanion.insert(trailId: id, fromUtc: _ms(_at(10)), colorId: 'region.kr.capital'),
+            PaintTrailColorsCompanion.insert(trailId: id, fromUtc: _ms(_at(20)), colorId: 'autumn.rain'),
+          ]));
+      final map = await e.svc.mapData(_at(35));
+      expect(map.paintLineColors, ['autumn.sunset', 'region.kr.capital', 'autumn.rain']);
+      final route = buildRoute(testHome, _landmarks[_farDest]!.latLng, rules);
+      // 10분(0.7km)마다 바뀐다
+      expect(map.paintLines[1].first.lat, closeTo(positionAt(route, 0.7).latLng.lat, 1e-9));
+      expect(map.paintLines[2].first.lat, closeTo(positionAt(route, 1.4).latLng.lat, 1e-9));
+      expect(map.paintLines[2].last.lng, closeTo(positionAt(route, 2.1).latLng.lng, 1e-9));
     });
 
     test('물감 길이 없으면 물감 줄도 없다', () async {

@@ -66,10 +66,9 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     if (mounted) ref.invalidate(unseenPaintsProvider);
   }
 
-  /// 물감을 고른다 (누르면 바로 ‘쓰는 중’, 캔버스 6-1)
+  /// 물감을 고른다 (누르면 바로 ‘쓰는 중’, 캔버스 6-1). 걷는 중이면 그 순간부터 그 색으로 칠한다 (16장 11/16)
   Future<void> _choosePaint(String colorId) async {
-    final paint = await ref.read(paintServiceProvider.future);
-    await paint.choose(colorId);
+    await ref.read(paintTrailProvider.notifier).choosePaint(colorId);
     if (mounted) ref.invalidate(paintShelfProvider);
   }
 
@@ -200,7 +199,8 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     );
   }
 
-  /// 물감 탭: 가진 물감 선반 (기본 물감이 맨 앞). 걷는 중(물감 길이 열린 동안)에는 고르지 않는다
+  /// 물감 탭: 가진 물감 선반 (최근 → 계절 색 → 지역 색, 기본 물감이 맨 앞). 걷는 중에도 고른다
+  /// (config paintColor.choose.whileWalking, 16장 11/16)
   Widget _paintSliver() {
     final shelf = ref.watch(paintShelfProvider).value;
     final rules = ref.watch(rulesProvider).value;
@@ -211,7 +211,8 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
       sliver: SliverToBoxAdapter(
         child: PaintShelves(
           data: shelf,
-          rules: rules.paintColor,
+          rules: rules,
+          now: ref.read(clockProvider)(),
           canChoose: rules.paintColor.chooseWhileWalking || !walking,
           onChoose: _choosePaint,
         ),

@@ -20,7 +20,8 @@ import '../../domain/follow.dart';
 import '../../domain/gait.dart';
 import '../../domain/geo.dart';
 import '../../domain/milestones.dart';
-import '../../domain/paint_color.dart' show PaintWeather;
+import '../../domain/landmark.dart';
+import '../../domain/paint_color.dart' show PaintWeather, RegionPaint, regionPaintAt;
 import '../../domain/rules.dart';
 import '../../domain/screen_rules.dart';
 import '../../domain/walk_arrival.dart';
@@ -34,11 +35,13 @@ import '../companion/meet_flow.dart';
 import '../companion/story_lines.dart';
 import '../scene/scene_view.dart';
 import 'paint_drop_layer.dart';
+import 'paint_trail_host.dart' show walkingDismissedProvider;
 import 'walking_hud.dart';
 
 /// 걷는 중 (캔버스 3-1, 16장 11/13 물감 길): 물감 길이 열려 있는 동안 보는 화면. PaintTrailHost가
-/// 물감 길이 열리면 열고 걸음이 멈춰 끝나면 쉼터로 닫는다. 왼쪽 위 쉼터 아이콘은 화면만 쉼터로 돌린다
-/// (물감 길은 이어진다). ‘걷기 마치기’는 없다.
+/// 물감 길이 열리면 열고 걸음이 멈춰 끝나면 쉼터로 닫는다 (16장 11/16 쉼터↔걷는 중 6규칙). 왼쪽 위 쉼터 아이콘은
+/// 화면만 쉼터로 돌린다 (물감 길은 이어지고 그 물감 길 동안 저절로 돌아오지 않는다). ‘걷기 마치기’도, 물감을 고르는
+/// 버튼도 없다 (물감은 쉼터 배낭 물감 탭에서 바꾼다, 16장 11/16).
 /// 숫자는 PaintTrailController가 주는 이번 물감 길 값이다: 걸음·거리는 health 기록과 센서 중 큰 쪽,
 /// 분당 걸음과 걷기/뛰기는 센서 기준. 보이는 거리는 새 값을 향해 부드럽게 따라간다.
 /// 화면이 꺼져 있던 동안 센 걸음은 앱이 돌아올 때 한꺼번에 들어오고, 그때 거리는 바로 맞춘다.
@@ -365,7 +368,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   /// 지금 뛰는 중인가 (화면의 '달리는 중'과 같은 기준)
   /// 그 순간 물감 색 id: 분·날씨·뛰기가 같으면 다시 계산하지 않는다 (해 뜨고 지는 시각 계산)
   String _momentColor(Rules rules, LatLng position, bool running) {
-    final weather = ref.watch(paintWeatherProvider).kind;
+    final weather = ref.watch(paintWeatherProvider).kindFor(_now, _start);
     final key = (epochMinute(_now), weather, running, position.lat, position.lng);
     final cached = _moment;
     if (cached != null && cached.$1 == key) return cached.$2;
@@ -375,6 +378,17 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   }
 
   ((int, PaintWeather?, bool, double, double), String)? _moment;
+
+  /// 지금 권역의 지역 색 (가장 가까운 명소의 권역, M1 v0.8): 지점이 같으면 다시 찾지 않는다
+  RegionPaint? _regionColor(Rules rules, LatLng position, List<Landmark> landmarks) {
+    final cached = _region;
+    if (cached != null && cached.$1 == position) return cached.$2;
+    final region = regionPaintAt(position, landmarks, rules);
+    _region = (position, region);
+    return region;
+  }
+
+  (LatLng, RegionPaint?)? _region;
 
   bool _isRunning(WalkSummary? s) => s != null && s.lastSteps > 0 && s.lastGait == Gait.run;
 
@@ -418,8 +432,12 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     ));
   }
 
-  /// 쉼터 아이콘: 화면만 쉼터로 (물감 길은 이어진다)
-  void _toRest() => Navigator.of(context).popUntil((r) => r.isFirst);
+  /// 쉼터 아이콘: 화면만 쉼터로 (물감 길·방울 줍기는 이어진다). 그 물감 길 동안은 저절로 걷는 중으로 되돌아가지
+  /// 않는다 (16장 11/16 ④, 쉼터 위 가운데 ‘걷는 중’을 누르면 다시)
+  void _toRest() {
+    ref.read(walkingDismissedProvider.notifier).set(ref.read(paintTrailProvider).id);
+    Navigator.of(context).popUntil((r) => r.isFirst);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -449,6 +467,10 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final dropColor = rules.paintColor.hexOf(moment);
     final trailId = ref.watch(paintTrailProvider.select((s) => s.id));
     final tubeAllowed = ref.watch(paintTubeRoomProvider(moment)).value ?? true;
+    // 지역 색으로 나오는 물감 통 (통의 config region.chancePerTube, 지금 권역의 지역 색)
+    final region = _regionColor(rules, position, landmarks);
+    final regionAllowed =
+        region == null || (ref.watch(paintTubeRoomProvider(region.stockId)).value ?? true);
 
     return Scaffold(
       body: Stack(
@@ -483,6 +505,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
               color: dropColor,
               trailId: trailId,
               tubeAllowed: tubeAllowed,
+              regionColor: region?.hex,
+              regionAllowed: regionAllowed,
             ),
           ),
           // 길 위 만남 동안에는 HUD를 가린다 (상태는 그대로 둔다)

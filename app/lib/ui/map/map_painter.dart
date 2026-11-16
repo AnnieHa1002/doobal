@@ -14,10 +14,6 @@ const _hollowR = 4.5;
 /// 물감 길 방울 타일 임시 그림: 방울 지름 = 타일 높이, 방울 사이 = 지름 × 이 값 (그림 납품 전 화면 구성값)
 const _dropGap = 0.9;
 
-/// 물감 길 아래 테두리 (디자인 기획 11/15, 16장 11/14: 연한 색이 종이에 묻히지 않게 잉크 25%를 방울보다 1pt 크게 먼저 깐다)
-const _outlineAlpha = 0.25;
-const _outlinePt = 1.0;
-
 /// 안 가 본 명소 점의 진하기 (잉크 흐린색)
 const _faintAlpha = 0.3;
 const _visitedR = 5.5;
@@ -107,7 +103,8 @@ class MapPainter extends CustomPainter {
     // 구간마다 칠한 물감 색, 모든 구간 아래에 잉크 테두리를 먼저 깐다
     final r = trail.paintHeightPt / 2 * k;
     final step = trail.paintHeightPt * _dropGap * k;
-    final outline = Paint()..color = Palette.ink.withValues(alpha: _outlineAlpha);
+    // 연한 색이 종이에 묻히지 않게 잉크 25%를 방울보다 1pt 크게 먼저 깐다 (config mapTrail.paint.border, 11/15)
+    final outline = Paint()..color = Color(trail.borderColor).withValues(alpha: trail.borderAlpha);
     final drops = [
       for (final path in data.paintLines) <(Offset, double)>[
         for (final metric in line(path).computeMetrics()) ...[
@@ -125,7 +122,7 @@ class MapPainter extends CustomPainter {
     }
     for (final line in drops) {
       for (final (at, radius) in line) {
-        canvas.drawCircle(at, radius + _outlinePt * k, outline);
+        canvas.drawCircle(at, radius + trail.borderExtraPt * k, outline);
       }
     }
     for (final (i, line) in drops.indexed) {

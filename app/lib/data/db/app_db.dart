@@ -174,6 +174,12 @@ class SyncState extends Table {
   /// 이 기기에만 두는 값 (백업에 넣지 않는 표)
   IntColumn get shopSeenUtc => integer().nullable()();
 
+  /// 그날 날씨 (스키마 20, 16장 11/16 ‘날씨는 그날 하루 하나’): 한국 날짜 키 'YYYY-MM-DD'와 getWeather의 kind
+  /// (clear·cloudy·rain·snow). 그날 처음 물감 길이 열릴 때 받아 두고 그날은 다시 묻지 않는다 (앱을 껐다 켜도).
+  /// 받지 못했으면 그대로 둔다 (다음 물감 길에서 다시). 이 기기에만 두는 값 (백업에 넣지 않는 표)
+  TextColumn get weatherDay => text().nullable()();
+  TextColumn get weatherKind => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -293,17 +299,31 @@ class NotificationSettings extends Table {
 /// endUtc가 null이면 열려 있다 (앱이 살아 있는 동안은 지금까지로 센다)
 @DataClassName('PaintTrailRow')
 ///
-/// 칠한 색 (스키마 18, M1 v0.7 구간 색): colorId는 이 물감 길을 연 때 고른 물감(없으면 기본 물감 id)이고,
-/// 그 색을 다 쓴 시각이 colorEndUtc다 (그 뒤는 기본 물감). 걷는 중에는 물감을 고르지 않아서
-/// 물감 길 하나는 많아야 두 구간이다. colorId가 null인 옛 물감 길은 기본 물감
+/// 칠한 색은 [PaintTrailColors] (스키마 20, 그전 18~19는 이 표의 color_id·color_end_utc 두 열)
 class PaintTrails extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get startUtc => integer()();
   IntColumn get endUtc => integer().nullable()();
   TextColumn get endReason => textEnum<PaintTrailEnd>().nullable()();
-  TextColumn get colorId => text().nullable()();
-  IntColumn get colorEndUtc => integer().nullable()();
 }
+
+/// 물감 길 색 구간 (스키마 20, 스키마 v10.7 PaintTrailColors, 16장 11/16 ‘물감 길 하나에 색 구간 여럿’):
+/// 물감 길 [trailId]를 [fromUtc](epoch ms)부터 [colorId]로 칠했다. 구간 끝은 같은 물감 길의 다음 줄 fromUtc
+/// (없으면 물감 길 끝). 물감 길을 열 때 한 줄(그때 칠할 물감), 걷는 중에 배낭에서 바꾸면 한 줄, 고른 색을 다 쓰면
+/// 기본 물감 한 줄. 줄이 없는 물감 길은 기본 물감 (스키마 18 전 물감 길)
+@DataClassName('PaintTrailColorRow')
+class PaintTrailColors extends Table {
+  IntColumn get trailId => integer()();
+  IntColumn get fromUtc => integer()();
+  TextColumn get colorId => text()();
+
+  @override
+  Set<Column> get primaryKey => {trailId, fromUtc};
+}
+
+/// 스키마 18~19의 물감 길 열을 옮길 때 다 쓴 뒤 구간의 색 = 기본 물감 id (config paintColor.default.id,
+/// 스키마 v10.5 basic). 마이그레이션은 config를 읽지 못해 여기 둔다
+const migrationBasicPaintId = 'basic';
 
 /// 럭 장부 행의 종류: earn은 걸어서 번 것(하루 한 행, 다시 계산하면 덮어쓴다), ad는 광고 보상,
 /// spend는 쓴 것, gift는 첫 선물 (ad·spend·gift는 한 번 쓰고 고치지 않는다)
@@ -484,13 +504,14 @@ class PaintTubes extends Table {
     ReportState,
     PaintStock,
     PaintTubes,
+    PaintTrailColors,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -663,16 +684,13 @@ class AppDb extends _$AppDb {
             // (16장 11/15 ②, 이전: 첫 기록일부터 최대 ‘지난 30일’ 한 장). 새로 설치한 기기는 행이 없다
             await into(reportState).insert(const ReportStateCompanion(id: Value(1)));
           }
-          // 18: 물감 색·물감 모으기 (M1 v0.7, 스키마 v10.5). 2 이하·15 이하에서 올라올 때는 위 createTable(profile)·
-          // createTable(paintTrails)가 지금 정의라 새 열이 이미 있어 건너뛴다. 옛 물감 길은 칠한 색이 없어 기본 물감이다
+          // 18: 물감 색·물감 모으기 (M1 v0.7, 스키마 v10.5). 2 이하에서 올라올 때는 위 createTable(profile)이 지금
+          // 정의라 새 열이 이미 있어 건너뛴다. 18의 물감 길 색 두 열(color_id·color_end_utc)은 20에서 표로 옮겨서
+          // 여기서는 더하지 않는다 (옛 물감 길은 칠한 색이 없어 기본 물감이다)
           if (from < 18) {
             await m.createTable(paintStock);
             await m.createTable(paintTubes);
             // 표가 있고 열이 없을 때만 더한다
-            if (await lacks('paint_trails', 'color_id')) {
-              await m.addColumn(paintTrails, paintTrails.colorId);
-              await m.addColumn(paintTrails, paintTrails.colorEndUtc);
-            }
             if (await lacks('profile', 'paint_color_id')) {
               await m.addColumn(profile, profile.paintColorId);
             }
@@ -687,6 +705,30 @@ class AppDb extends _$AppDb {
                 ? 'UPDATE sync_state SET shop_seen_utc = '
                     'COALESCE((SELECT MAX(unlocked_utc) FROM props_owned), install_utc)'
                 : 'UPDATE sync_state SET shop_seen_utc = install_utc');
+          }
+          // 20: 물감 길 하나에 색 구간 여럿 (16장 11/16 물감 세 가지 ③, 스키마 v10.7) + 그날 날씨 (①).
+          // 18~19의 두 열(연 때 색·다 쓴 시각)을 구간 줄 둘(그 색 → 기본 물감)로 옮기고 열을 지운다
+          if (from < 20) {
+            await m.createTable(paintTrailColors);
+            if (await hasTable('paint_trails') && !await lacks('paint_trails', 'color_id')) {
+              // 연 순간에 이미 다 썼으면(다 쓴 시각 ≤ 시작) 처음부터 기본 물감
+              await customStatement(
+                  'INSERT OR IGNORE INTO paint_trail_colors (trail_id, from_utc, color_id) '
+                  'SELECT id, start_utc, CASE WHEN color_end_utc IS NOT NULL AND color_end_utc <= start_utc '
+                  'THEN ? ELSE color_id END FROM paint_trails WHERE color_id IS NOT NULL',
+                  [migrationBasicPaintId]);
+              await customStatement(
+                  'INSERT OR IGNORE INTO paint_trail_colors (trail_id, from_utc, color_id) '
+                  'SELECT id, color_end_utc, ? FROM paint_trails '
+                  'WHERE color_id IS NOT NULL AND color_end_utc IS NOT NULL AND color_end_utc > start_utc',
+                  [migrationBasicPaintId]);
+              await customStatement('ALTER TABLE paint_trails DROP COLUMN color_end_utc');
+              await customStatement('ALTER TABLE paint_trails DROP COLUMN color_id');
+            }
+            if (await lacks('sync_state', 'weather_day')) {
+              await m.addColumn(syncState, syncState.weatherDay);
+              await m.addColumn(syncState, syncState.weatherKind);
+            }
           }
         },
       );

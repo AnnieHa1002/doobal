@@ -41,11 +41,12 @@ class PaintShelfData {
   final String current;
 }
 
-/// 물감 보관·고르기·칠하기·물감 통 받기 (16장 11/14, M1 v0.7, 스키마 18).
-/// - 물감 길을 열 때 그때 칠할 물감을 물감 길에 적는다 ([beginTrail]). 걷는 중에는 고르지 않으니 물감 길 하나는
-///   고른 색 → (다 쓰면) 기본 물감, 많아야 두 구간이다.
-/// - 물감 길 거리가 늘 때마다([addPaint]) 고른 색 남은 양을 그만큼 줄이고, 새로 넘은 방울마다 보상 표를 굴려
-///   물감 통이면 그 순간 색으로 보관에 더한다 (방울 번호는 이정표와 같은 센서 물감 길 거리 기준).
+/// 물감 보관·고르기·칠하기·물감 통 받기 (16장 11/14·11/15·11/16, M1 v0.7·v0.8, 스키마 18·20).
+/// - 물감 길을 열 때 그때 칠할 물감을 그 물감 길의 첫 색 구간으로 적는다 ([beginTrail]). 걷는 중에도 배낭에서
+///   바꾸면 그 순간부터 새 구간이고([choose]), 고른 색을 다 쓰면 그 순간부터 기본 물감 구간 (DB PaintTrailColors).
+/// - 물감 길 거리가 늘 때마다([addPaint]) 지금 구간 색의 남은 양을 그만큼 줄이고, 새로 넘은 방울마다 보상 표를 굴려
+///   물감 통이면 그 순간 색(계절 키)으로, 지역 색으로 나온 통이면 지금 권역의 지역 색으로 보관에 더한다
+///   (방울 번호는 이정표와 같은 센서 물감 길 거리 기준).
 /// 거리는 한 번 넘기면 다시 계산하지 않는다 (길 위 이벤트와 같다). 방울 보상은 물감 길·방울 번호로 정하는
 /// 무작위라 같은 방울을 다시 넘겨도 (PaintTubes 키) 한 번만 받고, 백업 복원 뒤에도 같다
 class PaintService {
@@ -67,8 +68,10 @@ class PaintService {
     return row != null && row.remainM > 0 ? chosen : _pc.defaultId;
   }
 
-  /// 쓸 물감을 고른다 (배낭 물감 탭). 기본 물감 id면 기본으로. 가진 적 없거나 남은 게 없는 색이면 false
-  Future<bool> choose(String colorId) => db.transaction(() async {
+  /// 쓸 물감을 고른다 (배낭 물감 탭). 기본 물감 id면 기본으로. 가진 적 없거나 남은 게 없는 색이면 false.
+  /// 물감 길 [openTrailId]가 열려 있으면 [now]부터 그 색으로 칠한다 (새 구간, 16장 11/16). 앞 구간에 칠한 만큼은
+  /// 부르는 쪽(PaintTrailController)이 먼저 [addPaint]로 넘긴다
+  Future<bool> choose(String colorId, {int? openTrailId, DateTime? now}) => db.transaction(() async {
         String? value;
         if (colorId != _pc.defaultId) {
           final row = await _stock(colorId);
@@ -77,22 +80,35 @@ class PaintService {
         }
         await db.into(db.profile).insertOnConflictUpdate(
             ProfileCompanion(id: const Value(1), paintColorId: Value(value)));
+        if (openTrailId != null && now != null) {
+          final trail = await _trail(openTrailId);
+          if (trail != null && trail.endUtc == null) {
+            await _segmentFrom(trail, now.toUtc().millisecondsSinceEpoch, value ?? _pc.defaultId);
+          }
+        }
         return true;
       });
 
-  /// 물감 길 [trailId]를 연 때: 그 물감 길에 지금 칠할 물감을 적는다 (이미 적혀 있으면 그대로)
+  /// 물감 길 [trailId]를 연 때: 그 물감 길의 첫 색 구간에 지금 칠할 물감을 적는다 (이미 적혀 있으면 그대로)
   Future<void> beginTrail(int trailId) => db.transaction(() async {
         final trail = await _trail(trailId);
-        if (trail == null || trail.colorId != null) return;
-        await (db.update(db.paintTrails)..where((t) => t.id.equals(trailId)))
-            .write(PaintTrailsCompanion(colorId: Value(await currentColor())));
+        if (trail == null || (await _segments(trailId)).isNotEmpty) return;
+        await db.into(db.paintTrailColors).insert(PaintTrailColorRow(
+            trailId: trailId, fromUtc: trail.startUtc, colorId: await currentColor()));
       });
 
+  /// 물감 길 [trailId]가 지금 칠하는 색 (마지막 구간, 없으면 기본 물감)
+  Future<String> trailColor(int trailId) async {
+    final segs = await _segments(trailId);
+    return segs.isEmpty ? _pc.defaultId : segs.last.colorId;
+  }
+
   /// 물감 길 [trailId]의 거리가 [fromM]에서 [toM]으로 늘었다 (이정표에 넘기는 것과 같은 센서 물감 길 거리, m).
-  /// 1) 그 물감 길의 고른 색 남은 양을 늘어난 만큼 줄인다. 다 쓰면 [now]부터 기본 물감 (물감 길 colorEndUtc,
-  ///    프로필의 고른 물감은 비운다, 걷는 중 알림 없음).
+  /// 1) 지금 구간 색의 남은 양을 늘어난 만큼 줄인다. 다 쓰면 [now]부터 기본 물감 구간 (프로필의 고른 물감은 비운다,
+  ///    걷는 중 알림 없음, 같은 색 통을 다시 주워도 저절로 다시 고르지 않음 — config choose.reselectOnRefill false).
   /// 2) 새로 넘은 방울 (내림(fromM ÷ 간격) + 1 ~ 내림(toM ÷ 간격))마다 보상 표를 굴린다. 물감 통이면 그 순간 색
-  ///    [momentColor]로 보관에 더한다. 그 색 통이 config 상한이면 나오지 않는다.
+  ///    [momentColor]로, 지역 색으로 나온 통이면 [regionColor](지금 권역의 지역 색 키, 없으면 그 순간 색)로 보관에
+  ///    더한다. 그 색 통이 config 상한이면 나오지 않는다.
   /// 새로 받은 통 줄을 돌려준다
   Future<List<PaintTubeRow>> addPaint({
     required int trailId,
@@ -100,6 +116,7 @@ class PaintService {
     required double toM,
     required DateTime now,
     required String momentColor,
+    String? regionColor,
   }) {
     if (!(toM > fromM)) return Future.value(const []);
     return db.transaction(() async {
@@ -115,17 +132,18 @@ class PaintService {
       for (var k = first; k <= last; k++) {
         final roll = rollDrop(trailId, k, _pc, random: random);
         if (!roll.tube) continue;
-        final tube = await _addTube(trailId, k, momentColor, roll.amountM.toDouble(), at);
+        final color = roll.region ? regionColor ?? momentColor : momentColor;
+        final tube = await _addTube(trailId, k, color, roll.amountM.toDouble(), at);
         if (tube != null) got.add(tube);
       }
       return got;
     });
   }
 
-  /// 물감 길 [trail]을 [deltaM] 칠한다. 고른 색이면 남은 양을 줄이고 다 쓰면 [at]에 기본 물감으로 넘긴다
+  /// 물감 길 [trail]을 [deltaM] 칠한다. 지금 구간이 고른 색이면 남은 양을 줄이고 다 쓰면 [at]부터 기본 물감 구간
   Future<void> _use(PaintTrailRow trail, double deltaM, int at) async {
-    final color = trail.colorId;
-    if (color == null || color == _pc.defaultId || trail.colorEndUtc != null) return;
+    final color = await trailColor(trail.id);
+    if (color == _pc.defaultId) return;
     final row = await _stock(color);
     final split = paintSplit(row?.remainM ?? 0, deltaM);
     if (row != null && split.usedM > 0) {
@@ -135,13 +153,28 @@ class PaintService {
               tubes: Value(await _tubesLeft(color, split.leftM))));
     }
     if (split.leftM > 0) return;
-    await (db.update(db.paintTrails)..where((t) => t.id.equals(trail.id)))
-        .write(PaintTrailsCompanion(colorEndUtc: Value(at)));
+    await _segmentFrom(trail, at, _pc.defaultId);
     if ((await _profile())?.paintColorId == color) {
       await (db.update(db.profile)..where((t) => t.id.equals(1)))
           .write(const ProfileCompanion(paintColorId: Value(null)));
     }
   }
+
+  /// 물감 길 [trail]을 [atMs]부터 [colorId]로 칠한다: 지금 구간과 색이 같으면 그대로, 아니면 새 구간
+  /// (같은 시각이면 그 구간을 바꾼다). 물감 길 시작·지금 구간 시작보다 앞이면 그 시각에 둔다
+  Future<void> _segmentFrom(PaintTrailRow trail, int atMs, String colorId) async {
+    final segs = await _segments(trail.id);
+    if (segs.isNotEmpty && segs.last.colorId == colorId) return;
+    var from = atMs < trail.startUtc ? trail.startUtc : atMs;
+    if (segs.isNotEmpty && from < segs.last.fromUtc) from = segs.last.fromUtc;
+    await db.into(db.paintTrailColors).insertOnConflictUpdate(
+        PaintTrailColorRow(trailId: trail.id, fromUtc: from, colorId: colorId));
+  }
+
+  Future<List<PaintTrailColorRow>> _segments(int trailId) => (db.select(db.paintTrailColors)
+        ..where((t) => t.trailId.equals(trailId))
+        ..orderBy([(t) => OrderingTerm(expression: t.fromUtc)]))
+      .get();
 
   /// 방울 하나의 물감 통을 보관에 더한다. 이미 받은 방울이거나 그 색 통이 상한이면 null
   Future<PaintTubeRow?> _addTube(int trailId, int dropNo, String colorId, double amountM, int at) async {
@@ -221,6 +254,19 @@ class PaintService {
     final row = await _stock(colorId);
     return row == null || row.tubes < _pc.maxTubesPerColor;
   }
+
+  /// 그날 받아 둔 날씨 (스키마 20 sync_state.weather_day·weather_kind). 없으면 null
+  Future<({String day, String kind})?> savedWeather() async {
+    final row = await (db.select(db.syncState)..where((t) => t.id.equals(1))).getSingleOrNull();
+    final day = row?.weatherDay;
+    final kind = row?.weatherKind;
+    return day == null || kind == null ? null : (day: day, kind: kind);
+  }
+
+  /// 그날 날씨를 적는다 (동기화 상태 행이 아직 없으면 적지 않는다: 메모리에만)
+  Future<void> saveWeather(String day, String kind) =>
+      (db.update(db.syncState)..where((t) => t.id.equals(1))).write(
+          SyncStateCompanion(weatherDay: Value(day), weatherKind: Value(kind)));
 
   Future<ProfileRow?> _profile() =>
       (db.select(db.profile)..where((t) => t.id.equals(1))).getSingleOrNull();
