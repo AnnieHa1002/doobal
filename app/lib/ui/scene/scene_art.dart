@@ -35,6 +35,9 @@ const starDotMaxPx = 8.0;
 /// 하늘 한 장을 구워 둘 때의 배율 (기기 pt 기준). 그라데이션·옅은 결이라 낮아도 된다
 const _skyBakeScale = 1.5;
 
+/// scene_art.json `file`의 납품 이름. scene.json은 납품 PNG 이름으로 적고, 앱에는 WebP로 넣었다 (T6c)
+String _artName(String path) => path.split('/').last.replaceFirst(RegExp(r'\.webp$'), '.png');
+
 class SceneArt {
   SceneArt(
     this.data,
@@ -59,10 +62,10 @@ class SceneArt {
   final List<String>? bankGray;
   final List<String>? meadowGray;
 
-  /// 그림 파일 이름 → assets 키 (scene.json은 파일 이름으로 적는다)
+  /// 그림 납품 이름 → assets 키 (scene.json은 납품 PNG 이름으로 적는다)
   late final Map<String, String> _keyOfFile = {
     for (final e in (data['assets'] as Map<String, dynamic>).entries)
-      ((e.value as Map)['file'] as String).split('/').last: e.key,
+      _artName((e.value as Map)['file'] as String): e.key,
   };
 
   String? assetKeyOf(String file) => _keyOfFile[file];
@@ -182,7 +185,7 @@ class SceneArt {
       // 이 지역·계절에 설 수 있는 조각만 읽는다
       final byFile = <String, String>{
         for (final e in assets.entries)
-          ((e.value as Map)['file'] as String).split('/').last: e.key,
+          _artName((e.value as Map)['file'] as String): e.key,
       };
       for (final row in SceneRow.values) {
         for (final piece in plan.eligible(row, region, look.season.name)) {
@@ -260,7 +263,7 @@ class SceneArt {
     final assets = data['assets'] as Map<String, dynamic>;
     final sky = data['sky'] as Map<String, dynamic>;
     final byFile = {
-      for (final e in assets.entries) ((e.value as Map)['file'] as String).split('/').last: e.key,
+      for (final e in assets.entries) _artName((e.value as Map)['file'] as String): e.key,
     };
     double canvasW(String key) => ((assets[key] as Map)['canvas'][0] as num).toDouble();
     final out = <String, double>{

@@ -9,7 +9,11 @@ void main() {
     jsonDecode(File('assets/data/scene.json').readAsStringSync()) as Map<String, dynamic>,
   );
   final assets = (jsonDecode(File('assets/data/scene_art.json').readAsStringSync()) as Map)['assets'] as Map;
-  final files = {for (final v in assets.values) ((v as Map)['file'] as String).split('/').last};
+  // scene.json은 납품 PNG 이름, scene_art.json은 앱에 넣은 파일(WebP)
+  final files = {
+    for (final v in assets.values)
+      ((v as Map)['file'] as String).split('/').last.replaceFirst(RegExp(r'\.webp$'), '.png'),
+  };
 
   group('데이터', () {
     test('실제 scene.json v5의 값', () {

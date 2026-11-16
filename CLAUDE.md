@@ -36,7 +36,7 @@ app/                Flutter 앱 (패키지 doobal, 번들 ID com.annieha.doobal)
   assets/rive/      Rive 시험 파일
 functions/          Firebase Cloud Functions (에뮬레이터 시험까지, 앱은 에뮬레이터로 연결(11/9), 실제 프로젝트 doobal-47236 배포 전. 실행법은 functions/README.md)
 data/               명소 CSV, build_static.py, build_events.py, geocode_landmarks.py
-tools/              clean_assets.py (에셋 정리), check_secrets.py (키·토큰 검사)
+tools/              clean_assets.py (에셋 정리), to_webp.py (앱에 넣을 PNG → WebP), check_secrets.py (키·토큰 검사)
 ```
 
 ## 기술 스택 (확정)
@@ -79,3 +79,4 @@ tools/              clean_assets.py (에셋 정리), check_secrets.py (키·토�
 
 - 그림체: 양피지·수채 위 판화풍 + 2~2.5등신. 색·글꼴·캔버스 규격은 기준 문서 9장.
 - 생성 원본은 `tools/clean_assets.py`로 정리하고, 정리본은 이름 끝에 `_clean`. 이미지 파일은 Drive Assets 폴더가 원본 저장소다.
+- 앱에 넣는 그림은 WebP: `python3 tools/to_webp.py --write --remove-png <png...>`(장마다 품질을 재서 고름) 뒤 데이터의 파일 이름을 .webp로 고친다.

@@ -25,7 +25,7 @@ class _Bundle extends AssetBundle {
     if (key.contains('/backgrounds/')) loaded.add(key.split('/').last);
     if (extra.contains(key)) {
       // 작은 진짜 그림으로 대신한다
-      return rootBundle.load('assets/backgrounds/v11/sky_star_dot_v01_clean.png');
+      return rootBundle.load('assets/backgrounds/v11/sky_star_dot_v01_clean.webp');
     }
     if (key == 'assets/data/scene.json' && scene != null) {
       final text = await rootBundle.loadString(key);
@@ -60,7 +60,7 @@ void main() {
 
     testWidgets('파일이 없으면 지금 그림을 그대로 쓴다', (tester) async {
       final b = await run(tester, 1, const {});
-      expect(b.loaded, contains('bg_far_capital_wide_part1_v10_clean.png'));
+      expect(b.loaded, contains('bg_far_capital_wide_part1_v10_clean.webp'));
     });
 
     testWidgets('세 장이 다 있으면 겨울에는 겨울판', (tester) async {
@@ -68,12 +68,12 @@ void main() {
       for (final n in winter) {
         expect(b.loaded, contains(n));
       }
-      expect(b.loaded, isNot(contains('bg_far_capital_wide_part1_v10_clean.png')));
+      expect(b.loaded, isNot(contains('bg_far_capital_wide_part1_v10_clean.webp')));
     });
 
     testWidgets('한 장이라도 없으면 기본판', (tester) async {
       final b = await run(tester, 1, {'$_dir/${winter[0]}', '$_dir/${winter[1]}'});
-      expect(b.loaded, contains('bg_far_capital_wide_part1_v10_clean.png'));
+      expect(b.loaded, contains('bg_far_capital_wide_part1_v10_clean.webp'));
     });
 
     testWidgets('겨울이 아니면 겨울판을 안 읽는다', (tester) async {
@@ -88,7 +88,7 @@ void main() {
         for (final n in winter) '$_dir/${n.replaceAll('.png', '.webp')}',
       });
       expect(b.loaded, contains(winter[0].replaceAll('.png', '.webp')));
-      expect(b.loaded, isNot(contains('bg_far_capital_wide_part1_v10_clean.png')));
+      expect(b.loaded, isNot(contains('bg_far_capital_wide_part1_v10_clean.webp')));
     });
   });
 
@@ -107,7 +107,7 @@ void main() {
       final extra = {for (final n in seam) '$_dir/$n'};
       final off = _Bundle(extra: extra);
       (await tester.runAsync(() => SceneArt.load(off, jeolla(), false, 1 / 3, 3)))!.dispose();
-      expect(off.loaded, contains('bg_far_jeolla_wide_part1_v10_clean.png'));
+      expect(off.loaded, contains('bg_far_jeolla_wide_part1_v10_clean.webp'));
       expect(off.loaded, isNot(contains(seam[0])));
 
       final on = _Bundle(
@@ -120,7 +120,7 @@ void main() {
       );
       (await tester.runAsync(() => SceneArt.load(on, jeolla(), false, 1 / 3, 3)))!.dispose();
       expect(on.loaded, contains(seam[0]));
-      expect(on.loaded, isNot(contains('bg_far_jeolla_wide_part1_v10_clean.png')));
+      expect(on.loaded, isNot(contains('bg_far_jeolla_wide_part1_v10_clean.webp')));
     });
   });
 
