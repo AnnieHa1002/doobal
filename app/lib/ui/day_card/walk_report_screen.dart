@@ -25,7 +25,8 @@ List<String> weekdayNames(bool startsMonday) => startsMonday
     ? const ['월', '화', '수', '목', '금', '토', '일']
     : const ['일', '월', '화', '수', '목', '금', '토'];
 
-/// 가장 많이 걷는 때: 이웃한 두 시면 ‘저녁 6~8시’, 아니면 가장 많은 한 시 ‘아침 7~8시’. 걸음이 없으면 ‘-’
+/// 가장 많이 걷는 때: 이웃한 두 시면 ‘저녁 6~8시’, 아니면 가장 많은 한 시 ‘아침 7~8시’. 걸음이 없으면 ‘-’.
+/// 두 시가 다른 때에 걸치면 둘 다 붙인다 ‘아침 11시~낮 1시’ (11/17 폰: ‘아침 11~1시’로 보여 고침, 가안)
 String peakHoursLabel(List<int> peak) {
   if (peak.isEmpty) return '-';
   var from = peak.first;
@@ -34,9 +35,11 @@ String peakHoursLabel(List<int> peak) {
     from = math.min(peak[0], peak[1]);
     to = from + 2;
   }
-  final start = formatHourKo(from);
-  final end = to % 12 == 0 ? 12 : to % 12;
-  return '${start.substring(0, start.length - 1)}~$end시';
+  final first = hourPartKo(from);
+  final last = hourPartKo(to - 1);
+  return first == last
+      ? '$first ${hour12(from)}~${hour12(to)}시'
+      : '$first ${hour12(from)}시~$last ${hour12(to)}시';
 }
 
 /// 비율(0~1)을 반올림한 % 두 개 (합 100). 둘 다 없으면 (0, 0)

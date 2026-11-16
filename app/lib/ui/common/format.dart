@@ -47,18 +47,20 @@ String formatKstClockAmPm(DateTime utc) {
 
 /// 시(0~23)를 말하듯이: 22 → '밤 10시', 8 → '아침 8시', 13 → '낮 1시', 3 → '새벽 3시'
 /// (0시는 '밤 12시', 12시는 '낮 12시')
-String formatHourKo(int hour) {
-  final part = switch (hour) {
-    0 => '밤',
-    < 6 => '새벽',
-    < 12 => '아침',
-    < 18 => '낮',
-    < 21 => '저녁',
-    _ => '밤',
-  };
-  final h = hour % 12 == 0 ? 12 : hour % 12;
-  return '$part $h시';
-}
+String formatHourKo(int hour) => '${hourPartKo(hour)} ${hour12(hour)}시';
+
+/// 시(0~23)가 드는 때: 0시 밤, 1~5시 새벽, 6~11시 아침, 12~17시 낮, 18~20시 저녁, 21~23시 밤
+String hourPartKo(int hour) => switch (hour % 24) {
+      0 => '밤',
+      < 6 => '새벽',
+      < 12 => '아침',
+      < 18 => '낮',
+      < 21 => '저녁',
+      _ => '밤',
+    };
+
+/// 12시간제 숫자 (0·12 → 12)
+int hour12(int hour) => hour % 12 == 0 ? 12 : hour % 12;
 
 /// 권역 7의 짧은 이름. 지도 칩 순서 그대로다 (수도권부터 울릉까지)
 const regionLabels = {

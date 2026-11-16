@@ -1,6 +1,7 @@
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/ui/common/format.dart';
+import 'package:doobal/ui/day_card/walk_report_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -35,6 +36,18 @@ void main() {
     expect(formatPace(0), '0\'00"');
     expect(formatPace(3600), '60\'00"');
     expect(formatPace(-5), '0\'00"');
+  });
+
+  test('peakHoursLabel: 같은 때면 한 번, 다른 때에 걸치면 둘 다 (11/17 폰 ‘아침 11~1시’)', () {
+    expect(peakHoursLabel(const []), '-');
+    expect(peakHoursLabel(const [7]), '아침 7~8시');
+    expect(peakHoursLabel(const [18, 19]), '저녁 6~8시');
+    expect(peakHoursLabel(const [12, 11]), '아침 11시~낮 1시');
+    expect(peakHoursLabel(const [10, 11]), '아침 10~12시');
+    expect(peakHoursLabel(const [17, 18]), '낮 5시~저녁 7시');
+    expect(peakHoursLabel(const [20, 21]), '저녁 8시~밤 10시');
+    expect(peakHoursLabel(const [11]), '아침 11~12시');
+    expect(peakHoursLabel(const [23, 22]), '밤 10~12시');
   });
 
   test('formatHourKo: 시를 말하듯이 (밤 10시, 아침 8시)', () {
