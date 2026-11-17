@@ -674,7 +674,12 @@
  },
  "allowedSources": {
   "ios": [],
-  "android": []
+  "android": [
+   "com.android.healthconnect.phone",
+   "com.sec.android.app.shealth",
+   "com.google.android.apps.fitness"
+  ],
+  "note": "16장 11/17 Annie: 폰 센서 + 기본 걸음 앱만 인정(수동 입력은 늘 뺌, 같은 분에 출처가 여럿이면 큰 값 하나). 같은 이름이거나 이름 + ‘.’로 시작하면 허용(안드로이드 기본 폰 걸음은 com.android.healthconnect.phone.<기기마다 다른 값>, 11/17 Z 플립6에서 뽑음). 삼성 헬스·구글 피트니스는 기본 걸음 앱 가안. iOS는 첫 빌드(T6b) 때 폰에서 뽑아 채움(빈 목록 = 출처로 거르지 않음)"
  },
  "live": {
   "cadenceWindowSec": 30,
