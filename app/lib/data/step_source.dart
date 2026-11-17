@@ -56,7 +56,7 @@ class HealthStepSource implements StepSource {
             start: p.dateFrom.toUtc(),
             end: p.dateTo.toUtc(),
             steps: (p.value as hp.NumericHealthValue).numericValue.round(),
-            sourceId: p.sourceId,
+            sourceId: stepSourceKey(p.sourceId, p.sourceName),
             method: switch (p.recordingMethod) {
               hp.RecordingMethod.automatic => RecordingMethod.automatic,
               hp.RecordingMethod.active => RecordingMethod.active,
@@ -67,6 +67,11 @@ class HealthStepSource implements StepSource {
     ];
   }
 }
+
+/// 걸음 기록의 출처 키 (config allowedSources와 맞춘다): iOS는 HealthKit 출처 id(번들 id), 안드로이드는
+/// health 패키지가 sourceId를 늘 빈 값으로 주고 Health Connect dataOrigin 패키지 이름을 sourceName에 넣어서 그것
+/// (11/17 폰에서 봄: 48시간 기록 271개가 모두 sourceId 빈 값)
+String stepSourceKey(String sourceId, String sourceName) => sourceId.isNotEmpty ? sourceId : sourceName;
 
 class FakeStepSource implements StepSource {
   FakeStepSource([List<StepRecord>? records]) : records = records ?? [];
