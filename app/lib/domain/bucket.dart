@@ -46,8 +46,13 @@ int epochMinute(DateTime t) => t.millisecondsSinceEpoch ~/ _msPerMin;
 List<StepRecord> filterRecords(List<StepRecord> records, List<String> allowedSources) =>
     records
         .where((r) => r.method != RecordingMethod.manual)
-        .where((r) => allowedSources.isEmpty || allowedSources.contains(r.sourceId))
+        .where((r) => allowedSources.isEmpty || allowedSources.any((a) => sourceAllowed(r.sourceId, a)))
         .toList();
+
+/// 출처 [source]가 허용 항목 [allowed]에 드는가: 같은 이름이거나, 그 이름 + ‘.’로 시작하면 (앞부분 맞추기).
+/// 안드로이드 기본 폰 걸음은 `com.android.healthconnect.phone.<기기마다 다른 값>`이라 앞부분으로 맞춘다 (11/17 폰)
+bool sourceAllowed(String source, String allowed) =>
+    allowed.isNotEmpty && (source == allowed || source.startsWith('$allowed.'));
 
 /// 기록 하나를 각 분과 겹친 시간 비율로 나눈다 (분 → 걸음). 나누는 방법은 [splitSteps]
 Map<int, int> splitRecord(StepRecord r) => splitSteps(r.steps, r.start, r.end);

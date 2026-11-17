@@ -91,4 +91,27 @@ void main() {
     expect(filterRecords(recs, const ['iphone']).map((r) => r.sourceId), ['iphone']);
     expect(filterRecords(recs, const []), hasLength(2));
   });
+
+  test('허용 항목은 같은 이름이거나 이름 + ‘.’로 시작하는 출처 (안드로이드 기본 폰 걸음, 16장 11/17)', () {
+    const phone = 'com.android.healthconnect.phone';
+    final recs = [
+      _rec(_at(10, 0), _at(10, 1), 80, source: '$phone.ja68d9be3a26d37f6916298270c71ce29'),
+      _rec(_at(10, 1), _at(10, 2), 70, source: 'com.sec.android.app.shealth'),
+      _rec(_at(10, 2), _at(10, 3), 60, source: 'com.sec.android.app.shealthplus'),
+      _rec(_at(10, 3), _at(10, 4), 50, source: 'com.example.stepcheat'),
+      _rec(_at(10, 4), _at(10, 5), 40, source: 'com.android.healthconnect.phonex'),
+    ];
+    final kept = filterRecords(recs, const [phone, 'com.sec.android.app.shealth']);
+    expect(kept.map((r) => r.steps), [80, 70]);
+    expect(sourceAllowed('', phone), isFalse);
+    expect(sourceAllowed('anything', ''), isFalse);
+  });
+
+  test('출처가 둘이면 같은 분은 더하지 않고 큰 값 (폰 센서 + 삼성 헬스가 같은 걸음을 적어도 한 번)', () {
+    final recs = [
+      _rec(_at(10, 0), _at(10, 1), 80, source: 'com.android.healthconnect.phone.abc'),
+      _rec(_at(10, 0), _at(10, 1), 95, source: 'com.sec.android.app.shealth'),
+    ];
+    expect(_steps(toMinutes(recs)), [95]);
+  });
 }
