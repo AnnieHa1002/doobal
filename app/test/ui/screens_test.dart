@@ -52,7 +52,7 @@ StepRecord _walk(DateTime start, int minutes, int spm) => StepRecord(
       start: start,
       end: start.add(Duration(minutes: minutes)),
       steps: minutes * spm,
-      sourceId: 'iphone',
+      sourceId: 'com.android.healthconnect.phone.test',
       method: RecordingMethod.automatic,
     );
 

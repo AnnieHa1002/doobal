@@ -77,7 +77,7 @@ void main() {
       start: now.subtract(const Duration(hours: 1)),
       end: now.subtract(const Duration(minutes: 30)),
       steps: 3000,
-      sourceId: 'iphone',
+      sourceId: 'com.android.healthconnect.phone.test',
       method: RecordingMethod.automatic,
     ));
 
@@ -182,7 +182,7 @@ void main() {
         start: start,
         end: end,
         steps: 16000,
-        sourceId: 'iphone',
+        sourceId: 'com.android.healthconnect.phone.test',
         method: RecordingMethod.automatic,
       ));
     });

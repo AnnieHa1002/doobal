@@ -38,11 +38,15 @@ final byId = {for (final l in landmarks) l.id: l};
 // 경복궁에서 동쪽으로 약 1km
 const nearGyeongbok = LatLng(37.57761, 126.9769 + 0.0113);
 
+/// 시험 걸음의 출처: 앱 동기화(syncServiceProvider)는 config allowedSources(시험 기계는 iOS가 아니라 안드로이드
+/// 목록)로 거르므로 허용되는 안드로이드 기본 폰 걸음 출처로 둔다 (16장 11/17)
+const testStepSource = 'com.android.healthconnect.phone.test';
+
 StepRecord walkRecord(DateTime start, int minutes, int spm) => StepRecord(
       start: start,
       end: start.add(Duration(minutes: minutes)),
       steps: minutes * spm,
-      sourceId: 'iphone',
+      sourceId: testStepSource,
       method: RecordingMethod.automatic,
     );
 
