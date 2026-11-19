@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/companion_providers.dart';
@@ -26,34 +25,38 @@ import '../../domain/rules.dart';
 import '../../domain/screen_rules.dart';
 import '../../domain/walk_arrival.dart';
 import '../../domain/walk_record.dart';
-import '../arrival/arrival_screen.dart';
-import '../common/screen_orientation.dart';
 import '../common/toast.dart';
 import '../companion/companion_pacer.dart';
+import '../companion/companion_slot.dart' show openCompanions;
 import '../companion/companion_walk_layer.dart';
 import '../companion/meet_flow.dart';
 import '../companion/story_lines.dart';
+import '../guestbook/guestbook_write_screen.dart';
 import '../scene/scene_view.dart';
+import '../tabs/home_tabs.dart';
+import 'guestbook_sign.dart';
 import 'paint_drop_layer.dart';
-import 'paint_trail_host.dart' show walkingDismissedProvider;
 import 'walking_hud.dart';
 
-/// 걷는 중 (캔버스 3-1, 16장 11/13 물감 길): 물감 길이 열려 있는 동안 보는 화면. PaintTrailHost가
-/// 물감 길이 열리면 열고 걸음이 멈춰 끝나면 쉼터로 닫는다 (16장 11/16 쉼터↔걷는 중 6규칙). 왼쪽 위 쉼터 아이콘은
-/// 화면만 쉼터로 돌린다 (물감 길은 이어지고 그 물감 길 동안 저절로 돌아오지 않는다). ‘걷기 마치기’도, 물감을 고르는
-/// 버튼도 없다 (물감은 쉼터 배낭 물감 탭에서 바꾼다, 16장 11/16).
+/// 걷기 탭의 처음 화면 = 걷는 중 (캔버스 3-1, 16장 11/13 물감 길·11/18 ④⑤·11/19). 앱이 떠 있는 동안 계속 있고
+/// (탭을 오가도 그대로), 물감 길이 열려 있으면 걷는 중, 아니면 쉬는 중이다: 땅이 멈추고 정령은 둥둥 옆,
+/// 동행은 옆면으로 서서 숨만 쉰다 (config companions.walkTab, 16장 11/19 걷기 탭은 무조건 옆면).
+/// 걸어도·물감 길이 끝나도 탭은 저절로 바뀌지 않는다 (걷는 중이면 탭 바 걷기 아이콘의 발자국이 움직인다).
+/// 왼쪽 위 쉼터 아이콘·‘걷기 마치기’·물감 고르는 버튼은 없다 (물감은 쉼터 배낭 물감 탭에서 바꾼다, 16장 11/16).
+/// 장면 아래는 탭 바 위로 30pt 겹치고, 가로로 돌리면 탭 바가 숨는다 (탭 뼈대).
 /// 숫자는 PaintTrailController가 주는 이번 물감 길 값이다: 걸음·거리는 health 기록과 센서 중 큰 쪽(안드로이드는
 /// 감지 센서가 카운터보다 먼저 센 걸음까지, 16장 11/19), 분당 걸음과 걷기/뛰기는 센서 기준.
-/// 보이는 거리는 새 값을 향해 부드럽게 따라간다.
+/// 보이는 거리는 새 값을 향해 부드럽게 따라간다. 새 물감 길이 열리면 0부터, 끝나면 0으로 돌아간다.
 /// 화면이 꺼져 있던 동안 센 걸음은 앱이 돌아올 때 한꺼번에 들어오고, 그때 거리는 바로 맞춘다.
 /// 땅 위로 이번 물감 길 거리 config paintDrop.spacingM마다 물감 방울이 흘러와 정령에 닿으면 줍는다 (연출만).
-/// 이정표 카드(길 위 이벤트)는 컨트롤러가 만든 것을 config hud.eventCardSec 동안 띄운다 (화면이 꺼진 동안
-/// 넘은 칸은 마지막 events.offScreenCards장만). 새 도장을 받으면 걸음 알약 아래 작은 줄이 잠깐 뜬다.
+/// 이정표 카드(길 위 이벤트)는 컨트롤러가 만든 것을 이 화면이 보일 때 config hud.eventCardSec 동안 띄운다
+/// (안 보이는 동안 넘은 칸은 마지막 events.offScreenCards장만). 새 도장을 받으면 걸음 알약 아래 작은 줄이 잠깐 뜬다.
 /// 칸이 이벤트 대신 동행 만남이면(pendingMeeting) HUD를 가리고 길 위 만남(MeetFlow)을 이 화면 위에 띄운다.
-/// 함께 걷는 동행은 장면에서 pace대로 따라온다. 화면을 떠날 때 뒤처진 거리로 쉼터에 늦게 오는 시간을 넘긴다.
-/// 진행이 100%가 되면 도착 화면으로 바꾼다 (물감 길은 도착에서 끝나고(config paintTrail.endOnArrival),
-/// 닫으면 쉼터, 도착 뒤 걸음은 새 물감 길). 도착은 늘 health 동기화가 정한다: 센서 미리보기가 남은 거리를 넘으면 동기화를 바로 돌려 보고 도착이 확정되면 넘어간다.
-/// 이 화면이 떠 있는 동안은 walkingActiveProvider로 AutoSync가 도착 화면을 따로 띄우지 않게 한다
+/// 함께 걷는 동행은 장면에서 pace대로 따라오고, 누르면 동행 화면(안 읽은 장이 있으면 동행 위 알림 점).
+/// 방명록을 쓸 수 있으면 정령 오른쪽 길가에 표지판이 화면에 고정돼 서고(걷는 중·쉬는 중 모두), 누르면 방명록 쓰기
+/// (config guestbook.sign, 16장 11/18·11/19).
+/// 도착은 동기화가 정하고 AutoSync가 이 탭 안에 도착 화면을 띄운다: 센서 미리보기가 남은 거리를 넘으면 이 화면이
+/// 동기화를 바로 돌려 본다
 class WalkingScreen extends ConsumerStatefulWidget {
   const WalkingScreen({super.key});
 
@@ -69,8 +72,12 @@ const _paceMaxDt = 0.25;
 
 class _WalkingScreenState extends ConsumerState<WalkingScreen>
     with SingleTickerProviderStateMixin {
-  late final DateTime _start;
+  /// 이번 물감 길이 열린 시각 (쉬는 중이면 지금)
+  late DateTime _start;
   late DateTime _now;
+
+  /// 걷기 탭 처음 화면이 보이는가 (탭 뼈대, walkFrontProvider)
+  var _front = false;
   late final Ticker _ticker;
   var _lastTick = Duration.zero;
 
@@ -112,7 +119,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   /// 이 화면에서 이미 고른 동행 (저장이 끝나기 전에 읽어도 다시 띄우지 않게)
   final _meetDone = <String>{};
 
-  /// 도착으로 넘어가는 중 (한 번만) / 마지막으로 도착 확인 동기화를 돌린 시각
+  /// 도착이 확정돼 더 미리 알아보지 않는다 (물감 길마다) / 마지막으로 도착 확인 동기화를 돌린 시각
   var _ending = false;
   DateTime? _probeAt;
 
@@ -120,17 +127,9 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   Companion? _walkingWith;
   final _pacer = CompanionPacer();
 
-  /// 쉼터 늦은 도착을 넘길 곳, 넘겼는가, 마지막 규칙
-  late final CampArrivalNotifier _arrival;
-  var _arrivalSent = false;
-  Rules? _rules;
-
   /// 정령에 잠깐 보일 표정 (길 위 만남·새 소품, palette 표정 호출 표)과 마지막으로 본 안 본 소품 수
   SpiritCue? _cue;
   int? _unseenProps;
-
-  /// 가로로 돌릴 수 있게 풀었는가 (config ui.orientation, 닫을 때 세로로 다시 잠근다)
-  var _orientationOpen = false;
 
   /// [event]의 표정을 잠깐 보인다 (같은 표정이 이어져도 다시 울리게 새 객체로)
   void _cueFor(String event, {String? trigger}) {
@@ -146,16 +145,10 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _service = ref.read(syncServiceProvider.future);
     _trail = ref.read(paintTrailProvider.notifier);
     _active = ref.read(walkingActiveProvider.notifier);
-    _arrival = ref.read(campArrivalProvider.notifier);
-    // 위젯을 짓는 중에는 provider를 못 바꾼다
-    Future.microtask(() => _setActive(true));
     _now = clock();
-    _start = ref.read(paintTrailProvider).start ?? _now;
-    final shown = _trail.shownAt(_now);
-    _shownM = shown?.distanceM ?? 0;
-    _stepFollower.snap(shown?.steps ?? 0);
-    _catchUps = _trail.live?.catchUps ?? 0;
+    _resetTrail(ref.read(paintTrailProvider));
     _ticker = createTicker(_onTick)..start();
+    ref.listenManual(walkFrontProvider, (_, front) => _onFront(front), fireImmediately: true);
     ref.listenManual(snapshotProvider, (_, next) {
       final s = next.value;
       if (s != null) _onSnapshot(s);
@@ -171,23 +164,19 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   @override
   void dispose() {
-    if (_orientationOpen) unawaited(SystemChrome.setPreferredOrientations(portraitOnly));
     _badgeSub?.cancel();
     _eventTimer?.cancel();
     _badgeTimer?.cancel();
-    Future.microtask(() => _setActive(false));
+    if (_front) Future.microtask(() => _setActive(false));
     _ticker.dispose();
-    // 화면을 떠나면 쉼터 늦은 도착을 넘긴다 (정리 중에는 provider를 못 바꾼다)
-    if (!_arrivalSent) {
-      final send = _arrivalSender(_clock());
-      Future.microtask(send);
-    }
     _pacer.dispose();
     super.dispose();
   }
 
   /// 물감 길 상태가 바뀌었다: 새 기록이면 따라갈 속도를, 새 카드면 띄우고, 이정표를 넘겼으면 만남을 본다
   void _onTrail(PaintTrailState? prev, PaintTrailState next) {
+    // 새 물감 길이 열렸거나 끝났다: 숫자를 0부터 (쉬는 중은 0)
+    if (prev != null && next.id != prev.id) setState(() => _resetTrail(next));
     if (prev != null && next.refreshes != prev.refreshes) {
       final record = next.record;
       final rules = ref.read(rulesProvider).value;
@@ -212,6 +201,13 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
   void _nextCard() {
     if (!mounted) return;
     _eventTimer?.cancel();
+    // 안 보이는 동안은 쌓아 두었다가 보일 때 띄운다 (마지막 events.offScreenCards장만)
+    if (!_front) {
+      final keep = ref.read(rulesProvider).value?.eventOffScreenCards ?? 1;
+      if (_eventQueue.length > keep) _eventQueue.removeRange(0, _eventQueue.length - keep);
+      if (_event != null) setState(() => _event = null);
+      return;
+    }
     if (_eventQueue.isEmpty) {
       if (_event != null) setState(() => _event = null);
       return;
@@ -287,15 +283,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
         if (mounted) _cueFor('newProp');
       });
     }
-    final arrival = s.pendingArrival;
-    if (arrival != null && !_ending) {
-      _ending = true;
-      // 화면을 짓는 중일 수 있어서 이번 프레임이 끝난 뒤에 넘어간다
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _toArrival(arrival.journeyId);
-      });
-      return;
-    }
+    // 도착이 확정됐다: 도착 화면은 AutoSync가 이 탭 안에 띄운다. 이 물감 길에서는 더 미리 알아보지 않는다
+    if (s.pendingArrival != null) _ending = true;
     final entered = s.onSea && !_wasOnSea;
     _wasOnSea = s.onSea;
     if (!entered) return;
@@ -313,7 +302,6 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _lastTick = elapsed;
     if (rules == null) return;
 
-    _rules = rules;
     final now = ref.read(clockProvider)();
     final summary = _trail.summaryAt(now);
     // 화면 숫자·땅은 감지 센서가 먼저 센 걸음까지 (걸음마다 바로 움직인다, 16장 11/19)
@@ -395,20 +383,6 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
 
   bool _isRunning(WalkSummary? s) => s != null && s.lastSteps > 0 && s.lastGait == Gait.run;
 
-  /// 화면을 [end]에 떠났다고 쉼터에 넘기는 일 (한 번만). 뒤처지지 않았으면 늦은 도착 0
-  void Function() _arrivalSender(DateTime end) {
-    _arrivalSent = true;
-    final rules = _rules;
-    final lateSec = rules == null ? 0.0 : lateArrivalSec(_pacer.lagM, rules);
-    return () {
-      try {
-        _arrival.finishWalk(end, lateSec);
-      } catch (_) {
-        // 앱이 통째로 정리되는 중이면 넘길 곳이 없다
-      }
-    };
-  }
-
   /// 센서 미리보기가 남은 거리를 넘으면 동기화를 바로 돌려 도착이 확정됐는지 본다.
   /// 진행 기준은 언제나 health 동기화 값이라 여기서 도착을 정하지는 않는다 (M1)
   void _probeArrival(WalkSummary? summary, DateTime now) {
@@ -424,23 +398,40 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     unawaited(_trail.refreshNow());
   }
 
-  /// 진행 100%: 도착 화면으로 바꾼다 (물감 길은 동기화가 도착 시각에 닫았고, 도착 화면을 닫으면 쉼터).
-  /// 이 화면이 맨 위가 아니면(물감 길이 끝나 닫히는 중) 바꾸지 않는다: pushReplacement는 맨 위 경로를
-  /// 바꾸므로 쉼터를 바꿔 버린다. 그때는 이 화면이 닫힌 뒤 AutoSync가 도착 화면을 띄운다
-  void _toArrival(String journeyId) {
-    if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
-    if (!_arrivalSent) _arrivalSender(_clock())();
-    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
-      builder: (_) => ArrivalScreen(journeyId: journeyId, fromWalk: true),
-    ));
+  /// 물감 길 [t]에 맞춰 숫자를 0(또는 지금 값)부터 다시 (새 물감 길·끝·처음 지을 때)
+  void _resetTrail(PaintTrailState t) {
+    _start = t.start ?? _now;
+    final shown = _trail.shownAt(_now);
+    _shownM = shown?.distanceM ?? 0;
+    _stepFollower.reset(shown?.steps ?? 0);
+    _catchUps = _trail.live?.catchUps ?? 0;
+    _catchUpMps = 0;
+    _ending = false;
+    _probeAt = null;
   }
 
-  /// 쉼터 아이콘: 화면만 쉼터로 (물감 길·방울 줍기는 이어진다). 그 물감 길 동안은 저절로 걷는 중으로 되돌아가지
-  /// 않는다 (16장 11/16 ④, 쉼터 위 가운데 ‘걷는 중’을 누르면 다시)
-  void _toRest() {
-    ref.read(walkingDismissedProvider.notifier).set(ref.read(paintTrailProvider).id);
-    Navigator.of(context).popUntil((r) => r.isFirst);
+  /// 걷기 탭 처음 화면이 보이게 됐거나 가려졌다 (탭 뼈대). 보이는 동안만 도장 줄을 이 화면이 맡고,
+  /// 보이게 되면 쌓인 이정표 카드를 띄우고 숫자를 지금 값으로 맞춘다 (안 보이는 동안은 프레임이 멈춰 있었다)
+  void _onFront(bool front) {
+    if (front == _front) return;
+    _front = front;
+    Future.microtask(() => _setActive(front));
+    if (!front) return;
+    final shown = _trail.shownAt(_clock());
+    if (shown != null) {
+      _shownM = math.max(_shownM, shown.distanceM);
+      _stepFollower.snap(shown.steps);
+    }
+    if (_event == null && _eventQueue.isNotEmpty) Future.microtask(_nextCard);
+    if (mounted) setState(() {});
   }
+
+  /// 함께 걷는 동행을 누르면 동행 화면 (config companions.walkTab.tap, 걷기 탭 안)
+  void _openCompanion() => openCompanions(context);
+
+  /// 길가 표지판을 누르면 방명록 쓰기 (config guestbook.sign.tap 5-1)
+  void _openGuestbook(String ticketId) => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => GuestbookWriteScreen(ticketId: ticketId)));
 
   @override
   Widget build(BuildContext context) {
@@ -451,11 +442,6 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final position = snap?.position;
     if (rules == null || landmarks == null || snap == null || position == null) {
       return const Scaffold(body: SizedBox.expand());
-    }
-    // 가로 화면은 이 화면만 (config ui.orientation.landscape). 규칙을 읽은 첫 화면에서 한 번 푼다
-    if (!_orientationOpen && rules.screen.landscapeScreens.contains('walking')) {
-      _orientationOpen = true;
-      unawaited(lockOrientation(rules.screen, 'walking'));
     }
     final summary = _trail.summaryAt(_now);
     final running = _isRunning(summary);
@@ -474,11 +460,19 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     final region = _regionColor(rules, position, landmarks);
     final regionAllowed =
         region == null || (ref.watch(paintTubeRoomProvider(region.stockId)).value ?? true);
+    // 안 읽은 장 알림 점은 동행 위에도 (config companions.walkTab.dot)
+    final storyDot = rules.screen.dotOn('companion') && ref.watch(unreadStoryProvider);
+    final ticket = snap.guestbookTicket;
 
     return Scaffold(
+      // 화면 가득: 길 위 만남 동안 HUD가 Offstage(0×0)여도 장면이 0으로 줄지 않게
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          SceneView(
+          // 장면 아래는 탭 바 위로 30pt 겹친다 (캔버스 3-1)
+          Positioned.fill(
+            bottom: TabBarSpace.sceneBottom(context),
+            child: SceneView(
             mode: SceneMode.walking,
             distanceM: shownM,
             nowUtc: _now,
@@ -502,6 +496,16 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
                       companion: companion,
                       pace: _pacer.frame,
                       spot: spot,
+                      onTap: _openCompanion,
+                      notice: storyDot,
+                    ),
+            // 방명록을 쓸 수 있으면 길가 표지판 (길 위 만남 동안은 숨김)
+            walkRoadside: ticket == null || meet != null
+                ? null
+                : (spot) => GuestbookRoadSign(
+                      spot: spot,
+                      screenX: rules.screen.tabs.signScreenX,
+                      onTap: () => _openGuestbook(ticket.id),
                     ),
             walkGround: (spot) => PaintDropLayer(
               spot: spot,
@@ -514,6 +518,7 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
               regionAllowed: regionAllowed,
             ),
           ),
+          ),
           // 길 위 만남 동안에는 HUD를 가린다 (상태는 그대로 둔다)
           Offstage(
             offstage: meet != null,
@@ -523,7 +528,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
               summary: summary,
               shownM: _shownM,
               shownSteps: _stepFollower.shown,
-              walkingTime: _now.difference(_start),
+              // 쉬는 중(물감 길 없음)이면 0
+              walkingTime: trailId == null ? Duration.zero : _now.difference(_start),
               running: running,
               nextMilestone: _nextMilestone(snap),
               event: _event,
@@ -531,7 +537,6 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
               onCloseEvent: _closeEvent,
               badgeLine: _badgeLine,
               storyLine: _storyLine(rules),
-              onRest: _toRest,
             ),
           ),
           if (meet != null)

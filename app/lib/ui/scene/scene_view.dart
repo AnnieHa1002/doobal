@@ -45,9 +45,11 @@ class SceneView extends StatelessWidget {
     this.sceneAbove = const [],
     this.walkCompanion,
     this.walkGround,
+    this.walkRoadside,
     this.restPose,
     this.spiritCue,
     this.spiritCues,
+    this.onSpiritLongPress,
   });
 
   final SceneMode mode;
@@ -99,6 +101,9 @@ class SceneView extends StatelessWidget {
   /// 걷는 중 장면의 땅 위 층 (땅과 같이 흐르는 물감 방울, 정령·동행 뒤). 장면이 자리를 넘겨 부른다
   final Widget Function(SceneCompanionSpot spot)? walkGround;
 
+  /// 걷는 중 장면의 길가 층 (화면에 고정된 방명록 표지판, 물감 방울 위·동행 뒤). 눌린다
+  final Widget Function(SceneCompanionSpot spot)? walkRoadside;
+
   /// 쉼터 정령의 지금 자세 (쉼터가 config restSwap으로 20~40초마다 바꾼다). null이면 쉼터 첫 자세.
   /// 밤에는 이것 대신 잠들기 (config restSwap.night)
   final int? restPose;
@@ -108,6 +113,9 @@ class SceneView extends StatelessWidget {
 
   /// 정령 표정 호출 표 (밤 쉼터 졸림·누르기 행복·연타 화남). 없으면 표정 없이 동작만
   final SpiritCues? spiritCues;
+
+  /// 정령을 길게 누르면 (쉼터 → 정령 꾸미기, config character.tapReaction.longPress). 없으면 길게 눌러도 그대로
+  final VoidCallback? onSpiritLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +209,8 @@ class SceneView extends StatelessWidget {
             : rules.characterHeightPx * k);
     final companion = walkCompanion;
     final ground = walkGround;
-    final spot = companion == null && ground == null
+    final roadside = walkRoadside;
+    final spot = companion == null && ground == null && roadside == null
         ? null
         : _companionSpot(size, art, artLayout, foot, figureHeight, tint);
     return Stack(
@@ -210,13 +219,10 @@ class SceneView extends StatelessWidget {
           child: CustomPaint(painter: layer(ScenePass.background)),
         ),
         if (ground != null) Positioned.fill(child: IgnorePointer(child: ground(spot!))),
-        // 동행이 없어도 자리는 둔다 (정령이 다시 만들어지지 않게)
+        if (roadside != null) Positioned.fill(child: roadside(spot!)),
+        // 동행이 없어도 자리는 둔다 (정령이 다시 만들어지지 않게). 동행은 눌린다 (걷기 탭 → 동행 화면)
         Positioned.fill(
-          child: IgnorePointer(
-            child: companion == null
-                ? const SizedBox.shrink()
-                : companion(spot!),
-          ),
+          child: companion == null ? const SizedBox.shrink() : companion(spot!),
         ),
         _character(foot, figureHeight, speed, pose, tint, stand),
         Positioned.fill(
@@ -292,7 +298,7 @@ class SceneView extends StatelessWidget {
       height: 600 * scale,
       child: SceneTinted(
         tint: tint,
-        child: RepaintBoundary(
+        child: _longPress(RepaintBoundary(
           child: DoobalCharacter(
             speed: speed,
             playback: playback,
@@ -306,9 +312,19 @@ class SceneView extends StatelessWidget {
             cue: spiritCue,
             cues: spiritCues,
           ),
-        ),
+        )),
       ),
     );
+  }
+
+  /// 정령 길게 누르기. 누르기 반응(정령 안의 탭)과 겨루다 0.5초가 지나면 이쪽이 이긴다.
+  /// 걷는 중 장면의 정령은 누르기를 받지 않는다 (config character.tapReaction.screens는 쉼터·꾸미기):
+  /// 정령의 600 캔버스 상자가 넓어서 그 뒤의 동행·길가 표지판을 가리지 않게
+  Widget _longPress(Widget spirit) {
+    if (mode != SceneMode.rest) return IgnorePointer(child: spirit);
+    final onLong = onSpiritLongPress;
+    if (onLong == null) return spirit;
+    return GestureDetector(key: const ValueKey('spirit-long-press'), onLongPress: onLong, child: spirit);
   }
 
   /// 쉼터 장면: 하늘·후경 한 층(천천히)과 캠프·물건·정령 한 층. 두 층을 옮기고 키우기만 하므로

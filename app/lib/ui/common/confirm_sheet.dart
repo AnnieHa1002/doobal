@@ -18,6 +18,8 @@ Future<bool?> showConfirmSheet(
 }) {
   return showModalBottomSheet<bool>(
     context: context,
+    // 탭 바까지 덮어 뜬다 (캔버스 TabBar 메모 ‘시트는 탭 바 위에’)
+    useRootNavigator: true,
     // 기본은 화면 높이의 9/16까지라, 큰 글자에서는 글이 먼저 잘린다
     isScrollControlled: true,
     useSafeArea: true,

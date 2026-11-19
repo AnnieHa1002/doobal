@@ -1793,6 +1793,24 @@ class SyncService {
     ];
   }
 
+  /// 여정 [journeyId]의 도착으로 닫힌 물감 길 [start, end) (도착 → 걷기 기록 → 쉼터, 16장 11/18 ⑤).
+  /// 도착은 열린 물감 길을 여정의 arrivedUtc에 arrived로 닫는다 ([_endTrailsOnArrival]).
+  /// 앱 없이 걸어 도착했거나(물감 길 없음) 길이가 0이면 null
+  Future<({DateTime start, DateTime end})?> arrivalTrail(String journeyId) async {
+    final j = await (db.select(db.journeys)..where((t) => t.id.equals(journeyId))).getSingleOrNull();
+    final at = j?.arrivedUtc;
+    if (at == null) return null;
+    final rows = await (db.select(db.paintTrails)
+          ..where((t) =>
+              t.endReason.equalsValue(PaintTrailEnd.arrived) &
+              t.endUtc.equals(at) &
+              t.startUtc.isSmallerThanValue(at))
+          ..orderBy([(t) => OrderingTerm(expression: t.startUtc)]))
+        .get();
+    final r = rows.firstOrNull;
+    return r == null ? null : (start: _utc(r.startUtc), end: _utc(at));
+  }
+
   /// 분 시작이 [fromMs, toMs) 안인 분의 실제 거리(m)
   double _walkedM(List<GaitMinute> gaits, int fromMs, int toMs) {
     var sum = 0.0;

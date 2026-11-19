@@ -8,7 +8,6 @@ import 'package:doobal/domain/asset_index.dart';
 import 'package:doobal/domain/color_props.dart';
 import 'package:doobal/domain/shop.dart';
 import 'package:doobal/ui/common/item_cell.dart';
-import 'package:doobal/ui/companion/companion_slot.dart';
 import 'package:doobal/ui/rest/prop_wiggle.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/rest/rest_slots.dart';
@@ -614,8 +613,9 @@ void main() {
       await openRest(tester, e);
       final cart = _key('camp-object-cart');
       expect(cart, findsOneWidget);
+      // 이름 ‘상점’은 옆 상점 버튼에 (수레는 이름표 없음, 16장 11/18). 수레 그림 자리표시는 옆 버튼 아이콘에도 있다
       expect(find.text('상점'), findsOneWidget);
-      expect(tester.getRect(_key('cart-placeholder')), const Rect.fromLTWH(440, 530, 120, 109));
+      expect(tester.getRect(_key('cart-placeholder').first), const Rect.fromLTWH(440, 530, 120, 109));
 
       await tester.dragFrom(const Offset(380, 300), const Offset(-300, 0));
       await tester.pump();
@@ -661,8 +661,6 @@ void main() {
         shopCatalogProvider.overrideWith(
           (ref) => ShopCatalog(defaultBoat: 'boat_raft', items: const []),
         ),
-        // 동행 자리는 동기화 서비스를 읽으므로 비운다 (동행 쪽은 companion_rest_test)
-        companionRestSlotProvider.overrideWithValue(null),
       ]);
       addTearDown(c.dispose);
       final sub = c.listen(restSlotsProvider, (_, _) {});

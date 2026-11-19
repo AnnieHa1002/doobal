@@ -51,6 +51,12 @@ class CountFollower {
     }
   }
 
+  /// 새로 센다 (새 물감 길·물감 길이 끝나 쉬는 중): 줄어드는 것도 바로 [target]으로
+  void reset(int target) {
+    _shown = target.toDouble();
+    _rate = 0;
+  }
+
   /// 따라가지 않고 바로 맞춘다 (화면이 꺼졌던 동안의 걸음이 한꺼번에 들어왔을 때, 거리와 같이)
   void snap(int target) {
     if (target > _shown) _shown = target.toDouble();

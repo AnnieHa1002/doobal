@@ -57,8 +57,7 @@ class UiEnv {
   /// [appRules]를 주면 config.json 대신 그 규칙으로 앱이 돈다 (config 숫자가 화면에 나오는지 볼 때).
   /// [appLandmarks]를 주면 화면이 읽는 명소 목록(landmarksProvider)만 그것으로 바뀐다 (서비스는 101곳 그대로).
   /// [live]를 주면 기기 걸음 센서가 그것으로 바뀐다.
-  /// [camp]를 주지 않으면 옛 쉼터 테마 v3([campThemeV3]): 쉼터 물건으로 다른 화면에 들어가는 시험이 T14까지 그대로 돈다.
-  /// 실제 v5(수레만)는 `camp: campTheme`
+  /// [camp]를 주지 않으면 실제 쉼터 테마 v5(수레만, 다른 화면은 옆 버튼·아래 탭으로 들어간다)
   UiEnv({
     FakeStepSource? source,
     Rules? appRules,
@@ -67,7 +66,7 @@ class UiEnv {
     AssetIndex? assets,
     CampTheme? camp,
   })  : db = AppDb(NativeDatabase.memory()),
-        camp = camp ?? campThemeV3,
+        camp = camp ?? campTheme,
         source = source ?? FakeStepSource(),
         live = live ?? FakeLiveSteps(),
         appRules = appRules ?? rules,
@@ -285,8 +284,8 @@ Future<void> end(WidgetTester tester, UiEnv e) async {
   await tester.runAsync(e.db.close);
 }
 
-/// 쉼터가 떠 있는 앱에서 물감 길을 지금 연다 (센서 판정을 기다리지 않고 PaintTrailController.startNow,
-/// 16장 11/13: 출발하기 버튼이 없다). 판정이 시작되길 기다렸다가 열고 걷는 중 화면이 뜰 때까지 기다린다.
+/// 쉼터가 떠 있는 앱에서 물감 길을 지금 열고 (센서 판정을 기다리지 않고 PaintTrailController.startNow,
+/// 16장 11/13: 출발하기 버튼이 없다) 걷기 탭으로 간다 (걸어도 탭은 저절로 안 바뀐다, 16장 11/18).
 /// 센서 걸음은 이 뒤에 처음 받는 값이 기준이다
 Future<void> startTrailNow(WidgetTester tester) async {
   final c = ProviderScope.containerOf(tester.element(find.byType(MaterialApp).first));
@@ -297,7 +296,23 @@ Future<void> startTrailNow(WidgetTester tester) async {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 25)));
     }
   }
+  await openTab(tester, 'walk');
   await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+  await transition(tester);
+}
+
+/// 아래 탭 [id](rest·walk·me)를 누른다 (그 탭의 처음 화면)
+Future<void> openTab(WidgetTester tester, String id) async {
+  await settle(tester, () => find.byKey(ValueKey('tab-$id')).evaluate().isNotEmpty, tries: 80);
+  await tester.tap(find.byKey(ValueKey('tab-$id')));
+  await transition(tester);
+}
+
+/// 쉼터 옆 세로 버튼 [id](map·backpack·shop)를 누른다
+Future<void> openSide(WidgetTester tester, String id) async {
+  final button = find.byKey(ValueKey('rest-side-$id'));
+  await settle(tester, () => button.evaluate().isNotEmpty, tries: 80);
+  await tester.tap(button);
   await transition(tester);
 }
 

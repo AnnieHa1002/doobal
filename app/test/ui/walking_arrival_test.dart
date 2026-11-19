@@ -5,9 +5,9 @@ import 'package:doobal/main.dart';
 import 'package:doobal/ui/arrival/arrival_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
-import 'package:doobal/ui/walking/paint_trail_host.dart' show topRouteObserver;
 import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:flutter/widgets.dart' show ValueKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -85,7 +85,10 @@ void main() {
     expect(find.byType(WalkingScreen), findsOneWidget);
 
     await walkToArrival(tester, e, from: steps);
-    expect(find.byType(WalkingScreen, skipOffstage: false), findsNothing);
+    // 도착 화면은 걷기 탭 안에서 걷는 중 위에 (걷는 중은 아래에 남는다, 탭 바도 남는다)
+    expect(find.byType(WalkingScreen), findsNothing);
+    expect(find.byType(WalkingScreen, skipOffstage: false), findsOneWidget);
+    expect(find.byKey(const ValueKey('tab-bar')), findsOneWidget);
 
     // 물감 길은 도착 시각에 arrived로 끝났고 끝 토스트는 없다
     final c = ProviderScope.containerOf(tester.element(find.byType(ArrivalScreen)));
@@ -99,19 +102,23 @@ void main() {
     expect(find.textContaining('를 그렸어요'), findsNothing);
     expect(e.walkNotice.running, isFalse);
 
-    // 도착 화면을 닫으면 쉼터 (11/13: 걷기 기록을 거치지 않는다). 그 뒤 걸음이 없으니 걷는 중으로 안 간다
+    // 도착 화면을 닫으면 그 물감 길의 걷기 기록, 닫으면 쉼터 탭 (16장 11/18 ⑤, config walk.arrivalFlow)
     await tester.tap(find.byTooltip('닫기'));
     await transition(tester);
-    await settle(tester, () => find.byType(RestScreen).evaluate().isNotEmpty);
+    await settle(tester, () => find.byType(WalkRecordScreen).evaluate().isNotEmpty, tries: 80);
     await transition(tester);
+    expect(find.byType(WalkRecordScreen), findsOneWidget);
+    expect(find.byType(ArrivalScreen, skipOffstage: false), findsNothing);
+    await tester.tap(find.byTooltip('뒤로'));
+    await transition(tester);
+    await settle(tester, () => find.byType(RestScreen).evaluate().isNotEmpty);
     expect(find.byType(RestScreen), findsOneWidget);
-    expect(find.byType(WalkRecordScreen), findsNothing);
-    expect(find.byType(ArrivalScreen), findsNothing);
+    expect(find.byType(WalkRecordScreen, skipOffstage: false), findsNothing);
     expect(find.byType(WalkingScreen), findsNothing);
     await end(tester, e);
   });
 
-  testWidgets('도착 뒤 60초 10보면 새 물감 길: 도착 화면이 떠 있는 동안은 기다렸다가 닫으면 쉼터를 거치지 않고 바로 걷는 중',
+  testWidgets('도착 뒤 60초 10보면 새 물감 길: 도착 화면은 그대로, 닫으면 걷기 기록 → 쉼터 탭 (새 물감 길은 이어진다)',
       (tester) async {
     final e = await openWalking(tester);
     final steps = await walkToArrival(tester, e);
@@ -131,18 +138,17 @@ void main() {
     expect(rows.map((r) => r.endReason), [PaintTrailEnd.arrived, null]);
     expect(rows[1].startUtc, greaterThanOrEqualTo(rows[0].endUtc!));
 
-    // 16장 11/16 ③ ‘다른 화면을 닫으면 걷는 중’ (T9 후속 물을 것 1): 닫는 동안 쉼터가 맨 위가 되지 않는다
-    final restOnTop = <bool>[];
-    void watch() => restOnTop.add(topRouteObserver.restOnTop);
-    topRouteObserver.top.addListener(watch);
-    addTearDown(() => topRouteObserver.top.removeListener(watch));
+    // 걸어도 탭·화면은 저절로 안 바뀐다 (16장 11/18 ⑤가 11/16 ③을 대신함): 도착 → 걷기 기록 → 쉼터 탭
     await tester.tap(find.byTooltip('닫기'));
     await transition(tester);
-    await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
-    expect(find.byType(WalkingScreen), findsOneWidget);
-    expect(find.byType(ArrivalScreen), findsNothing);
-    expect(restOnTop, isNotEmpty);
-    expect(restOnTop, everyElement(isFalse));
+    await settle(tester, () => find.byType(WalkRecordScreen).evaluate().isNotEmpty, tries: 80);
+    await tester.tap(find.byTooltip('뒤로'));
+    await transition(tester);
+    await settle(tester, () => find.byType(RestScreen).evaluate().isNotEmpty);
+    expect(find.byType(RestScreen), findsOneWidget);
+    expect(find.byType(ArrivalScreen, skipOffstage: false), findsNothing);
+    expect(c.read(paintTrailProvider).active, isTrue);
+    expect(find.byKey(const ValueKey('tab-walk-steps')), findsOneWidget);
     await end(tester, e);
   });
 

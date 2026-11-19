@@ -165,14 +165,19 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('쉼터 불 옆 동행에 점이 뜬다 (개발 화면 입구는 지움)', (tester) async {
+    testWidgets('걷기 탭 아이콘과 걷기 탭 동행 위에 점이 뜬다 (config companions.walkTab.dot, 개발 화면 입구는 지움)',
+        (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         await met(e, 'bright', walks: 4, chapter: 1);
         await withCompanion(e, 'bright');
       });
       await pumpDoobal(tester, e, const DoobalApp());
-      final dot = find.byKey(const ValueKey('companion-dot'));
+      final tabDot = find.byKey(const ValueKey('tab-walk-dot'));
+      await settle(tester, () => tabDot.evaluate().isNotEmpty);
+      expect(tabDot, findsOneWidget);
+      await startTrailNow(tester);
+      final dot = find.byKey(const ValueKey('walk-companion-dot'));
       await settle(tester, () => dot.evaluate().isNotEmpty);
       expect(dot, findsOneWidget);
       await openOnTop(tester, e, const DebugScreen());

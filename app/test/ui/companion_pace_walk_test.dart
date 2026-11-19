@@ -6,6 +6,7 @@ import 'package:doobal/domain/landmark.dart';
 import 'package:doobal/domain/route.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/companion/companion_pacer.dart';
+import 'package:doobal/ui/companion/companion_screen.dart';
 import 'package:doobal/ui/companion/companion_walk_layer.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/scene/doobal_character.dart';
@@ -166,7 +167,7 @@ void main() {
       return (x: r.center.dx, height: r.width * 290 / 600);
     }
 
-    testWidgets('휴(walkOnly): 곁에서 걷다가 뛰면 뒤처져 사라지고, 마친 뒤 쉼터에 늦게 온다', (tester) async {
+    testWidgets('휴(walkOnly): 곁에서 걷다가 뛰면 뒤처져 사라진다 (쉼터에는 동행이 없다, 16장 11/18)', (tester) async {
       final e = await openWalking(tester, 'rest');
       final s = spirit(tester);
       expect(tester.getCenter(_mate).dx, closeTo(s.x - walkBehindToSpirit * s.height, 0.5));
@@ -188,34 +189,25 @@ void main() {
       await frames(tester, 8);
       expect(_mate, findsNothing);
 
-      // 쉼터 아이콘으로 쉼터에 돌아간다: 불 옆은 비었다가, 늦은 도착 최대 시간이 지나면 앉는다
-      await tester.tap(find.byKey(const Key('walk-rest')));
-      await transition(tester);
+      // 쉼터 탭에는 동행 자리가 없다
+      await openTab(tester, 'rest');
       await settle(tester, () => find.byType(RestScreen).evaluate().isNotEmpty);
-      final entry = find.byKey(const ValueKey('camp-object-companion'));
-      await settle(tester, () => false, tries: 4);
-      expect(entry, findsNothing, reason: '아직 걸어오는 중');
-
-      final late = Duration(seconds: rules.companionLateArrivalMaxSec.ceil() + 1);
-      e.now = e.now.add(late);
-      await tester.pump(late);
-      await settle(tester, () => entry.evaluate().isNotEmpty);
-      expect(entry, findsOneWidget);
+      expect(find.byKey(const ValueKey('camp-object-companion')), findsNothing);
       await end(tester, e);
     });
 
-    testWidgets('심 박사(match): 뛰어도 곁에 있다, 마친 뒤 쉼터에 바로 앉아 있다', (tester) async {
+    testWidgets('심 박사(match): 뛰어도 곁에 있다, 누르면 걷기 탭 안에서 동행 화면 (config companions.walkTab.tap)', (tester) async {
       final e = await openWalking(tester, 'doctor');
       final home = tester.getCenter(_mate).dx;
       await sensor(tester, e, 1025);
       await frames(tester, 5);
       expect(tester.getCenter(_mate).dx, closeTo(home, 0.5));
 
-      await tester.tap(find.byKey(const Key('walk-rest')));
+      await tester.tap(find.byKey(const ValueKey('walk-companion-tap')));
       await transition(tester);
-      final entry = find.byKey(const ValueKey('camp-object-companion'));
-      await settle(tester, () => entry.evaluate().isNotEmpty);
-      expect(entry, findsOneWidget);
+      await settle(tester, () => find.byType(CompanionScreen).evaluate().isNotEmpty);
+      expect(find.byType(CompanionScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('tab-bar')), findsOneWidget);
       await end(tester, e);
     });
 

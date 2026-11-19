@@ -30,6 +30,8 @@ Future<bool?> showDestSheet(
 }) {
   return showModalBottomSheet<bool>(
     context: context,
+    // 탭 바까지 덮어 뜬다 (캔버스 TabBar 메모 ‘시트는 탭 바 위에’)
+    useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Palette.card,

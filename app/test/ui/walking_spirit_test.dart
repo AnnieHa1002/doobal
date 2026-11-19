@@ -59,7 +59,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   }
 
-  testWidgets('걷는 중만 가로로 돌릴 수 있고, 떠나면 다시 세로로 잠근다 (config ui.orientation)', (tester) async {
+  testWidgets('걷기 탭 처음 화면만 가로로 돌릴 수 있고, 다른 탭으로 가면 다시 세로로 잠근다 (config ui.orientation)', (tester) async {
     final calls = <List<String>>[];
     final e = await openWalking(tester, calls);
     expect(calls.last, [
@@ -67,12 +67,16 @@ void main() {
       'DeviceOrientation.landscapeLeft',
       'DeviceOrientation.landscapeRight',
     ]);
-    await tester.tap(find.byKey(const Key('walk-rest')));
-    await transition(tester);
-    // 닫는 전환이 끝나 화면이 정리되면
+    await openTab(tester, 'rest');
     await tester.pump(const Duration(seconds: 1));
-    expect(find.byType(WalkingScreen, skipOffstage: false), findsNothing);
+    // 걷기 탭은 숨어서 남아 있다 (keepState)
+    expect(find.byType(WalkingScreen), findsNothing);
+    expect(find.byType(WalkingScreen, skipOffstage: false), findsOneWidget);
     expect(calls.last, ['DeviceOrientation.portraitUp']);
+    // 다시 걷기 탭이면 가로를 연다
+    await openTab(tester, 'walk');
+    await tester.pump(const Duration(seconds: 1));
+    expect(calls.last, hasLength(3));
     await end(tester, e);
   });
 

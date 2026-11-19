@@ -31,8 +31,9 @@ class BigPainting {
 
 /// 그림 크게 보기를 연다 (화집·도착, 16장 11/10). [items]를 좌우로 넘기고 [index]에서 시작한다.
 /// 도착은 한 장만 넘긴다
+/// 화면 가득 보기라 아래 탭 바를 덮는다 (앱 Navigator 위, config ui.tabs.hiddenOn bigView)
 Future<void> openPaintingViewer(BuildContext context, List<BigPainting> items, int index) =>
-    Navigator.of(context).push(PageRouteBuilder<void>(
+    Navigator.of(context, rootNavigator: true).push(PageRouteBuilder<void>(
       pageBuilder: (_, _, _) => PaintingViewer(items: items, initialIndex: index),
       transitionDuration: const Duration(milliseconds: 200),
       reverseTransitionDuration: const Duration(milliseconds: 150),

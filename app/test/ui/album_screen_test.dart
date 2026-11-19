@@ -636,8 +636,8 @@ void main() {
     });
   });
 
-  group('쉼터 배낭의 알림 점', () {
-    Finder dot() => find.byKey(const ValueKey('backpack-dot'));
+  group('쉼터 배낭(옆 버튼)의 알림 점', () {
+    Finder dot() => find.byKey(const ValueKey('rest-side-backpack-dot'));
 
     testWidgets('새 소품이 없으면 점이 없다', (tester) async {
       final e = UiEnv();
@@ -659,7 +659,7 @@ void main() {
       expect(find.byType(RestScreen), findsOneWidget);
       expect(dot(), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('camp-object-backpack')));
+      await tester.tap(find.byKey(const ValueKey('rest-side-backpack')));
       await transition(tester);
       await settle(
           tester, () => find.byKey(const ValueKey('new-painting-kr001')).evaluate().isNotEmpty);
@@ -696,12 +696,14 @@ void main() {
       expect(deco.shape, BoxShape.circle);
       expect((deco.border! as Border).top.width, 1.5);
       expect(tester.getSize(dot()), const Size(10, 10));
-      // 배낭 그림의 오른쪽 위 모서리 안쪽 (캔버스 2-2: 왼쪽 50, 위 4, 폭 64 그림에서)
-      final bag = find.byKey(const ValueKey('camp-object-backpack'));
+      // 배낭 옆 버튼 56pt 상자의 오른쪽 위 모서리에 걸친다 (캔버스 2-2 .dot right:-4 top:-4, CSS처럼 테두리 1.8 안쪽 기준)
+      final bag = find.byKey(const ValueKey('rest-side-backpack'));
       final corner = tester.getTopRight(bag);
-      expect(tester.getCenter(dot()) - corner, const Offset(-9, 9));
+      final center = tester.getCenter(dot()) - corner;
+      expect(center.dx, closeTo(-2.8, 1e-9));
+      expect(center.dy, closeTo(2.8, 1e-9));
 
-      await tester.tap(find.byKey(const ValueKey('camp-object-backpack')));
+      await tester.tap(find.byKey(const ValueKey('rest-side-backpack')));
       await transition(tester);
       await settle(tester, () => find.byKey(const ValueKey('tab-props')).evaluate().isNotEmpty);
       expect(find.byType(AlbumScreen), findsOneWidget);

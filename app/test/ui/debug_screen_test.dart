@@ -151,11 +151,11 @@ void main() {
       container.read(debugDistanceScaleProvider.notifier).set(10);
       await settle(tester, () => _badge.evaluate().isNotEmpty);
       expect(find.text('거리 ×10'), findsOneWidget);
-      // 상태 알약 바로 아래, 가운데
+      // 상태 알약 바로 아래, 알약과 같은 가운데 (알약은 럭 보석 오른쪽 칸 가운데, 캔버스 2-2)
       final pill = tester.getRect(find.textContaining('쉬는 중'));
       final badge = tester.getRect(_badge);
       expect(badge.top, greaterThan(pill.bottom - 4));
-      expect(badge.center.dx, closeTo(195, 1));
+      expect(badge.center.dx, closeTo(pill.center.dx, 1));
 
       container.read(debugDistanceScaleProvider.notifier).set(100);
       await settle(tester, () => find.text('거리 ×100').evaluate().isNotEmpty);

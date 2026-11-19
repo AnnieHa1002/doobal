@@ -93,7 +93,8 @@ void main() {
   });
 
   group('새 소식 점 (config ui.newDot, 16장 11/13)', () {
-    Finder cartDot() => find.byKey(const ValueKey('cart-dot'));
+    // 상점 새 상품 점은 쉼터 옆 상점 버튼에 (16장 11/18, 수레 그림에는 점이 없다)
+    Finder cartDot() => find.byKey(const ValueKey('rest-side-shop-dot'));
 
     testWidgets('수레 점은 처음에는 없고, 기본 소품을 얻어 색 소품이 새로 들어오면 켜지고, 앱을 껐다 켜도 남고, 상점을 열면 꺼진다',
         (tester) async {

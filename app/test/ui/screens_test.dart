@@ -32,7 +32,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../app/helpers.dart';
 import '../domain/helpers.dart';
-import 'ui_env.dart' show startTrailNow;
+import 'ui_env.dart' show openTab, startTrailNow;
 
 // 설치 KST 2026-11-18 09:00, 걷기 시작은 한 시간 뒤 (낮)
 final _t0 = DateTime.utc(2026, 11, 18, 0);
@@ -96,8 +96,7 @@ class _Env {
         boatCatalogProvider.overrideWith((ref) => boatCatalog),
         companionCatalogProvider.overrideWith((ref) => companionCatalog),
         noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
-        // 쉼터 물건(배낭·노트·지도)으로 들어가는 시험이라 옛 테마 v3 (T14 옆 버튼 전까지)
-        campThemeProvider.overrideWith((ref) => campThemeV3),
+        campThemeProvider.overrideWith((ref) => campTheme),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),
         spiritPaletteProvider.overrideWith((ref) => spiritPalette),
@@ -181,10 +180,11 @@ void main() {
 
       expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
       expect(find.text('출발하기'), findsNothing);
-      expect(find.byKey(const ValueKey('map-dot')), findsOneWidget);
+      expect(find.byKey(const ValueKey('rest-side-map-dot')), findsOneWidget);
       expect(find.text('지도'), findsOneWidget);
       expect(find.text('배낭'), findsOneWidget);
-      expect(find.text('노트'), findsOneWidget);
+      // 노트는 나 탭으로 옮겼다 (16장 11/18 ②)
+      expect(find.text('노트'), findsNothing);
 
       await tester.tap(find.text('지도'));
       await _transition(tester);
@@ -252,7 +252,7 @@ void main() {
       await _pumpApp(tester, e);
 
       expect(find.text('쉬는 중 · 목적지까지 ${formatKm(_totalKm('kr003'))}'), findsOneWidget);
-      expect(find.byKey(const ValueKey('map-dot')), findsNothing);
+      expect(find.byKey(const ValueKey('rest-side-map-dot')), findsNothing);
 
       await startTrailNow(tester);
       expect(find.text('걷기 마치기'), findsNothing);
@@ -260,7 +260,7 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('지도·배낭·노트를 누르면 각 화면이 열린다', (tester) async {
+    testWidgets('옆 버튼 지도·배낭과 나 탭 노트를 누르면 각 화면이 열린다 (16장 11/18 ②)', (tester) async {
       final e = _Env();
       await e.seed(tester);
       await _pumpApp(tester, e);
@@ -273,7 +273,7 @@ void main() {
       await _tapIcon(tester, Icons.arrow_back);
       expect(find.byType(MapScreen), findsNothing);
 
-      await tester.tap(find.byKey(const ValueKey('camp-object-backpack')));
+      await tester.tap(find.byKey(const ValueKey('rest-side-backpack')));
       await _transition(tester);
       expect(find.byType(AlbumScreen), findsOneWidget);
       expect(find.text('화집'), findsOneWidget);
@@ -281,30 +281,33 @@ void main() {
       await _tapIcon(tester, Icons.arrow_back);
       expect(find.byType(AlbumScreen), findsNothing);
 
-      await tester.tap(find.byKey(const ValueKey('camp-object-note')));
+      await openTab(tester, 'me');
+      await tester.tap(find.byKey(const ValueKey('me-note')));
       await _transition(tester);
       expect(find.text('노트'), findsOneWidget);
       expect(find.text('내 방명록'), findsOneWidget);
       expect(find.text('걷기 기록'), findsOneWidget);
       await _tapIcon(tester, Icons.arrow_back);
 
+      await openTab(tester, 'rest');
       expect(find.byType(RestScreen), findsOneWidget);
       expect(find.text('쉬는 중 · 목적지를 골라 보세요'), findsOneWidget);
       await _end(tester, e);
     });
 
-    testWidgets('나의 정보·설정, 설정의 개발자 화면은 디버그 화면', (tester) async {
+    testWidgets('나 탭: 나의 정보, 설정 줄, 설정의 개발자 화면은 디버그 화면', (tester) async {
       final e = _Env();
       await e.seed(tester);
       await _pumpApp(tester, e);
 
-      await _tapIcon(tester, Icons.person);
+      await openTab(tester, 'me');
       expect(find.text('나의 정보'), findsOneWidget);
       await _settle(tester, () => find.text('최근 14일').evaluate().isNotEmpty);
       expect(find.text('최근 14일'), findsOneWidget);
-      await _tapIcon(tester, Icons.arrow_back);
 
-      await _tapIcon(tester, Icons.settings);
+      await tester.scrollUntilVisible(find.byKey(const ValueKey('me-settings')), 200);
+      await tester.tap(find.byKey(const ValueKey('me-settings')));
+      await _transition(tester);
       expect(find.text('설정'), findsOneWidget);
       // 알림 줄이 늘어서 개발자 화면 줄은 스크롤해야 보인다
       await tester.scrollUntilVisible(find.text('개발자 화면'), 300);
@@ -639,14 +642,13 @@ void main() {
         await _end(tester, e);
       });
 
-      testWidgets('쉼터 아이콘으로 나가도 센서는 계속 읽는다 (물감 길은 이어진다)', (tester) async {
+      testWidgets('쉼터 탭으로 가도 센서는 계속 읽는다 (물감 길은 이어진다)', (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
         expect(e.live.listeners, 1);
 
-        await tester.tap(find.byKey(const Key('walk-rest')));
-        await _transition(tester);
+        await openTab(tester, 'rest');
         expect(find.byType(WalkingScreen), findsNothing);
         expect(e.live.listeners, 1);
         await _end(tester, e);
@@ -709,11 +711,9 @@ void main() {
         expect(_pillSteps('1,000'), findsOneWidget);
         expect(find.byIcon(Icons.directions_walk), findsOneWidget);
 
-        // 쉼터 아이콘 → 상태 알약 ‘걷는 중’으로 다시 들어와도 묻지 않는다
-        await tester.tap(find.byKey(const Key('walk-rest')));
-        await _transition(tester);
-        await tester.tap(find.byKey(const ValueKey('rest-walking-pill')));
-        await _transition(tester);
+        // 쉼터 탭 → 걷기 탭으로 다시 들어와도 묻지 않는다
+        await openTab(tester, 'rest');
+        await openTab(tester, 'walk');
         await _wait(tester);
         expect(find.byType(WalkingScreen), findsOneWidget);
         expect(e.live.permissionRequests, 0);
@@ -971,14 +971,13 @@ void main() {
         await _end(tester, e);
       });
 
-      testWidgets('쉼터 아이콘으로 나가도 알림은 켜진 채 (물감 길은 이어진다)', (tester) async {
+      testWidgets('쉼터 탭으로 가도 알림은 켜진 채 (물감 길은 이어진다)', (tester) async {
         final e = _Env();
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
         expect(e.notice.running, isTrue);
 
-        await tester.tap(find.byKey(const Key('walk-rest')));
-        await _transition(tester);
+        await openTab(tester, 'rest');
         expect(e.notice.running, isTrue);
         expect(e.notice.stops, 0);
         await _end(tester, e);
@@ -1010,12 +1009,15 @@ void main() {
     }) async {
       await tester.runAsync(() => e.svc.sync(end.add(const Duration(minutes: 30))));
       _phone(tester);
+      // 노트 줄에서 여는 것처럼 빈 첫 화면 위에 올린다 (뒤로 갈 곳이 있다)
       await tester.pumpWidget(ProviderScope(
         overrides: e.overrides,
-        child: MaterialApp(
-          home: WalkRecordScreen(start: start, end: end),
-        ),
+        child: const MaterialApp(home: SizedBox()),
       ));
+      tester.state<NavigatorState>(find.byType(Navigator)).push(MaterialPageRoute<void>(
+        builder: (_) => WalkRecordScreen(start: start, end: end),
+      ));
+      await _transition(tester);
       await _settle(tester, () => find.text('기록을 정리하는 중').evaluate().isEmpty);
     }
 

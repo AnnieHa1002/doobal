@@ -74,6 +74,51 @@ void main() {
     });
   });
 
+  group('화면 3탭 (config ui.tabs·rest.sideButtons·guestbook.sign, 16장 11/18·11/19)', () {
+    final tabs = screen.tabs;
+
+    test('탭은 쉼터·걷기·나, 앱은 쉼터로 열리고 걷기 탭을 가로로 돌리면 탭 바를 숨긴다', () {
+      expect(tabs.items, ['rest', 'walk', 'me']);
+      expect(tabs.labels, {'rest': '쉼터', 'walk': '걷기', 'me': '나'});
+      expect(tabs.openTo, 'rest');
+      expect(tabs.landscapeHidesBar, isTrue);
+    });
+
+    test('걷기 탭 아이콘 점은 안 읽은 이야기·방명록 쓸 기회', () {
+      expect(tabs.walkDots, {'companionStory', 'guestbookSign'});
+    });
+
+    test('쉼터 옆 버튼은 지도·배낭·상점·쉼터 꾸미기, 표지판은 화면 폭 78%, 정령을 길게 누르면 꾸미기', () {
+      expect(tabs.sideButtons, ['map', 'backpack', 'shop', 'decorate']);
+      expect(tabs.signScreenX, 0.78);
+      expect(tabs.spiritLongPressCustomize, isTrue);
+    });
+
+    test('탭이 빠지거나 겹치면, 걸어서 탭이 저절로 바뀌거나, 모르는 버튼·점이면 config를 못 읽는다', () {
+      Map<String, dynamic> tabsOf(Map<String, dynamic> c) =>
+          (c['ui'] as Map<String, dynamic>)['tabs'] as Map<String, dynamic>;
+      for (final bad in <void Function(Map<String, dynamic>)>[
+        (c) => tabsOf(c)['items'] = ['rest', 'walk'],
+        (c) => tabsOf(c)['items'] = ['rest', 'walk', 'walk'],
+        (c) => tabsOf(c)['autoSwitch'] = true,
+        (c) => (tabsOf(c)['openTo'] as Map<String, dynamic>)['value'] = 'shop',
+        (c) => (tabsOf(c)['dots'] as Map<String, dynamic>)['walk'] = ['weather'],
+        (c) => ((c['rest'] as Map<String, dynamic>)['sideButtons'] as Map<String, dynamic>)['items'] = ['note'],
+        (c) => ((c['guestbook'] as Map<String, dynamic>)['sign'] as Map<String, dynamic>)['screenX'] = 1.2,
+      ]) {
+        final c = _config();
+        bad(c);
+        expect(() => ScreenRules.fromJson(c), throwsFormatException);
+      }
+    });
+
+    test('길게 누르기가 꾸미기가 아니면 꺼진다', () {
+      final c = _config();
+      ((c['character'] as Map<String, dynamic>)['tapReaction'] as Map<String, dynamic>).remove('longPress');
+      expect(ScreenRules.fromJson(c).tabs.spiritLongPressCustomize, isFalse);
+    });
+  });
+
   group('화면별 자세 (config character.rive.screens, 정령 계약 3장)', () {
     test('자세 번호: 쉼터 떠 있기 정면·밤 잠들기, 걷는 중 옆 이동·멈춤 둥둥 옆, 도착·꾸미기·만들기·나의 정보 정면, 뒤는 5', () {
       expect(stage.poseOf('rest'), 0);

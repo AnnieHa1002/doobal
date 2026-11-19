@@ -313,7 +313,10 @@ void main() {
       ));
       await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
       await settle(tester, () => s.auth.user != null);
-      await tester.tap(find.byIcon(Icons.settings));
+      // 설정은 나 탭 목록 줄에서 (16장 11/18 ⑥)
+      await openTab(tester, 'me');
+      await settle(tester, () => find.byKey(const ValueKey('me-settings')).evaluate().isNotEmpty);
+      await tester.tap(find.byKey(const ValueKey('me-settings')));
       await transition(tester);
       await tester.tap(find.text('계정 삭제'));
       await tester.pump();

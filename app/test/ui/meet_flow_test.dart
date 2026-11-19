@@ -265,8 +265,8 @@ void main() {
     Future<List<CompanionRow>> rows(WidgetTester tester, UiEnv e) async =>
         (await tester.runAsync(() => e.db.select(e.db.companions).get()))!;
 
-    /// HUD가 보이는가 (만남 동안은 가린다): 왼쪽 위 쉼터 아이콘
-    Finder finish() => find.byKey(const Key('walk-rest'));
+    /// HUD가 보이는가 (만남 동안은 가린다): 걸음 알약 (왼쪽 위 쉼터 아이콘은 16장 11/18 탭 바로 대신해 없다)
+    Finder finish() => find.byKey(const Key('walk-pill'));
 
     testWidgets('첫 실제 여정의 2km: 이정표 카드 대신 길 위 만남, 고르면 걷는 중으로 돌아온다', (tester) async {
       final e = await openWalking(tester);

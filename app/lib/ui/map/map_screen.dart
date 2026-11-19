@@ -19,6 +19,7 @@ import '../common/toast.dart';
 import 'landmark_card.dart';
 import 'map_geometry.dart';
 import 'map_painter.dart';
+import '../tabs/home_tab.dart';
 import 'map_sheets.dart';
 import 'map_widgets.dart';
 
@@ -216,8 +217,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     }
   }
 
-  /// 쉼터로 돌아간다 (지금 목적지의 `출발하기`: 여정은 이미 정해져 있다)
-  Future<void> _toRest() async => Navigator.of(context).popUntil((r) => r.isFirst);
+  /// 쉼터 탭으로 돌아간다 (지금 목적지의 `출발하기`: 여정은 이미 정해져 있다). 지도가 열린 탭은 처음 화면으로
+  Future<void> _toRest() async => backToRest(ref, Navigator.of(context));
 
   /// 여정을 시작한다 (경비를 더할지 [useFund]). 바꾸기든 처음 출발이든 여정만 정하고 쉼터로 돌아간다
   Future<void> _start(String destId, bool useFund, {required bool change}) async {

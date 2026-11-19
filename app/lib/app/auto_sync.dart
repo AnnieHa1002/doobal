@@ -13,6 +13,7 @@ import '../ui/arrival/arrival_screen.dart';
 import '../ui/common/toast.dart';
 import '../ui/companion/companion_screen.dart';
 import '../ui/guestbook/guestbook_write_screen.dart';
+import '../ui/tabs/home_tab.dart';
 import 'background_sync.dart';
 import 'backup_runner.dart';
 import 'companion_providers.dart';
@@ -34,10 +35,8 @@ const _toastMinKm = 0.1;
 /// '다시 부르기' 알림(N5)을 취소하고, 백그라운드로 갈 때는 다시 예약한다.
 /// 자동 백업도 여기서 시도한다 (계정을 연결한 사용자만, 10분 안 반복은 건너뛴다): 날짜가 바뀐 뒤 첫
 /// 동기화, 도착을 알았을 때, 백그라운드로 갈 때.
-/// 도착했는데 도착 화면을 아직 안 봤으면(앱을 켜기 전에 도착했을 때) 열려 있는 화면 위에
-/// 도착 화면을 띄운다. 걷는 중 화면이 떠 있을 때는 그 화면이 걷기를 마치고 도착 화면으로 바꾸므로
-/// (walkingActiveProvider) 여기서는 띄우지 않고, 걷는 중 화면이 닫힌 뒤에 남아 있으면 띄운다.
-/// 이 위젯이 home이라 어느 화면 위에서든 같은 Navigator에 올릴 수 있다.
+/// 도착했는데 도착 화면을 아직 안 봤으면 지금 탭 안에 도착 화면을 띄운다 (걷기 탭에서 걷다 도착하면 걷기 탭 안,
+/// 걷는 중 화면은 도착을 미리 알아보고 동기화만 당긴다). 걸어도 탭은 저절로 바뀌지 않는다 (16장 11/18).
 /// 물감 길을 위해 앱이 살아 있는 동안 config sync.aliveSaveSec마다와 백그라운드로 갈 때 '살아 있던 시각'을
 /// 적는다. 앱을 켠 직후에는 앞 실행에서 끝나지 않은 물감 길을 그 시각에서 닫고(appEnded, 동기화보다 먼저)
 /// 동기화한다 (모든 걸음이 같게 세지므로 따로 알리지 않는다).
@@ -87,11 +86,6 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     );
     ref.listenManual(snapshotProvider, (_, next) => _checkArrival(next.value),
         fireImmediately: true);
-    // 걷는 중 화면이 닫혔는데 아직 안 본 도착이 남아 있으면 그때 띄운다
-    // (닫으며 invalidate 한 새 상태를 기다려서 읽는다)
-    ref.listenManual(walkingActiveProvider, (_, active) {
-      if (active == 0) ref.read(snapshotProvider.future).then(_checkArrival, onError: (_) {});
-    });
     ref.listenManual(syncServiceProvider, (_, next) {
       final svc = next.value;
       if (svc == null) return;
@@ -163,6 +157,8 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
       _ => null,
     };
     if (page == null) return;
+    // 방명록·동행은 걷기 탭 화면이다 (16장 11/18, 캔버스 TabBar 메모)
+    if (openInTab<void>(ref, HomeTab.walk, page) != null) return;
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
   }
 
@@ -176,7 +172,7 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   }
 
   /// 새로 받은 도장 한 줄 토스트 (소품과 같은 방식). 배낭 알림 점은 안 본 도장 수로 켜지니 상태를 새로 읽는다.
-  /// 걷는 중 화면이 떠 있으면 그 화면이 걸음 알약 아래 작은 줄로 알리므로 토스트는 띄우지 않는다
+  /// 걷기 탭 걷는 중 화면이 보이면 그 화면이 걸음 알약 아래 작은 줄로 알리므로 토스트는 띄우지 않는다
   void _showNewBadges(List<stamp.Badge> badges) {
     if (!mounted) return;
     ref.invalidate(snapshotProvider);
@@ -258,8 +254,7 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
 
   void _checkArrival(Snapshot? snap) {
     final id = snap?.pendingArrival?.journeyId;
-    // 걷는 중 화면이 떠 있으면 그 화면이 걷기를 마치고 도착 화면으로 바꾼다 (11/4)
-    if (id == null || ref.read(walkingActiveProvider) > 0 || !_arrivalsShown.add(id)) return;
+    if (id == null || !_arrivalsShown.add(id)) return;
     // 도착을 알았다: 새 그림이 들어간 상태를 백업한다 (도착 화면이 닫히길 기다리지 않는다)
     _backup((runner, now) => runner.run(BackupReason.arrived, now));
     // 그리는 중에 화면을 올리지 않도록 이번 그리기가 끝난 뒤에
@@ -268,11 +263,12 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     });
   }
 
-  /// 도착 화면을 올리고, 닫히면 본 것으로 적은 뒤 상태를 새로 읽는다
+  /// 도착 화면을 지금 탭 안에 올리고(탭 바가 남는다, M2~M6 AC), 닫히면 본 것으로 적은 뒤 상태를 새로 읽는다.
+  /// 걷기 탭에서 걷다 도착하면 걷기 탭 안이다. 탭 뼈대가 아직 없으면 앱 Navigator 위로
   Future<void> _showArrival(String journeyId) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => ArrivalScreen(journeyId: journeyId)),
-    );
+    final page = ArrivalScreen(journeyId: journeyId);
+    await (openInCurrentTab<void>(ref, page) ??
+        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page)));
     if (!mounted) return;
     try {
       final svc = await ref.read(syncServiceProvider.future);

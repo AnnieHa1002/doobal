@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../domain/companion.dart';
 import '../../domain/companion_pace.dart';
 import '../scene/scene_view.dart';
+import '../common/notice_dot.dart';
 import 'companion_art.dart';
 
 // 걷는 중 장면의 동행 (캔버스 3-1 ‘뒤따르는 퐁이’). 자리표시 그림이라 동작은 위아래 둥실로만 보인다
@@ -38,11 +39,19 @@ class WalkCompanionLayer extends StatefulWidget {
     required this.companion,
     required this.pace,
     required this.spot,
+    this.onTap,
+    this.notice = false,
   });
 
   final Companion companion;
   final ValueListenable<PaceFrame> pace;
   final SceneCompanionSpot spot;
+
+  /// 누르면 (걷기 탭 → 동행 화면, config companions.walkTab.tap). 없으면 눌리지 않는다
+  final VoidCallback? onTap;
+
+  /// 동행 위 알림 점 (안 읽은 장, companions.walkTab.dot)
+  final bool notice;
 
   @override
   State<WalkCompanionLayer> createState() => _WalkCompanionLayerState();
@@ -101,6 +110,30 @@ class _WalkCompanionLayerState extends State<WalkCompanionLayer>
     }
   }
 
+  /// 누를 수 있으면 누름 상자와 알림 점을 붙인다. 아니면 눌림을 받지 않는다
+  Widget _tappable(Widget figure) {
+    final onTap = widget.onTap;
+    if (onTap == null) return IgnorePointer(child: figure);
+    return Semantics(
+      button: true,
+      label: widget.notice ? '${widget.companion.name} (새 이야기 있음)' : widget.companion.name,
+      excludeSemantics: true,
+      child: GestureDetector(
+        key: const ValueKey('walk-companion-tap'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(child: figure),
+            if (widget.notice)
+              const Positioned(top: 0, right: 0, child: NoticeDot(key: ValueKey('walk-companion-dot'))),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final spot = widget.spot;
@@ -109,10 +142,10 @@ class _WalkCompanionLayerState extends State<WalkCompanionLayer>
     final footY = spot.boatFoot?.dy ?? spot.spiritFoot.dy;
     return AnimatedBuilder(
       animation: Listenable.merge([widget.pace, _bob]),
-      child: SceneTinted(
+      child: _tappable(SceneTinted(
         tint: spot.tint,
         child: RepaintBoundary(child: CompanionFigure(companion: widget.companion, height: h)),
-      ),
+      )),
       builder: (context, child) {
         final x = walkCompanionFootX(widget.pace.value, spot, w);
         if (x + w / 2 < 0 || x - w / 2 > spot.size.width) return const SizedBox.shrink();

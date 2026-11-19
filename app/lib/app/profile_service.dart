@@ -68,6 +68,10 @@ class ProfileService {
         ));
       });
 
+  /// 닉네임만 바꾼다 (나 탭, 검사를 거친 값). 모습 같은 다른 열은 그대로
+  Future<void> saveNickname(String nickname) =>
+      _write(ProfileCompanion(id: const Value(1), nickname: Value(nickname)));
+
   /// 닉네임(검사를 거친 값)과 모습
   Future<void> saveMe(String nickname, Look look) => _write(ProfileCompanion(
         id: const Value(1),

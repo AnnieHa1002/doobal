@@ -1,8 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:doobal/data/db/app_db.dart';
-import 'package:doobal/domain/guestbook.dart';
-import 'package:doobal/domain/journey.dart' show Frame;
 import 'package:doobal/ui/map/map_screen.dart';
 import 'package:doobal/ui/rest/prop_wiggle.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
@@ -39,7 +36,8 @@ WiggleSpec _spec(List<int> ints) => WiggleSpec(
       random: _ScriptedRandom(ints: ints),
     );
 
-const _ids = ['map', 'backpack', 'note', 'guestbook'];
+/// 쉼터 장면에서 흔들리는 물건 (camp_wide v5는 수레뿐, 알림 점은 옆 버튼에 붙어 흔들림을 고르지 않는다)
+const _ids = ['cart'];
 
 /// 물건 [id]의 지금 기울기(라디안). 회전 Transform의 행렬에서 읽는다
 double _tilt(WidgetTester tester, String id) {
@@ -81,21 +79,24 @@ void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   group('고르기·간격·각도', () {
+    // 고르는 규칙 자체는 물건 이름과 상관없다 (흔들림은 다른 테마의 물건에도 쓴다)
+    const ids = ['map', 'backpack', 'note', 'guestbook'];
+
     test('알림 점이 있는 물건이 있으면 그 중에서만 고른다', () {
       const notice = {'backpack', 'guestbook'};
-      expect(pickWiggleTarget(_ids, notice, _ScriptedRandom(ints: [0])), 'backpack');
-      expect(pickWiggleTarget(_ids, notice, _ScriptedRandom(ints: [1])), 'guestbook');
+      expect(pickWiggleTarget(ids, notice, _ScriptedRandom(ints: [0])), 'backpack');
+      expect(pickWiggleTarget(ids, notice, _ScriptedRandom(ints: [1])), 'guestbook');
       final random = math.Random(1);
-      final picked = {for (var i = 0; i < 200; i++) pickWiggleTarget(_ids, notice, random)};
+      final picked = {for (var i = 0; i < 200; i++) pickWiggleTarget(ids, notice, random)};
       expect(picked, notice);
     });
 
     test('알림 점이 없으면 전체에서 고른다 (알림 id가 목록에 없어도 같다)', () {
-      expect(pickWiggleTarget(_ids, {}, _ScriptedRandom(ints: [0])), 'map');
-      expect(pickWiggleTarget(_ids, {}, _ScriptedRandom(ints: [3])), 'guestbook');
-      expect(pickWiggleTarget(_ids, {'없는 물건'}, _ScriptedRandom(ints: [2])), 'note');
+      expect(pickWiggleTarget(ids, {}, _ScriptedRandom(ints: [0])), 'map');
+      expect(pickWiggleTarget(ids, {}, _ScriptedRandom(ints: [3])), 'guestbook');
+      expect(pickWiggleTarget(ids, {'없는 물건'}, _ScriptedRandom(ints: [2])), 'note');
       final random = math.Random(2);
-      expect({for (var i = 0; i < 200; i++) pickWiggleTarget(_ids, {}, random)}, _ids.toSet());
+      expect({for (var i = 0; i < 200; i++) pickWiggleTarget(ids, {}, random)}, ids.toSet());
     });
 
     test('고를 물건이 없으면 null', () {
@@ -130,33 +131,33 @@ void main() {
     });
   });
 
-  group('쉼터 물건', () {
-    testWidgets('간격이 지나면 물건 하나가 기울었다가 0으로 돌아오고, 또 간격이 지나면 다시 흔들린다',
+  group('쉼터 물건 (수레)', () {
+    testWidgets('간격이 지나면 수레가 기울었다가 0으로 돌아오고, 또 간격이 지나면 다시 흔들린다',
         (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _openRest(tester, e, _spec([0]));
 
-      // 알림 점이 없어서 전체에서 첫 번째(지도)를 고른다. 처음에는 모두 0도, 회전 Transform은 있다
-      for (final id in ['map', 'backpack', 'note']) {
-        expect(_tilt(tester, id), 0, reason: id);
+      // 처음에는 0도, 회전 Transform은 있다. 땅 위 지도·배낭·노트·표지판은 없다 (16장 11/18)
+      expect(_tilt(tester, 'cart'), 0);
+      for (final id in ['map', 'backpack', 'note', 'guestbook']) {
+        expect(find.byKey(ValueKey('wiggle-$id')), findsNothing, reason: id);
       }
-      expect(find.byKey(const ValueKey('wiggle-guestbook')), findsNothing);
 
       await tester.pump(const Duration(milliseconds: 900));
       expect(_tilted(tester), isEmpty, reason: '간격(1초) 전');
 
       await _wiggleStarted(tester);
-      expect(_tilted(tester), ['map']);
+      expect(_tilted(tester), ['cart']);
       final maxTilt = const WiggleSpec().degrees * math.pi / 180;
-      expect(_tilt(tester, 'map').abs(), lessThanOrEqualTo(maxTilt));
+      expect(_tilt(tester, 'cart').abs(), lessThanOrEqualTo(maxTilt));
 
       await _wiggleEnds(tester);
       expect(_tilted(tester), isEmpty);
-      expect(_tilt(tester, 'map'), 0);
+      expect(_tilt(tester, 'cart'), 0);
 
       await _wiggleStarted(tester);
-      expect(_tilted(tester), ['map']);
+      expect(_tilted(tester), ['cart']);
       await _wiggleEnds(tester);
       expect(_tilted(tester), isEmpty);
       await end(tester, e);
@@ -171,7 +172,7 @@ void main() {
       final seen = <double>[];
       for (var i = 0; i < 12; i++) {
         await tester.pump(const Duration(milliseconds: 50));
-        seen.add(_tilt(tester, 'map'));
+        seen.add(_tilt(tester, 'cart'));
       }
       expect(seen.any((a) => a > 0.01), isTrue);
       expect(seen.any((a) => a < -0.01), isTrue);
@@ -179,67 +180,14 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('알림 점이 없으면 전체에서 고른다 (세 번째 = 노트)', (tester) async {
-      final e = UiEnv();
-      // 여정이 있어야 지도에 점이 없다 (여정이 없으면 지도 점, 16장 11/13)
-      await e.seed(tester, () => e.svc.startJourney('kr003', t1, useFund: false));
-      await _openRest(tester, e, _spec([2]));
-
-      await _wiggleStarted(tester);
-      expect(_tilted(tester), ['note']);
-      await _wiggleEnds(tester);
-      await end(tester, e);
-    });
-
-    testWidgets('알림 점이 있는 물건(배낭 점, 방명록 표지판) 중에서만 고른다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () async {
-        await e.svc.startJourney('kr003', t1, useFund: false);
-        // 안 본 그림 → 배낭 점, 쓸 기회 → 방명록 표지판
-        await e.ownPaintings({'kr001': Frame.wood}, seen: false);
-        await e.db.into(e.db.guestbookTickets).insert(GuestbookTicketsCompanion.insert(
-              id: 'a:j1',
-              kind: TicketKind.arrival,
-              scope: 'kr001',
-              openedUtc: t1.millisecondsSinceEpoch,
-            ));
-      });
-      // 알림이 있는 물건은 [배낭, 방명록]: 첫 흔들림은 둘째(방명록), 다음은 첫째(배낭)
-      await _openRest(tester, e, _spec([1, 0]));
-      expect(find.byKey(const ValueKey('backpack-dot')), findsOneWidget);
-      expect(find.byKey(const ValueKey('signpost')), findsOneWidget);
-
-      await _wiggleStarted(tester);
-      expect(_tilted(tester), ['guestbook']);
-      await _wiggleEnds(tester);
-      expect(_tilted(tester), isEmpty);
-
-      await _wiggleStarted(tester);
-      expect(_tilted(tester), ['backpack']);
-      await _wiggleEnds(tester);
-      await end(tester, e);
-    });
-
-    testWidgets('배낭 점만 있으면 배낭만 흔들린다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => e.ownPaintings({'kr001': Frame.wood}, seen: false));
-      // 어느 칸을 골라도 (마지막 칸) 알림 물건 하나뿐이라 배낭
-      await _openRest(tester, e, _spec([3]));
-
-      await _wiggleStarted(tester);
-      expect(_tilted(tester), ['backpack']);
-      await _wiggleEnds(tester);
-      await end(tester, e);
-    });
-
-    testWidgets('흔들리는 중에도 물건을 누르면 열린다', (tester) async {
+    testWidgets('흔들리는 중에도 옆 버튼을 누르면 열린다', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _openRest(tester, e, _spec([0]));
 
       await _wiggleStarted(tester);
-      expect(_tilted(tester), ['map']);
-      await tester.tap(find.byKey(const ValueKey('camp-object-map')));
+      expect(_tilted(tester), ['cart']);
+      await tester.tap(find.byKey(const ValueKey('rest-side-map')));
       await transition(tester);
       expect(find.byType(MapScreen), findsOneWidget);
       await end(tester, e);
@@ -293,7 +241,7 @@ void main() {
       // 흔드는 중에 치운다
       await _openRest(tester, e, _spec([0]));
       await _wiggleStarted(tester);
-      expect(_tilted(tester), ['map']);
+      expect(_tilted(tester), ['cart']);
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 30));
       expect(tester.binding.hasScheduledFrame, isFalse);

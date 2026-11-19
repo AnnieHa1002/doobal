@@ -8,6 +8,7 @@ import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/decorate/decorate_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/walking/paint_drop_layer.dart';
+import 'package:doobal/ui/tabs/home_tabs.dart';
 import 'package:doobal/ui/walking/paint_trail_host.dart';
 import 'package:doobal/ui/walking/walking_hud.dart';
 import 'package:doobal/ui/walking/walking_screen.dart';
@@ -20,9 +21,9 @@ import '../domain/helpers.dart' show testHome;
 import 'ui_env.dart';
 
 // 물감 길 화면 (16장 11/13, M2~M6 명세 v0.17 T①·②·⑦, 캔버스 2-1·2-2·3-1):
-// 앱을 연 채 걸으면 저절로 걷는 중, 걸음이 5분 멈추면 저절로 쉼터 + 토스트, 쉼터 아이콘, 상시 알림 N0,
-// 시트·꾸미기 중에는 기다림, 물감 방울, 첫날 말풍선, iOS 화면 꺼짐 메우기(16장 11/14),
-// 쉼터↔걷는 중 6규칙(16장 11/16, 8장 3번, 캔버스 2-2 ‘걷는 중 · 물감 길 n km ›’)
+// 앱을 연 채 걸으면 물감 길이 열리고(탭은 그대로, 걷기 탭 발자국), 걸음이 5분 멈추면 끝나고 토스트, 상시 알림 N0,
+// 물감 방울, 첫날 말풍선, iOS 화면 꺼짐 메우기(16장 11/14).
+// 11/16 쉼터↔걷는 중 6규칙은 16장 11/18 3탭이 대신한다: 걸어도·끝나도 탭은 저절로 안 바뀐다 (home_tabs_test)
 
 /// 앱을 띄우고 쉼터·물감 길 판정이 시작될 때까지 기다린다 (앞 실행의 물감 길 닫기 → 판정 시작).
 /// [suspends]면 iOS처럼 앱이 뒤로 가면 멈추는 기기로 돈다 (화면 꺼짐 메우기)
@@ -47,10 +48,17 @@ Future<void> _walk100(WidgetTester tester, UiEnv e, int from, int steps) async {
   }
 }
 
-/// 쉼터에서 센서 값을 넣어 물감 길을 연다: 기준 [base] 뒤 30초에 10보 → 열림, 걷는 중으로 넘어가길 기다린다
+/// 물감 길이 열렸는가
+bool _trailOpen(WidgetTester tester) =>
+    ProviderScope.containerOf(tester.element(find.byType(HomeTabs))).read(paintTrailProvider).active;
+
+/// 쉼터에서 센서 값을 넣어 물감 길을 연다: 기준 [base] 뒤 30초에 10보 → 열림. 걸어도 탭은 그대로라
+/// 걷기 탭을 눌러 걷는 중을 본다
 Future<void> _startTrail(WidgetTester tester, UiEnv e, {int base = 50000}) async {
   await _sensor(tester, e, 0, base);
   await _sensor(tester, e, 30, base + 10);
+  await settle(tester, () => _trailOpen(tester), tries: 80);
+  await openTab(tester, 'walk');
   await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
   await transition(tester);
 }
@@ -99,15 +107,15 @@ void main() {
     await end(tester, e);
   });
 
-  testWidgets('여정이 없으면 지도에 알림 점', (tester) async {
+  testWidgets('여정이 없으면 지도 옆 버튼에 알림 점', (tester) async {
     final e = UiEnv();
     await e.seed(tester);
     await _pumpApp(tester, e);
-    expect(find.byKey(const ValueKey('map-dot')), findsOneWidget);
+    expect(find.byKey(const ValueKey('rest-side-map-dot')), findsOneWidget);
     await end(tester, e);
   });
 
-  testWidgets('센서 60초에 9보면 그대로, 10보면 저절로 걷는 중 (물감 길이 열리고 상시 알림이 켜진다)',
+  testWidgets('센서 60초에 9보면 그대로, 10보면 물감 길이 열리고 상시 알림이 켜진다. 탭은 쉼터 그대로 (16장 11/18)',
       (tester) async {
     final e = UiEnv();
     await e.seed(tester, e.startSketch);
@@ -121,17 +129,21 @@ void main() {
 
     // 9보를 넣은 뒤 61초가 지나 처음 걸음은 창 밖: 새로 10보
     await _sensor(tester, e, 61, 50019);
-    await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
-    expect(find.byType(WalkingScreen), findsOneWidget);
+    await settle(tester, () => _trailOpen(tester), tries: 80);
     final rows = (await tester.runAsync(() => e.db.select(e.db.paintTrails).get()))!;
     expect(rows, hasLength(1));
     expect(rows.single.endUtc, isNull);
     expect(e.walkNotice.running, isTrue);
-    // 걷는 중에는 ‘걷기 마치기’·×1.3 딱지가 없고 왼쪽 위에 쉼터 아이콘
-    await transition(tester);
+    await settle(tester, () => false, tries: 6);
+    expect(find.byType(RestScreen), findsOneWidget);
+    expect(find.byType(WalkingScreen), findsNothing);
+    expect(find.byKey(const ValueKey('tab-walk-steps')), findsOneWidget);
+    // 걷는 중에는 ‘걷기 마치기’·×1.3 딱지·왼쪽 위 쉼터 아이콘이 없다
+    await openTab(tester, 'walk');
+    expect(find.byType(WalkingScreen), findsOneWidget);
     expect(find.text('걷기 마치기'), findsNothing);
     expect(find.textContaining('×'), findsNothing);
-    expect(find.byKey(const Key('walk-rest')), findsOneWidget);
+    expect(find.byKey(const Key('walk-rest')), findsNothing);
     await end(tester, e);
   });
 
@@ -154,6 +166,8 @@ void main() {
     await settle(tester, () => false, tries: 10);
     expect(find.byType(WalkingScreen), findsNothing);
     await detect(1);
+    await settle(tester, () => _trailOpen(tester), tries: 80);
+    await openTab(tester, 'walk');
     await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
     final rows = (await tester.runAsync(() => e.db.select(e.db.paintTrails).get()))!;
     expect(rows, hasLength(1));
@@ -185,29 +199,7 @@ void main() {
     await end(tester, e);
   });
 
-  testWidgets('쉼터 아이콘은 화면만 쉼터로: 물감 길은 이어지고 상태 알약 ‘걷는 중’을 누르면 다시 걷는 중',
-      (tester) async {
-    final e = UiEnv();
-    await e.seed(tester, e.startSketch);
-    await _pumpApp(tester, e);
-    await _startTrail(tester, e);
-
-    await tester.tap(find.byKey(const Key('walk-rest')));
-    await transition(tester);
-    expect(find.byType(WalkingScreen), findsNothing);
-    expect(find.text('걷는 중'), findsOneWidget);
-    expect(find.byKey(const ValueKey('rest-walking-pill')), findsOneWidget);
-    // 물감 길은 그대로 열려 있다
-    final c = ProviderScope.containerOf(tester.element(find.byType(RestScreen)));
-    expect(c.read(paintTrailProvider).active, isTrue);
-
-    await tester.tap(find.byKey(const ValueKey('rest-walking-pill')));
-    await transition(tester);
-    expect(find.byType(WalkingScreen), findsOneWidget);
-    await end(tester, e);
-  });
-
-  testWidgets('걸음이 5분 멈추면 저절로 쉼터 + `물감 길 n km를 그렸어요`, 물감 길은 idle로 닫히고 알림을 끈다',
+  testWidgets('걸음이 5분 멈추면 물감 길이 idle로 닫히고 알림을 끄며 `물감 길 n km를 그렸어요`. 걷기 탭은 그대로 쉬는 중',
       (tester) async {
     final e = UiEnv();
     await e.seed(tester, e.startSketch);
@@ -219,15 +211,17 @@ void main() {
     final last = e.now;
     // 마지막 걸음 분의 끝 + 5분이 지나야 끝난다 (그 전에는 그대로)
     await _elapse(tester, e, 4 * 60);
-    expect(find.byType(WalkingScreen), findsOneWidget);
+    expect(_trailOpen(tester), isTrue);
     // 5초씩 보내며 끝나길 기다린다 (토스트가 떠 있는 동안 본다)
-    for (var i = 0; i < 40 && find.byType(WalkingScreen).evaluate().isNotEmpty; i++) {
+    for (var i = 0; i < 40 && _trailOpen(tester); i++) {
       await _elapse(tester, e, 5);
       await settle(tester, () => false, tries: 2);
     }
     await transition(tester);
-    expect(find.byType(WalkingScreen), findsNothing);
-    expect(find.byType(RestScreen), findsOneWidget);
+    // 탭은 저절로 안 바뀐다: 걷기 탭 그대로 (쉬는 중, 숫자는 0)
+    expect(find.byType(WalkingScreen), findsOneWidget);
+    expect(find.byType(RestScreen), findsNothing);
+    expect(tester.widget<WalkingHud>(find.byType(WalkingHud)).shownSteps, 0);
     expect(paintTrailEndedToast(0.077), '물감 길 0.1km를 그렸어요');
     expect(find.text('물감 길 0.1km를 그렸어요'), findsOneWidget);
 
@@ -240,192 +234,49 @@ void main() {
     await end(tester, e);
   });
 
-  testWidgets('꾸미기 중에 물감 길이 열리면 기다렸다가 꾸미기를 닫으면 걷는 중으로', (tester) async {
+  testWidgets('다른 화면(꾸미기·화집)에서 걸어도 그 화면 그대로, 닫아도 쉼터 (16장 11/18 ⑤)', (tester) async {
     final e = UiEnv();
     await e.seed(tester, e.startSketch);
     await _pumpApp(tester, e);
-    final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
-    nav.push(MaterialPageRoute<void>(builder: (_) => const DecorateScreen()));
-    await transition(tester);
-    await settle(tester, () => false, tries: 6);
-
-    await _sensor(tester, e, 0, 50000);
-    await _sensor(tester, e, 30, 50010);
-    await settle(tester, () => false, tries: 20);
-    expect(find.byType(DecorateScreen), findsOneWidget);
-    expect(find.byType(WalkingScreen), findsNothing);
-
-    nav.pop();
-    await transition(tester);
-    await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
-    expect(find.byType(WalkingScreen), findsOneWidget);
-    await end(tester, e);
-  });
-
-  testWidgets('시트가 떠 있으면 닫힐 때까지 기다린다', (tester) async {
-    final e = UiEnv();
-    await e.seed(tester, e.startSketch);
-    await _pumpApp(tester, e);
-    final context = tester.element(find.byType(RestScreen));
-    showModalBottomSheet<void>(context: context, builder: (_) => const Text('시트'));
-    await transition(tester);
-
-    await _sensor(tester, e, 0, 50000);
-    await _sensor(tester, e, 30, 50010);
-    await settle(tester, () => false, tries: 20);
-    expect(find.text('시트'), findsOneWidget);
-    expect(find.byType(WalkingScreen), findsNothing);
-
-    Navigator.of(tester.element(find.text('시트'))).pop();
-    await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
-    expect(find.byType(WalkingScreen), findsOneWidget);
-    await end(tester, e);
-  });
-
-  group('쉼터↔걷는 중 6규칙 (16장 11/16)', () {
-    Finder pill() => find.byKey(const ValueKey('rest-walking-pill'));
-
-    /// 쉼터 위에 [screen]을 연다
-    Future<void> push(WidgetTester tester, Widget screen) async {
-      tester.state<NavigatorState>(find.byType(Navigator).first)
-          .push(MaterialPageRoute<void>(builder: (_) => screen));
+    for (final (i, screen) in [const DecorateScreen(), const AlbumScreen()].indexed) {
+      final nav = Navigator.of(tester.element(find.byType(RestScreen)));
+      nav.push(MaterialPageRoute<void>(builder: (_) => screen));
       await transition(tester);
       await settle(tester, () => false, tries: 6);
+      await _sensor(tester, e, 0, 50000 + i * 1000);
+      await _sensor(tester, e, 30, 50010 + i * 1000);
+      await settle(tester, () => _trailOpen(tester), tries: 80);
+      await settle(tester, () => false, tries: 10);
+      expect(find.byType(screen.runtimeType), findsOneWidget);
+      nav.pop();
+      await transition(tester);
+      await settle(tester, () => false, tries: 10);
+      expect(find.byType(RestScreen), findsOneWidget);
+      expect(find.byType(WalkingScreen), findsNothing);
+      // 다음 화면 전에 물감 길을 닫는다
+      for (var j = 0; j < 80 && _trailOpen(tester); j++) {
+        await _elapse(tester, e, 5);
+      }
     }
+    await end(tester, e);
+  });
 
-    void pop(WidgetTester tester) => tester.state<NavigatorState>(find.byType(Navigator).first).pop();
-
-    testWidgets('④ 쉼터 아이콘으로 오면 그 물감 길 동안 저절로 돌아가지 않는다 (걸어도, 쉼터에서 연 화면을 닫아도). '
-        '위 가운데 ‘걷는 중 · 물감 길 n km ›’(지금 물감 색 점, 44pt)를 누르면 걷는 중', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, e.startSketch);
-      await _pumpApp(tester, e);
-      await _startTrail(tester, e);
-      await tester.tap(find.byKey(const Key('walk-rest')));
-      await transition(tester);
-      expect(find.byType(WalkingScreen), findsNothing);
-
-      // 쉼터에서 계속 걸어도 그대로, 알약 거리는 이번 물감 길 거리
-      for (var i = 1; i <= 6; i++) {
-        await _sensor(tester, e, 30, 50010 + i * 50);
-        await _elapse(tester, e, 5);
-      }
-      await settle(tester, () => false, tries: 10);
-      expect(find.byType(WalkingScreen), findsNothing);
-      expect(find.byType(RestScreen), findsOneWidget);
-      expect(pill(), findsOneWidget);
-      expect(tester.getSize(pill()).height, greaterThanOrEqualTo(44));
-      expect(find.descendant(of: pill(), matching: find.text('걷는 중')), findsOneWidget);
-      final km = tester.widget<Text>(find.byKey(const ValueKey('rest-walking-km'))).data!;
-      expect(km, matches(RegExp(r'^· 물감 길 \d+\.\dkm$')));
-      expect(km, isNot('· 물감 길 0.0km'));
-      // 점 = 지금 물감 색 (고른 색이 없으니 기본 물감)
-      final dot = tester.widget<Container>(find.byKey(const ValueKey('rest-walking-dot')));
-      expect((dot.decoration as BoxDecoration).color, Color(e.appRules.paintColor.defaultHex));
-      // 물감 길이 열려 있으니 ‘쉬는 중’은 아니다
-      expect(find.textContaining('쉬는 중'), findsNothing);
-
-      // 쉼터에서 다른 화면(화집)을 열었다 닫아도 쉼터
-      await push(tester, const AlbumScreen());
-      pop(tester);
-      await transition(tester);
-      await settle(tester, () => false, tries: 10);
-      expect(find.byType(WalkingScreen), findsNothing);
-
-      await tester.tap(pill());
-      await transition(tester);
-      expect(find.byType(WalkingScreen), findsOneWidget);
-      await end(tester, e);
-    });
-
-    testWidgets('③ 다른 화면(화집)에서 걷기 시작하면 그 화면 그대로, 닫으면 걷는 중', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, e.startSketch);
-      await _pumpApp(tester, e);
-      await push(tester, const AlbumScreen());
-
-      await _sensor(tester, e, 0, 50000);
-      await _sensor(tester, e, 30, 50010);
-      await settle(tester, () => false, tries: 20);
-      expect(find.byType(AlbumScreen), findsOneWidget);
-      expect(find.byType(WalkingScreen), findsNothing);
-      final c = ProviderScope.containerOf(tester.element(find.byType(AlbumScreen)));
-      expect(c.read(paintTrailProvider).active, isTrue);
-
-      pop(tester);
-      await transition(tester);
-      await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
-      expect(find.byType(WalkingScreen), findsOneWidget);
-      await end(tester, e);
-    });
-
-    testWidgets('① 앱을 다시 열어도 쉼터 아이콘으로 떠난 물감 길 동안은 쉼터 (④가 먼저, 16장 11/17). '
-        '새 물감 길이 열리면 잊고 저절로 걷는 중', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, e.startSketch);
-      await _pumpApp(tester, e);
-      await _startTrail(tester, e);
-      await tester.tap(find.byKey(const Key('walk-rest')));
-      await transition(tester);
-      expect(find.byType(WalkingScreen), findsNothing);
-
-      _hide(tester);
-      await tester.pump(const Duration(milliseconds: 100));
-      e.now = e.now.add(const Duration(seconds: 20));
-      _show(tester);
-      await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 20);
-      expect(find.byType(WalkingScreen), findsNothing);
-      expect(find.byType(RestScreen), findsOneWidget);
-      expect(pill(), findsOneWidget);
-      final c = ProviderScope.containerOf(tester.element(find.byType(RestScreen)));
-      final first = c.read(paintTrailProvider).id;
-      expect(c.read(paintTrailProvider).active, isTrue);
-
-      // 다시 켠 뒤 걸어도 그 물감 길 동안은 쉼터
-      await _sensor(tester, e, 30, 50060);
-      await _sensor(tester, e, 30, 50110);
-      await settle(tester, () => false, tries: 10);
-      expect(find.byType(WalkingScreen), findsNothing);
-      expect(c.read(paintTrailProvider).id, first);
-
-      // 걸음이 멈춰 물감 길이 닫힌 뒤 새 물감 길이 열리면 잊는다
-      for (var i = 0; i < 80 && c.read(paintTrailProvider).active; i++) {
-        await _elapse(tester, e, 5);
-      }
-      expect(c.read(paintTrailProvider).active, isFalse);
-      await settle(tester, () => false, tries: 4);
-      await _startTrail(tester, e, base: 50200);
-      expect(c.read(paintTrailProvider).id, isNot(first));
-      expect(find.byType(WalkingScreen), findsOneWidget);
-      await end(tester, e);
-    });
-
-    testWidgets('⑤ 물감 길이 끝날 때 다른 화면(화집)이면 화면은 그대로, 토스트만. 그 뒤 닫으면 쉼터 ‘쉬는 중’', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, e.startSketch);
-      await _pumpApp(tester, e);
-      await _startTrail(tester, e);
-      await tester.tap(find.byKey(const Key('walk-rest')));
-      await transition(tester);
-      await push(tester, const AlbumScreen());
-
-      for (var i = 0; i < 80 && (ProviderScope.containerOf(tester.element(find.byType(AlbumScreen)))
-              .read(paintTrailProvider)
-              .active); i++) {
-        await _elapse(tester, e, 5);
-      }
-      await settle(tester, () => false, tries: 4);
-      expect(find.byType(AlbumScreen), findsOneWidget);
-      expect(find.textContaining('를 그렸어요'), findsOneWidget);
-
-      pop(tester);
-      await transition(tester);
-      await settle(tester, () => false, tries: 6);
-      expect(find.byType(WalkingScreen), findsNothing);
-      expect(pill(), findsNothing);
-      expect(find.textContaining('쉬는 중'), findsOneWidget);
-      await end(tester, e);
-    });
+  testWidgets('앱을 다시 열어도 탭은 그대로 (열린 물감 길로 저절로 가지 않는다)', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, e.startSketch);
+    await _pumpApp(tester, e);
+    await _sensor(tester, e, 0, 50000);
+    await _sensor(tester, e, 30, 50010);
+    await settle(tester, () => _trailOpen(tester), tries: 80);
+    _hide(tester);
+    await tester.pump(const Duration(milliseconds: 100));
+    e.now = e.now.add(const Duration(seconds: 20));
+    _show(tester);
+    await settle(tester, () => false, tries: 20);
+    expect(_trailOpen(tester), isTrue);
+    expect(find.byType(RestScreen), findsOneWidget);
+    expect(find.byType(WalkingScreen), findsNothing);
+    await end(tester, e);
   });
 
   testWidgets('물감 방울: 땅 위 층이 있고, 펼친 알약에 ‘물감 길 n km · 물감 방울 n개’', (tester) async {
@@ -525,7 +376,7 @@ void main() {
       }
       await settle(tester, () => false, tries: 4);
       await transition(tester);
-      expect(find.byType(WalkingScreen), findsNothing);
+      expect(c.read(paintTrailProvider).active, isFalse);
       final row = (await tester.runAsync(() => e.db.select(e.db.paintTrails).getSingle()))!;
       expect((row.endUtc, row.endReason),
           (t1.add(const Duration(minutes: 7)).millisecondsSinceEpoch, PaintTrailEnd.idle));

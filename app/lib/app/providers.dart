@@ -257,9 +257,8 @@ class TrailsReady extends Notifier<bool> {
 
 final trailsReadyProvider = NotifierProvider<TrailsReady, bool>(TrailsReady.new);
 
-/// 걷는 중 화면(과 걷다 도착해서 열린 도착 화면)이 몇 개 떠 있는가. 0보다 큰 동안 도착은 그 화면들이
-/// 직접 다룬다 (걷기를 마치고 도착 화면으로 바꾸고, 닫으면 걷기 기록). AutoSync는 그동안 도착 화면을
-/// 따로 띄우지 않고 다 닫힌 뒤에 새로 읽어 다시 본다. 걷는 중 → 도착으로 바뀔 때 잠깐 겹쳐서 개수로 센다
+/// 걷기 탭의 걷는 중 화면이 보이는가 (1이면 보임). 보이는 동안 새 도장은 그 화면이 걸음 알약 아래 작은 줄로
+/// 알리고 AutoSync는 토스트를 띄우지 않는다. 도착 화면은 늘 AutoSync가 지금 탭 안에 띄운다 (16장 11/18)
 class WalkingActive extends Notifier<int> {
   @override
   int build() => 0;

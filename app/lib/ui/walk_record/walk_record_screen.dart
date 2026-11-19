@@ -18,6 +18,7 @@ import '../common/ink_bar.dart';
 import '../common/ink_card.dart';
 import '../common/palette.dart';
 import '../common/screen_header.dart';
+import '../tabs/home_tab.dart';
 import '../companion/companion_art.dart';
 import '../companion/companion_screen.dart';
 import '../companion/story_lines.dart';
@@ -33,11 +34,14 @@ const _storyOpenedBg = Color(0xFFF1E0B0);
 /// 열린다 (걷고 난 뒤 저절로 뜨지 않는다). 동기화하지 않고(마지막 동기화 시각이 과거로 돌아가지 않게)
 /// 저장된 health 분으로 걸음·거리·시간·걷기/달리기·물감 방울·럭·함께 걷기·이정표·이야기를 낸다.
 /// 실제/여행 거리 두 줄·본격 걷기·다음 방명록 지점은 없다
+/// 도착 뒤에 열렸으면([closeToRest]) 닫을 때(시스템 뒤로도) 그 탭을 처음 화면으로 되돌리고 쉼터 탭으로 간다
+/// (도착 → 걷기 기록 → 쉼터, 16장 11/18 ⑤)
 class WalkRecordScreen extends ConsumerStatefulWidget {
-  const WalkRecordScreen({super.key, required this.start, required this.end});
+  const WalkRecordScreen({super.key, required this.start, required this.end, this.closeToRest = false});
 
   final DateTime start;
   final DateTime end;
+  final bool closeToRest;
 
   @override
   ConsumerState<WalkRecordScreen> createState() => _WalkRecordScreenState();
@@ -102,14 +106,20 @@ class _WalkRecordScreenState extends ConsumerState<WalkRecordScreen> {
       card = InkCard(child: _content(rules, record, snap));
     }
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const ScreenHeader('물감 길'),
-            Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: card)),
-          ],
+    return PopScope(
+      canPop: !widget.closeToRest,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) backToRest(ref, Navigator.of(context));
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const ScreenHeader('물감 길'),
+              Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: card)),
+            ],
+          ),
         ),
       ),
     );

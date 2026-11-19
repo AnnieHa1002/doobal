@@ -25,7 +25,7 @@ import 'ui_env.dart';
 
 final _bubble = find.byKey(const ValueKey('first-sketch-bubble'));
 /// 여정이 없을 때 지도에 붙는 알림 점 (출발하기 버튼이 없어서 목적지를 고르는 곳을 알린다)
-final _mapDot = find.byKey(const ValueKey('map-dot'));
+final _mapDot = find.byKey(const ValueKey('rest-side-map-dot'));
 final _card = find.byKey(const ValueKey('arrival-card'));
 Finder _cell(String id) => find.byKey(ValueKey('cell-$id'));
 Finder _packIn(Finder owner) => find.descendant(of: owner, matching: find.byType(FirstPackFace));
@@ -167,7 +167,7 @@ void main() {
       await end(tester, none);
     });
 
-    testWidgets('물감 길이 열리면 걷는 중으로 간다 (여정이 있다)', (tester) async {
+    testWidgets('물감 길이 열리고 걷기 탭으로 가면 걷는 중 (여정이 있다)', (tester) async {
       final e = UiEnv();
       await e.seed(tester, e.startSketch);
       await _pumpRest(tester, e);

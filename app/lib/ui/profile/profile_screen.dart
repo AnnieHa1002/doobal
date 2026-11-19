@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/profile_service.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/rules.dart';
 import '../../domain/spirit_look.dart';
 import '../../domain/time_kst.dart';
 import '../../domain/walk_history.dart';
@@ -15,6 +16,9 @@ import '../common/ink_card.dart';
 import '../common/palette.dart';
 import '../common/screen_header.dart';
 import '../decorate/decorate_screen.dart';
+import '../note/note_screen.dart';
+import '../settings/settings_screen.dart';
+import 'nickname_sheet.dart';
 import '../scene/spirit_character.dart';
 
 /// 걸음 막대 영역의 높이와, 걸음이 0인 날도 남기는 막대의 최소 높이
@@ -23,7 +27,9 @@ const _barMinHeight = 4.0;
 
 const _weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
 
-/// 나의 정보: 프로필, 숫자 카드 4개, 최근 14일 걸음 막대 (UI 명세 11장)
+/// 나의 정보 = 아래 탭 ‘나’의 처음 화면 (16장 11/18 ⑥·11/19, 캔버스 9-1): 프로필(정령·닉네임 연필·꾸미기),
+/// 숫자 카드 4개, 최근 14일 걸음 막대, 목록 줄 노트(내 방명록·걷기 기록)·설정. 탭 처음 화면이라 뒤로 버튼이 없다.
+/// 출발 동네 바꾸기는 없다 (가안). 도장(배지)은 화집에서 옮겨 오는 일(T18) 때 더한다
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -33,7 +39,8 @@ class ProfileScreen extends ConsumerWidget {
     final me = ref.watch(meProvider).value;
     final spirit = ref.watch(spiritLookProvider);
     final bars = ref.watch(recentDaysProvider).value;
-    final ready = snap != null && me != null && bars != null;
+    final rules = ref.watch(rulesProvider).value;
+    final ready = snap != null && me != null && bars != null && rules != null;
 
     return Scaffold(
       body: SafeArea(
@@ -41,7 +48,7 @@ class ProfileScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const ScreenHeader('나의 정보'),
-            Expanded(child: ready ? _content(context, snap, me, spirit, bars) : const SizedBox()),
+            Expanded(child: ready ? _content(context, snap, me, spirit, bars, rules) : const SizedBox()),
           ],
         ),
       ),
@@ -54,7 +61,10 @@ class ProfileScreen extends ConsumerWidget {
     Me me,
     SpiritLook spirit,
     List<DayBar> bars,
+    Rules rules,
   ) {
+    void push(Widget screen) =>
+        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(
@@ -63,8 +73,8 @@ class ProfileScreen extends ConsumerWidget {
           _ProfileCard(
             me: me,
             spirit: spirit,
-            onDecorate: () => Navigator.of(context)
-                .push(MaterialPageRoute<void>(builder: (_) => const DecorateScreen())),
+            onDecorate: () => push(const DecorateScreen()),
+            onNickname: () => showNicknameSheet(context, current: me.nickname, rules: rules),
           ),
           const SizedBox(height: 12),
           Row(
@@ -110,6 +120,27 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _DaysCard(bars: bars, today: snap.today),
+          const SizedBox(height: 12),
+          InkCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _LinkRow(
+                  key: const ValueKey('me-note'),
+                  title: '노트',
+                  sub: '내 방명록 · 걷기 기록',
+                  onTap: () => push(const NoteScreen()),
+                ),
+                const Divider(height: 1, thickness: 1, color: _rowLine),
+                _LinkRow(
+                  key: const ValueKey('me-settings'),
+                  title: '설정',
+                  sub: '계정 · 걸음 데이터 · 알림',
+                  onTap: () => push(const SettingsScreen()),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -118,11 +149,19 @@ class ProfileScreen extends ConsumerWidget {
 
 /// 위: 캐릭터 초상, 닉네임, 보조 버튼 `꾸미기`
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.me, required this.spirit, required this.onDecorate});
+  const _ProfileCard({
+    required this.me,
+    required this.spirit,
+    required this.onDecorate,
+    required this.onNickname,
+  });
 
   final Me me;
   final SpiritLook spirit;
   final VoidCallback onDecorate;
+
+  /// 닉네임 옆 연필: 닉네임 바꾸기 시트
+  final VoidCallback onNickname;
 
   @override
   Widget build(BuildContext context) {
@@ -147,11 +186,32 @@ class _ProfileCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  me.nickname,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.cardTitle(context),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        me.nickname,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.cardTitle(context),
+                      ),
+                    ),
+                    Semantics(
+                      button: true,
+                      label: '닉네임 바꾸기',
+                      excludeSemantics: true,
+                      child: GestureDetector(
+                        key: const ValueKey('nickname-edit'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onNickname,
+                        child: const SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Icon(Icons.edit_outlined, size: 20, color: Palette.subInk),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 // 너비 120pt는 글자 크기를 키우면 같이 넓어진다 (칸이 모자라면 칸만큼에서 멈춘다)
@@ -267,6 +327,51 @@ class _DaysCard extends StatelessWidget {
                   : Palette.moss,
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: Palette.ink, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+/// 목록 줄 사이 선 (캔버스 9-1 #E3D6BE)
+const _rowLine = Color(0xFFE3D6BE);
+
+/// 나 탭 목록 줄 (캔버스 9-1): 이름 14 + 옅은 설명 12 + 화살표, 높이 52 이상
+class _LinkRow extends StatelessWidget {
+  const _LinkRow({super.key, required this.title, required this.sub, required this.onTap});
+
+  final String title;
+  final String sub;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '$title, $sub',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Text(title, style: const TextStyle(fontSize: 14, color: Palette.ink)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    sub,
+                    textAlign: TextAlign.right,
+                    style: AppText.label,
+                  ),
+                ),
+                const Icon(Icons.chevron_right, size: 18, color: Palette.subInk),
+              ],
+            ),
+          ),
         ),
       ),
     );

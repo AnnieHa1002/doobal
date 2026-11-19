@@ -14,6 +14,8 @@ String storyChapterNo(StoryChapter c) => c.no == 0 ? '프롤로그' : '${c.no}�
 Future<void> showStorySheet(BuildContext context, Companion companion, StoryChapter chapter) {
   return showModalBottomSheet<void>(
     context: context,
+    // 탭 바까지 덮어 뜬다 (캔버스 TabBar 메모 ‘시트는 탭 바 위에’)
+    useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Palette.card,

@@ -155,6 +155,8 @@ class _StampCell extends StatelessWidget {
 Future<void> showStampSheet(BuildContext context, stamp.Badge badge, DateTime at) {
   return showModalBottomSheet<void>(
     context: context,
+    // 탭 바까지 덮어 뜬다 (캔버스 TabBar 메모 ‘시트는 탭 바 위에’)
+    useRootNavigator: true,
     backgroundColor: Palette.card,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),

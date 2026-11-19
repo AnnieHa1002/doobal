@@ -8,6 +8,7 @@ import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/guestbook/guestbook_read_screen.dart';
 import 'package:doobal/ui/guestbook/guestbook_write_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
+import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -16,7 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../domain/helpers.dart';
 import 'ui_env.dart';
 
-final _sign = find.byKey(const ValueKey('signpost'));
+final _sign = find.byKey(const ValueKey('road-signpost'));
 final _tag = find.byKey(const ValueKey('guestbook-tag'));
 final _input = find.byKey(const ValueKey('guestbook-input'));
 final _count = find.byKey(const ValueKey('guestbook-count'));
@@ -103,10 +104,15 @@ Future<List<GuestbookPostRow>> _posts(WidgetTester tester, UiEnv e) =>
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
-  group('쉼터 표지판', () {
+  // 방명록 표지판은 걷기 탭 길가에만 (16장 11/18·11/19, config guestbook.sign): 화면에 고정돼 정령 오른쪽,
+  // 걷는 중·쉬는 중 모두. 쉼터에는 없다
+  group('걷기 탭 길가 표지판', () {
     Future<void> openRest(WidgetTester tester, UiEnv e) async {
       await pumpDoobal(tester, e, const DoobalApp());
       await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
+      await settle(tester, () => false, tries: 6);
+      await openTab(tester, 'walk');
+      await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 40);
       await settle(tester, () => false, tries: 6);
     }
 
@@ -114,13 +120,13 @@ void main() {
       final e = UiEnv();
       await e.seed(tester);
       await openRest(tester, e);
-      expect(find.byType(RestScreen), findsOneWidget);
+      expect(find.byType(WalkingScreen), findsOneWidget);
       expect(_sign, findsNothing);
       expect(find.text('방명록'), findsNothing);
       await end(tester, e);
     });
 
-    testWidgets('도착 기회가 있으면 서고, 이정표 옆(테마의 자리)에 이름표 "방명록"이 붙는다', (tester) async {
+    testWidgets('도착 기회가 있으면 쉬는 중에도 서고, 판에 "방명록", 왼쪽 끝은 화면 폭 78%·기둥 발은 정령 발 높이', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
         await _putTicket(e, 'a:j1', TicketKind.arrival, 'kr001');
@@ -128,18 +134,24 @@ void main() {
       await openRest(tester, e);
       expect(_sign, findsOneWidget);
       expect(find.descendant(of: _sign, matching: find.text('방명록')), findsOneWidget);
-      // 자리는 테마의 표지판 상자 (기준 화면 390×844에서 pt 그대로)
-      final box = campThemeV3.object('guestbookSign').box;
-      expect(tester.getRect(_sign), Rect.fromLTWH(box.x, box.y, box.w, box.h));
+      // 캔버스 3-1: 80×104pt, 왼쪽 끝 = 화면 폭 × 0.78 (config guestbook.sign.screenX)
+      final rect = tester.getRect(_sign);
+      expect(rect.size, const Size(80, 104));
+      expect(rect.left, closeTo(390 * 0.78, 0.01));
+      // 장면과 같이 흐르지 않고 화면에 고정 (쉬는 중이라 땅도 멈춰 있지만, 시간이 가도 그 자리)
+      await tester.pump(const Duration(seconds: 3));
+      expect(tester.getRect(_sign), rect);
       await end(tester, e);
     });
 
-    testWidgets('실제 v5 테마(수레만)에는 표지판 자리가 없어 기회가 있어도 서지 않고, 쉼터는 그대로 뜬다 (16장 11/18)', (tester) async {
-      final e = UiEnv(camp: campTheme);
+    testWidgets('쉼터 탭에는 기회가 있어도 표지판이 없다 (16장 11/18)', (tester) async {
+      final e = UiEnv();
       await e.seed(tester, () async {
         await _putTicket(e, 'a:j1', TicketKind.arrival, 'kr001');
       });
-      await openRest(tester, e);
+      await pumpDoobal(tester, e, const DoobalApp());
+      await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
+      await settle(tester, () => false, tries: 6);
       expect(find.byType(RestScreen), findsOneWidget);
       expect(_sign, findsNothing);
       await end(tester, e);
@@ -205,8 +217,11 @@ void main() {
       await _writeAndSave(tester, '도착!');
       await settle(tester, () => false, tries: 6);
 
-      // 3,000보를 걸어서 100·1,000 기회가 열려 있다: 남은 걸음이 같아 숫자가 작은 100이 먼저
+      // 3,000보를 걸어서 100·1,000 기회가 열려 있다: 남은 걸음이 같아 숫자가 작은 100이 먼저.
+      // ‘방명록을 남겼어요’ 토스트(탭 바 위 96pt)가 표지판 아래쪽을 잠깐 덮으니 사라진 뒤 누른다
       expect(_sign, findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(_sign);
       await transition(tester);
       await settle(tester, () => _tag.evaluate().isNotEmpty);

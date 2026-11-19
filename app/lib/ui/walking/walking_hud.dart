@@ -13,7 +13,7 @@ import '../common/format.dart';
 import '../common/palette.dart';
 
 /// 걷는 중 위 UI (UI 명세 3장 10/30판, 캔버스 3-1 11/13). 큰 패널 대신
-/// ① 얇은 진행 줄(글자 없음) ② 쉼터 아이콘 + 걸음 알약 ③ 알약을 누르면 펼쳐지는 숫자 카드(8초 뒤 접힘,
+/// ① 얇은 진행 줄(글자 없음) ② 걸음 알약 ③ 알약을 누르면 펼쳐지는 숫자 카드(8초 뒤 접힘,
 /// ‘물감 길 n km · 물감 방울 n개’ 줄). 배경(SceneView) 위에 Stack으로 얹는다.
 /// ‘걷기 마치기’·본격 걷기 ×1.3 딱지는 없다 (16장 11/13 물감 길: 걸음이 멈추면 저절로 끝난다).
 /// 아이콘은 ui_icon SVG를 넣기 전까지 Material 아이콘으로 대신한다
@@ -28,7 +28,6 @@ class WalkingHud extends StatefulWidget {
     required this.walkingTime,
     required this.running,
     required this.nextMilestone,
-    required this.onRest,
     this.event,
     this.eventKm = 2,
     this.onCloseEvent,
@@ -50,9 +49,6 @@ class WalkingHud extends StatefulWidget {
 
   /// 다음 방명록 지점까지 남은 걸음. 없으면 null
   final int? nextMilestone;
-
-  /// 쉼터 아이콘: 화면만 쉼터로 돌리고 물감 길은 이어진다
-  final VoidCallback onRest;
 
   /// 지금 보여 줄 길 위 이벤트 카드(2km 이정표)와 그 칸의 크기(km, config events.everyKm). 없으면 null
   final RoadEventView? event;
@@ -79,9 +75,6 @@ abstract final class HudMetrics {
   static const pillMinWidth = 143.0;
   static const pillHeight = 32.0;
 
-  /// 쉼터 아이콘 (캔버스 3-1: 44pt 둥근 네모, 알약과 8pt 사이)
-  static const restButton = 44.0;
-  static const restGap = 8.0;
   static const collapseAfter = Duration(seconds: 8);
 
   /// 시험에서만: 이정표 카드·새 도장 줄이 떠 있는 시간을 바꾼다.
@@ -131,10 +124,9 @@ class _WalkingHudState extends State<WalkingHud> {
             children: [
               ProgressLine(ratio: j?.progress.ratio ?? 0),
               const SizedBox(height: HudMetrics.pillGap),
+              // 왼쪽 위 쉼터 아이콘은 없다: 아래 탭 바가 대신한다 (16장 11/18, 캔버스 3-1 11/19)
               Row(
                 children: [
-                  RestButton(onPressed: widget.onRest),
-                  const SizedBox(width: HudMetrics.restGap),
                   Flexible(
                     child: StepPill(
                       steps: widget.shownSteps,
@@ -211,36 +203,6 @@ class ProgressLine extends StatelessWidget {
 }
 
 const _tabular = [FontFeature.tabularFigures()];
-
-/// 쉼터 아이콘 (캔버스 3-1 왼쪽 위): 44pt 둥근 네모, 카드색 90% + 잉크 테두리, 집 모양
-class RestButton extends StatelessWidget {
-  const RestButton({super.key, required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: '쉼터',
-      child: GestureDetector(
-        key: const Key('walk-rest'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: Container(
-          width: HudMetrics.restButton,
-          height: HudMetrics.restButton,
-          decoration: BoxDecoration(
-            color: Palette.card.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Palette.ink, width: InkLine.pill),
-          ),
-          child: const Icon(Icons.home_outlined, size: 22, color: Palette.ink),
-        ),
-      ),
-    );
-  }
-}
 
 /// 카드색 90% 알약 + 잉크 테두리. 걷기/뛰기 아이콘 + 이번 걸음 수 + ‘걸음 · 1.99 km’.
 /// 글자를 키워서 알약이 칸보다 넓어지면 안의 글을 통째로 줄인다

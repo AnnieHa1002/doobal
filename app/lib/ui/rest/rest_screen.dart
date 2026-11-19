@@ -6,9 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/paint_providers.dart';
-import '../../app/paint_trail_controller.dart';
 import '../../app/providers.dart';
-import '../../app/report_providers.dart';
 import '../../app/screen_providers.dart';
 import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
@@ -19,36 +17,36 @@ import '../../domain/screen_rules.dart';
 import '../../domain/sketch.dart';
 import '../album/album_screen.dart';
 import '../common/app_text.dart';
-import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
-import '../day_card/day_card_view.dart';
 import '../debug/debug_screen.dart';
-import '../guestbook/guestbook_write_screen.dart';
+import '../decorate/decorate_screen.dart';
 import '../map/map_screen.dart';
-import '../note/note_screen.dart';
-import '../profile/profile_screen.dart';
 import '../scene/scene_view.dart';
-import '../settings/settings_screen.dart';
-import '../walking/paint_trail_host.dart';
+import '../shop/shop_art.dart';
+import '../shop/shop_slots.dart';
+import '../tabs/home_tabs.dart';
 import 'prop_wiggle.dart';
 import 'rest_gestures.dart';
 import 'rest_slots.dart';
 
-/// 쉼터 (홈, 루트 화면). 장면(하늘 → 후경 → 캠프 뒤 → 물건 → 정령 → 동행 → 캠프 앞 → 불꽃)은 화면 폭의
-/// 1.5배이고 좌우로 민다. 프로필·설정·상태 알약은 고정이다 (캔버스 2-2).
-/// 출발하기 버튼은 없다 (16장 11/13 물감 길): 앱을 연 채 걸으면 저절로 걷는 중으로 넘어간다 (PaintTrailHost).
-/// 첫 여정을 아직 안 걸었으면 아래 가운데 말풍선 ‘걸으면 출발해요’ (캔버스 2-1), 여정이 없으면 지도에 알림 점.
-/// 물감 길이 이어지는 동안(걷는 중에서 쉼터 아이콘으로 왔을 때) 위 가운데는 ‘걷는 중 · 물감 길 n km ›’(지금 물감 색 점,
-/// 44pt, 캔버스 2-2 11/16)이고 누르면 걷는 중으로 (16장 11/16 쉼터↔걷는 중 ④).
-/// 물건은 3~6초마다 하나씩 살짝 흔들린다 (알림 점이 있는 물건 우선, 연출 값은 prop_wiggle.dart).
-/// 불 옆 동행은 알림 점(안 읽은 장)이 있을 때만 흔들림에 든다 (평소에는 캔버스대로 둥실, 그림 쪽 몫).
-/// 새벽 5시 뒤 그날 처음 열면 하루 카드(캔버스 2-3)가 위에 겹쳐 뜬다 (pendingDayCardProvider, 닫으면 본 것으로).
-/// 도착·걷는 중은 그 위에 올라가니 그것을 끝내고 쉼터로 돌아오면 카드가 보인다.
-/// 정령은 떠 있기 정면·앉기 정면·앉기 옆을 20~40초마다 바꾸고(같은 자세 연속 없음), 밤에는 잠든다
-/// (config character.rive.restSwap, 16장 11/11). 새 소품이 생기면 잠깐 놀란다 (palette newProp).
-/// 새 소식 점은 config ui.newDot에 있는 자리만 (배낭·동행·수레, 16장 11/13)
+/// 쉼터 (아래 탭 ‘쉼터’의 처음 화면, 16장 11/18·11/19, 캔버스 2-2). 장면(하늘 → 후경 → 캠프 뒤 → 물건 → 정령 →
+/// 캠프 앞 → 불꽃)은 화면 폭의 1.5배이고 좌우로 민다. 장면 아래는 탭 바 위로 30pt 겹친다.
+/// 위에는 럭 보석(왼쪽)과 ‘쉬는 중 · 목적지까지 n km’ 알약(가운데)만 고정이다 (나의 정보·설정은 ‘나’ 탭으로).
+/// 오른쪽에 게임식 세로 버튼 지도·배낭(화집)·상점·쉼터 꾸미기 (config rest.sideButtons, 56pt).
+/// 쉼터 꾸미기 버튼은 쉼터 꾸미기(T15)가 서랍과 함께 켠다 (그 전에는 그리지 않는다).
+/// 땅 위 누르는 물건(배낭·노트·지도)·불 옆 동행·방명록 표지판은 없다 (camp_wide v5, 동행·표지판은 걷기 탭).
+/// 수레는 테마에 자리가 있으면 서고 누르면 상점이다 (M2~M6 AC 가안).
+/// 출발하기 버튼은 없다 (16장 11/13 물감 길). 걸어도 화면은 그대로이고, 걷는 중이면 아래 걷기 탭 아이콘의
+/// 발자국이 움직인다 (16장 11/18 ⑤).
+/// 첫 여정을 아직 안 걸었으면 아래 가운데 말풍선 ‘걸으면 출발해요’ (캔버스 2-1), 여정이 없으면 지도 버튼에 알림 점.
+/// 수레는 3~6초마다 살짝 흔들린다 (연출 값은 prop_wiggle.dart).
+/// 하루 카드(캔버스 2-3)는 탭 바 위에 뜨도록 탭 뼈대가 띄운다.
+/// 정령은 떠 있기 정면·앉기 정면을 20~40초마다 바꾸고(같은 자세 연속 없음), 밤에는 잠든다
+/// (config character.rive.restSwap, 16장 11/19 쉼터는 정면). 새 소품이 생기면 잠깐 놀란다 (palette newProp).
+/// 정령을 길게 누르면 정령 꾸미기 (config character.tapReaction.longPress, 16장 11/19 ③).
+/// 새 소식 점은 config ui.newDot에 있는 자리만 (배낭·상점, 16장 11/13·11/18)
 class RestScreen extends ConsumerStatefulWidget {
   const RestScreen({super.key});
 
@@ -56,19 +54,16 @@ class RestScreen extends ConsumerStatefulWidget {
   ConsumerState<RestScreen> createState() => _RestScreenState();
 }
 
-/// 흔들림 id: 캠프 물건은 테마의 id(지도·배낭·노트), 방명록 표지판은 이것
-const _guestbookWiggleId = 'guestbook';
+/// 위 고정 줄 (캔버스 2-2: 왼쪽·오른쪽 14pt, 높이 48)
+const _hudSide = 14.0;
+const _hudRow = 48.0;
 
-// 고정 HUD 자리 (캔버스 2-2)
-const _hudInset = 16.0;
-const _hudButton = 56.0;
-const _gemGap = 10.0;
+/// 위 고정 줄의 위 끝: 상태 표시줄 아래 (캔버스 390×844 54pt, 375×667 24pt)
+double _hudTop(EdgeInsets padding) => math.max(padding.top + 6, 24);
 
-/// 첫날 말풍선의 아래 여백 (캔버스 2-1: 40pt, 작은 화면 24pt)
+/// 첫날 말풍선의 아래 여백 (캔버스 2-1: 탭 바 위 16pt, 탭 바가 없으면 40pt)
 const _hintBottom = 40.0;
-
-/// 그림으로 서는 물건 (수레·표지판·동행은 따로)
-const _artObjects = {'map', 'backpack', 'note'};
+const _hintAboveBar = 16.0;
 
 class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProviderStateMixin {
   late final PropWiggler _wiggler;
@@ -128,31 +123,13 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
       snap.unseenBadges > 0 ||
       (ref.read(unseenPaintsProvider).value ?? 0) > 0);
 
-  /// 흔들 수 있는 물건과 그 중 알림 점이 있는 물건 (화면에 서 있는 것만)
+  /// 흔들 수 있는 물건 (화면에 서 있는 것만: 수레). 알림 점은 옆 버튼에 붙어 흔들림을 고르지 않는다
   ({List<String> all, Set<String> notice}) _wigglePool() {
     final camp = ref.read(campThemeProvider).value;
     final snap = ref.read(snapshotProvider).value;
-    if (camp == null || snap == null || snap.position == null) {
-      return (all: const [], notice: const {});
-    }
-    // 테마에 자리가 있는 물건만 (camp_wide v5는 수레만 남아 배낭·지도·노트·표지판·동행이 없다)
-    bool has(String id) => camp.objectOrNull(id) != null;
-    final sign = snap.guestbookTicket != null && has(campGuestbookSignId);
-    final companion = (ref.read(restSlotsProvider).companion?.notice ?? false) && has(campCompanionId);
-    return (
-      all: [
-        for (final id in _artObjects)
-          if (has(id)) id,
-        if (sign) _guestbookWiggleId,
-        if (companion) campCompanionId,
-      ],
-      notice: {
-        if (_hasNew(snap) && has('backpack')) 'backpack',
-        if (snap.journey == null && has('map')) 'map',
-        if (sign) _guestbookWiggleId,
-        if (companion) campCompanionId,
-      },
-    );
+    final cart = ref.read(restSlotsProvider).cart != null && camp?.objectOrNull(campCartId) != null;
+    if (snap == null || snap.position == null || !cart) return (all: const [], notice: const {});
+    return (all: const [campCartId], notice: const {});
   }
 
   void _push(BuildContext context, Widget screen) =>
@@ -183,32 +160,25 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     final position = snap.position;
     if (position == null) return const Scaffold(body: SizedBox.expand());
     final firstSketch = _firstSketchHint(snap, rules);
-    final trailOn = ref.watch(paintTrailProvider.select((s) => s.active));
-    final dayCard = ref.watch(pendingDayCardProvider);
-    void closeCard() => ref.read(pendingDayCardProvider.notifier).dismiss();
+    final padding = MediaQuery.viewPaddingOf(context);
+    final sceneBottom = TabBarSpace.sceneBottom(context);
+    final barSpace = TabBarSpace.of(context);
+    final hudTop = _hudTop(padding);
+    final small = MediaQuery.sizeOf(context).height < 700;
+    final cart = slots.cart != null && camp.objectOrNull(campCartId) != null;
+    final shopDot = slots.cart?.notice ?? false;
+    final buttons = <_SideButtonSpec>[
+      for (final id in rules.screen.tabs.sideButtons) ?_sideButton(context, id, snap, shopDot),
+    ];
 
-    return PopScope(
-      // 하루 카드가 떠 있으면 뒤로 가기는 카드를 닫는다
-      canPop: dayCard == null,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && dayCard != null) closeCard();
-      },
-      child: Scaffold(
-      body: LayoutBuilder(builder: (context, box) {
-        final stage = RestGeometry(camp, rules.rest, box.maxWidth, box.maxHeight);
-        final ticket = snap.guestbookTicket;
-        final shown = {
-          for (final o in camp.objects)
-            if (_artObjects.contains(o.id)) o.id,
-          if (ticket != null) campGuestbookSignId,
-          if (slots.cart != null) campCartId,
-          if (slots.companion != null && camp.companion != null) campCompanionId,
-        };
-        final padding = MediaQuery.viewPaddingOf(context);
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: RestGestures(
+    return Scaffold(
+      body: Stack(
+        children: [
+          Positioned.fill(
+            bottom: sceneBottom,
+            child: LayoutBuilder(builder: (context, box) {
+              final stage = RestGeometry(camp, rules.rest, box.maxWidth, box.maxHeight);
+              return RestGestures(
                 stage: stage,
                 camera: _camera,
                 child: SceneView(
@@ -227,124 +197,97 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                   spiritCue: _cue,
                   spiritCues: cues,
                   camera: _camera,
+                  onSpiritLongPress: rules.screen.tabs.spiritLongPressCustomize
+                      ? () => _push(context, const DecorateScreen())
+                      : null,
                   sceneBehind: [
                     if (firstSketch != null) _firstSign(stage, camp.firstSign),
-                    for (final o in camp.objects)
-                      if (shown.contains(o.id))
-                        o.id == campCartId
-                            ? _slotArt(stage, o, slots.cart!)
-                            : _objectArt(
-                                stage,
-                                o,
-                                hasNew: _hasNew(snap),
-                                noJourney: snap.journey == null,
-                              ),
-                  ],
-                  sceneBeside: [
-                    if ((slots.companion, camp.companion) case (final slot?, final seat?))
-                      _slotArt(stage, seat, slot),
+                    if (cart) _slotArt(stage, camp.objectOrNull(campCartId)!, slots.cart!),
                   ],
                   sceneAbove: [
-                    for (final id in camp.hitStack(shown))
-                      _hitBox(
-                        context,
-                        stage,
-                        // hitStack은 테마에 자리가 있는 물건만 준다
-                        camp.objectOrNull(id)!,
-                        ticket,
-                        id == campCompanionId
-                            ? slots.companion
-                            : id == campCartId
-                            ? slots.cart
-                            : null,
-                      ),
+                    if (cart) _hitBox(context, stage, camp.objectOrNull(campCartId)!, slots.cart!),
                   ],
                 ),
-              ),
-            ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(_hudInset),
-                child: Stack(
-                  children: [
-                    Align(
-                      alignment: Alignment.topLeft,
-                      child: CornerButton(
-                        icon: Icons.person,
-                        label: '나의 정보',
-                        radius: 18,
-                        onPressed: () => _push(context, const ProfileScreen()),
-                      ),
+              );
+            }),
+          ),
+          // 위 고정 줄: 럭 보석(왼쪽) + 쉬는 중 알약(가운데, 오른쪽 56pt를 비워 가운데처럼 보이게)
+          Positioned(
+            left: _hudSide + padding.left,
+            right: _hudSide + padding.right,
+            top: hudTop,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: _hudRow, child: _LuckGem(luck: luck, slot: slots.gem)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 56),
+                    child: Column(
+                      children: [
+                        SizedBox(height: _hudRow, child: Center(child: _StatusPill(_statusText(snap)))),
+                        if (scale != 1) _ScaleBadge(distanceScaleBadge(scale)),
+                      ],
                     ),
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: CornerButton(
-                        icon: Icons.settings,
-                        label: '설정',
-                        radius: 18,
-                        onPressed: () => _push(context, const SettingsScreen()),
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.topCenter,
-                      child: Padding(
-                        // 양쪽 모서리 버튼(56pt + 간격) 사이에 들어가게
-                        padding: const EdgeInsets.symmetric(horizontal: 72),
-                        child: IgnorePointer(
-                          ignoring: !trailOn,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (trailOn)
-                                _WalkingPill(onPressed: () => openWalking(Navigator.of(context)))
-                              else
-                                _StatusPill(_statusText(snap)),
-                              if (scale != 1) ...[
-                                const SizedBox(height: 6),
-                                _ScaleBadge(distanceScaleBadge(scale)),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // 럭 보석: 프로필 바로 아래, 첫날도 '0'으로 늘 보인다
-            Positioned(
-              left: 14,
-              top: padding.top + _hudInset + _hudButton + _gemGap,
-              child: _LuckGem(luck: luck, slot: slots.gem),
-            ),
-            if (firstSketch != null)
-              Positioned(
-                left: _hudInset,
-                right: _hudInset,
-                bottom: math.max(padding.bottom, _hintBottom),
-                child: IgnorePointer(
-                  child: Center(
-                    child: _WalkHint(key: const ValueKey('first-sketch-bubble'), sub: firstSketch),
                   ),
                 ),
-              ),
-            if (dayCard != null)
-              Positioned.fill(
-                child: DayCardOverlay(
-                  key: const ValueKey('rest-day-card'),
-                  card: dayCard,
-                  onClose: closeCard,
+              ],
+            ),
+          ),
+          // 오른쪽 세로 버튼 (캔버스 2-2: 오른쪽 12pt, 위 줄 아래 30pt(작은 폰 16pt), 간격 10)
+          Positioned(
+            right: _sideRight + padding.right,
+            top: hudTop + _hudRow + (small ? 16 : 30),
+            child: _SideButtons(buttons),
+          ),
+          if (firstSketch != null)
+            Positioned(
+              left: _hudSide,
+              right: _hudSide,
+              bottom: barSpace > 0 ? barSpace + _hintAboveBar : math.max(padding.bottom, _hintBottom),
+              child: IgnorePointer(
+                child: Center(
+                  child: _WalkHint(key: const ValueKey('first-sketch-bubble'), sub: firstSketch),
                 ),
               ),
-          ],
-        );
-      }),
+            ),
+        ],
       ),
     );
   }
 
-  /// 상태 알약 글 (물감 길이 닫혀 있을 때): ‘쉬는 중 · 목적지까지 n km’
+  /// 옆 버튼 [id] (config rest.sideButtons.items). 아직 열 화면이 없으면(쉼터 꾸미기, T15) null
+  _SideButtonSpec? _sideButton(BuildContext context, String id, Snapshot snap, bool shopDot) =>
+      switch (id) {
+        'map' => _SideButtonSpec(
+            id: id,
+            label: '지도',
+            // 여정이 없으면 점 (출발하기 버튼이 없어서 목적지를 고르는 곳을 알린다, 캔버스 2-2)
+            dot: snap.journey == null,
+            icon: const _SideImage('assets/backgrounds/v11/obj_rest_map_v11_clean.png', Icons.map_outlined),
+            onTap: () => _push(context, const MapScreen()),
+          ),
+        'backpack' => _SideButtonSpec(
+            id: id,
+            label: '배낭',
+            dot: _hasNew(snap),
+            icon: const _SideImage(
+                'assets/backgrounds/v11/obj_rest_backpack_v11_clean.png', Icons.backpack_outlined),
+            onTap: () => _push(context, const AlbumScreen()),
+          ),
+        // 상품이 없으면(수레 자리가 비면) 상점 입구를 숨긴다 (스키마 13장)
+        'shop' when ref.read(restSlotsProvider).cart != null => _SideButtonSpec(
+            id: id,
+            label: '상점',
+            dot: shopDot,
+            icon: const ShopCartArt(),
+            onTap: () => openShop(context),
+          ),
+        _ => null,
+      };
+
+  /// 상태 알약 글: ‘쉬는 중 · 목적지까지 n km’ (걷는 중에도 같다, 걷는 중은 걷기 탭 발자국이 알린다)
   String _statusText(Snapshot snap) {
     const state = '쉬는 중';
     final j = snap.journey;
@@ -366,60 +309,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     return '${formatKm(km)} · 약 ${formatInt(sketchSteps(km, rules))}보';
   }
 
-  /// 물건 그림 (장면 층, 정령 뒤). 누름 상자·이름표는 [_hitBox]가 맡는다
-  Widget _objectArt(
-    RestGeometry stage,
-    CampObject o, {
-    required bool hasNew,
-    bool noJourney = false,
-  }) {
-    final k = stage.k;
-    final sign = o.id == campGuestbookSignId;
-    final art = o.art;
-    return Positioned(
-      left: stage.sx(o.box.x),
-      top: stage.sy(o.box.y),
-      width: o.artW * k,
-      height: o.artH * k,
-      child: IgnorePointer(
-        child: PropWiggle(
-          key: ValueKey('wiggle-${sign ? _guestbookWiggleId : o.id}'),
-          wiggler: _wiggler,
-          id: sign ? _guestbookWiggleId : o.id,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              if (art != null)
-                Positioned.fill(
-                  child: _CampArtImage(art, fallback: _objectBox(o.artW * k, _iconOf(o.id))),
-                )
-              else
-                // TODO: 그림(ui_signpost)이 나오면 자리표시를 바꾼다
-                _objectBox(o.artW * k, _iconOf(o.id)),
-              if (o.id == 'backpack' && hasNew)
-                const Positioned(
-                  top: 4,
-                  right: 4,
-                  child: NoticeDot(key: ValueKey('backpack-dot')),
-                ),
-              // 여정이 없으면 지도에 점 (출발하기 버튼이 없어서 목적지를 고르는 곳을 알린다, 캔버스 2-2)
-              if (o.id == 'map' && noJourney)
-                const Positioned(
-                  top: 4,
-                  right: 4,
-                  child: NoticeDot(key: ValueKey('map-dot')),
-                ),
-              if (sign)
-                const Positioned(top: -4, right: -4, child: NoticeDot()),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 다른 트랙이 끼운 물건의 그림 (수레·동행). 알림 점까지 여기서 붙인다.
-  /// 흔들림은 [_wigglePool]이 고를 때만 (지금은 알림 점 있는 동행)
+  /// 다른 트랙이 끼운 물건의 그림 (수레). 알림 점은 옆 상점 버튼에 붙는다
   Widget _slotArt(RestGeometry stage, CampObject o, RestObjectSlot slot) {
     final k = stage.k;
     return Positioned(
@@ -432,14 +322,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
           key: ValueKey('wiggle-${o.id}'),
           wiggler: _wiggler,
           id: o.id,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned.fill(child: Builder(builder: slot.art)),
-              if (slot.notice)
-                Positioned(top: 4, right: 4, child: NoticeDot(key: ValueKey('${o.id}-dot'))),
-            ],
-          ),
+          child: Builder(builder: slot.art),
         ),
       ),
     );
@@ -458,17 +341,9 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     );
   }
 
-  /// 누름 상자와 이름표 (장면 맨 위). 쌓는 순서가 곧 겹칠 때 누름 순서다 (테마의 hitOrder)
-  Widget _hitBox(
-    BuildContext context,
-    RestGeometry stage,
-    CampObject o,
-    GuestbookTicket? ticket,
-    RestObjectSlot? slot,
-  ) {
+  /// 수레 누름 상자 (장면 맨 위, 이름표 없음: 상점 이름은 옆 버튼에 있다)
+  Widget _hitBox(BuildContext context, RestGeometry stage, CampObject o, RestObjectSlot slot) {
     final k = stage.k;
-    final sign = o.id == campGuestbookSignId;
-    final label = sign ? '방명록' : slot?.label ?? o.label;
     return Positioned(
       left: stage.sx(o.box.x),
       top: stage.sy(o.box.y),
@@ -476,90 +351,124 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
       height: o.box.h * k,
       child: Semantics(
         button: true,
-        label: label,
+        label: slot.label ?? o.label,
         excludeSemantics: true,
         child: GestureDetector(
-          key: ValueKey(sign ? 'signpost' : 'camp-object-${o.id}'),
+          key: ValueKey('camp-object-${o.id}'),
           behavior: HitTestBehavior.opaque,
-          onTap: () => slot != null
-              ? slot.onTap(context)
-              : _push(
-                  context,
-                  sign ? GuestbookWriteScreen(ticketId: ticket!.id) : _screenOf(o.id),
-                ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.topCenter,
-            children: [
-              Positioned(
-                top: o.labelTop * k,
-                child: _SceneLabel(label),
-              ),
-            ],
-          ),
+          onTap: () => slot.onTap(context),
         ),
       ),
     );
   }
-
-  /// 그림이 없을 때의 몸통: 카드색 바탕, 잉크 테두리, 가운데 아이콘
-  Widget _objectBox(double size, IconData icon) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: Palette.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Palette.ink, width: InkLine.panel),
-        ),
-        child: Icon(icon, size: size * 0.5, color: Palette.ink),
-      );
-
-  Widget _screenOf(String id) => switch (id) {
-        'map' => const MapScreen(),
-        'backpack' => const AlbumScreen(),
-        'note' => const NoteScreen(),
-        _ => throw StateError('알 수 없는 쉼터 물건: $id'),
-      };
-
-  IconData _iconOf(String id) => switch (id) {
-        'map' => Icons.map_outlined,
-        'backpack' => Icons.backpack_outlined,
-        campGuestbookSignId => Icons.edit_note_outlined,
-        _ => Icons.menu_book_outlined,
-      };
 }
 
-/// 물건 그림: 파일의 투명 여백을 뺀 상자가 이 위젯 크기에 맞는다. 화면에 필요한 크기로만 푼다
-class _CampArtImage extends StatelessWidget {
-  const _CampArtImage(this.art, {required this.fallback});
+/// 옆 버튼 오른쪽 여백 (캔버스 2-2 right 12)
+const _sideRight = 12.0;
 
-  final CampArt art;
-  final Widget fallback;
+/// 옆 버튼 하나의 값
+class _SideButtonSpec {
+  const _SideButtonSpec({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.dot = false,
+  });
+
+  final String id;
+  final String label;
+  final Widget icon;
+  final VoidCallback onTap;
+  final bool dot;
+}
+
+/// 오른쪽 세로 버튼 줄 (캔버스 2-2 .side: 56pt 둥근 네모 + 아래 이름표, 간격 10)
+class _SideButtons extends StatelessWidget {
+  const _SideButtons(this.buttons);
+
+  final List<_SideButtonSpec> buttons;
+
+  static const _box = 56.0;
+  static const _gap = 10.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: '쉼터 메뉴',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (i, b) in buttons.indexed) ...[
+            if (i > 0) const SizedBox(height: _gap),
+            Semantics(
+              button: true,
+              label: b.dot ? '${b.label} (새 소식 있음)' : b.label,
+              excludeSemantics: true,
+              child: GestureDetector(
+                key: ValueKey('rest-side-${b.id}'),
+                behavior: HitTestBehavior.opaque,
+                onTap: b.onTap,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: _box,
+                      height: _box,
+                      decoration: BoxDecoration(
+                        color: Palette.card,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Palette.ink, width: InkLine.panel),
+                        boxShadow: const [
+                          BoxShadow(color: Palette.shadow, offset: Offset(0, InkLine.shadow)),
+                        ],
+                      ),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Positioned.fill(
+                            child: Padding(padding: const EdgeInsets.all(6), child: b.icon),
+                          ),
+                          if (b.dot)
+                            Positioned(
+                              right: -4,
+                              top: -4,
+                              child: NoticeDot(key: ValueKey('rest-side-${b.id}-dot')),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    _SceneLabel(b.label),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 옆 버튼 그림 자리: 쉼터 물건 그림을 줄인 것 (Codex camp_deco_v01 T04 아이콘이 오면 바꾼다).
+/// 그림을 못 읽으면 아이콘
+class _SideImage extends StatelessWidget {
+  const _SideImage(this.file, this.fallback);
+
+  final String file;
+  final IconData fallback;
 
   @override
   Widget build(BuildContext context) {
     final ratio = MediaQuery.devicePixelRatioOf(context);
-    return LayoutBuilder(builder: (context, box) {
-      final sx = box.maxWidth / art.bbox[2];
-      final sy = box.maxHeight / art.bbox[3];
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: -art.bbox[0] * sx,
-            top: -art.bbox[1] * sy,
-            width: art.canvas[0] * sx,
-            height: art.canvas[1] * sy,
-            child: Image.asset(
-              art.file,
-              fit: BoxFit.fill,
-              cacheWidth: (art.canvas[0] * sx * ratio).ceil(),
-              errorBuilder: (_, error, stack) => fallback,
-            ),
-          ),
-        ],
-      );
-    });
+    return Image.asset(
+      file,
+      fit: BoxFit.contain,
+      cacheWidth: (44 * ratio).ceil(),
+      errorBuilder: (_, _, _) => Icon(fallback, color: Palette.ink, size: 28),
+    );
   }
 }
 
@@ -662,74 +571,6 @@ class _GemPlaceholder extends StatelessWidget {
         decoration: BoxDecoration(
           color: Palette.card,
           borderRadius: BorderRadius.circular(4),
-        ),
-      ),
-    );
-  }
-}
-
-/// 물감 길이 열려 있을 때 위 가운데 알약 (캔버스 2-2 11/16): [지금 물감 색 점] **걷는 중** · 물감 길 1.2km ›.
-/// 높이 44pt 이상, 누르면 걷는 중. 거리는 이번 물감 길 숫자(걷는 중 화면과 같은 값, 이정표를 넘길 때마다 새로)
-class _WalkingPill extends ConsumerWidget {
-  const _WalkingPill({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  /// 물감 색 점 지름
-  static const _dot = 8.0;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // 이정표 거리를 넘기거나 기록을 새로 받을 때마다 다시 읽는다 (몇 초마다). 점 = 그 물감 길이 지금 칠하는 색
-    final current =
-        ref.watch(paintTrailProvider.select((s) => (s.flushes, s.refreshes, s.paintColorId))).$3;
-    final summary = ref.read(paintTrailProvider.notifier).summaryAt(ref.read(clockProvider)());
-    final km = formatKmShort(summary?.distanceM ?? 0);
-    final pc = ref.watch(rulesProvider).value?.paintColor;
-    final dot = Color(pc == null ? Palette.terracotta.toARGB32() : pc.hexOf(current ?? pc.defaultId));
-    final style = context.display(13);
-    return Semantics(
-      button: true,
-      label: '걷는 중으로 돌아가기, 물감 길 $km',
-      excludeSemantics: true,
-      child: GestureDetector(
-        key: const ValueKey('rest-walking-pill'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.fromLTRB(10, 0, 14, 0),
-          decoration: BoxDecoration(
-            color: Palette.card.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Palette.ink, width: InkLine.panel),
-            boxShadow: const [BoxShadow(color: Palette.shadow, offset: Offset(0, InkLine.shadow))],
-          ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  key: const ValueKey('rest-walking-dot'),
-                  width: _dot,
-                  height: _dot,
-                  decoration: BoxDecoration(
-                    color: dot,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Palette.ink, width: 1),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text('걷는 중', style: style.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(width: 6),
-                Text('· 물감 길 $km', key: const ValueKey('rest-walking-km'),
-                    style: style.copyWith(color: Palette.subInk)),
-                const SizedBox(width: 6),
-                const Icon(Icons.chevron_right, size: 16, color: Palette.ink),
-              ],
-            ),
-          ),
         ),
       ),
     );

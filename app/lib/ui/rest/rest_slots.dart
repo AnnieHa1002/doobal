@@ -2,10 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/catalog_providers.dart';
-import '../companion/companion_slot.dart';
 import '../shop/shop_slots.dart';
 
-/// 쉼터 장면에 끼우는 물건 하나 (행상 수레·불 옆 동행). 자리와 크기는 테마(camp_wide.json)가 정한다
+/// 쉼터 장면에 끼우는 물건 하나 (행상 수레). 자리와 크기는 테마(camp_wide.json)가 정한다
 class RestObjectSlot {
   const RestObjectSlot({required this.art, required this.onTap, this.label, this.notice = false});
 
@@ -31,24 +30,18 @@ class RestGemSlot {
   final void Function(BuildContext context)? onTap;
 }
 
-/// 쉼터가 다른 트랙에 열어 둔 자리. T4b는 [cart]·[gem], T2b는 [companion]을 채운다.
+/// 쉼터가 다른 트랙에 열어 둔 자리. T4b가 [cart]·[gem]을 채운다 (불 옆 동행은 16장 11/18부터 걷기 탭에만).
 /// 쉼터 코드는 고치지 않고 [restSlotsProvider]에서 각 트랙의 프로바이더를 읽으면 된다
 class RestSlots {
-  const RestSlots({this.cart, this.companion, this.gem = const RestGemSlot()});
+  const RestSlots({this.cart, this.gem = const RestGemSlot()});
 
-  /// 행상 수레. 없으면 그 자리는 빈 땅이다
+  /// 행상 수레(옆 상점 버튼의 알림 점도 이 [RestObjectSlot.notice]). 없으면 수레도 상점 버튼도 없다
   final RestObjectSlot? cart;
-
-  /// 불 옆 동행. 없으면 빈자리다 (첫날)
-  final RestObjectSlot? companion;
   final RestGemSlot gem;
 }
 
 final restSlotsProvider = Provider<RestSlots>((ref) {
-  final companion = ref.watch(companionRestSlotProvider);
-  // 상품이 없으면 상점 입구를 숨긴다 (스키마 13장). 동행은 그대로
+  // 상품이 없으면 상점 입구를 숨긴다 (스키마 13장)
   final noShop = ref.watch(shopCatalogProvider).value?.items.isEmpty ?? false;
-  return noShop
-      ? RestSlots(companion: companion)
-      : RestSlots(cart: ref.watch(shopCartSlotProvider), companion: companion, gem: shopGemSlot);
+  return noShop ? const RestSlots() : RestSlots(cart: ref.watch(shopCartSlotProvider), gem: shopGemSlot);
 });

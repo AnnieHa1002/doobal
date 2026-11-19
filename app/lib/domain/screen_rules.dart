@@ -8,6 +8,7 @@ class ScreenRules {
     required this.cartDotWhen,
     required this.landscapeScreens,
     required this.spirit,
+    this.tabs = TabRules.fallback,
   });
 
   /// [config]는 config.json 전체
@@ -27,8 +28,12 @@ class ScreenRules {
       cartDotWhen: dot['cartWhen'] as String?,
       landscapeScreens: {for (final s in orientation['landscape'] as List) s as String},
       spirit: SpiritStageRules.fromJson(rive),
+      tabs: TabRules.fromJson(config),
     );
   }
+
+  /// 아래 탭 바·쉼터 옆 버튼·걷기 탭 표지판 (16장 11/18·11/19)
+  final TabRules tabs;
 
   /// 새 소식 점이 붙는 자리 (ui.newDot.on: backpack·companion·cart). 노트에는 없다
   final Set<String> newDots;
@@ -49,6 +54,105 @@ class ScreenRules {
 
 /// ui.newDot.on에 올 수 있는 자리
 const newDotPlaces = {'backpack', 'companion', 'cart'};
+
+/// 아래 탭 (config ui.tabs.items). 순서가 탭 바의 왼쪽부터다
+const tabIds = {'rest', 'walk', 'me'};
+
+/// 쉼터 옆 세로 버튼 (config rest.sideButtons.items)
+const sideButtonIds = {'map', 'backpack', 'shop', 'decorate'};
+
+/// 걷기 탭 아이콘에 점을 붙이는 일 (config ui.tabs.dots.walk)
+const walkDotKinds = {'companionStory', 'guestbookSign'};
+
+/// 화면 3탭 (16장 11/18 ①④⑤⑥·11/19, config ui.tabs·rest.sideButtons·guestbook.sign, M2~M6 AB·AC).
+/// 걸어도 탭은 저절로 바뀌지 않는다 (ui.tabs.autoSwitch false만 안다)
+class TabRules {
+  const TabRules({
+    required this.items,
+    required this.labels,
+    required this.openTo,
+    required this.landscapeHidesBar,
+    required this.walkDots,
+    required this.sideButtons,
+    required this.signScreenX,
+    required this.spiritLongPressCustomize,
+  });
+
+  /// [config]는 config.json 전체
+  factory TabRules.fromJson(Map<String, dynamic> config) {
+    final tabs = (config['ui'] as Map<String, dynamic>)['tabs'] as Map<String, dynamic>;
+    final items = [for (final t in tabs['items'] as List) t as String];
+    if (items.toSet().length != items.length || !tabIds.containsAll(items) || items.length != tabIds.length) {
+      throw FormatException('ui.tabs.items는 rest·walk·me 한 번씩: $items');
+    }
+    if (tabs['autoSwitch'] != false) {
+      throw const FormatException('ui.tabs.autoSwitch는 false만 안다 (16장 11/18 ⑤)');
+    }
+    final labels = {
+      for (final e in (tabs['labels'] as Map<String, dynamic>).entries) e.key: e.value as String,
+    };
+    if (!labels.keys.toSet().containsAll(items)) throw FormatException('ui.tabs.labels가 모자라다: $labels');
+    final openTo = (tabs['openTo'] as Map<String, dynamic>)['value'] as String;
+    if (!items.contains(openTo)) throw FormatException('ui.tabs.openTo가 탭이 아니다: $openTo');
+    final dots = tabs['dots'] as Map<String, dynamic>? ?? const {};
+    final walkDots = {for (final d in dots['walk'] as List? ?? const []) d as String};
+    if (!walkDotKinds.containsAll(walkDots)) throw FormatException('ui.tabs.dots.walk에 모르는 점: $walkDots');
+    final side = (config['rest'] as Map<String, dynamic>)['sideButtons'] as Map<String, dynamic>;
+    final buttons = [for (final b in side['items'] as List) b as String];
+    if (!sideButtonIds.containsAll(buttons)) throw FormatException('rest.sideButtons.items에 모르는 버튼: $buttons');
+    final sign = (config['guestbook'] as Map<String, dynamic>?)?['sign'] as Map<String, dynamic>?;
+    final signX = (sign?['screenX'] as num?)?.toDouble() ?? fallback.signScreenX;
+    if (signX <= 0 || signX >= 1) throw FormatException('guestbook.sign.screenX는 0~1 사이: $signX');
+    final tap = (config['character'] as Map<String, dynamic>)['tapReaction'] as Map<String, dynamic>;
+    final long = tap['longPress'] as Map<String, dynamic>?;
+    return TabRules(
+      items: items,
+      labels: labels,
+      openTo: openTo,
+      landscapeHidesBar: tabs['landscapeHidesBar'] as bool? ?? true,
+      walkDots: walkDots,
+      sideButtons: buttons,
+      signScreenX: signX,
+      spiritLongPressCustomize: long?['screen'] == 'rest' && long?['opens'] == 'customize',
+    );
+  }
+
+  /// config v30 값 (시험·옛 데이터에서 ScreenRules를 직접 만들 때)
+  static const fallback = TabRules(
+    items: ['rest', 'walk', 'me'],
+    labels: {'rest': '쉼터', 'walk': '걷기', 'me': '나'},
+    openTo: 'rest',
+    landscapeHidesBar: true,
+    walkDots: {'companionStory', 'guestbookSign'},
+    sideButtons: ['map', 'backpack', 'shop', 'decorate'],
+    signScreenX: 0.78,
+    spiritLongPressCustomize: true,
+  );
+
+  /// 탭 순서 (rest·walk·me)
+  final List<String> items;
+
+  /// 탭 이름 (쉼터·걷기·나)
+  final Map<String, String> labels;
+
+  /// 앱을 열 때의 탭 (가안 rest)
+  final String openTo;
+
+  /// 걷기 탭을 가로로 돌리면 탭 바를 숨긴다
+  final bool landscapeHidesBar;
+
+  /// 걷기 탭 아이콘에 점을 붙이는 일 (안 읽은 이야기·방명록 쓸 기회)
+  final Set<String> walkDots;
+
+  /// 쉼터 옆 세로 버튼 (위에서부터)
+  final List<String> sideButtons;
+
+  /// 걷기 탭 방명록 표지판의 왼쪽 끝 (화면 폭 비율, 캔버스 3-1 왼쪽 298/390)
+  final double signScreenX;
+
+  /// 쉼터에서 정령을 길게 누르면 정령 꾸미기 (config character.tapReaction.longPress, 16장 11/19 ③)
+  final bool spiritLongPressCustomize;
+}
 
 /// 정령 자세 번호와 화면별 자세 (config character.rive, 정령 계약 3장)
 class SpiritStageRules {

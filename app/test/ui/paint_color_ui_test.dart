@@ -211,7 +211,9 @@ void main() {
       await tester.pump(paintTrailTick);
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
     }
-    expect(find.byType(WalkingScreen), findsOneWidget);
+    // 걸어도 탭은 쉼터 그대로 (16장 11/18 ⑤). 물감·방울은 화면과 상관없이 물감 길이 칠한다
+    expect(find.byType(RestScreen), findsOneWidget);
+    expect(find.byType(WalkingScreen), findsNothing);
     for (var i = 0; i < 4; i++) {
       e.now = e.now.add(const Duration(seconds: 5));
       await tester.pump(paintTrailTick);

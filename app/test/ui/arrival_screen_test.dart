@@ -98,7 +98,8 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('걷는 중 진행이 100%가 되면 도착 화면으로 바뀌고 닫으면 쉼터 (한 번만, 계속 새로 읽어도)',
+    testWidgets('걷기 탭에서 진행이 100%가 되면 걷기 탭 안에 도착 화면(한 번만, 계속 새로 읽어도), '
+        '닫으면 쉼터 탭 (16장 11/18 ⑤)',
         (tester) async {
       final e = UiEnv();
       await e.seed(tester, () async {
@@ -123,8 +124,10 @@ void main() {
       }
       expect(find.byType(ArrivalScreen), findsOneWidget);
       await transition(tester);
-      // 걷는 중 화면은 도착 화면으로 바뀌어 사라졌다 (쌓이지 않는다)
-      expect(find.byType(WalkingScreen, skipOffstage: false), findsNothing);
+      // 도착 화면은 걷기 탭 안에서 걷는 중 위에 올라간다 (탭 바가 남는다, 쉼터 탭은 그대로 있다)
+      expect(find.byType(WalkingScreen, skipOffstage: false), findsOneWidget);
+      expect(find.byType(WalkingScreen), findsNothing);
+      expect(find.byKey(const ValueKey('tab-bar')), findsOneWidget);
       expect(find.byType(RestScreen, skipOffstage: false), findsOneWidget);
 
       // 갱신이 몇 번 더 돌아도 같은 여정을 또 올리지 않는다
@@ -136,13 +139,14 @@ void main() {
       }
       expect(find.byType(ArrivalScreen, skipOffstage: false), findsOneWidget);
 
-      // 닫으면 쉼터 (11/13: 걷기 기록을 거치지 않는다)
+      // 이 물감 길은 걸음이 멈춰(센서 걸음 없음) 도착 전에 끝났다: 도착으로 끝난 물감 길이 없어 걷기 기록 없이
+      // 쉼터 탭으로 (도착으로 끝난 물감 길이 있으면 걷기 기록 → 쉼터 탭, home_tabs_test)
       await tester.tap(find.byTooltip('닫기'));
       await transition(tester);
-      await settle(tester, () => find.byType(ArrivalScreen).evaluate().isEmpty);
+      await settle(tester, () => find.byType(RestScreen).evaluate().isNotEmpty, tries: 80);
       await transition(tester);
       expect(find.byType(ArrivalScreen, skipOffstage: false), findsNothing);
-      expect(find.byType(WalkRecordScreen), findsNothing);
+      expect(find.byType(WalkRecordScreen, skipOffstage: false), findsNothing);
       expect(find.byType(RestScreen), findsOneWidget);
       await settle(tester, () => false, tries: 4);
       final j = await _journey(tester, e, 'j${t1.millisecondsSinceEpoch}');
@@ -346,7 +350,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('닫기는 (걷다 온 게 아니면) 그냥 닫아 쉼터로 간다. 시스템 뒤로도 같다', (tester) async {
+    testWidgets('물감 길 없이 도착했으면 닫기는 걷기 기록 없이 첫 화면(탭 처음 화면)으로. 시스템 뒤로도 같다', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => e.insertArrival('j1', 'kr001', _day));
       await _openArrival(tester, e, 'j1');
@@ -367,7 +371,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('걷다 온 도착은 닫기·시스템 뒤로 모두 걷기 기록 없이 쉼터(첫 화면)로 돌아간다 (11/13)',
+    testWidgets('그 도착으로 끝난 물감 길이 없으면(앱 없이 걸어 도착) 닫기·시스템 뒤로 모두 걷기 기록 없이 첫 화면으로',
         (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => e.insertArrival('j1', 'kr001', _day));
@@ -375,7 +379,7 @@ void main() {
         await openOnTop(
           tester,
           e,
-          const ArrivalScreen(journeyId: 'j1', fromWalk: true),
+          const ArrivalScreen(journeyId: 'j1'),
           ready: () => _card.evaluate().isNotEmpty,
         );
         if (system) {

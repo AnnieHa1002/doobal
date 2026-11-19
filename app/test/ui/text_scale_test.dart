@@ -821,7 +821,8 @@ void main() {
   });
 
   group('걷는 중 걸음 알약', () {
-    // 화면 너비에서 양옆 20pt를 뺀 칸 (걷는 중 위쪽 UI의 칸). 쉼터 아이콘과 알약이 칸 안에 들어와야 한다
+    // 화면 너비에서 양옆 20pt를 뺀 칸 (걷는 중 위쪽 UI의 칸). 알약이 칸 안에 들어와야 한다
+    // (왼쪽 위 쉼터 아이콘은 16장 11/18 아래 탭 바로 대신해 없다)
     Future<void> openPill(WidgetTester tester, _Fit fit) async {
       phone(tester, width: fit.width, height: fit.height);
       await tester.pumpWidget(MaterialApp(
@@ -832,8 +833,6 @@ void main() {
               alignment: Alignment.topLeft,
               child: Row(
                 children: [
-                  RestButton(onPressed: () {}),
-                  const SizedBox(width: HudMetrics.restGap),
                   Flexible(
                     child: StepPill(steps: 12345, km: 12.34, running: true, onTap: () {}),
                   ),
@@ -846,12 +845,12 @@ void main() {
       await tester.pump();
     }
 
-    _scaleCases('쉼터 아이콘 + 걸음 알약', (tester, fit) async {
+    _scaleCases('걸음 알약', (tester, fit) async {
       await openPill(tester, fit);
       fit.check('걸음 알약');
       final pill = tester.getRect(find.byType(StepPill));
       // 칸(양옆 20pt)을 넘지 않는다. 글자가 커지면 안의 글이 줄어든다
-      expect(tester.getRect(find.byType(RestButton)).left, greaterThanOrEqualTo(20 - 0.01));
+      expect(pill.left, greaterThanOrEqualTo(20 - 0.01));
       expect(pill.right, lessThanOrEqualTo(fit.width - 20 + 0.01));
       expect(find.byKey(const Key('focus-badge')), findsNothing);
     });
