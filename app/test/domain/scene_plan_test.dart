@@ -5,9 +5,8 @@ import 'package:doobal/domain/scene_plan.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final plan = ScenePlan.fromJson(
-    jsonDecode(File('assets/data/scene.json').readAsStringSync()) as Map<String, dynamic>,
-  );
+  final scene = jsonDecode(File('assets/data/scene.json').readAsStringSync()) as Map<String, dynamic>;
+  final plan = ScenePlan.fromJson(scene);
   final assets = (jsonDecode(File('assets/data/scene_art.json').readAsStringSync()) as Map)['assets'] as Map;
   // scene.json은 납품 PNG 이름, scene_art.json은 앱에 넣은 파일(WebP)
   final files = {
@@ -22,10 +21,8 @@ void main() {
       expect(plan.front.speed, 0.3);
       expect(plan.back.speed, 0.2);
       expect(plan.front.feetY, 2081);
-      expect(plan.back.feetY, 1780);
+      expect(plan.back.feetY, 1880); // 11/19 들판 선 (전 1780)
       expect(plan.back.haze, 0.25);
-      expect(plan.tallClearX, 140);
-      expect(plan.tallNearOpacity, 0.35);
       expect(plan.grovePieces.length, 9);
       expect(plan.roadsidePieces.length, 14);
     });
@@ -151,27 +148,13 @@ void main() {
     });
   });
 
-  group('키 큰 조각 흐리기', () {
-    double op(double left, double right) => ScenePlan.tallOpacity(
-          left: left,
-          right: right,
-          center: 585,
-          clear: 140,
-          near: 0.35,
-          fade: 80,
-        );
+  test('키 큰 조각을 흐리는 값이 없다 (16장 11/19 Annie: 장면 물체는 어떤 경우에도 투명하게 하지 않음)', () {
+    final roadside = (scene['layout'] as Map)['roadside'] as Map;
+    expect(roadside.containsKey('tallNearCharacterOpacity'), isFalse);
+    expect(roadside.containsKey('tallFadePx'), isFalse);
+  });
 
-    test('정령 상자(445~725)에 걸치면 0.35', () {
-      expect(op(600, 700), 0.35);
-      expect(op(100, 445), 0.35);
-      expect(op(725, 900), 0.35);
-    });
-
-    test('멀리 있으면 1, 사이는 부드럽게', () {
-      expect(op(900, 1000), 1);
-      expect(op(100, 300), 1);
-      expect(op(765, 900), closeTo(0.35 + 0.65 * 0.5, 1e-9));
-      expect(op(100, 405), closeTo(0.35 + 0.65 * 0.5, 1e-9));
-    });
+  test('뒤쪽 줄 발은 들판 선(meadow.portraitY 1880, 16장 11/19)', () {
+    expect(plan.back.feetY, ((scene['meadow'] as Map)['portraitY'] as num).toDouble());
   });
 }

@@ -101,9 +101,6 @@ class ScenePlan {
     required this.bigHeight,
     required this.smallHeight,
     required this.backScale,
-    required this.tallClearX,
-    required this.tallNearOpacity,
-    required this.tallFadePx,
     required this.regionTags,
   });
 
@@ -121,13 +118,6 @@ class ScenePlan {
 
   /// 뒷줄은 앞줄 높이의 이 비율
   final List<double> backScale;
-
-  /// 키 큰 조각이 흐려지는 정령 중심 ± 폭 (기준 화면 px)
-  final double tallClearX;
-  final double tallNearOpacity;
-
-  /// 흐려지기 시작하는 곳까지의 폭 (기준 화면 px)
-  final double tallFadePx;
 
   /// 지역 → 태그
   final Map<String, List<String>> regionTags;
@@ -200,22 +190,6 @@ class ScenePlan {
     };
   }
 
-  /// 키 큰 조각의 불투명도. 왼쪽·오른쪽 끝이 [left]·[right]인 조각이 중심 [center] ± [clear] 안이면
-  /// [near], [fade]만큼 떨어진 곳에서 1로 부드럽게 올라간다
-  static double tallOpacity({
-    required double left,
-    required double right,
-    required double center,
-    required double clear,
-    required double near,
-    required double fade,
-  }) {
-    final gap = math.max(left - (center + clear), (center - clear) - right);
-    if (gap <= 0) return near;
-    if (fade <= 0 || gap >= fade) return 1;
-    return near + (1 - near) * (gap / fade);
-  }
-
   factory ScenePlan.fromJson(Map<String, dynamic> scene) {
     final pieces = scene['pieces'] as Map<String, dynamic>;
     final layout = scene['layout'] as Map<String, dynamic>;
@@ -257,9 +231,6 @@ class ScenePlan {
       bigHeight: _pair(front['bigHeightPx']),
       smallHeight: _pair(front['smallHeightPx']),
       backScale: _pair(back['scaleOfFront']),
-      tallClearX: _d(roadside['tallObjectClearX']),
-      tallNearOpacity: _d(roadside['tallNearCharacterOpacity']),
-      tallFadePx: _d(roadside['tallFadePx']),
       regionTags: {
         for (final e in backdrops.entries)
           e.key: ((e.value as Map)['tags'] as List).cast<String>(),

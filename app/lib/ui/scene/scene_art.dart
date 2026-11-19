@@ -560,6 +560,15 @@ class SceneArtLayout {
 
   /// 땅·길 그림 배율 (가로 화면은 줄인다). 땅 1m의 화면 길이 = groundPxPerM × [scale] × 이것
   double get groundScale => size.width > size.height ? .78 : 1;
+
+  /// 장면 조각 줄 [row]의 발 y(화면). [feetY]는 scene.json의 세로 그림 px이고, 가로 화면은 땅 그림을 줄인 만큼
+  /// ([groundScale]) 줄여 놓는다. 뒤쪽 줄은 들판 윗선(meadowY)을, 군락·앞쪽 줄은 땅(groundY)을 기준으로 놓는다
+  /// (16장 11/19: 뒤쪽 줄 발을 들판 선에 맞춤. 세로·가로 모두 feetY = meadow.portraitY면 들판 윗선에 선다)
+  double rowFeetY(SceneRow row, double feetY) {
+    final portrait = art.data['portrait'] as Map<String, dynamic>;
+    final anchor = row == SceneRow.back ? 'meadowY' : 'groundY';
+    return y(n(anchor) + (feetY - (portrait[anchor] as num).toDouble()) * groundScale);
+  }
   Offset get foot {
     if (restK != null) {
       final c = camp!.character;
