@@ -42,9 +42,10 @@ badges = load('badges.json')
 scene = load('scene.json')
 
 # 1. 상점 ↔ 소품
+# 16장 11/19: 탭 대신 분류(category) 하나 — shop v7~
 for it in shop['items']:
-    if it['tab'] not in shop['tabs']:
-        err(f"shop {it['id']}: 모르는 탭 {it['tab']}")
+    if it.get('category') not in shop['categories']:
+        err(f"shop {it['id']}: 모르는 분류 {it.get('category')}")
     if pid := it.get('propId'):
         p = props.get(pid)
         if not p:
@@ -295,6 +296,87 @@ art_doc = load('scene_art.json')
 for o in ('portrait', 'landscape'):
     if art_doc[o].get('figureHeight') != config['character']['canvas']['screenHeightPx'][o]:
         err(f"정령 화면 키: scene_art {o}.figureHeight ≠ config character.canvas.screenHeightPx.{o}")
+
+# 11/19 밤(data-v14): 무늬(trails.json)·물감 통·상점 미니 친구·시작 선물·쉼터 물품
+trails = load('trails.json')
+trail_ids = {t['id']: t for t in trails['patterns']}
+if trails.get('default') not in trail_ids:
+    err(f"trails default {trails.get('default')}가 patterns에 없음")
+pp = config.get('paintPattern', {})
+if pp.get('default') != trails.get('default'):
+    err("config paintPattern.default ≠ trails.json default")
+kms = [t['unlock']['km'] for t in trails['patterns'] if t['unlock']['kind'] == 'trailKm']
+if kms != sorted(kms) or len(set(kms)) != len(kms):
+    err(f"trails 거리 보상 {kms}가 오름차순·서로 다름이 아님")
+for it in shop['items']:
+    if it.get('slot') == 'trail':
+        t = trail_ids.get(it.get('trailId'))
+        if not t:
+            err(f"shop {it['id']}: trails에 없는 무늬 {it.get('trailId')}")
+        elif t['unlock'].get('shopPrice') != it['price'] or t['name'] != it['name']:
+            err(f"shop {it['id']}: 값·이름이 trails.json과 다름")
+for tid, t in trail_ids.items():
+    if t['unlock'].get('shopPrice') and tid not in {it.get('trailId') for it in shop['items']}:
+        err(f"trails {tid}: shopPrice가 있는데 shop.json에 없음")
+cart = config['shop']['cart']
+kinds = [k for b in cart['kindsByKm'] for k in b['kinds']]
+known_kinds = set(props_doc['slots']) | {'decor', 'boat', 'trail', 'paintTube'}
+for k in kinds:
+    if k not in known_kinds:
+        err(f"config shop.cart.kindsByKm: 모르는 종류 {k}")
+if len(set(kinds)) != len(kinds):
+    err("config shop.cart.kindsByKm: 같은 종류가 두 묶음에")
+for it in shop['items']:
+    if it.get('category') == 'travel':
+        continue
+    k = it.get('slot') or it.get('category')
+    if k not in kinds:
+        err(f"shop {it['id']}: 수레 종류 {k}가 kindsByKm에 없음(수레에 안 나옴)")
+    if it.get('consumable'):
+        if k not in cart.get('consumableKinds', []):
+            err(f"shop {it['id']}: 소모품인데 consumableKinds에 없음")
+        c = it.get('cart', {})
+        if not (0 < c.get('chancePerDay', 0) <= 1) or c.get('maxPerDay', 0) < 1:
+            err(f"shop {it['id']}: cart.chancePerDay(0~1]·maxPerDay ≥ 1 아님")
+        if it.get('paint', {}).get('tubes', 0) < 1:
+            err(f"shop {it['id']}: paint.tubes ≥ 1 아님")
+shop_pets = [p for p in mvp.values() if p.get('shopPet')]
+for p in shop_pets:
+    if p['slot'] != 'pet' or p['unlock']['kind'] != 'shop':
+        err(f"props {p['id']}: 상점 미니 친구인데 slot pet·unlock shop이 아님")
+    if p.get('stance') not in ('float', 'ground'):
+        err(f"props {p['id']}: stance가 float·ground가 아님")
+if len(shop_pets) != 8:
+    warn(f"상점 미니 친구 {len(shop_pets)}종(16장 11/19: 8종, 12/19 점검에서 4종만이면 나머지 status later)")
+gift = config.get('maker', {}).get('startGift', {})
+if gift:
+    g = props.get(gift.get('prop'))
+    if not g or g['unlock']['kind'] != 'gift' or g['status'] != 'mvp':
+        err(f"config maker.startGift {gift.get('prop')}: props에 unlock gift mvp 소품이 아님")
+for p in mvp.values():
+    if p['unlock']['kind'] == 'gift' and p['id'] != gift.get('prop'):
+        err(f"props {p['id']}: unlock gift인데 maker.startGift가 아님")
+n_props = len([p for p in mvp.values() if 'variantOf' not in p and p['slot'] != 'effect'])
+if n_props != 46:
+    warn(f"MVP 소품(색 소품·꾸밈 효과 빼고) {n_props}개 ≠ 기준 문서 7장 46")
+decor = load('decor.json')
+decor_ids = {d['id']: d for d in decor['items']}
+for it in shop['items']:
+    if did := it.get('decorId'):
+        d = decor_ids.get(did)
+        if not d:
+            err(f"shop {it['id']}: decor.json에 없는 물품 {did}")
+        elif d['unlock'].get('price') != it['price'] or d['name'] != it['name']:
+            err(f"shop {it['id']}: 값·이름이 decor.json과 다름")
+for did, d in decor_ids.items():
+    if d['unlock']['kind'] == 'shop' and did not in {it.get('decorId') for it in shop['items']}:
+        err(f"decor {did}: 상점 물품인데 shop.json에 없음")
+for c in companions['companions']:
+    if len(c.get('restLines', [])) != config['companions']['finaleRoam']['tap']['linesPerCompanion']:
+        err(f"companions {c['id']}: restLines 수 ≠ config finaleRoam.tap.linesPerCompanion")
+wp = config['character']['rive'].get('walkPlayback', {})
+if not (0 < wp.get('min', 0) <= wp.get('max', 0)) or wp.get('refStepsPerMin', 0) <= 0:
+    err("character.rive.walkPlayback: refStepsPerMin > 0, 0 < min ≤ max 아님")
 
 for w in warns:
     print('경고:', w)

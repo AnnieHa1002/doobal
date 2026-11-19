@@ -1,5 +1,5 @@
 {
- "version": 8,
+ "version": 9,
  "slots": [
   "hat",
   "face",
@@ -606,6 +606,158 @@
    }
   },
   {
+   "id": "pet_06",
+   "slot": "pet",
+   "name": "파랑새",
+   "unlock": {
+    "kind": "shop",
+    "price": 500
+   },
+   "status": "mvp",
+   "shopPet": true,
+   "stance": "float",
+   "icon": "item_pet_bluebird_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 6,
+    "color": "bluebirdFriendColor",
+    "pending": true
+   }
+  },
+  {
+   "id": "pet_07",
+   "slot": "pet",
+   "name": "카나리아",
+   "unlock": {
+    "kind": "shop",
+    "price": 500
+   },
+   "status": "mvp",
+   "shopPet": true,
+   "stance": "float",
+   "icon": "item_pet_canary_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 7,
+    "color": "canaryFriendColor",
+    "pending": true
+   }
+  },
+  {
+   "id": "pet_08",
+   "slot": "pet",
+   "name": "잠자리",
+   "unlock": {
+    "kind": "shop",
+    "price": 500
+   },
+   "status": "mvp",
+   "shopPet": true,
+   "stance": "float",
+   "icon": "item_pet_dragonfly_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 8,
+    "color": "dragonflyFriendColor",
+    "pending": true
+   }
+  },
+  {
+   "id": "pet_09",
+   "slot": "pet",
+   "name": "도깨비불",
+   "unlock": {
+    "kind": "shop",
+    "price": 500
+   },
+   "status": "mvp",
+   "shopPet": true,
+   "stance": "float",
+   "icon": "item_pet_wisp_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 9,
+    "color": "wispFriendColor",
+    "pending": true
+   }
+  },
+  {
+   "id": "pet_10",
+   "slot": "pet",
+   "name": "꼬마 인삼",
+   "unlock": {
+    "kind": "shop",
+    "price": 500
+   },
+   "status": "mvp",
+   "shopPet": true,
+   "stance": "ground",
+   "icon": "item_pet_ginseng_kid_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 10,
+    "color": "ginsengKidFriendColor",
+    "pending": true
+   }
+  },
+  {
+   "id": "pet_11",
+   "slot": "pet",
+   "name": "두더지",
+   "unlock": {
+    "kind": "shop",
+    "price": 500
+   },
+   "status": "mvp",
+   "shopPet": true,
+   "stance": "ground",
+   "icon": "item_pet_mole_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 11,
+    "color": "moleFriendColor",
+    "pending": true
+   }
+  },
+  {
+   "id": "pet_12",
+   "slot": "pet",
+   "name": "고슴도치",
+   "unlock": {
+    "kind": "shop",
+    "price": 500
+   },
+   "status": "mvp",
+   "shopPet": true,
+   "stance": "ground",
+   "icon": "item_pet_hedgehog_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 12,
+    "color": "hedgehogFriendColor",
+    "pending": true
+   }
+  },
+  {
+   "id": "pet_13",
+   "slot": "pet",
+   "name": "너구리",
+   "unlock": {
+    "kind": "shop",
+    "price": 500
+   },
+   "status": "mvp",
+   "shopPet": true,
+   "stance": "ground",
+   "icon": "item_pet_raccoon_dog_v01",
+   "rive": {
+    "choice": "petChoice",
+    "n": 13,
+    "color": "raccoonDogFriendColor",
+    "pending": true
+   }
+  },
+  {
    "id": "hand_05",
    "slot": "float",
    "name": "연잎",
@@ -684,6 +836,26 @@
     "n": 1,
     "color": "starLanternColor"
    }
+  },
+  {
+   "id": "float_04",
+   "slot": "float",
+   "name": "물빛 구슬",
+   "unlock": {
+    "kind": "gift",
+    "on": "spiritMakerDone"
+   },
+   "equipOnStart": true,
+   "status": "mvp",
+   "icon": "ui_icon_float_04_v01",
+   "rive": {
+    "choice": "floatChoice",
+    "n": 6,
+    "color": "waterBeadFloatColor",
+    "pending": true,
+    "note": "codex_trail_patterns_gift_v01 T05: 둥실 다음 빈 번호 가안 6, Color 입력 이름은 가안 — riv 납품 README로 고침"
+   },
+   "nameDraft": true
   },
   {
    "id": "effect_01",
@@ -833,7 +1005,7 @@
    "status": "pending"
   },
   {
-   "id": "pet_06",
+   "id": "evt_pet_01",
    "slot": "pet",
    "name": "다람쥐",
    "unlock": {
@@ -841,10 +1013,11 @@
     "terrain": "mountain",
     "dayNight": "day"
    },
-   "status": "pending"
+   "status": "pending",
+   "oldId": "pet_06"
   },
   {
-   "id": "pet_07",
+   "id": "evt_pet_02",
    "slot": "pet",
    "name": "길고양이",
    "unlock": {
@@ -852,10 +1025,11 @@
     "terrain": "city",
     "dayNight": "day"
    },
-   "status": "pending"
+   "status": "pending",
+   "oldId": "pet_07"
   },
   {
-   "id": "pet_08",
+   "id": "evt_pet_03",
    "slot": "pet",
    "name": "반딧불이",
    "unlock": {
@@ -864,7 +1038,8 @@
     "season": "summer",
     "dayNight": "night"
    },
-   "status": "pending"
+   "status": "pending",
+   "oldId": "pet_08"
   },
   {
    "id": "hat_03",
@@ -1370,5 +1545,6 @@
     "color": "brownShoesColor"
    }
   }
- ]
+ ],
+ "changes": "v9(11/19 밤 개발 기획, 16장 11/19 상점 미니 친구 8종·꾸밈 제안 세부·상점 무늬·물감·선물 이름): 상점 미니 친구 8종 pet_06~13(Rive petChoice 6~13·Color 입력 이름은 codex_shop_mini_friends_v01 6장, 500 럭 가안), 이전 pending 이벤트 미니 친구 pet_06~08(다람쥐·길고양이·반딧불이)은 id를 evt_pet_01~03으로 옮김(출시 후 후보, 그림·코드 없음), 시작 선물 둥실 float_04 ‘물빛 구슬’(이름 기획 가안, unlock gift·equipOnStart, Rive floatChoice 6 가안 — riv 납품 뒤 실제 빈 번호로). 물감 길 무늬 3종은 소품이 아니라 trails.json. 이 파일은 리포 main의 props v8(rive.riveVerified·unusedChoices 포함)을 기준으로 함 — 프로젝트 사본 v8은 그 두 키가 빠진 옛 사본이었음"
 }
