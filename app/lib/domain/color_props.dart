@@ -49,10 +49,11 @@ List<ShopItem> colorShopItems(List<Prop> props) => [
           .indexed)
         ShopItem(
           id: p.id,
-          tab: ShopTab.prop,
+          category: ShopCategory.prop,
           name: p.name,
           price: p.price!,
           order: i + 1,
+          slot: p.slot,
           propId: p.id,
           requires: p.requires ?? p.variantOf,
         ),

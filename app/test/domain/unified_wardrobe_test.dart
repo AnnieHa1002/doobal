@@ -19,13 +19,31 @@ const _rigColors = [
   'starLanternColor', 'lotusLeafFloatColor', 'smallMoonFloatColor', 'floatCloudColor', 'floatBalloonColor',
 ];
 
+/// props.json에서 `rive.pending`인 소품: riv 납품 전이라 코드 표(unifiedProps)에 아직 없다 (props v9)
+Set<String> _rivePending() {
+  final raw = jsonDecode(File('assets/data/props.json').readAsStringSync()) as Map<String, dynamic>;
+  return {
+    for (final m in (raw['props'] as List).cast<Map<String, dynamic>>())
+      if ((m['rive'] as Map?)?['pending'] == true) m['id'] as String,
+  };
+}
+
 void main() {
   // 11/12 통합 작업의 표(unified_wardrobe.dart)가 v32 Rive 소스 시험 버튼 이름과 맞는지 (11/13 대조)
   group('소품 → Rive 칸·번호·색 (unifiedProps)', () {
-    final mvp = [for (final p in props) if (!p.isColorVariant && p.slot != 'effect') p];
+    final pending = _rivePending();
+    final mvp = [
+      for (final p in props)
+        if (!p.isColorVariant && p.slot != 'effect' && !pending.contains(p.id)) p,
+    ];
     final byId = {for (final u in unifiedProps) u.id: u};
 
-    test('효과 말고 모든 소품(37)이 자기 칸에 있다', () {
+    test('riv 납품 전 소품은 상점 미니 친구 8(petChoice 6~13)과 물빛 구슬(floatChoice 6)뿐이고 코드 표에 없다', () {
+      expect(pending, {for (var n = 6; n <= 13; n++) 'pet_${n.toString().padLeft(2, '0')}', 'float_04'});
+      expect(pending.where(byId.containsKey), isEmpty);
+    });
+
+    test('효과·riv 납품 전 말고 모든 소품(37)이 자기 칸에 있다', () {
       expect(mvp, hasLength(37));
       expect(byId.keys.toSet(), {for (final p in mvp) p.id});
       for (final p in mvp) {
@@ -56,7 +74,7 @@ void main() {
       final withRive = <String>{};
       for (final m in (raw['props'] as List).cast<Map<String, dynamic>>()) {
         final rive = m['rive'] as Map<String, dynamic>?;
-        if (rive == null) continue;
+        if (rive == null || rive['pending'] == true) continue;
         final base = byId[m['variantOf'] ?? m['id']];
         expect(base, isNotNull, reason: '${m['id']}: 코드 표에 없다');
         expect((rive['choice'], rive['n'], rive['color']), ('${base!.slot}Choice', base.choice, base.colorField),

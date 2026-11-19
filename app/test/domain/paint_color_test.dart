@@ -52,7 +52,8 @@ void main() {
       expect(_pc.backpack.order, PaintGroup.values);
       expect(_pc.backpack.recentCount, 3);
       expect(_pc.backpack.collapsible, isTrue);
-      expect(_pc.backpack.openOnStart, PaintOpenOnStart.currentSeason);
+      // v30: 처음에 모두 펼침 (v24는 지금 계절만)
+      expect(_pc.backpack.openOnStart, PaintOpenOnStart.all);
       expect((_pc.tubeRoadSprite, _pc.tubeIconSprite), ('ui_paint_tube_road_v01', 'ui_paint_tube_icon_v01'));
       // 지도 물감 길 테두리 (mapTrail.paint.border)
       expect((rules.mapTrail.borderColor, rules.mapTrail.borderAlpha, rules.mapTrail.borderExtraPt),

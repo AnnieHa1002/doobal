@@ -55,8 +55,8 @@ void main() {
       expect(screen.cartDotOnNewItem, isTrue);
     });
 
-    test('가로 화면은 걷는 중만', () {
-      expect(screen.landscapeScreens, {'walking'});
+    test('가로 화면은 걷는 중과 그림 크게 보기 (config v30, 16장 11/19. 크게 보기 잠금은 T18)', () {
+      expect(screen.landscapeScreens, {'walking', 'bigView'});
     });
 
     test('꾸미기 미리보기는 밀어서 정면·옆·뒤, 표정 단추 없음', () {
@@ -120,12 +120,12 @@ void main() {
   group('쉼터 자세 바꾸기 (config restSwap, 16장 11/11)', () {
     final swap = stage.restSwap;
 
-    test('config: 떠 있기 정면·앉기 정면·앉기 옆, 20~40초, 같은 자세 연속 없음, 밤 잠들기', () {
-      expect(swap.poses, [0, 2, 3]);
+    test('config: 떠 있기 정면·앉기 정면(v30 쉼터 정령 정면만, 16장 11/19), 20~40초, 같은 자세 연속 없음, 밤 잠들기', () {
+      expect(swap.poses, [0, 2]);
       expect((swap.minSec, swap.maxSec, swap.noRepeat, swap.night), (20, 40, true, 4));
     });
 
-    test('다음 자세는 지금과 다르고, 나머지 둘이 모두 나온다', () {
+    test('다음 자세는 지금과 다르고, 나머지가 모두 나온다', () {
       final random = Random(7);
       for (final now in swap.poses) {
         final seen = <int>{};
@@ -139,7 +139,7 @@ void main() {
       }
     });
 
-    test('처음(지금 자세 없음)에는 셋 중 아무거나, noRepeat가 꺼지면 같은 자세도 나온다', () {
+    test('처음(지금 자세 없음)에는 아무거나, noRepeat가 꺼지면 같은 자세도 나온다', () {
       final random = Random(3);
       expect({for (var i = 0; i < 200; i++) nextRestPose(swap, null, random)}, swap.poses.toSet());
       const loose = RestSwapRules(poses: [0, 2], minSec: 20, maxSec: 40, noRepeat: false, night: 4);

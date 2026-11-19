@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'color.dart';
 import 'format_int.dart';
 
-/// 소품 해금 조건. props.json의 unlock.kind (default는 예약어라 initial)
-enum PropUnlockKind { initial, distance, region, steps, companion, shop }
+/// 소품 해금 조건. props.json의 unlock.kind (default는 예약어라 initial).
+/// gift는 시작 선물(props v9 float_04 ‘물빛 구슬’, unlock.on spiritMakerDone): 정령 만들기를 마치면 입은 채 시작하는 것은 T17 몫이라
+/// 지금은 얻는 길이 없다
+enum PropUnlockKind { initial, distance, region, steps, companion, shop, gift }
 
 /// props.json의 소품 하나 (status mvp만 읽는다)
 class Prop {
@@ -82,6 +84,7 @@ class Prop {
         'steps' => PropUnlockKind.steps,
         'companion' => PropUnlockKind.companion,
         'shop' => PropUnlockKind.shop,
+        'gift' => PropUnlockKind.gift,
         final k => throw FormatException('모르는 소품 해금 조건: $k (${j['id']})'),
       },
       km: (u['km'] as num?)?.toDouble(),
@@ -133,7 +136,8 @@ List<Prop> parseProps(Map<String, dynamic> json) => [
 ];
 
 /// 지금 얻은 소품 id. 거리 소품은 걷는 중 화면에서 걸은 이동 거리(본격 걷기 보너스 포함, 배 구간 환산 아님)로 센다.
-/// 동료 소품은 동료 이야기를 마칠 때(M4), 상점 소품은 살 때(M4.5) 주므로 여기서 주지 않는다
+/// 동료 소품은 동료 이야기를 마칠 때(M4), 상점 소품은 살 때(M4.5) 주므로 여기서 주지 않는다.
+/// 시작 선물(gift)은 정령 만들기를 마칠 때 줄 것이라(T17) 여기서 주지 않는다
 Set<String> earnedPropIds(
   List<Prop> props,
   double totalKm,
@@ -147,7 +151,7 @@ Set<String> earnedPropIds(
         PropUnlockKind.distance => totalKm >= p.km!,
         PropUnlockKind.region => completedRegions.contains(p.region),
         PropUnlockKind.steps => totalSteps >= p.steps!,
-        PropUnlockKind.companion || PropUnlockKind.shop => false,
+        PropUnlockKind.companion || PropUnlockKind.shop || PropUnlockKind.gift => false,
       })
         p.id,
   };

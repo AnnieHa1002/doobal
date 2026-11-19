@@ -135,13 +135,20 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     if (camp == null || snap == null || snap.position == null) {
       return (all: const [], notice: const {});
     }
-    final sign = snap.guestbookTicket != null;
-    final companion = ref.read(restSlotsProvider).companion?.notice ?? false;
+    // 테마에 자리가 있는 물건만 (camp_wide v5는 수레만 남아 배낭·지도·노트·표지판·동행이 없다)
+    bool has(String id) => camp.objectOrNull(id) != null;
+    final sign = snap.guestbookTicket != null && has(campGuestbookSignId);
+    final companion = (ref.read(restSlotsProvider).companion?.notice ?? false) && has(campCompanionId);
     return (
-      all: [..._artObjects, if (sign) _guestbookWiggleId, if (companion) campCompanionId],
+      all: [
+        for (final id in _artObjects)
+          if (has(id)) id,
+        if (sign) _guestbookWiggleId,
+        if (companion) campCompanionId,
+      ],
       notice: {
-        if (_hasNew(snap)) 'backpack',
-        if (snap.journey == null) 'map',
+        if (_hasNew(snap) && has('backpack')) 'backpack',
+        if (snap.journey == null && has('map')) 'map',
         if (sign) _guestbookWiggleId,
         if (companion) campCompanionId,
       },
@@ -195,7 +202,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
             if (_artObjects.contains(o.id)) o.id,
           if (ticket != null) campGuestbookSignId,
           if (slots.cart != null) campCartId,
-          if (slots.companion != null) campCompanionId,
+          if (slots.companion != null && camp.companion != null) campCompanionId,
         };
         final padding = MediaQuery.viewPaddingOf(context);
         return Stack(
@@ -234,14 +241,16 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                               ),
                   ],
                   sceneBeside: [
-                    if (slots.companion case final slot?) _slotArt(stage, camp.companion, slot),
+                    if ((slots.companion, camp.companion) case (final slot?, final seat?))
+                      _slotArt(stage, seat, slot),
                   ],
                   sceneAbove: [
                     for (final id in camp.hitStack(shown))
                       _hitBox(
                         context,
                         stage,
-                        id == campCompanionId ? camp.companion : camp.object(id),
+                        // hitStack은 테마에 자리가 있는 물건만 준다
+                        camp.objectOrNull(id)!,
                         ticket,
                         id == campCompanionId
                             ? slots.companion

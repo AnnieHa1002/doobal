@@ -122,7 +122,7 @@ void main() {
       final slot = RestObjectSlot(art: (_) => const SizedBox(), onTap: (_) {});
       final c = ProviderContainer(overrides: [
         shopCatalogProvider.overrideWith(
-          (ref) => ShopCatalog(tabLabels: const {}, defaultBoat: 'boat_raft', items: const []),
+          (ref) => ShopCatalog(defaultBoat: 'boat_raft', items: const []),
         ),
         companionRestSlotProvider.overrideWithValue(slot),
       ]);

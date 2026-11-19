@@ -96,7 +96,8 @@ class _Env {
         boatCatalogProvider.overrideWith((ref) => boatCatalog),
         companionCatalogProvider.overrideWith((ref) => companionCatalog),
         noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
-        campThemeProvider.overrideWith((ref) => campTheme),
+        // 쉼터 물건(배낭·노트·지도)으로 들어가는 시험이라 옛 테마 v3 (T14 옆 버튼 전까지)
+        campThemeProvider.overrideWith((ref) => campThemeV3),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),
         spiritPaletteProvider.overrideWith((ref) => spiritPalette),

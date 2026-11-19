@@ -3,10 +3,25 @@ import 'gait.dart';
 import 'notification_policy.dart' show josa;
 import 'rules.dart';
 
-// 럭 상점 상품 (shop.json v4, M4.5): 여행 효과(소모품)·소품·꾸밈 효과·배. 값은 베타 뒤 조정
+// 럭 상점 상품 (shop.json v9, M4.5): 여행 효과(소모품)·소품·꾸밈 효과·배, v7부터 쉼터 꾸밈 물품, v9 미니 친구·무늬·물감 통.
+// 값은 베타 뒤 조정
 
-/// 상점 탭. travel은 소모품, effect는 꾸미기 효과 칸의 영구 소품이다
-enum ShopTab { travel, prop, effect, boat }
+/// 상품 분류 (shop.json v7 category, 분류 아이콘). prop에는 꾸미기 소품·색 소품·꾸밈 효과·물감 길 무늬·물감 통이 든다
+enum ShopCategory { travel, prop, decor, boat }
+
+/// 지금 상점 화면의 탭 4개 (shop v6 tabs·tabLabels). shop v7부터 데이터에는 탭이 없고 분류([ShopCategory])만 있다.
+/// 오늘의 수레(T16)가 화면을 바꾸기 전까지 이름을 여기 둔다. travel은 소모품, effect는 꾸미기 효과 칸의 영구 소품이다
+enum ShopTab {
+  travel('여행 효과'),
+  prop('소품'),
+  effect('꾸밈 효과'),
+  boat('배');
+
+  const ShopTab(this.label);
+
+  /// 탭 화면 이름 (옛 tabLabels)
+  final String label;
+}
 
 /// 여행 효과의 종류 (shop.json effect.kind)
 enum ShopEffectKind { travelKmInstant, travelRatioUntilWalkEnd }
@@ -34,16 +49,21 @@ class ShopEffect {
       );
 }
 
-/// 상품 하나. [propId]는 소품·꾸밈 효과, [boatId]는 배, [effect]·[dailyLimit]·[maxHold]는 여행 효과에만 있다
+/// 상품 하나. [propId]는 소품·꾸밈 효과, [boatId]는 배, [decorId]는 쉼터 꾸밈 물품(decor.json), [trailId]는 물감 길 무늬
+/// (trails.json), [effect]·[dailyLimit]·[maxHold]는 여행 효과에만 있다. [slot]은 소품 칸(무늬는 trail, 물감 통은 paintTube)
 class ShopItem {
   const ShopItem({
     required this.id,
-    required this.tab,
+    required this.category,
     required this.name,
     required this.price,
     required this.order,
+    this.slot,
     this.propId,
     this.boatId,
+    this.decorId,
+    this.trailId,
+    this.consumable = false,
     this.effect,
     this.dailyLimit,
     this.maxHold,
@@ -53,12 +73,20 @@ class ShopItem {
   });
 
   final String id;
-  final ShopTab tab;
+  final ShopCategory category;
   final String name;
   final int price;
   final int order;
+
+  /// 소품 칸 (shop v9 slot). 오늘의 수레가 종류를 나눌 때 쓴다(T16). 여행 효과·꾸밈 물품·배에는 없다
+  final String? slot;
   final String? propId;
   final String? boatId;
+  final String? decorId;
+  final String? trailId;
+
+  /// 사서 쓰는 것인가 (shop v9 물감 통). 여행 효과는 [effect]로 안다
+  final bool consumable;
   final ShopEffect? effect;
   final int? dailyLimit;
   final int? maxHold;
@@ -70,16 +98,35 @@ class ShopItem {
   /// 상점 칸 이름 아래 설명 한 줄. 여행 효과만 있다 (shop v6 desc, 16장 11/13 화면 글 ②)
   final String? desc;
 
+  /// 지금 상점 화면에서 이 상품이 뜨는 탭. 옛 탭(shop v6)에 있던 상품만 뜬다: 쉼터 꾸밈 물품·물감 길 무늬·물감 통·
+  /// 상점 미니 친구(Rive petChoice 6~13 아직 없음)는 null이라 안 보이고 살 수도 없다(무늬·물감 통·꾸밈 물품은 [buyBlock]이
+  /// 막는다). 오늘의 수레(T16)·쉼터 꾸미기(T15)·무늬(T17)에서 보인다
+  ShopTab? get tab => switch (category) {
+        ShopCategory.travel => ShopTab.travel,
+        ShopCategory.boat => ShopTab.boat,
+        ShopCategory.decor => null,
+        ShopCategory.prop => switch (slot) {
+            _ when propId == null => null,
+            'effect' => ShopTab.effect,
+            'pet' => null,
+            _ => ShopTab.prop,
+          },
+      };
+
   factory ShopItem.fromJson(Map<String, dynamic> j) {
     final effect = j['effect'] as Map<String, dynamic>?;
     return ShopItem(
       id: j['id'] as String,
-      tab: _tabOf(j['tab'] as String),
+      category: _categoryOf(j['category'] as String),
       name: j['name'] as String,
       price: j['price'] as int,
       order: j['order'] as int,
+      slot: j['slot'] as String?,
       propId: j['propId'] as String?,
       boatId: j['boatId'] as String?,
+      decorId: j['decorId'] as String?,
+      trailId: j['trailId'] as String?,
+      consumable: j['consumable'] as bool? ?? false,
       effect: effect == null ? null : ShopEffect.fromJson(effect),
       dailyLimit: j['dailyLimit'] as int?,
       maxHold: j['maxHold'] as int?,
@@ -91,10 +138,18 @@ class ShopItem {
 
 /// shop.json 전체
 class ShopCatalog {
-  ShopCatalog({required this.tabLabels, required this.defaultBoat, required this.items});
+  ShopCatalog({
+    required this.defaultBoat,
+    required this.items,
+    this.categories = const [],
+    this.categoryIcons = const {},
+  });
 
-  /// 탭 화면 이름
-  final Map<ShopTab, String> tabLabels;
+  /// 분류 순서 (shop v7 categories)
+  final List<ShopCategory> categories;
+
+  /// 분류 아이콘 그림 이름 (shop v7 categoryIcons, 회색조 — 앱이 색을 입힘). 그림이 오기 전(pending)에도 이름은 있다
+  final Map<ShopCategory, String> categoryIcons;
 
   /// 처음 타는 배 (boats.json id)
   final String defaultBoat;
@@ -106,25 +161,32 @@ class ShopCatalog {
 
   ShopItem? byId(String id) => _byId[id];
 
-  /// [tab]의 상품을 order 순서로
+  /// 지금 상점 화면의 [tab]에 뜨는 상품을 order 순서로 ([ShopItem.tab])
   List<ShopItem> inTab(ShopTab tab) =>
       [for (final i in items) if (i.tab == tab) i]..sort((a, b) => a.order.compareTo(b.order));
 }
 
-ShopCatalog parseShop(Map<String, dynamic> json) => ShopCatalog(
-      tabLabels: {
-        for (final e in (json['tabLabels'] as Map<String, dynamic>).entries)
-          _tabOf(e.key): e.value as String,
-      },
-      defaultBoat: json['defaultBoat'] as String,
-      items: [
-        for (final i in json['items'] as List) ShopItem.fromJson(i as Map<String, dynamic>),
-      ],
-    );
+ShopCatalog parseShop(Map<String, dynamic> json) {
+  final icons = json['categoryIcons'] as Map<String, dynamic>? ?? const {};
+  return ShopCatalog(
+    categories: [
+      for (final c in (json['categories'] as List?) ?? const []) _categoryOf(c as String),
+    ],
+    // pending·note 같은 적어 둔 값은 건너뛴다
+    categoryIcons: {
+      for (final c in ShopCategory.values)
+        if (icons[c.name] case final String name) c: name,
+    },
+    defaultBoat: json['defaultBoat'] as String,
+    items: [
+      for (final i in json['items'] as List) ShopItem.fromJson(i as Map<String, dynamic>),
+    ],
+  );
+}
 
-ShopTab _tabOf(String name) => ShopTab.values.firstWhere(
-      (t) => t.name == name,
-      orElse: () => throw FormatException('모르는 상점 탭: $name'),
+ShopCategory _categoryOf(String name) => ShopCategory.values.firstWhere(
+      (c) => c.name == name,
+      orElse: () => throw FormatException('모르는 상품 분류: $name'),
     );
 
 // 구매·사용 규칙 (M4.5). 화면과 동기화가 같은 판정을 쓴다

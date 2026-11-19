@@ -118,7 +118,6 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                 child: _Tabs(
-                  labels: shop.tabLabels,
                   selected: _tab,
                   onSelect: (t) => setState(() => _tab = t),
                 ),
@@ -264,9 +263,8 @@ class _Balance extends StatelessWidget {
 
 /// 탭 줄: 아래 옅은 선 위에 고른 탭만 테라코타 밑줄 (캔버스 8-1)
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.labels, required this.selected, required this.onSelect});
+  const _Tabs({required this.selected, required this.onSelect});
 
-  final Map<ShopTab, String> labels;
   final ShopTab selected;
   final ValueChanged<ShopTab> onSelect;
 
@@ -286,13 +284,13 @@ class _Tabs extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final e in labels.entries)
+              for (final t in ShopTab.values)
                 Expanded(
                   child: _Tab(
-                    key: ValueKey('shop-tab-${e.key.name}'),
-                    label: e.value,
-                    selected: e.key == selected,
-                    onTap: () => onSelect(e.key),
+                    key: ValueKey('shop-tab-${t.name}'),
+                    label: t.label,
+                    selected: t == selected,
+                    onTap: () => onSelect(t),
                   ),
                 ),
             ],

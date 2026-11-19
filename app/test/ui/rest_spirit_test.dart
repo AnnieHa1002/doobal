@@ -38,7 +38,7 @@ void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   group('쉼터 정령 자세 (config character.rive.restSwap, 16장 11/11)', () {
-    testWidgets('처음은 떠 있기 정면, 20~40초마다 떠 있기·앉기 정면·앉기 옆 중 다른 자세로', (tester) async {
+    testWidgets('처음은 떠 있기 정면, 20~40초마다 떠 있기·앉기 정면 중 다른 자세로 (config v30 쉼터 정령 정면만, 16장 11/19)', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
@@ -56,9 +56,9 @@ void main() {
       for (var i = 1; i < changes.length; i++) {
         final gap = changes[i].$1 - changes[i - 1].$1;
         expect(gap, inInclusiveRange(20, 41), reason: '$changes');
-        expect([0, 2, 3], contains(changes[i].$2));
+        expect([0, 2], contains(changes[i].$2));
       }
-      expect(seen.toSet(), {0, 2, 3});
+      expect(seen.toSet(), {0, 2});
       expect(_doobal(tester).mirrored, isFalse);
       await end(tester, e);
     });

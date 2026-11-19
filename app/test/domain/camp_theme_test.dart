@@ -4,30 +4,58 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
 
+/// 옛 꼴(v3)의 테마: 동행 자리·hitOrder·방명록 표지판이 있다. 빠진 v5와 둘 다 읽는지 본다
+CampTheme _v3({bool withHitOrder = true}) {
+  Map<String, dynamic> obj(String id, double x, double y, {bool ticket = false}) => {
+        'id': id,
+        'label': id,
+        'x': x,
+        'y': y,
+        'w': 60,
+        'h': 70,
+        'artW': 60,
+        'artH': 56,
+        'labelTop': 56,
+        if (ticket) 'onlyWhenTicket': true,
+      };
+  return CampTheme.fromJson({
+    'id': 'camp',
+    'scene': {'widthPt': 585, 'refScreenPt': [390, 844]},
+    'objects': [obj('note', 184, 572), obj('cart', 440, 530), obj('guestbookSign', 2, 470, ticket: true)],
+    'companion': {...obj('x', 200, 590)}..remove('id'),
+    'character': {'x': 20, 'y': 545, 'w': 140, 'heightPt': 180},
+    'campfire': {'x': 174, 'y': 684, 'w': 80, 'h': 80, 'frames': 3, 'frameSec': 0.2},
+    'firstSign': {'x': 0, 'y': 0, 'w': 50, 'h': 20, 'label': '첫날'},
+    if (withHitOrder) 'hitOrder': ['cart', 'note', 'guestbookSign', 'companion', 'character'],
+  });
+}
+
 void main() {
-  test('실제 camp_wide.json v3: 장면 크기와 자리 (캔버스 2-2 메모)', () {
+  test('실제 camp_wide.json v5: 장면 크기와 자리, 땅 위 물건은 수레만 (16장 11/18)', () {
     expect(campTheme.id, 'camp');
     expect(campTheme.approx, isTrue);
     expect(campTheme.widthPt, 585);
     expect((campTheme.refW, campTheme.refH), (390, 844));
-    expect([for (final o in campTheme.objects) o.id],
-        ['backpack', 'note', 'map', 'cart', 'guestbookSign']);
-    expect(campTheme.object('map').label, '지도');
-    expect((campTheme.object('backpack').box.x, campTheme.object('backpack').box.y), (268, 510));
-    expect((campTheme.object('note').box.x, campTheme.object('note').box.y), (184, 572));
-    expect((campTheme.object('map').box.x, campTheme.object('map').box.y), (318, 596));
+    expect([for (final o in campTheme.objects) o.id], ['cart']);
     expect((campTheme.object('cart').box.x, campTheme.object('cart').box.y), (440, 530));
-    expect((campTheme.companion.box.x, campTheme.companion.box.y), (236, 612));
+    expect(campTheme.object('cart').artSourceFile, 'obj_rest_cart_v01_clean.png');
+    // v5 수레에는 이름표 자리가 없어 그림 바로 아래
+    expect(campTheme.object('cart').labelTop, campTheme.object('cart').artH);
+    // 동행 자리·누름 순서는 파일에서 빠졌다: 동행은 그리지 않고, 순서는 물건 → 동행 → 정령
+    expect(campTheme.companion, isNull);
+    expect(campTheme.hitOrder, ['cart', campCompanionId, campCharacterId]);
     expect((campTheme.campfire.box.x, campTheme.campfire.box.y), (174, 684));
     expect(campTheme.campfire.frames, 3);
     expect(campTheme.campfire.frameSec, 0.2);
     expect((campTheme.character.x, campTheme.character.y, campTheme.character.heightPt), (20, 545, 180));
-    expect(campTheme.object('guestbookSign').onlyWhenTicket, isTrue);
     expect(() => campTheme.object('tent'), throwsStateError);
+    for (final id in ['tent', 'map', 'backpack', 'note', campGuestbookSignId, campCompanionId]) {
+      expect(campTheme.objectOrNull(id), isNull, reason: id);
+    }
   });
 
   test('물건은 장면 안에 있고 누름 상자는 44pt 이상', () {
-    for (final o in [...campTheme.objects, campTheme.companion]) {
+    for (final o in campTheme.objects) {
       expect(o.box.x, greaterThanOrEqualTo(0), reason: o.id);
       expect(o.box.x + o.box.w, lessThanOrEqualTo(campTheme.widthPt), reason: o.id);
       expect(o.box.y + o.box.h, lessThanOrEqualTo(campTheme.refH), reason: o.id);
@@ -37,42 +65,33 @@ void main() {
     }
   });
 
-  test('수레는 처음 화면 밖, 나머지 물건과 정령은 처음 화면 안', () {
+  test('수레는 처음 화면 밖, 정령은 처음 화면 안', () {
     expect(campTheme.object('cart').box.x, greaterThanOrEqualTo(campTheme.refW));
-    for (final id in ['backpack', 'note', 'map', 'guestbookSign']) {
-      final b = campTheme.object(id).box;
-      expect(b.x + b.w, lessThanOrEqualTo(campTheme.refW), reason: id);
-    }
     expect(campTheme.character.x + campTheme.character.w, lessThanOrEqualTo(campTheme.refW));
-    expect(campTheme.companion.box.x + campTheme.companion.box.w, lessThanOrEqualTo(campTheme.refW));
   });
 
   group('누름 순서', () {
-    test('hitOrder의 물건은 모두 테마에 있다', () {
-      for (final id in campTheme.hitOrder) {
-        if (id == campCharacterId || id == campCompanionId) continue;
-        expect(campTheme.objects.any((o) => o.id == id), isTrue, reason: id);
-      }
-      expect(campTheme.hitOrder.last, campCharacterId);
-    });
-
-    test('Stack에 쌓는 순서는 hitOrder를 뒤집은 것이고 정령과 안 서 있는 물건은 뺀다', () {
-      expect(
-        campTheme.hitStack({'cart', 'map', 'backpack', 'note', 'guestbookSign', 'companion'}),
-        ['companion', 'guestbookSign', 'note', 'backpack', 'map', 'cart'],
-      );
-      expect(campTheme.hitStack({'map', 'note'}), ['note', 'map']);
+    test('v5: 테마에 자리가 없는 물건(방명록 표지판·동행)은 서 있어도 빠진다', () {
+      expect(campTheme.hitStack({'cart', 'map', 'guestbookSign', 'companion'}), ['cart']);
       expect(campTheme.hitStack({}), isEmpty);
     });
 
-    test('노트와 동행이 겹치는 자리에서는 노트가 위', () {
-      final note = campTheme.object('note').box;
-      final companion = campTheme.companion.box;
-      // 겹치는 자리가 실제로 있다
-      expect(note.contains(237, 620), isTrue);
-      expect(companion.contains(237, 620), isTrue);
-      final stack = campTheme.hitStack({'note', 'companion'});
-      expect(stack.indexOf('note'), greaterThan(stack.indexOf('companion')));
+    test('옛 꼴(v3): 동행 자리와 hitOrder를 읽고, Stack은 hitOrder를 뒤집어 정령·안 서 있는 물건을 뺀다', () {
+      final v3 = _v3();
+      expect(v3.companion?.id, campCompanionId);
+      expect(v3.objectOrNull(campCompanionId), same(v3.companion));
+      expect(v3.object(campGuestbookSignId).onlyWhenTicket, isTrue);
+      expect(
+        v3.hitStack({'cart', 'note', 'guestbookSign', 'companion'}),
+        ['companion', 'guestbookSign', 'note', 'cart'],
+      );
+      expect(v3.hitStack({'note'}), ['note']);
+    });
+
+    test('hitOrder가 없으면 물건 순서가 위, 동행·정령이 아래', () {
+      final v3 = _v3(withHitOrder: false);
+      expect(v3.hitOrder, ['note', 'cart', 'guestbookSign', campCompanionId, campCharacterId]);
+      expect(v3.hitStack({'note', 'companion'}), ['companion', 'note']);
     });
   });
 
