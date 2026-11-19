@@ -235,8 +235,7 @@
      480
     ],
     "tallObjectClearX": 140,
-    "tallNearCharacterOpacity": 0.35,
-    "tallObjectClearNote": "정령 화면 상자 x 445~725(가운데 585 ± 140), 11/5 정령 540px 기준"
+    "tallObjectClearNote": "정령 화면 상자 x 445~725(가운데 585 ± 140), 11/5 정령 540px 기준. 16장 11/19 Annie: 장면 물체는 어떤 경우에도 투명하게 하지 않음(정령 뒤 흐리기 0.35 뺌)"
    },
    "meadow": {
     "speed": 0.5,
@@ -580,6 +579,13 @@
     "noRepeat": true,
     "night": "sleep"
    },
+   "walkPlayback": {
+    "approx": true,
+    "refStepsPerMin": 100,
+    "min": 0.7,
+    "max": 1.6,
+    "note": "16장 11/19 Annie(가안): 걷는 중 정령 걷기·뛰기 동작의 재생 빠르기 = 분당 걸음 ÷ refStepsPerMin을 min~max로 자름(분당 100보 = 1배). 걷기·뛰기 동안만, 표정·반응(트리거) 시간은 실제 시간 그대로"
+   },
    "sideFacesLeft": true,
    "flipSideOn": [
     "walking",
@@ -682,8 +688,10 @@
   "note": "16장 11/17 Annie: 폰 센서 + 기본 걸음 앱만 인정(수동 입력은 늘 뺌, 같은 분에 출처가 여럿이면 큰 값 하나). 같은 이름이거나 이름 + ‘.’로 시작하면 허용(안드로이드 기본 폰 걸음은 com.android.healthconnect.phone.<기기마다 다른 값>, 11/17 Z 플립6에서 뽑음). 삼성 헬스·구글 피트니스는 기본 걸음 앱 가안. iOS는 첫 빌드(T6b) 때 폰에서 뽑아 채움(빈 목록 = 출처로 거르지 않음)"
  },
  "live": {
-  "cadenceWindowSec": 30,
-  "noticeUpdateSec": 60
+  "cadenceWindowSec": 10,
+  "noticeUpdateSec": 60,
+  "detectorLeadSec": 10,
+  "note": "16장 11/19 Annie(걸음 반응·캐릭터 빠르기): 걷는 빠르기(분당 걸음)는 최근 cadenceWindowSec초 평균(30 → 10). 안드로이드는 걸음 감지 센서(걸음마다 바로 옴)로 걷는 중 화면 숫자·땅·정령을 먼저 움직이고, 정확한 걸음은 걸음 카운터·health로 맞춤. 화면이 카운터보다 앞서 보여 주는 걸음은 최근 detectorLeadSec초 안에 감지한 것까지(카운터는 늦어도 약 10초 안에 그 걸음을 담는다, 안드로이드 문서). 물감 길 시작(paintTrail.startMinSteps)도 감지 걸음으로 셈(약 5초). 감지 센서가 없는 기기·iOS는 카운터 그대로"
  },
  "record": {
   "lapKm": 1
