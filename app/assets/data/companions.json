@@ -1,5 +1,5 @@
 {
- "version": 3,
+ "version": 4,
  "storyLayersFile": "story_layers.json",
  "companions": [
   {
@@ -17,6 +17,17 @@
     "laugh",
     "smile",
     "surprised"
+   ],
+   "restLines": [
+    {
+     "text": "와! 오늘도 걸을 거지?"
+    },
+    {
+     "text": "저 그림, 우리 같이 본 데야!"
+    },
+    {
+     "text": "여기 꽃 핀 거 알아?"
+    }
    ],
    "chapters": [
     {
@@ -400,6 +411,17 @@
     "laugh",
     "smile",
     "surprised"
+   ],
+   "restLines": [
+    {
+     "text": "…여기 볕 좋네."
+    },
+    {
+     "text": "오늘은 쉬어도 돼."
+    },
+    {
+     "text": "…그 그림, 괜찮네."
+    }
    ],
    "chapters": [
     {
@@ -795,6 +817,18 @@
     "laugh",
     "smile",
     "surprised"
+   ],
+   "restLines": [
+    {
+     "text": "물은 마셨지요? 호호.",
+     "source": "H5"
+    },
+    {
+     "text": "도라지가 안부 전해요!"
+    },
+    {
+     "text": "쉬는 것도 걷기만큼 중요하지요."
+    }
    ],
    "chapters": [
     {

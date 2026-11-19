@@ -1,6 +1,6 @@
 {
- "version": 24,
- "changes": "v24 (11/16 개발 기획, 16장 11/16 Annie 물감 세 가지): weatherSource 하루 한 번(단기예보 그날 대표 날씨, askMin·cacheMin 1440, cacheKey 한국 날짜), choose.whileWalking true(걷는 중에도 배낭에서 바로 바꿈), choose.reselectOnRefill false. v23 (11/16 개발 기획, 물감색_개발인계·물감색_계절지역·T12 넘김): paintColor 16색 확정 hex를 {walk, run} 쌍으로(intensity 지움), names, season(64색), region(지역 7색·chancePerTube 0.15), weatherSource.askMin 30, paintDrop.rewards. v22 (11/14 개발 기획, 16장 11/14 물감 모으기·날씨 색 Annie 결정): paintColor 새로(색 = 시간대 5·날씨 3 × 걷기/뛰기, 물감 통 확률·양·보관·기본 물감·날씨 서버). paintDrop.pickup.colors는 paintColor로 옮김. v21 (11/14 개발 기획, 16장 11/14 새싹·꽃·물감 길 세부, 정령_v36·물감길 개발인계): character.rive 파일 spirit_v36.riv·bodyBox v36 계산값(474px)·screenScale 0.726/0.546·unusedChoices hat 5·6, paintTrail.endOnArrival·iosBackfillPaint, paintDrop 확정(100m·+1)·pickup 연출 시간·방울 색, mapTrail 두께. v20 (11/13 개발 기획, 꾸밈효과_개발인계): effects 새로(입자 5종 개수·속도·크기·수명 가안, 공통 제외 구역, 밤 그리기 순서, 반딧불 빛, 동작 줄이기, 물감 4색). v19 (11/13 개발 기획, R34 정령_v33_개발인계): character.rive.bodyBox를 디자인 기획 실측으로(머리~발바닥 y 71~559·489px, 발 디딤점 (244,559) = 아트보드 48.7%·93.2%, 아트보드 높이 = 몸 키 × 1.227). v18 (11/13 개발 기획, 16장 11/13 화면 세부 4건): hud.eventCardSec 7→8, ui.orientation(가로는 걷는 중만), ui.newDot(배낭·동행·행상 수레 새 상품, 노트 없음), character.rive.customizePreview(밀어서 정면·옆·뒤, 표정 버튼 없음). v17 (11/13 개발 기획, v33 납품 대조): character.rive pending false·fileId·designApproval pending·exprDraft 0·bodyBox(몸 키 실측 489px)·screenScale 0.703/0.530(추정)·fallback crop 44/252, character.float pending false. v16 (11/13 개발 기획, 16장 11/13 Annie): coins.format.buyQuestion '구매하시겠습니까?'(상품 이름·값 없이). v15 (11/13 개발 기획, 물감 길·하루 카드): bonus 배수 1.0(없앰, 키는 코드 때문에 남김), paintTrail·paintDrop·report 새로, events.distanceBasis paintTrailActual, props.distanceBasis actualAll. v14 (11/13 개발 기획): character.rive 새로(spirit_v33.riv·Spirit·WardrobeController·WardrobeColors, 자세 7, 화면별 자세, 쉼터 떠 있기↔앉기 20~40초·밤 잠들기, 트리거 6, 누름 가안), anim mode rive, float는 키 규칙만. v13 (11/13 개발 기획): album.bigView share false·saveWith gal(공유 보류). 글꼴 Noto Sans KR은 PR #2가 ui.font를 바꿈. v12 (11/10 개발 기획): character.facing fall·sit 삭제(둥둥 정령), character.float 새로(정령 키 = 동행 × 0.75·떠 있는 높이 0.15·화면 키 가안 344/259px, T5 전까지 pending), anim.file spirit_float.json, album.bigView 새로(그림 크게 보기 2배·저장 토스트 1.5초). v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
+ "version": 30,
+ "changes": "v30(11/19 밤 개발 기획, 리포 data-v14): 리포 main(T13까지)의 코드가 읽는 키를 되살림 — character.rive.walkPlayback(분당 걸음 ÷ 100, 0.7~1.6배, 코드 screen_rules.dart가 읽음, moveSpeed는 같은 값의 설명이라 지움), live.detectorLeadSec 10(rules.dart), ui.newDot.on의 ‘cart’·cartWhen newShopItem(코드는 cart만 앎 — 11/18 뜻은 쉼터 옆 버튼 ‘상점’, 이름 바꾸기는 개발 몫). v25~v29(프로젝트 사본)를 리포에 처음 올림. v29(11/19 밤 개발 기획, 16장 11/19 상점 미니 친구 8종·지도 연필 선·압정 핀·그림 칸·화집 바로 입기·꾸밈 제안 2개·꾸밈 제안 세부·상점 무늬·물감·선물 이름): shop.cart 0km 묶음에 물감 통(paintTube, 소모품, 규칙은 shop.json paint_tube.cart), 5km 묶음 새로(물감 길 무늬 trail), 25km 미니 친구 묶음 pending 뺌(상점 미니 친구 8 pet_06~13), consumableKinds. paintPattern 새로(무늬 목록 trails.json, 구간마다 patternId 저장, 배낭 물감 탭 맨 위 줄에서 고름·그다음부터 칠함, 새로 얻어도 저절로 안 고름, 지도·하루 카드만, 물감 길 누적 10·50·100km 보상 = 아직 없는 무늬 중 첫 번째·셋 다면 100 럭), mapTrail.patterns, map.style(연필 선·연필 동그라미·압정 핀 머리 색 = 액자 등급·종이 깃발 핀, 핀 크기 고정)·map.card.paintingSlot(칸 1개, 받으면 액자 색 + 그림 썸네일, 글 없음), album.propsTab(소품 누르면 바로 입기·다시 누르면 벗기·옷은 안 벗음), maker.startGift(float_04 물빛 구슬 입은 채 시작), character.rive.next.newInputs(petChoice 6~13·floatChoice 6 가안). 이 판은 리포 main의 v24 + 프로젝트 사본 v25~v28을 합쳐 다시 씀(리포 반영은 다음 세션 data-v14). v28(11/19 개발 기획): shop.cart 배 300km 확정(pending 뺌), 꾸밈 효과 75km→150km, 25km 미니 친구 묶음 pending(16장 11/19 수레 세부 3건). companions.json v4 restLines. v27 (11/19 개발 기획, 16장 11/19 하루 카드 개편): report.card 엽서형(장면·소인·문장 한 줄·여정 막대·칩 3·주간 점, 공유 이미지 같은 모양, 거리·물감 방울 칸 뺌, 문장 템플릿 5 가안). v26 (11/19 개발 기획, 16장 11/19 쉼터 정면·걷기 옆면 / 옷 한 벌): character.rive.restSwap 떠 있기 정면·앉기 정면만(앉기 옆 뺌), companions.facing.walkTabIdle side·walkTab.idlePose standSide(옆 걷기 첫 프레임 + 숨쉬기 가안), character.rive.next(옷 한 벌 riv 납품 대기, 입력 그대로). v25 (11/19 개발 기획, 같은 날 보충: shop.cart 오늘의 수레·ui.tabs.hiddenOn 모든 화면 탭 바(16장 11/19 오늘의 수레) / album.bigView 가로 돌려 보기·가안 3건 Annie 확정 / 16장 11/16~11/19 개발 기획 대기 12줄): ui.tabs 새로(아래 바 3탭 쉼터·걷기·나, 걸어도 탭 안 바뀜, 걷기 탭 아이콘 발자국, 앱은 쉼터로 열림 가안, 걷기 탭 가로면 바 숨김 — 11/16 쉼터↔걷는 중 6규칙·11/17 T12 ① 대체), rest 옆 세로 버튼(지도·배낭·상점·쉼터 꾸미기)·정령 길게 누르기 → 꾸미기·rest.decor(자유 배치·밤 빛, 물품은 decor.json), ui.newDot cart → shop·persist, companions 쉼터 자리 없음·걷기 탭 쉬는 중 옆에 앉기·완결 뒤 쉼터 돌아다니기(finaleRoam), guestbook.sign 걷기 탭만, ads UMP 없음·버튼 누를 때 불러오기, paintColor.backpack 최근 = 최근 쓴 색·계절 한 묶음 모두 펼침, weatherSource 비·눈 같으면 비·소나기 = 비·자정 넘긴 물감 길은 시작한 날 날씨, allowedSources.android(폰 센서·기본 걸음 앱, 수동 입력 빼기, 같은 분 큰 값), live.cadenceWindowSec 30→10·stepDetector, character.rive.moveSpeed(분당 걸음 100 = 1배, 0.7~1.6), roadside 투명 없음(tallNearCharacterOpacity 지움, 멈출 때 비킴), coins.firstSketchGift 이젤, walk.arrivalFlow, map.visitedDot 액자 등급 색·완결 동행 말풍선(finaleRoam.tap)·도장 나 탭(ui.tabs.me·album.tabs) — 16장 11/19 지도·동행·도장. v24 (11/16 개발 기획, 16장 11/16 Annie 물감 세 가지): weatherSource 하루 한 번(단기예보 그날 대표 날씨, askMin·cacheMin 1440, cacheKey 한국 날짜), choose.whileWalking true(걷는 중에도 배낭에서 바로 바꿈), choose.reselectOnRefill false. v23 (11/16 개발 기획, 물감색_개발인계·물감색_계절지역·T12 넘김): paintColor 16색 확정 hex를 {walk, run} 쌍으로(intensity 지움), names, season(64색), region(지역 7색·chancePerTube 0.15), weatherSource.askMin 30, paintDrop.rewards. v22 (11/14 개발 기획, 16장 11/14 물감 모으기·날씨 색 Annie 결정): paintColor 새로(색 = 시간대 5·날씨 3 × 걷기/뛰기, 물감 통 확률·양·보관·기본 물감·날씨 서버). paintDrop.pickup.colors는 paintColor로 옮김. v21 (11/14 개발 기획, 16장 11/14 새싹·꽃·물감 길 세부, 정령_v36·물감길 개발인계): character.rive 파일 spirit_v36.riv·bodyBox v36 계산값(474px)·screenScale 0.726/0.546·unusedChoices hat 5·6, paintTrail.endOnArrival·iosBackfillPaint, paintDrop 확정(100m·+1)·pickup 연출 시간·방울 색, mapTrail 두께. v20 (11/13 개발 기획, 꾸밈효과_개발인계): effects 새로(입자 5종 개수·속도·크기·수명 가안, 공통 제외 구역, 밤 그리기 순서, 반딧불 빛, 동작 줄이기, 물감 4색). v19 (11/13 개발 기획, R34 정령_v33_개발인계): character.rive.bodyBox를 디자인 기획 실측으로(머리~발바닥 y 71~559·489px, 발 디딤점 (244,559) = 아트보드 48.7%·93.2%, 아트보드 높이 = 몸 키 × 1.227). v18 (11/13 개발 기획, 16장 11/13 화면 세부 4건): hud.eventCardSec 7→8, ui.orientation(가로는 걷는 중만), ui.newDot(배낭·동행·행상 수레 새 상품, 노트 없음), character.rive.customizePreview(밀어서 정면·옆·뒤, 표정 버튼 없음). v17 (11/13 개발 기획, v33 납품 대조): character.rive pending false·fileId·designApproval pending·exprDraft 0·bodyBox(몸 키 실측 489px)·screenScale 0.703/0.530(추정)·fallback crop 44/252, character.float pending false. v16 (11/13 개발 기획, 16장 11/13 Annie): coins.format.buyQuestion '구매하시겠습니까?'(상품 이름·값 없이). v15 (11/13 개발 기획, 물감 길·하루 카드): bonus 배수 1.0(없앰, 키는 코드 때문에 남김), paintTrail·paintDrop·report 새로, events.distanceBasis paintTrailActual, props.distanceBasis actualAll. v14 (11/13 개발 기획): character.rive 새로(spirit_v33.riv·Spirit·WardrobeController·WardrobeColors, 자세 7, 화면별 자세, 쉼터 떠 있기↔앉기 20~40초·밤 잠들기, 트리거 6, 누름 가안), anim mode rive, float는 키 규칙만. v13 (11/13 개발 기획): album.bigView share false·saveWith gal(공유 보류). 글꼴 Noto Sans KR은 PR #2가 ui.font를 바꿈. v12 (11/10 개발 기획): character.facing fall·sit 삭제(둥둥 정령), character.float 새로(정령 키 = 동행 × 0.75·떠 있는 높이 0.15·화면 키 가안 344/259px, T5 전까지 pending), anim.file spirit_float.json, album.bigView 새로(그림 크게 보기 2배·저장 토스트 1.5초). v11 (11/6 개발 기획): character.anim 컷아웃(spirit_cutout.json, 시트 방식 폐기), rest.parallax 삭제(안 읽음, camp_wide drag가 한 곳). v10 (11/6 개발 기획): 캔버스 2-2 쉼터 값 — rest.drag(놓으면 처음·끝으로 붙음, 원경 0.45배), 누르기 행복 1초(tapReaction.happySec), 모닥불 3장 0.2초. v9 (11/6 개발 기획): 정령 화면 키 540(세로)·406(가로)px(11/5), 긴 조각 비킴 ±140px, scene.layers.people 뺌(11/4), 표시 글꼴 고르기 → Pretendard 하나(11/4), 쉼터 두 손가락 확대 1~1.5배(11/5), 리포 임시값을 원본으로(events.flushSec·sync.backgroundMin·map.firstView·walk.arrivalProbeSec·hud), 정령 움직임 시트 방식 자리(character.anim). v8 (11/4 개발 기획): 리포 코드와 맞춤 — sync.aliveSaveSec 30 되살림(appWalk.aliveHeartbeatSec과 같은 값이라 그 키는 지움), bonus.appliesTo 'qualifiedSession'(코드가 아는 값, 뜻은 그대로 '앱 걷는 중 창 안의 걷기 1번'), rest 물건 자리는 themes/camp.json v2. v7 (11/4 개발 기획): 16장 11/3~11/4 반영 — character.canvas(정령·동행 1024×1024·발 y 960·머리 y 192), character.tapReaction(한두 번 = 행복, 3초 안 5번 = 2초 화남, 가안), 깜빡임은 Rive v24 blinkMode auto가 맡음(blink는 Rive 없는 자리 대체값), coins.format('{n} 럭'·'+{n} 럭'), ui(표시 글꼴 3종·배율·글자 최소 11pt, 스플래시 계절 4), guestbook 신고(report: blindMinReports·reportCountMinTotalSteps, X 버튼 폐기), rest(쉼터 장면 폭 약 1.5배·좌우 밀기·누름 순서는 scene.json rest), boats는 boats.json. v6 (11/3 개발 기획): character.facing 화면별 방향 가안, companions.facing. v5 (2026-11-02 개발 기획): 럭 숫자(coins perKm 10·dailyCap 400·welcomeGift 100, shop 효과 상한 3km·보관 9, ads maxRewardCoins 400, 상품은 shop.json), N0 1분 갱신, 리포에서 먼저 더한 키(live·record·profile·backup) 합침. v4 (2026-11-01): 첫 여정 0.5~0.8km·바꾸기 막기, 본격 걷기 보너스(앱 걷는 중 창 안의 걷기 1번만), appWalk(종료 처리·안드로이드 상시 알림 N0), 거리 소품 기준 walkTravel, N5 오전 10시, scene 6역할(grove·roadside), 후경 v10 값, 사람 실루엣, 계절 보정 확장",
  "gait": {
   "walkMaxSpm": 130,
   "runMinSpm": 140,
@@ -24,7 +24,9 @@
   "startMinSteps": {
    "approx": true,
    "steps": 10,
-   "withinSec": 60
+   "withinSec": 60,
+   "source": "stepDetector",
+   "note": "16장 11/19: 시작 판정은 걸음 감지 센서(걸음마다 바로 옴, live.stepDetector)로 셈 — 10걸음 그대로, 약 5초. 걸음 카운터는 10걸음쯤 뒤에야 첫 값을 줘서 늦었음"
   },
   "idleEndMin": {
    "approx": true,
@@ -32,7 +34,7 @@
   },
   "endOnAppKilled": "lastAliveUtc",
   "androidForegroundService": true,
-  "note": "16장 11/13: 출발·마치기 버튼 없음. 앱이 앞에 있을 때 센서 걸음이 60초 안에 10보 늘면 시작(가안), 화면을 꺼도 앱이 살아 있는 동안 이어짐(안드로이드 상시 알림 N0), 걸음 0인 시간이 idleEndMin 이어지면 마지막 걸음 시각에 끝, 앱이 종료되면 lastAliveUtc에 끝. 시작하면 쉼터 → 걷는 중, 끝나면 걷는 중 → 쉼터 / 16장 11/14: 명소에 도착하면 그 물감 길이 끝남(도착 화면 → 쉼터), 도착 뒤 걸음은 새 물감 길로 시작(startMinSteps 다시). iOS에서 화면을 꺼 둔 동안(앱은 살아 있음) 걸은 구간도 다음에 열 때 물감 길로 칠함(HealthKit 걸음으로 메움, 방울 럭·이벤트는 물감 길 실제 거리 규칙 그대로)",
+  "note": "16장 11/13: 출발·마치기 버튼 없음. 앱이 앞에 있을 때 센서 걸음이 60초 안에 10보 늘면 시작(가안), 화면을 꺼도 앱이 살아 있는 동안 이어짐(안드로이드 상시 알림 N0), 걸음 0인 시간이 idleEndMin 이어지면 마지막 걸음 시각에 끝, 앱이 종료되면 lastAliveUtc에 끝 / 16장 11/14: 명소에 도착하면 그 물감 길이 끝남, 도착 뒤 걸음은 새 물감 길로 시작(startMinSteps 다시). iOS에서 화면을 꺼 둔 동안(앱은 살아 있음) 걸은 구간도 다음에 열 때 물감 길로 칠함(HealthKit 걸음으로 메움, 방울 럭·이벤트는 물감 길 실제 거리 규칙 그대로) / 16장 11/18: 물감 길이 시작·끝나도 탭(화면)은 저절로 바뀌지 않음(11/13 쉼터 → 걷는 중 자동 전환·11/16 6규칙 대체, ui.tabs). 걷는 중 표시는 걷기 탭 아이콘의 발자국",
   "endOnArrival": true,
   "iosBackfillPaint": true
  },
@@ -83,6 +85,12 @@
   "dailyCap": 400,
   "welcomeGift": 100,
   "welcomeGiftOn": "firstSketchArrival",
+  "firstSketchGift": {
+   "decor": "decor_easel",
+   "hangs": "sketch",
+   "placeAt": "camp_wide.decor.easelStart",
+   "note": "16장 11/19 ①: 첫 그림(짐 꾸러미) 도착 때 럭 100과 함께 이젤을 주고, 그 그림을 건 채 쉼터 정해진 자리에 놓아 둠(설명 글 없음). 사용자가 옮기면 그 자리로 저장"
+  },
   "format": {
    "amount": "{n} 럭",
    "gain": "+{n} 럭",
@@ -94,12 +102,104 @@
  "shop": {
   "dailyEffectCapKm": 3,
   "maxHoldPerItem": 9,
-  "itemsFile": "shop.json"
+  "itemsFile": "shop.json",
+  "cart": {
+   "approx": true,
+   "refreshHour": 5,
+   "refreshTz": "Asia/Seoul",
+   "distanceBasis": "actualAll",
+   "slotsByKm": [
+    {
+     "km": 0,
+     "slots": 3
+    },
+    {
+     "km": 50,
+     "slots": 4
+    },
+    {
+     "km": 150,
+     "slots": 5
+    },
+    {
+     "km": 300,
+     "slots": 6
+    }
+   ],
+   "kindsByKm": [
+    {
+     "km": 0,
+     "kinds": [
+      "cloth",
+      "hat",
+      "shoe",
+      "paintTube"
+     ],
+     "note": "물감 통(16장 11/19 밤 Annie, 창구 Q006): 수레 무작위 칸 소모품, 처음부터. 나올 확률·하루 칸 수는 shop.json paint_tube.cart(하루 약 50%·최대 1칸 가안)"
+    },
+    {
+     "km": 5,
+     "approx": true,
+     "kinds": [
+      "trail"
+     ],
+     "note": "16장 11/19 밤 Annie(창구 Q005): 물감 길 무늬는 초반부터 수레에(5km 가안, 하루 4.9km면 2일째). 무늬 3종 각 200 럭 가안, trails.json"
+    },
+    {
+     "km": 25,
+     "kinds": [
+      "pet"
+     ],
+     "note": "16장 11/19: 상점 미니 친구 8종(pet_06~13, 500 럭 가안). 그림이 오기 전엔 꾸미기·상점 칸은 점선 자리표시(16장 11/6 규칙), 그림 없는 미니 친구는 정령 옆에 그리지 않음. 12/19 점검에서 4종만 먼저면 나머지 4종은 props status later로(창구 Q001)"
+    },
+    {
+     "km": 75,
+     "kinds": [
+      "face",
+      "hand",
+      "float"
+     ]
+    },
+    {
+     "km": 150,
+     "kinds": [
+      "decor",
+      "effect"
+     ]
+    },
+    {
+     "km": 300,
+     "kinds": [
+      "boat"
+     ]
+    }
+   ],
+   "fixed": [
+    "travel"
+   ],
+   "exclude": [
+    "owned"
+   ],
+   "prefer": "neverShownFirst",
+   "seed": "hash(installId, kstDate)",
+   "boughtToday": "keepWithOwnedTag",
+   "fewerThanSlots": "showFewer",
+   "colorVariants": "followBase",
+   "newDot": "cartHasNeverShown",
+   "note": "16장 11/19 Annie: 일반 상품은 오늘의 수레 무작위 칸(3칸에서 누적 실제 거리 50·150·300km에 4·5·6칸, 가안), 한국 시간 새벽 5시에 바뀜(하루 카드와 같은 경계). 산 것·가진 것은 빼고 한 번도 안 나온 상품 먼저, 그다음 덜 나온 상품. 종류(kind = props slot, 쉼터 물품 decor, 배 boat)는 누적 거리로 차례로 열림(꾸밈 옷·모자·신발 → 25km 미니 친구 → 75km 액세서리 → 150km 쉼터 물품 → 배 마지막). 여행 효과는 무작위 밖 고정 칸. 개발 기획 가안: 그날 줄은 5시에 한 번 정해 저장(기기, 오프라인 됨), 낮에 산 칸은 ‘가짐’ 꼬리표로 그날까지 남김, 고를 상품이 칸보다 적으면 칸을 줄임(빈 칸 없음), 색 소품은 기본 소품을 가진 뒤 그 기본 소품 종류로 섞임, 꾸밈 효과(effect)는 150km 쉼터 물품과 함께, 배는 300km(16장 11/19 수레 세부 3건: 배 300km 확정, 효과 150km 가안, 25km 상점 미니 친구 새로), 새 상품 점은 그날 수레에 처음 나온 상품이 있을 때 / 16장 11/19 밤: 0km 묶음에 물감 통(소모품 — exclude owned·neverShownFirst에서 빠지고 shop.json paint_tube.cart로 하루 한 번 뽑음), 5km 묶음 물감 길 무늬, 25km 미니 친구 8종",
+   "consumableKinds": [
+    "paintTube"
+   ]
+  }
  },
  "ads": {
   "rewardedPerDay": 1,
   "rewardKind": "addTodayEarnedSoFar",
-  "maxRewardCoins": 400
+  "maxRewardCoins": 400,
+  "loadOn": "buttonTap",
+  "ump": false,
+  "att": "beforeFirstAd",
+  "note": "16장 11/16: 동의 창(UMP) 없음 — 보상형 광고 정보는 동의 없이 위탁 처리(약관 v05), 광고는 사용자가 광고 버튼을 누를 때만 불러옴. iOS ATT 창은 첫 광고 전 그대로. 설정 ‘광고 동의 다시 고르기’ 없음"
  },
  "sync": {
   "refetchHours": 48,
@@ -235,7 +335,13 @@
      480
     ],
     "tallObjectClearX": 140,
-    "tallObjectClearNote": "정령 화면 상자 x 445~725(가운데 585 ± 140), 11/5 정령 540px 기준. 16장 11/19 Annie: 장면 물체는 어떤 경우에도 투명하게 하지 않음(정령 뒤 흐리기 0.35 뺌)"
+    "tallNeverTransparent": true,
+    "tallStopNudge": {
+     "approx": true,
+     "maxExtraPx": 280,
+     "easeSec": 0.6
+    },
+    "tallObjectClearNote": "정령 화면 상자 x 445~725(가운데 585 ± 140), 11/5 정령 540px 기준 / 16장 11/19: 장면 물체는 어떤 경우에도 투명하게 하지 않음(tallNearCharacterOpacity 0.35 지움). 지나갈 때는 정령이 앞에 그려진 채 그대로 지나가고, 걸음이 멈춰 장면이 설 때 키 큰 조각이 ±140 안에 서게 되면 이 층만 maxExtraPx 안에서 조금 더 흘려 비킴(easeSec). 멈춘 화면에서 조각을 지우던 옛 규칙도 없앰. 배치 원본 scene.json layout.roadside(뒤쪽 줄 나무 발 = 들판 선)는 디자인 기획"
    },
    "meadow": {
     "speed": 0.5,
@@ -423,14 +529,55 @@
    "aheadAwaySec": 8,
    "walkMps": 1.3,
    "lagCatchUpMps": 0.5,
-   "lateArrivalMaxSec": 600
+   "lateArrivalMaxSec": 600,
+   "note": "16장 11/18: 휴가 늦게 도착하는 자리는 걷기 탭 쉬는 중(정령 옆에 늦게 와서 앉음, 가안). 쉼터에는 동행 자리 없음"
   },
   "facing": {
-   "rest": "front",
+   "walkTabIdle": "side",
    "companionScreen": "front",
    "meet": "front",
    "walking": "side",
-   "departMoment": "side"
+   "departMoment": "side",
+   "note": "16장 11/19: 걷기 탭 쉬는 중 동행도 옆면(11/18 정면 앉기 재사용을 바꿈). 쉼터 완결 동행(finaleRoam)은 그대로"
+  },
+  "walkTab": {
+   "idlePose": "standSide",
+   "beside": "spiritRight",
+   "tap": "companionScreen",
+   "dot": [
+    "walkTabIcon",
+    "companion"
+   ],
+   "note": "16장 11/18: 동행은 걷기 탭에만 — 걸을 때 뒤따르고 쉬는 중에는 정령 옆에 앉음. 동행을 누르면 동행 화면(7-1, 가안). 안 읽은 장 알림 점은 걷기 탭 아이콘과 동행 위",
+   "standSide": {
+    "approx": true,
+    "how": "walkSideFrame0Breath",
+    "note": "디자인 기획 가안: 새 그림 없이 옆면 걷기 첫 프레임에 숨쉬기(동행 Rive v15 걷기 클립 0프레임에서 멈추고 숨쉬기 반복). 옆면 앉기 원화가 오면 sitSide로 바꿈"
+   }
+  },
+  "finaleRoam": {
+   "approx": true,
+   "where": "rest",
+   "when": "chapter8Read",
+   "walkPtPerSec": 12,
+   "stopSec": [
+    4,
+    10
+   ],
+   "sitChance": 0.3,
+   "band": "camp_wide.decor.groundBand",
+   "orderWithDecor": "lowerIsFront",
+   "tap": {
+    "first": "bubble",
+    "bubbleSec": 3,
+    "linesPerCompanion": 3,
+    "pick": "random",
+    "noRepeat": true,
+    "secondTapWhileBubble": "companionScreen",
+    "linesFrom": "companions.json restLines(기획/동행_이야기.md v04.5 ‘쉼터 한마디’)",
+    "note": "16장 11/19 ②: 쉼터의 완결 동행을 누르면 말풍선 한 줄(동행마다 3줄 중 무작위, 3초 가안, 바로 앞 줄은 안 반복 — 개발 기획 가안), 말풍선이 떠 있을 때 한 번 더 누르면 동행 화면"
+   },
+   "note": "16장 11/18 ④: 그 동행의 이야기 8장까지 다 읽으면 그때부터 쉼터 땅 띠 위를 천천히 걷다 멈추고 가끔 앉음(동행마다 따로). 물품과는 앞뒤 순서만(부딪힘 없음), 누르면 말풍선(tap). 동행 Rive 걷기·앉기 재사용. 넘치면 출시 뒤로(가안)"
   }
  },
  "guestbook": {
@@ -443,7 +590,21 @@
   "reviewHours": 48,
   "banAfterDeletes": 3,
   "banDays": 7,
-  "note": "11/3: X 대신 신고(모두에게 보임). 누적 1만 보 미만 계정의 신고는 받아 두되 셈에서만 뺌. 옛 키 blindMinX·xMinTotalSteps는 폐기"
+  "note": "11/3: X 대신 신고(모두에게 보임). 누적 1만 보 미만 계정의 신고는 받아 두되 셈에서만 뺌. 옛 키 blindMinX·xMinTotalSteps는 폐기",
+  "sign": {
+   "where": "walkTab",
+   "states": [
+    "walking",
+    "idle"
+   ],
+   "anchor": "screen",
+   "screenX": 0.78,
+   "footOn": "path",
+   "tap": "5-1",
+   "dot": "walkTabIcon",
+   "arrivalTicket": "arrivalScreen",
+   "note": "16장 11/18: 방명록을 쓸 수 있을 때 걷기 탭 길가에 표지판(걷는 중·쉬는 중 모두), 누르면 방명록 쓰기. 쉼터에는 없음(camp 표지판 자리 0.59 버림). 장면과 같이 흐르면 지나가 버리므로 화면에 고정해 정령 오른쪽 길가에 둠(11/19 Annie 확정, 자리 값은 캔버스). 도착 방명록은 도착 화면 그대로"
+  }
  },
  "character": {
   "blink": {
@@ -504,7 +665,19 @@
     "holdSec": 2
    },
    "note": "쉼터·꾸미기에서 정령 몸을 누르면 행복(머리·배 누르기 동작 그대로), 3초 안에 5번이면 2초 화남 뒤 기본. 화면 글 없음 / 11/5 캔버스: 누르면 기쁨 1초 / 11/10 둥둥 정령: 머리 누르기 → press_head, 배 누르기 → press_belly, 화남 → angry_front, 기쁨 1초는 joy_front / 11/13 v33: 머리 tapHead·배 tapBelly 트리거, 연타 angry, 행복 1초는 expr 1",
-   "happySec": 1
+   "happySec": 1,
+   "nightRest": {
+    "approx": true,
+    "expr": 1,
+    "holdSec": 1,
+    "then": "sleep",
+    "note": "16장 11/16 T11 ③: 밤 쉼터에서 잠든 정령을 누르면 잠깐(눌림 트리거 + expr 1, 1초) 반응하고 다시 잠(자세 4·expr 4). 연타 화남은 밤에도 같음"
+   },
+   "longPress": {
+    "screen": "rest",
+    "opens": "customize",
+    "note": "16장 11/19 ③: 쉼터에서 정령을 길게 누르면 정령 꾸미기로 바로(나 탭 길과 둘). 정령은 꾸밈 물품이 아니라 집히지 않음 — 정령 위를 길게 누르면 늘 꾸미기(물품이 정령 앞에 겹치면 물품이 먼저)"
+   }
   },
   "anim": {
    "mode": "rive",
@@ -571,20 +744,13 @@
     "approx": true,
     "poses": [
      "floatFront",
-     "sitFront",
-     "sitSide"
+     "sitFront"
     ],
     "minSec": 20,
     "maxSec": 40,
     "noRepeat": true,
-    "night": "sleep"
-   },
-   "walkPlayback": {
-    "approx": true,
-    "refStepsPerMin": 100,
-    "min": 0.7,
-    "max": 1.6,
-    "note": "16장 11/19 Annie(가안): 걷는 중 정령 걷기·뛰기 동작의 재생 빠르기 = 분당 걸음 ÷ refStepsPerMin을 min~max로 자름(분당 100보 = 1배). 걷기·뛰기 동안만, 표정·반응(트리거) 시간은 실제 시간 그대로"
+    "night": "sleep",
+    "note": "16장 11/19 쉼터는 정면: 떠 있기 정면·앉기 정면만 무작위(앉기 옆 뺌), 밤 잠들기(옆으로 눕기)는 예외로 그대로"
    },
    "sideFacesLeft": true,
    "flipSideOn": [
@@ -609,7 +775,7 @@
      "note": "16장 11/15 미니 친구: 다음 정령 Rive 판에서 자세별 미니 친구 상자를 실측해 넣음(계약 v0.8 2-1장). 그전엔 없음"
     }
    },
-   "note": "계약 v0.7(16장 11/11 Rive·11/13 v32). 입력은 모두 뷰 모델 속성. 자세는 poseChoice만 바꾸면 riv가 전환(겹쳐 흐리기 금지, 같은 인스턴스 유지). 11/14 기준 v36(입력 59개, v33과 같음). 앱 연결은 개발 T5",
+   "note": "계약 v0.9(16장 11/11 Rive·11/13 v32·11/16 새 소품 놀람·11/19 빠르기). 입력은 모두 뷰 모델 속성. 자세는 poseChoice만 바꾸면 riv가 전환(겹쳐 흐리기 금지, 같은 인스턴스 유지). 11/14 기준 v36(입력 59개, v33과 같음). 앱 연결은 개발 T5",
    "fileId": "1xyrThvsfzjW7dFB2ktbshyv1Icib1Usl",
    "fileBytes": 11796602,
    "designApproval": "approved",
@@ -667,6 +833,36 @@
      6
     ],
     "note": "v36 hatChoice 5 새싹·6 꽃은 riv에만 있고 MVP에서 안 씀(16장 11/14 Annie B안). 앱은 0~4만 보냄"
+   },
+   "next": {
+    "pending": true,
+    "from": "Assets/01_Characters_캐릭터/spirit_outfit_full_v01_<날짜>/",
+    "note": "16장 11/19 옷 한 벌(소매·바짓단): 지시서 codex_spirit_outfit_full_v01. 공개 입력·상태 머신 그대로라 file·fileId·fileBytes만 바꿈(계약 v0.10). 날개 팔이면 소매 숨김·연잎과 함께면 갈매기 자리 옮김은 riv 안에서 처리, 앱 코드 없음. 납품 README에 입력이 바뀌었으면 그때 다시 대조",
+    "newInputs": {
+     "petChoice": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+     ],
+     "floatChoice": [
+      6
+     ],
+     "approx": true,
+     "note": "16장 11/19: codex_shop_mini_friends_v01(petChoice 6~13·Color 8)·codex_trail_patterns_gift_v01(floatChoice 다음 빈 번호 가안 6) — outfit_full 뒤 같은 riv에 순서대로. 납품 inputs.md와 대조 뒤 props rive.pending을 지움"
+    }
+   },
+   "screensNote": "16장 11/19: 걷기 탭 정령은 걷는 중·쉬는 중 모두 옆면(moveSide·floatSide), 쉼터는 정면(restSwap)",
+   "walkPlayback": {
+    "approx": true,
+    "refStepsPerMin": 100,
+    "min": 0.7,
+    "max": 1.6,
+    "note": "16장 11/19 Annie(가안): 걷는 중 정령 걷기·뛰기 동작의 재생 빠르기 = 분당 걸음 ÷ refStepsPerMin을 min~max로 자름(분당 100보 = 1배). 걷기·뛰기 동안만, 표정·반응(트리거) 시간은 실제 시간 그대로 / v30: 프로젝트 v25~v29의 moveSpeed(같은 값, advance 배율, moveSide만)를 이 키로 합침"
    }
   }
  },
@@ -679,19 +875,35 @@
   "inactiveDeferHour": 10
  },
  "allowedSources": {
-  "ios": [],
+  "match": "exactOrPrefixDot",
+  "manualEntry": "exclude",
+  "sameMinute": "max",
   "android": [
    "com.android.healthconnect.phone",
    "com.sec.android.app.shealth",
    "com.google.android.apps.fitness"
   ],
-  "note": "16장 11/17 Annie: 폰 센서 + 기본 걸음 앱만 인정(수동 입력은 늘 뺌, 같은 분에 출처가 여럿이면 큰 값 하나). 같은 이름이거나 이름 + ‘.’로 시작하면 허용(안드로이드 기본 폰 걸음은 com.android.healthconnect.phone.<기기마다 다른 값>, 11/17 Z 플립6에서 뽑음). 삼성 헬스·구글 피트니스는 기본 걸음 앱 가안. iOS는 첫 빌드(T6b) 때 폰에서 뽑아 채움(빈 목록 = 출처로 거르지 않음)"
+  "ios": [],
+  "note": "16장 11/17 Annie: 폰 센서 + 기본 걸음 앱의 걸음만 인정. 출처 키는 Health Connect dataOrigin 패키지 이름, 목록과 같거나 '목록 이름 + .'으로 시작하면 인정(기본 폰 걸음은 com.android.healthconnect.phone.<기기마다 다른 값>). 삼성 헬스·구글 피트니스는 기본 걸음 앱 가안. 수동 입력(recordingMethod manual)은 늘 뺌. 같은 분에 출처가 여럿이면 더하지 않고 큰 값 하나. iOS는 첫 빌드 때 폰에서 출처를 뽑아 채움 — 빈 목록이면 출처로 거르지 않음(수동 입력 빼기·같은 분 큰 값은 그대로)"
  },
  "live": {
   "cadenceWindowSec": 10,
   "noticeUpdateSec": 60,
-  "detectorLeadSec": 10,
-  "note": "16장 11/19 Annie(걸음 반응·캐릭터 빠르기): 걷는 빠르기(분당 걸음)는 최근 cadenceWindowSec초 평균(30 → 10). 안드로이드는 걸음 감지 센서(걸음마다 바로 옴)로 걷는 중 화면 숫자·땅·정령을 먼저 움직이고, 정확한 걸음은 걸음 카운터·health로 맞춤. 화면이 카운터보다 앞서 보여 주는 걸음은 최근 detectorLeadSec초 안에 감지한 것까지(카운터는 늦어도 약 10초 안에 그 걸음을 담는다, 안드로이드 문서). 물감 길 시작(paintTrail.startMinSteps)도 감지 걸음으로 셈(약 5초). 감지 센서가 없는 기기·iOS는 카운터 그대로"
+  "stepDetector": {
+   "android": "Sensor.TYPE_STEP_DETECTOR",
+   "ios": "CMPedometer 갱신(걸음마다 오지 않음, 첫 iOS 빌드 때 확인)",
+   "uses": [
+    "hudSteps",
+    "groundMove",
+    "spiritMoveSpeed",
+    "paintTrailStart"
+   ],
+   "truth": "stepCounter+health",
+   "reconcile": "counterCatchUp",
+   "note": "16장 11/19 ①②: 걸음 카운터는 걸음을 모아 늦게 보냄(첫 값 약 10걸음 뒤, 걷는 동안 11초마다 한꺼번에). 화면 숫자·땅·정령 움직임·물감 길 시작은 걸음 감지 센서로 걸음마다 바로 움직이고, 카운터 값이 오면 화면 숫자를 카운터 쪽으로 맞춤(줄이지는 않고, 감지 센서가 앞서 있으면 카운터가 따라올 때까지 그대로). 정확한 걸음 수·진행·보상은 카운터·health 그대로. 권한은 같은 ACTIVITY_RECOGNITION(11/19 허용 확인)"
+  },
+  "note": "16장 11/19 ③: 걷는 빠르기(분당 걸음)는 최근 10초 평균(이전 30초)",
+  "detectorLeadSec": 10
  },
  "record": {
   "lapKm": 1
@@ -733,10 +945,69 @@
   },
   "orientation": {
    "landscape": [
-    "walking"
+    "walking",
+    "bigView"
    ],
    "others": "portrait",
-   "note": "16장 11/13: 가로 화면은 걷는 중만, 나머지 화면은 세로 고정"
+   "note": "16장 11/13: 가로 화면은 걷는 중만, 나머지 화면은 세로 고정 / 11/18: 걷기 탭만 가로, 가로일 때 아래 바 숨김(ui.tabs.landscapeHidesBar) / 11/19: 그림 크게 보기도 가로(album.bigView)"
+  },
+  "tabs": {
+   "items": [
+    "rest",
+    "walk",
+    "me"
+   ],
+   "labels": {
+    "rest": "쉼터",
+    "walk": "걷기",
+    "me": "나"
+   },
+   "openTo": {
+    "approx": true,
+    "value": "rest"
+   },
+   "autoSwitch": false,
+   "walkingIndicator": "footprintsOnWalkIcon",
+   "landscapeHidesBar": true,
+   "keepState": true,
+   "dots": {
+    "walk": [
+     "companionStory",
+     "guestbookSign"
+    ],
+    "me": []
+   },
+   "arrival": [
+    "arrival",
+    "walkRecord",
+    "rest"
+   ],
+   "me": [
+    "profile",
+    "records",
+    "badges",
+    "customize",
+    "nickname",
+    "note",
+    "settings"
+   ],
+   "note": "16장 11/18·11/19: 아래 메뉴 바 3탭 쉼터(홈)·걷기·나(11/19 ‘내 정보’ → ‘나’). 걸어도·물감 길이 끝나도 탭은 저절로 바뀌지 않음(11/16 6규칙·11/17 T12 ① 대체). 걷는 중이면 걷기 탭 아이콘에 움직이는 발자국(쉼터 위 글 없음). 걷기 탭 = 걷는 중 화면, 안 걸을 때도 열리고 쉬는 중 상태. 앱은 쉼터로 열림(가안). 도착하면 도착 → 걷기 기록 → 쉼터 탭. 나 탭 = 프로필·기록·정령 꾸미기·닉네임 바꾸기·노트(걷기 기록·방명록)·설정, 출발 동네 바꾸기 없음(가안). 탭을 오가도 각 탭 화면 상태는 유지(keepState, 개발 기획 가안) / 16장 11/19 ③: 도장(배지)은 화집에서 나 탭으로(badges) / 16장 11/19 오늘의 수레 ⑥: 아래 탭 바는 첫 실행(시작 화면)·화면 가득 보기(크게 보기)·가로 걷기를 빼고 모든 화면에(지도·화집·상점·꾸미기·도착 등도 바가 보임)",
+   "icons": {
+    "rest": "icon_tab_camp_v01",
+    "walk": "icon_tab_walk_v01",
+    "walkingFrames": [
+     "icon_tab_walk_step1_v01",
+     "icon_tab_walk_step2_v01",
+     "icon_tab_walk_step3_v01"
+    ],
+    "me": "spiritFace",
+    "note": "codex_camp_deco_v01 T05. 나 탭은 그림 없이 앱이 꾸민 정령 얼굴(Rive)을 작게(디자인 기획 가안)"
+   },
+   "hiddenOn": [
+    "onboarding",
+    "bigView",
+    "walkingLandscape"
+   ]
   },
   "newDot": {
    "on": [
@@ -744,8 +1015,9 @@
     "companion",
     "cart"
    ],
-   "cartWhen": "newShopItem",
-   "note": "16장 11/13: 새 소식 점은 배낭·동행 + 행상 수레(새 상품이 들어올 때만). 노트에는 점 없음(하루 카드가 대신)"
+   "persist": true,
+   "note": "16장 11/13: 새 소식 점은 배낭·동행 + 상점(새 상품이 들어올 때만). 노트에는 점 없음(하루 카드가 대신) / 16장 11/16 T11 ①: 상점 새 상품 점은 저장해서 앱을 껐다 켜도 남음(DB 19) / 11/18: 행상 수레(cart) → 쉼터 옆 버튼 ‘상점’, 동행 점은 걷기 탭 아이콘과 동행 위(companions.walkTab.dot) / v30: 코드 이름 그대로 cart(= 쉼터 옆 버튼 상점)·cartWhen newShopItem",
+   "cartWhen": "newShopItem"
   }
  },
  "rest": {
@@ -754,23 +1026,34 @@
   "startAt": "left",
   "scroll": "horizontal",
   "fixedHud": [
-   "profile",
-   "settings",
    "gem",
-   "statusLabel",
-   "departButton"
+   "sideButtons"
   ],
+  "sideButtons": {
+   "items": [
+    "map",
+    "backpack",
+    "shop",
+    "decorate"
+   ],
+   "side": "right",
+   "minTouchPt": 44,
+   "exits": {
+    "map": "4-1",
+    "backpack": "6-1",
+    "shop": "8-1",
+    "decorate": "rest.decorDrawer"
+   },
+   "note": "16장 11/18 ②: 쉼터 버튼을 땅 위 물건(지도·배낭·노트·수레)에서 화면 옆 게임식 세로 버튼으로(지도·배낭·상점·쉼터 꾸미기). 노트는 나 탭. 어느 쪽 옆인지·크기는 캔버스(디자인 기획)가 정함, side는 가안",
+   "icons": "icon_rest_side_{map|backpack|shop|decorate}_v01(codex_camp_deco_v01 T04)"
+  },
   "firstScreenObjects": [
-   "map",
-   "backpack",
-   "note",
-   "companion",
    "character"
   ],
   "rightEdgeObjects": [
    "cart"
   ],
-  "layoutFile": "themes/camp_wide.json v3(캔버스 pt 값)",
+  "layoutFile": "themes/camp_wide.json v4(캔버스 pt 값)",
   "zoom": {
    "min": 1.0,
    "max": 1.5,
@@ -789,6 +1072,56 @@
   "campfire": {
    "frames": 3,
    "frameSec": 0.2
+  },
+  "decor": {
+   "file": "decor.json",
+   "maxPlaced": 20,
+   "editMode": false,
+   "pick": "longPress",
+   "save": "onDrop",
+   "area": "camp_wide.decor.groundBand",
+   "order": "lowerIsFront",
+   "blocked": [
+    "character",
+    "campfire",
+    "cart"
+   ],
+   "blockedFeedback": "bounceBack",
+   "flipButton": true,
+   "edgeScroll": {
+    "approx": true,
+    "edgePt": 40,
+    "ptPerSec": 240
+   },
+   "remove": "dragToDrawer",
+   "tint": [
+    "season",
+    "timePhase"
+   ],
+   "coords": "sceneRatio",
+   "hungPaintingTap": {
+    "opens": "bigView",
+    "page": "withinItem",
+    "note": "16장 11/19 ⑦: 걸린 그림을 누르면 화집과 같은 크게 보기. 좌우 넘기기는 그 물품에 걸린 그림 안에서만(빨랫줄 3장), 11/19 Annie 확정"
+   },
+   "nightLight": {
+    "approx": true,
+    "items": [
+     "decor_lantern",
+     "decor_stone_lantern"
+    ],
+    "reuse": "effects.items.effect_05.glow",
+    "radiusPt": 90,
+    "centerAlpha": 0.35,
+    "phases": [
+     "night",
+     "dawn",
+     "sunset"
+    ],
+    "note": "16장 11/19 ②: 등불·석등은 밤(노을·새벽 포함 가안)에 둘레가 밝아짐 — 반딧불 빛(RadialGradient 더하기) 코드를 물품 자리에서 그대로, 새 그림 없음. 깜빡이지 않음 빛 중심·반지름은 납품 README lightAt·lightRadiusPx, 그전엔 radiusPt 90 가안",
+    "radiusFrom": "decor.json art README lightRadiusPx(가안 등불 220·석등 260 캔버스 px)"
+   },
+   "note": "16장 11/18 ③·11/19: 꾸밈 물품을 쉼터 땅 띠 안에 끌어서 자유 배치(편집 모드 없음). 길게 눌러 집기 → 끌기 → 놓으면 저절로 저장. 앞뒤 순서는 아래(발 y가 큰 것)가 앞, 저절로. 정령·모닥불 자리에 놓으면 살짝 튕겨 나옴(글 없음). 좌우 뒤집기 버튼 1(집은 동안 보임), 화면 끝으로 끌면 장면이 따라 밀림, 치우기는 아래 서랍으로 끌어 넣기(서랍 = 쉼터 꾸미기 버튼). 물품에도 계절·시간대 보정. 자리는 장면 비율로 저장(테마·화면 크기가 바뀌어도 그대로). 한 번에 20개(가안, 성능). 하나 사면 하나"
   }
  },
  "map": {
@@ -797,12 +1130,57 @@
    "margin": 0.15,
    "approx": true,
    "note": "지도 첫 보기: 내 위치 기준으로 명소 3곳 이상 보이게(11/4), 리포 domain/map_first_view.dart 임시값"
+  },
+  "visitedDot": {
+   "by": "frameGrade",
+   "colorsFrom": "Assets/04_Frames_액자 3등급 기존 색(나무·은·금)",
+   "unvisited": "faint",
+   "sketch": "excluded",
+   "note": "16장 11/19 ①: 다녀온 명소 점을 그 명소 그림의 액자 등급 색으로(재방문으로 등급이 오르면 점 색도 바뀜). 안 간 명소는 흐린 점 그대로. 색 값은 디자인 기획 캔버스 4-1(새 에셋 없음) / 16장 11/19 지도 연필 선: 점 대신 압정 핀, 이 색은 핀 머리 색(map.style.visited)"
+  },
+  "style": {
+   "approx": true,
+   "lines": {
+    "pencil": [
+     "regionBorders",
+     "offAppTrail",
+     "nextRoute",
+     "seaRoute"
+    ],
+    "nextRoute": "pencilDashed",
+    "jitterPt": 0.6,
+    "paintTrail": "mapTrail.paint"
+   },
+   "unvisited": "pencilCircle",
+   "visited": {
+    "kind": "pushPin",
+    "headColor": "map.visitedDot"
+   },
+   "destination": "paperFlagPin",
+   "pinsNonScaling": true,
+   "art": "code",
+   "note": "16장 11/19 지도 연필 선·압정 핀(디자인 기획 캔버스 4-1): 시도 경계·앱 없이 걸은 길·다음 길(점선)·뱃길은 살짝 떨리는 가는 연필 선, 안 가 본 명소는 연필 동그라미, 다녀온 명소는 압정 핀(머리 색 = 그 그림 액자 나무·은·금), 목적지는 종이 깃발 핀, 핀은 확대해도 화면 크기 그대로. 모두 코드 그림(새 에셋 없음, 값은 캔버스 4-1). 물감 길은 그대로"
+  },
+  "card": {
+   "paintingSlot": {
+    "count": 1,
+    "empty": "pencilDashed",
+    "filled": "frameGradeColor+thumbnail",
+    "label": null,
+    "tap": "bigView",
+    "note": "16장 11/19 밤 Annie(창구 Q004): 지도 현재 목적지·명소 카드의 액자 안내 대신 그림 칸 1개. 받기 전엔 연필 점선 빈 칸, 받으면 그 그림 액자 색 칸 + 썸네일, ‘그림 n / 3’ 글 없음. 원경·근경·장면 3칸은 2·3번째 그림이 들어오는 출시 뒤. 누르면 크게 보기(가안)"
+   }
   }
  },
  "walk": {
   "arrivalProbeSec": 5,
   "autoFinishOnArrival": true,
-  "note": "걷다가 도착하면 걷기를 자동으로 마침(11/4) — 도착 확인 주기 / 11/13 물감 길: 걷기 마치기 버튼은 없고, 도착 화면 → 걷기 기록 대신 쉼터로 / 16장 11/14: 도착하면 그 물감 길은 끝남(paintTrail.endOnArrival)"
+  "arrivalFlow": [
+   "arrival",
+   "walkRecord",
+   "rest"
+  ],
+  "note": "걷다가 도착하면 걷기를 자동으로 마침(11/4) — 도착 확인 주기 / 16장 11/14: 도착하면 그 물감 길은 끝남(paintTrail.endOnArrival) / 16장 11/18 ⑤: 도착 → 걷기 기록 → 쉼터 탭(11/13 ‘도착 → 쉼터’ 대체)"
  },
  "hud": {
   "eventCardSec": 8,
@@ -816,11 +1194,34 @@
    "maxZoom": 2.0,
    "pageInAlbumOnly": true,
    "closeSwipeDown": true,
-   "landscape": false,
+   "landscape": true,
    "savedToastSec": 1.5,
-   "note": "16장 11/10 그림 크게 보기·저장: 화집(일기·전체)·도착에서 그림을 누르면 액자째 화면 가득, 글 없음. 두 손가락 1~2배(2배 가안), 좌우 넘기기는 화집 안에서만(같은 보기 순서), 도착은 한 장. 아래로 밀거나 뒤로 가면 닫힘. 왼쪽 위 저장 아이콘 → 기기 사진에 저장 + 토스트 ‘저장했어요’ 1.5초. 화집 그림 상세 시트는 없음(16장 11/10) / 16장 11/13: 공유(다른 앱으로 보내기)는 보류 — 다시 넣을 때는 크게 보기 아이콘으로, 사진첩 저장은 gal 패키지",
+   "note": "16장 11/10 그림 크게 보기·저장: 화집(일기·전체)·도착에서 그림을 누르면 액자째 화면 가득, 글 없음. 두 손가락 1~2배(2배 가안), 좌우 넘기기는 화집 안에서만(같은 보기 순서), 도착은 한 장. 아래로 밀거나 뒤로 가면 닫힘. 왼쪽 위 저장 아이콘 → 기기 사진에 저장 + 토스트 ‘저장했어요’ 1.5초. 화집 그림 상세 시트는 없음(16장 11/10) / 16장 11/13: 공유(다른 앱으로 보내기)는 보류 — 다시 넣을 때는 크게 보기 아이콘으로, 사진첩 저장은 gal 패키지 / 11/19: 쉼터 걸린 그림도 같은 크게 보기(rest.decor.hungPaintingTap) / 16장 11/19 Annie: 크게 보기 화면만 폰을 돌리면 가로(버튼 없음), 닫으면 세로로 돌아옴. 가로에서 그림 높이 = 화면 높이(세로 1170px 폭 맞춤 877px → 가로 1170px 높이, 약 1.33배). 도착·화집·쉼터에 걸린 그림 모두 같음. 가로에서도 두 손가락 2배 상한 그대로",
    "share": false,
-   "saveWith": "gal"
+   "saveWith": "gal",
+   "rotate": "sensor",
+   "portraitOnClose": true
+  },
+  "tabs": [
+   "paintings",
+   "props",
+   "paints"
+  ],
+  "tabsNote": "16장 11/19 ③: 화집 탭은 그림·소품·물감(도장은 나 탭). 물감 탭은 세 번째",
+  "propsTab": {
+   "tapToWear": true,
+   "tapAgainRemoves": true,
+   "neverRemove": [
+    "cloth"
+   ],
+   "preview": "topSpirit",
+   "joy": {
+    "trigger": "joy",
+    "sec": 1
+   },
+   "toast": true,
+   "link": "customize",
+   "note": "16장 11/19 화집 소품 바로 입기: 소품 탭에서 소품을 누르면 바로 입음(같은 슬롯은 바뀜), 다시 누르면 벗음(옷은 벗지 않음 — 옷 없는 정령 없음), 위 정령 미리보기가 바로 바뀌고 잠깐 기쁨·한 줄 토스트. 꾸미기 링크는 색·얼굴 바꾸기용. 저장은 꾸미기와 같은 착용 상태(DB 변화 없음)"
   }
  },
  "report": {
@@ -842,13 +1243,90 @@
    "default": 7
   },
   "share": "share_plus",
-  "note": "16장 11/13 하루 카드: 한국 시간 새벽 5시 이후 그날 처음 앱을 열 때, 아직 안 보여 준 지난날(0~24시) 카드 1장. 밀린 날이 여럿이면 한 장으로 합침(지난 n일 합계·하루 평균·가장 많이 걸은 날, 최대 maxMergeDays일). 이번 주 7일 막대는 카드 날이 든 주(월~일 가안). 공유 = 카드 이미지(share_plus). 리포트(시간대별·걷기/달리기·물감 길 비율)는 최근 detailDays일, 공유 없음, 기기 안 자료만",
+  "noteHidesToday": true,
+  "note": "16장 11/13 하루 카드: 한국 시간 새벽 5시 이후 그날 처음 앱을 열 때, 아직 안 보여 준 지난날(0~24시) 카드 1장. 밀린 날이 여럿이면 한 장으로 합침(지난 n일 합계·하루 평균·가장 많이 걸은 날, 최대 maxMergeDays일). 이번 주 7일 막대는 카드 날이 든 주(월~일 가안). 공유 = 카드 이미지(share_plus). 리포트(시간대별·걷기/달리기·물감 길 비율)는 최근 detailDays일, 공유 없음, 기기 안 자료만 / 16장 11/16 T11 ④: 노트 걷기 기록의 오늘 날짜 줄은 숨김(오늘 줄은 다음 날 새벽 5시 뒤 생김, 하루 카드와 같은 경계)",
   "shareImagePx": {
    "approx": true,
    "size": [
     1080,
     1350
    ]
+  },
+  "card": {
+   "approx": true,
+   "style": "postcard",
+   "frame": "designSystemCard",
+   "scene": {
+    "walked": {
+     "from": "walkingLayers",
+     "spirit": "moveSide",
+     "trail": "yesterdayPaintSegments",
+     "note": "걷는 중 층 그림(후경·들판·길)을 한 장면으로 멈춰 그리고, 길에 어제 칠한 물감 색 구간을 순서대로 깔고, 정령은 옆면 걷기 첫 장면. 새 에셋 없음"
+    },
+    "arrived": {
+     "from": "arrivalPainting",
+     "note": "도착한 날은 받은 그림(액자 없이 카드 안 그림 칸)"
+    },
+    "rest": {
+     "from": "walkingLayers",
+     "timePhase": "night",
+     "spirit": "sleep",
+     "note": "쉬어 간 날은 밤 장면에 잠든 정령"
+    }
+   },
+   "postmark": {
+    "format": "M.d",
+    "multiDay": "M.d–M.d"
+   },
+   "sentence": {
+    "templates": {
+     "day": "어제는 {dest} 쪽으로 {km} km 다가갔어요",
+     "arrived": "어제 {dest}에 닿았어요",
+     "rest": "어제는 푹 쉬었어요",
+     "multi": "지난 {n}일 동안 {dest} 쪽으로 {km} km 다가갔어요",
+     "multiRest": "지난 {n}일 동안 쉬어 갔어요"
+    },
+    "noJourney": {
+     "day": "어제는 {km} km 걸었어요",
+     "multi": "지난 {n}일 동안 {km} km 걸었어요",
+     "note": "여정이 없을 때(여행 경비로 모임) — {dest}가 없음"
+    },
+    "pick": "arrived > day, 밀린 날 중 도착이 있으면 arrived(그 명소), 모두 0이면 multiRest",
+    "kmFormat": "0.0",
+    "note": "16장 11/19 하루 카드 개편: 문장 템플릿 5(어제·도착·쉬어 간 날·지난 n일·지난 n일 모두 쉼). rest·multiRest는 11/15 확정 글, 나머지는 개발 기획 가안(Annie 확인). {dest} = 그날 끝 무렵의 목적지 명소 이름, {km} = 여행 거리(상점 효과 포함, 여정이 다가간 만큼)",
+    "approx": true
+   },
+   "journeyBar": {
+    "shows": "remainingKm",
+    "hideWhenNoJourney": true
+   },
+   "chips": {
+    "day": [
+     "steps",
+     "paintTrailKm",
+     "coinsGained"
+    ],
+    "multi": [
+     "stepsTotal",
+     "stepsDailyAvg",
+     "coinsGained"
+    ],
+    "rest": [],
+    "note": "칩 3: 걸음·물감 길·+럭. 여러 날은 합계·하루 평균·+럭. 거리·물감 방울 숫자 칸은 뺌(11/19)"
+   },
+   "weekDots": {
+    "from": "weekStartsMonday",
+    "restDay": "hollow"
+   },
+   "share": {
+    "sameAsCard": true,
+    "excludeOn": [
+     "rest",
+     "multiRest"
+    ],
+    "sizeFrom": "report.shareImagePx"
+   },
+   "note": "16장 11/19 하루 카드 개편(디자인 기획 캔버스 2-3·2-4 DayCardV D안): 종이·테이프 대신 디자인 시스템 카드. 이전 막대 7일·숫자 줄 카드를 대신함"
   }
  },
  "effects": {
@@ -1012,7 +1490,7 @@
    "glowAlpha": 0.25,
    "note": "동작 줄이기: 입자는 정지 그림 1장, 반딧불 빛은 깜빡이지 않고 알파 0.25"
   },
-  "note": "디자인기획/꾸밈효과_개발인계(11/13 Annie 밤 규칙)·Drive effects_v01_검토_20261113 motion_draft.json(가안). 그림은 clean/(입자 9·아이콘 5, 검수 전). 앱 CustomPainter(R2, 개발). 입자는 밤 필터를 받지 않고 낮과 같은 색, 반딧불 빛은 그림 없이 RadialGradient(흰~연노랑, 가운데 0.35 → 0)를 더하기로 겹쳐 근처 땅·정령을 밝힘. 물감 입자는 회색 그림에 색을 곱함. 키 id는 props effect 슬롯 id와 같음"
+  "note": "디자인기획/꾸밈효과_개발인계(11/13 Annie 밤 규칙)·Drive effects_v01_검토_20261113 motion_draft.json(가안). 그림은 clean/(입자 9·아이콘 5, 검수 전). 앱 CustomPainter(R2, 개발). 입자는 밤 필터를 받지 않고 낮과 같은 색, 반딧불 빛은 그림 없이 RadialGradient(흰~연노랑, 가운데 0.35 → 0)를 더하기로 겹쳐 근처 땅·정령을 밝힘. 물감 입자는 회색 그림에 색을 곱함. 키 id는 props effect 슬롯 id와 같음 11/19: 등불·석등 밤 빛도 이 glow 코드를 씀(rest.decor.nightLight)"
  },
  "mapTrail": {
   "approx": true,
@@ -1035,7 +1513,14 @@
    "color": "#7A6A5C"
   },
   "nonScaling": true,
-  "note": "디자인기획/물감길_개발인계 3장: 물감 길 구간은 방울 타일을 구간 방향으로 돌려 반복(RGB × 그 구간의 물감 색, 11/14), 끝에 끝 방울. 앱 없이 걸은 구간은 연필 선. 확대해도 두께는 화면 pt 그대로. 붓자국 v01은 안 씀(11/14 Annie)"
+  "note": "디자인기획/물감길_개발인계 3장: 물감 길 구간은 방울 타일을 구간 방향으로 돌려 반복(RGB × 그 구간의 물감 색, 11/14), 끝에 끝 방울. 앱 없이 걸은 구간은 연필 선. 확대해도 두께는 화면 pt 그대로. 붓자국 v01은 안 씀(11/14 Annie)",
+  "patterns": {
+   "from": "trails.json",
+   "tileKey": "tile",
+   "capKey": "cap",
+   "sameSizeAsDrops": true,
+   "note": "16장 11/19: 구간의 patternId로 타일·끝을 고름, 크기·색 곱하기·잉크 테두리는 paint 규칙 그대로(codex_trail_patterns_gift_v01 6장, 512×64·끝 64×64)"
+  }
  },
  "paintColor": {
   "approx": true,
@@ -1115,7 +1600,7 @@
   "choose": {
    "where": "rest.backpack.paintTab",
    "whileWalking": true,
-   "note": "16장 11/16 Annie: 배낭 물감 탭에서 원할 때 바로 바꿈(걷는 중에도, 그 순간부터 그 색으로 칠함 = 물감 길 하나에 구간이 여럿). 고른 색을 다 쓰면 기본으로, 같은 색 통을 다시 주워도 저절로 다시 고르지 않음. 걷는 중 화면에는 고르는 버튼을 두지 않음(배낭은 쉼터에서 엶)",
+   "note": "16장 11/16 Annie: 배낭 물감 탭에서 원할 때 바로 바꿈(걷는 중에도, 그 순간부터 그 색으로 칠함 = 물감 길 하나에 구간이 여럿). 고른 색을 다 쓰면 기본으로, 같은 색 통을 다시 주워도 저절로 다시 고르지 않음. 걷는 중 화면에는 고르는 버튼을 두지 않음(배낭은 쉼터 옆 버튼에서 엶)",
    "reselectOnRefill": false
   },
   "mapSegments": true,
@@ -1126,11 +1611,12 @@
    "cacheMin": 1440,
    "offline": "timePhase",
    "secret": "Secret Manager KMA_SERVICE_KEY",
-   "note": "16장 11/16 Annie: 실시간 대신 그날 하루 날씨 하나. 그날 처음 물감 길이 열릴 때 정령의 지도 위 여정 지점으로 한 번 묻고, 서버는 격자 + 한국 날짜로 캐시(격자마다 하루 1번 기상청 호출). 하루 동안 정령이 멀리 가도 그날 날씨는 그대로. 인터넷이 없거나 실패하면 시간대 색, 다음 물감 길 때 다시 물음. 키는 Secret Manager KMA_SERVICE_KEY",
+   "note": "16장 11/16 Annie: 실시간 대신 그날 하루 날씨 하나. 그날 처음 물감 길이 열릴 때 정령의 지도 위 여정 지점으로 한 번 묻고, 서버는 격자 + 한국 날짜로 캐시(격자마다 하루 1번 기상청 호출). 하루 동안 정령이 멀리 가도 그날 날씨는 그대로. 인터넷이 없거나 실패하면 시간대 색, 다음 물감 길 때 다시 물음. 키는 Secret Manager KMA_SERVICE_KEY / 16장 11/17 ④⑤: 비·눈 시간이 같으면 비, 소나기도 비. 자정을 넘긴 물감 길은 시작한 날 날씨로 끝까지",
    "askMin": 1440,
    "per": "kstDay",
    "cacheKey": "grid+kstDate",
-   "dailyRule": "그날(한국 날짜) 06~21시 예보 중 강수(비·눈) 시간이 하나라도 있으면 그 강수(비·눈이 둘 다면 많은 쪽), 없으면 하늘 상태가 흐림(SKY 4)인 시간이 절반 이상이면 흐림, 아니면 맑음"
+   "dailyRule": "그날(한국 날짜) 06~21시 예보 중 강수(비·눈) 시간이 하나라도 있으면 그 강수(비·눈이 둘 다면 많은 쪽, 같으면 비. 소나기·비/눈은 비, 눈날림은 눈), 없으면 하늘 상태가 흐림(SKY 4)인 시간이 절반 이상이면 흐림, 아니면 맑음",
+   "trailAcrossMidnight": "startDay"
   },
   "note": "16장 11/14 Annie: 물감 길 색은 그 순간 시간대·날씨·강도로 정해지고, 걸으며 물감 통을 모아 쉼터 배낭에서 고른 색을 다 쓸 때까지 칠함. 지도 물감 길은 구간마다 칠한 색으로 남음. 색 hex는 11/15 디자인 기획 확정(파스텔), 계절 64·지역 7은 11/15 Annie",
   "names": {
@@ -1347,12 +1833,50 @@
     "region"
    ],
    "recentCount": 3,
+   "recentBy": "lastUsed",
+   "seasonGroups": "single",
    "groupsCollapsible": true,
-   "openOnStart": "currentSeason",
+   "openOnStart": "all",
    "remainUnit": "km",
    "remainStep": 0.1,
    "remainRound": "floor",
-   "note": "화집 네 번째 탭 ‘물감 n’(가진 색 수, 기본 포함). 기본 맨 앞 고정 → 최근 3칸 → 계절 색(봄·여름·가을·겨울, 가진 계절만) → 지역 색(나라 > 권역, 가진 것만). 묶음은 접힘, 처음엔 지금 계절만 펼침. 꼬리표 = 색 이름 + 남은 거리 0.1km 내림(기본은 없음). 물감색_개발인계 4장·물감색_계절지역 3장"
+   "note": "화집 세 번째 탭(11/19 도장이 나 탭으로 가서 네 번째 → 세 번째) ‘물감 n’(가진 색 수, 기본 포함). 기본 맨 앞 고정 → 최근 3칸 → 계절 색 → 지역 색(나라 > 권역, 가진 것만). 꼬리표 = 색 이름 + 남은 거리 0.1km 내림(기본은 없음). 물감색_개발인계 4장·물감색_계절지역 3장 / 16장 11/17 ②③: ‘최근’은 최근에 고른(쓴) 색(주운 색 아님). 계절 색은 캔버스 6-1대로 한 묶음(계절마다 나누지 않음), 처음에 모든 묶음 펼침(이전 ‘지금 계절만 펼침’ 대체)"
+  }
+ },
+ "paintPattern": {
+  "file": "trails.json",
+  "default": "drops",
+  "segmentKey": "patternId",
+  "choose": {
+   "where": "album.paints.topRow",
+   "whileWalking": true,
+   "appliesFrom": "now",
+   "autoSelectOnGain": false,
+   "note": "디자인기획/꾸밈제안_모양_가안 확정판: 물감 색처럼 ‘지금 칠할 무늬’. 배낭 물감 탭 맨 위 한 줄(기본 방울 + 가진 무늬)에서 고르면 그 순간부터 새 구간(색이 바뀔 때와 같이 구간을 나눔), 이미 칠한 구간은 그때 무늬 그대로. 새로 얻어도 저절로 고르지 않음. 걷는 중 화면에 고르는 버튼 없음"
+  },
+  "visibleOn": [
+   "map",
+   "dayCard"
+  ],
+  "walkingScreen": false,
+  "reward": {
+   "distanceBasis": "paintTrailActual",
+   "kmFrom": "trails.json patterns[].unlock.km",
+   "give": "firstMissingInOrder",
+   "allOwnedCoins": 100,
+   "allOwnedCoinsCountsTowardDailyCap": false,
+   "approx": true,
+   "note": "16장 11/19 밤 Annie(창구 Q005): 물감 길 누적 실제 거리(상점 효과 제외) 10·50·100km에 닿으면 아직 없는 무늬 중 표 순서로 첫 번째를 줌. 상점에서 이미 사서 셋 다 가졌으면 그 보상 대신 100 럭(첫 선물처럼 하루 상한 밖 — 개발 기획 가안). 받으면 한 줄 토스트(소품 얻을 때와 같음), 동기화 때 판정(배지·소품 해금과 같은 자리)"
+  },
+  "missingArt": "drawAsDefault",
+  "note": "16장 11/19 꾸밈 제안 세부·상점 무늬·물감·선물 이름. 물감 길 구간(trailSegments)마다 색과 함께 무늬 id를 저장(M1). 무늬 그림이 오기 전엔 그 구간도 방울 타일로 그림(pending)"
+ },
+ "maker": {
+  "startGift": {
+   "prop": "float_04",
+   "equip": true,
+   "on": "spiritMakerDone",
+   "note": "16장 11/19 밤 Annie(창구 Q003·Q007): 정령 만들기를 마치면 둥실 ‘물빛 구슬’(이름 기획 가안)을 입은 채 시작, 벗을 수 있음. 상점·걸어서는 얻지 않음. 그림·Rive 번호가 오기 전엔 가진 것으로만 저장하고 정령 위에 안 그림(16장 11/6 규칙)"
   }
  }
 }

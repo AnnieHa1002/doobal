@@ -1,28 +1,39 @@
 {
- "version": 6,
- "asOf": "2026-11-13",
- "source": "v6(11/13 개발 기획, 16장 11/13 Annie): 여행 효과 2종에 desc(상점 칸 이름 아래 한 줄, 소품·배·꾸밈 효과에는 없음), 순풍은 물감 길 기준. v5(11/6 개발 기획): 짧은 이름(11/4 Annie, 럭_상점.md v2.3), 색 소품은 props.json colorVariants에서 빌드(색 정해지면 tab prop, 100 럭), 상점 배 6척 산 뒤 색 바꾸기(boats.json recolor, 무료). v4(11/4 개발 기획): 배 9척(11/3 Annie) — 상점 배 6(5,000·5,000·5,000·8,000·8,000·12,000럭, 값은 베타 뒤 조정), 나룻배 800·작은 돛단배 1,200 상품 없앰. 보상 배 3은 상품이 아니라 boats.json unlock. 탭 화면 이름 tabLabels(UI 명세 15장). v3(11/3): 상품 19개, 기획/럭_상점.md v2.1·소품_목록.md v04.1",
+ "version": 9,
+ "asOf": "2026-11-19",
+ "source": "v9(11/19 밤 개발 기획, 16장 11/19 상점 미니 친구 8종·꾸밈 제안 세부·상점 무늬·물감·선물 이름, 기획/럭_상점.md v2.12): 상점 미니 친구 8(pet_06~13, 500 럭 가안), 물감 길 무늬 3(trail_01~03, 200 럭 가안, 목록은 trails.json), 물감 통(paint_tube, 소모품, 수레 무작위 칸 하루 약 50%·하루 최대 1칸·그날 계절 색 1색 3통·30 럭 가안, 지역 색 안 팖). 수레 종류 키는 slot 칸에 씀(소품이 아닌 무늬 trail·물감 통 paintTube도). v8(11/19 개발 기획, 16장 11/19 오늘의 수레): list cart — 여행 효과는 고정 칸, 나머지 일반 상품은 오늘의 수레 무작위 칸(규칙은 config shop.cart). 상품 줄·값·category는 그대로(분류 아이콘은 칸에 그대로). v7(11/19 개발 기획, 16장 11/19 ⑤⑥ Annie, 기획/럭_상점.md v2.7): 탭을 나누지 않고 한 목록 — tabs·tabLabels·칸의 tab 대신 category(분류 아이콘 travel·prop·decor·boat, 색 소품·꾸밈 효과는 prop 아이콘), 쉼터 꾸밈 물품 8개(decorId, 값은 decor.json과 같음) 추가. v6(11/13 개발 기획, 16장 11/13 Annie): 여행 효과 2종에 desc(상점 칸 이름 아래 한 줄, 소품·배·꾸밈 효과에는 없음), 순풍은 물감 길 기준. v5(11/6 개발 기획): 짧은 이름(11/4 Annie, 럭_상점.md v2.3), 색 소품은 props.json colorVariants에서 빌드(색 정해지면 tab prop, 100 럭), 상점 배 6척 산 뒤 색 바꾸기(boats.json recolor, 무료). v4(11/4 개발 기획): 배 9척(11/3 Annie) — 상점 배 6(5,000·5,000·5,000·8,000·8,000·12,000럭, 값은 베타 뒤 조정), 나룻배 800·작은 돛단배 1,200 상품 없앰. 보상 배 3은 상품이 아니라 boats.json unlock. v3(11/3): 상품 19개, 기획/럭_상점.md v2.1·소품_목록.md v04.1",
  "currencyName": "럭",
  "priceFormat": "{n} 럭",
- "tabs": [
+ "list": "cart",
+ "categories": [
   "travel",
   "prop",
-  "effect",
+  "decor",
   "boat"
  ],
- "tabLabels": {
-  "travel": "여행 효과",
-  "prop": "소품",
-  "effect": "꾸밈 효과",
-  "boat": "배"
+ "categoryIcons": {
+  "travel": "icon_shop_cat_effect_v01",
+  "prop": "icon_shop_cat_prop_v01",
+  "decor": "icon_shop_cat_deco_v01",
+  "boat": "icon_shop_cat_boat_v01",
+  "pending": true,
+  "note": "분류 아이콘 4(디자인기획/codex_camp_deco_v01 T06, Assets/05_UI_화면/icons_v02/, 회색조 한 장 — 앱이 색을 입힘, 20pt). 11/19 밤: 무늬·물감 통 칸도 prop 아이콘(개발 기획 가안, 새 분류 아이콘 없음 — 디자인 기획 확인)"
  },
- "tabNote": "travel = 여행 효과(소모품), effect = 꾸미기 효과 슬롯(영구 입자 효과). 상점 탭은 '꾸밈 효과', 꾸미기 탭은 '효과'",
+ "listOrder": {
+  "approx": true,
+  "fixed": "travel(order 순, 위)",
+  "cart": "그날 정해진 수레 칸 순서",
+  "note": "16장 11/19: ‘한 목록’(v7)은 오늘의 수레 칸 + 여행 효과 칸으로 바뀜. 배치는 캔버스 8-1"
+ },
+ "categoryNote": "travel = 여행 효과(소모품), prop = 꾸미기 소품·색 소품·꾸밈 효과(effect 슬롯, 영구 입자)·물감 길 무늬(trail, 영구, trails.json)·물감 통(paintTube, 소모품), decor = 쉼터 꾸밈 물품(영구, decor.json), boat = 상점 배. 수레 종류(kind)는 slot 값(소품 slot, trail, paintTube), 없으면 category(decor, boat)(config shop.cart.kindsByKm). 이전 탭 4개(여행 효과·소품·꾸밈 효과·배)는 11/19부터 안 씀 — 상품이 늘면 탭을 다시 검토(기획)",
  "defaultBoat": "boat_raft",
  "boatsFile": "boats.json",
+ "decorFile": "decor.json",
+ "trailsFile": "trails.json",
  "items": [
   {
    "id": "fx_shortcut",
-   "tab": "travel",
+   "category": "travel",
    "name": "지름길",
    "price": 50,
    "order": 1,
@@ -37,7 +48,7 @@
   },
   {
    "id": "fx_tailwind",
-   "tab": "travel",
+   "category": "travel",
    "name": "순풍",
    "price": 40,
    "order": 2,
@@ -52,7 +63,7 @@
   },
   {
    "id": "face_01",
-   "tab": "prop",
+   "category": "prop",
    "name": "헤드폰",
    "price": 300,
    "order": 1,
@@ -61,7 +72,7 @@
   },
   {
    "id": "face_02",
-   "tab": "prop",
+   "category": "prop",
    "name": "귀마개",
    "price": 300,
    "order": 2,
@@ -70,7 +81,7 @@
   },
   {
    "id": "cloth_05",
-   "tab": "prop",
+   "category": "prop",
    "name": "연두 망토",
    "price": 600,
    "order": 3,
@@ -79,7 +90,7 @@
   },
   {
    "id": "shoe_04",
-   "tab": "prop",
+   "category": "prop",
    "name": "장화",
    "price": 300,
    "order": 4,
@@ -88,7 +99,7 @@
   },
   {
    "id": "shoe_05",
-   "tab": "prop",
+   "category": "prop",
    "name": "고양이 슬리퍼",
    "price": 300,
    "order": 5,
@@ -97,7 +108,7 @@
   },
   {
    "id": "shoe_06",
-   "tab": "prop",
+   "category": "prop",
    "name": "짚신",
    "price": 300,
    "order": 6,
@@ -106,7 +117,7 @@
   },
   {
    "id": "hand_11",
-   "tab": "prop",
+   "category": "prop",
    "name": "벙어리장갑",
    "price": 400,
    "order": 7,
@@ -115,7 +126,7 @@
   },
   {
    "id": "hand_12",
-   "tab": "prop",
+   "category": "prop",
    "name": "새 날개",
    "price": 400,
    "order": 8,
@@ -124,7 +135,7 @@
   },
   {
    "id": "hand_13",
-   "tab": "prop",
+   "category": "prop",
    "name": "잎 장갑",
    "price": 400,
    "order": 9,
@@ -133,7 +144,7 @@
   },
   {
    "id": "float_01",
-   "tab": "prop",
+   "category": "prop",
    "name": "별 랜턴",
    "price": 500,
    "order": 10,
@@ -142,52 +153,239 @@
   },
   {
    "id": "effect_01",
-   "tab": "effect",
+   "category": "prop",
    "name": "나뭇잎",
    "price": 200,
-   "order": 1,
+   "order": 11,
    "propId": "effect_01",
    "slot": "effect"
   },
   {
    "id": "effect_02",
-   "tab": "effect",
+   "category": "prop",
    "name": "빗방울",
    "price": 200,
-   "order": 2,
+   "order": 12,
    "propId": "effect_02",
    "slot": "effect"
   },
   {
    "id": "effect_03",
-   "tab": "effect",
+   "category": "prop",
    "name": "반짝이",
    "price": 200,
-   "order": 3,
+   "order": 13,
    "propId": "effect_03",
    "slot": "effect"
   },
   {
    "id": "effect_04",
-   "tab": "effect",
+   "category": "prop",
    "name": "물감",
    "price": 200,
-   "order": 4,
+   "order": 14,
    "propId": "effect_04",
    "slot": "effect"
   },
   {
    "id": "effect_05",
-   "tab": "effect",
+   "category": "prop",
    "name": "반딧불",
    "price": 200,
-   "order": 5,
+   "order": 15,
    "propId": "effect_05",
    "slot": "effect"
   },
   {
+   "id": "pet_06",
+   "category": "prop",
+   "name": "파랑새",
+   "price": 500,
+   "order": 16,
+   "propId": "pet_06",
+   "slot": "pet"
+  },
+  {
+   "id": "pet_07",
+   "category": "prop",
+   "name": "카나리아",
+   "price": 500,
+   "order": 17,
+   "propId": "pet_07",
+   "slot": "pet"
+  },
+  {
+   "id": "pet_08",
+   "category": "prop",
+   "name": "잠자리",
+   "price": 500,
+   "order": 18,
+   "propId": "pet_08",
+   "slot": "pet"
+  },
+  {
+   "id": "pet_09",
+   "category": "prop",
+   "name": "도깨비불",
+   "price": 500,
+   "order": 19,
+   "propId": "pet_09",
+   "slot": "pet"
+  },
+  {
+   "id": "pet_10",
+   "category": "prop",
+   "name": "꼬마 인삼",
+   "price": 500,
+   "order": 20,
+   "propId": "pet_10",
+   "slot": "pet"
+  },
+  {
+   "id": "pet_11",
+   "category": "prop",
+   "name": "두더지",
+   "price": 500,
+   "order": 21,
+   "propId": "pet_11",
+   "slot": "pet"
+  },
+  {
+   "id": "pet_12",
+   "category": "prop",
+   "name": "고슴도치",
+   "price": 500,
+   "order": 22,
+   "propId": "pet_12",
+   "slot": "pet"
+  },
+  {
+   "id": "pet_13",
+   "category": "prop",
+   "name": "너구리",
+   "price": 500,
+   "order": 23,
+   "propId": "pet_13",
+   "slot": "pet"
+  },
+  {
+   "id": "trail_01",
+   "category": "prop",
+   "name": "발자국",
+   "price": 200,
+   "order": 24,
+   "trailId": "trail_01",
+   "slot": "trail"
+  },
+  {
+   "id": "trail_02",
+   "category": "prop",
+   "name": "꽃잎",
+   "price": 200,
+   "order": 25,
+   "trailId": "trail_02",
+   "slot": "trail"
+  },
+  {
+   "id": "trail_03",
+   "category": "prop",
+   "name": "별가루",
+   "price": 200,
+   "order": 26,
+   "trailId": "trail_03",
+   "slot": "trail"
+  },
+  {
+   "id": "paint_tube",
+   "category": "prop",
+   "name": "물감 통",
+   "price": 30,
+   "order": 27,
+   "slot": "paintTube",
+   "consumable": true,
+   "paint": {
+    "color": "todaySeasonRandom",
+    "tubes": 3,
+    "tubeAmountFrom": "config paintColor.tube.amountM",
+    "excludeRegion": true
+   },
+   "cart": {
+    "chancePerDay": 0.5,
+    "maxPerDay": 1,
+    "skipOwnedRules": true
+   },
+   "art": {
+    "icon": "ui_paint_tube_icon_v01",
+    "tint": "multiplyRgb"
+   }
+  },
+  {
+   "id": "decor_lantern",
+   "category": "decor",
+   "name": "등불",
+   "price": 300,
+   "order": 1,
+   "decorId": "decor_lantern"
+  },
+  {
+   "id": "decor_stone_lantern",
+   "category": "decor",
+   "name": "석등",
+   "price": 400,
+   "order": 2,
+   "decorId": "decor_stone_lantern"
+  },
+  {
+   "id": "decor_bench",
+   "category": "decor",
+   "name": "나무 벤치",
+   "price": 400,
+   "order": 3,
+   "decorId": "decor_bench"
+  },
+  {
+   "id": "decor_stump",
+   "category": "decor",
+   "name": "그루터기",
+   "price": 200,
+   "order": 4,
+   "decorId": "decor_stump"
+  },
+  {
+   "id": "decor_flower_pot",
+   "category": "decor",
+   "name": "풀꽃 화분",
+   "price": 200,
+   "order": 5,
+   "decorId": "decor_flower_pot"
+  },
+  {
+   "id": "decor_woodpile",
+   "category": "decor",
+   "name": "장작 더미",
+   "price": 200,
+   "order": 6,
+   "decorId": "decor_woodpile"
+  },
+  {
+   "id": "decor_hammock",
+   "category": "decor",
+   "name": "해먹",
+   "price": 600,
+   "order": 7,
+   "decorId": "decor_hammock"
+  },
+  {
+   "id": "decor_pond",
+   "category": "decor",
+   "name": "작은 연못",
+   "price": 800,
+   "order": 8,
+   "decorId": "decor_pond"
+  },
+  {
    "id": "boat_cruise",
-   "tab": "boat",
+   "category": "boat",
    "name": "유람선",
    "price": 5000,
    "order": 1,
@@ -196,7 +394,7 @@
   },
   {
    "id": "boat_speed",
-   "tab": "boat",
+   "category": "boat",
    "name": "스피드보트",
    "price": 5000,
    "order": 2,
@@ -205,7 +403,7 @@
   },
   {
    "id": "boat_pirate",
-   "tab": "boat",
+   "category": "boat",
    "name": "해적선",
    "price": 5000,
    "order": 3,
@@ -214,7 +412,7 @@
   },
   {
    "id": "boat_canopy",
-   "tab": "boat",
+   "category": "boat",
    "name": "차양 보트",
    "price": 8000,
    "order": 4,
@@ -223,7 +421,7 @@
   },
   {
    "id": "boat_atelier",
-   "tab": "boat",
+   "category": "boat",
    "name": "오두막 돛배",
    "price": 8000,
    "order": 5,
@@ -232,7 +430,7 @@
   },
   {
    "id": "boat_starlight",
-   "tab": "boat",
+   "category": "boat",
    "name": "별빛배",
    "price": 12000,
    "order": 6,
@@ -240,10 +438,12 @@
    "recolor": true
   }
  ],
+ "consumableNote": "물감 통(16장 11/19 밤, 럭_상점 v2.12): 수레 무작위 칸 상품이지만 소모품이라 ‘산 것·가진 것 빼기’·‘안 나온 종류 먼저’에서 빠짐(cart.skipOwnedRules). 그날 수레를 정할 때 chancePerDay로 한 번 뽑아 나오면 칸 하나를 차지(maxPerDay 1). 색 = 그날(한국 날짜) 계절 16색 중 무작위 1색(시드 config shop.cart.seed), 지역 색·다른 계절 색은 안 팖. 사면 그 색 통 3개(통 1개 = 길에서 줍는 통과 같은 양, 색마다 999통 상한 그대로). 낮에 사면 그 칸은 ‘가짐’ 꼬리표 대신 그날 다시 못 삼(하루 1칸). 칸 그림 = 그 색을 곱한 물감 통 아이콘(새 그림 없음)",
+ "trailNote": "물감 길 무늬(16장 11/19 밤): 수레 처음 묶음 다음 5km 묶음부터(가안), 산 무늬는 영구. 걸어서 받는 거리 보상과 겹침 규칙은 config paintPattern.reward",
  "colorVariantItems": {
   "from": "props.json colorVariants",
-  "tab": "prop",
-  "note": "props.json에 variantOf가 있는 소품을 상점 소품 탭에 '기본 소품 바로 뒤' 순서로 띄움. 기본 소품(requires)을 아직 못 얻었으면 숨김. shop.json에는 따로 적지 않음(값은 props unlock.price 하나)"
+  "category": "prop",
+  "note": "props.json에 variantOf가 있는 소품을 목록에서 '기본 소품 바로 뒤' 순서로 띄움(소품 아이콘). 기본 소품(requires)을 아직 못 얻었으면 숨김. shop.json에는 따로 적지 않음(값은 props unlock.price 하나)"
  },
  "descNote": "desc는 여행 효과만(16장 11/13 Annie, 14장 설명 글 없음 원칙의 예외). 숫자는 effect 값과 같아야 함(check_data)"
 }
