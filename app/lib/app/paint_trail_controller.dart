@@ -180,11 +180,21 @@ class PaintTrailController extends Notifier<PaintTrailState> {
   /// 이번 물감 길의 센서 걸음 (센서가 없거나 물감 길이 없으면 null). 화면이 프레임마다 읽는다
   LiveWalk? get live => state.active && (_walker?.ready ?? false) ? _walker!.walk : null;
 
-  /// 화면에 보이는 이번 물감 길 숫자 (health 기록과 센서 중 큰 쪽, liveSummary)
+  /// 이번 물감 길 숫자 (health 기록과 센서 중 큰 쪽, liveSummary). 걸음·거리는 센 값(카운터·health)이고,
+  /// 분당 걸음과 걷기/뛰기는 센서 기준이다
   WalkSummary? summaryAt(DateTime now) {
     final walk = live;
     final health = state.record?.summary;
     return walk == null ? health : liveSummary(health, walk, now);
+  }
+
+  /// 걷는 중 화면에 보이는 걸음·거리 (liveShown): [summaryAt]에 감지 센서가 카운터보다 먼저 센 걸음을 더한 값.
+  /// 뒤로 가지 않는다. 숫자가 없으면 null
+  ({int steps, double distanceM})? shownAt(DateTime now) {
+    final walk = live;
+    final health = state.record?.summary;
+    if (walk != null) return liveShown(health, walk);
+    return health == null ? null : (steps: health.steps, distanceM: health.distanceM);
   }
 
   /// 지금 바로 동기화해서 이 물감 길 기록을 새로 낸다 (도착 확인). 돌고 있으면 그것을 기다린다
@@ -250,6 +260,7 @@ class PaintTrailController extends Notifier<PaintTrailState> {
         denied: () => denied.denied,
         onDenied: () => denied.set(true),
         onGain: _onGain,
+        onDetect: _onDetect,
         onResume: _onResume,
         onHiddenSteps: (p) => _pushNotice(
           math.max(_noticeSteps, p.steps),
@@ -310,6 +321,17 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     // 시작을 일으킨 걸음까지 세게 그 걸음들 전 누적값을 기준으로 둔다
     final startSteps = tracker.lastStartSteps;
     _walker?.restart(baseline: total - startSteps, at: start);
+    _opening ??= _open(start).whenComplete(() => _opening = null);
+  }
+
+  /// 앱이 앞에 있을 때 감지 센서가 걸음을 알아챘다 (안드로이드, 16장 11/19): 물감 길 시작 판정(약 5초)과
+  /// 마지막 걸음에 넣는다. 감지 걸음이 물감 길을 열면 그 걸음들을 새 걷기에 먼저 넣는다 (센 걸음은 카운터가 맞춘다)
+  void _onDetect(SensorGain g) {
+    final tracker = _tracker;
+    if (tracker == null || _disposed) return;
+    final start = tracker.add(g);
+    if (start == null) return;
+    _walker?.restartDetected(tracker.lastStartGains);
     _opening ??= _open(start).whenComplete(() => _opening = null);
   }
 

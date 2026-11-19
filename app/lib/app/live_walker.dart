@@ -18,7 +18,10 @@ typedef HiddenPreview = ({int steps, double distanceM});
 /// [onHiddenSteps]에 알리고(알림 갱신용), 앱이 다시 앞으로 오면 마지막 값을 받은 시각으로 한 번 먹인다.
 /// 센서 값은 부팅 이후 누적이라 그 값에 숨어 있던 동안의 걸음이 다 들어 있고, [LiveWalk]가 그걸 센다.
 /// 숨어 있는 사이 앱이 종료되면 이 걸음은 놓친다 (health 기록에는 남는다).
-/// 값이 늘 때마다(숨어 있어도) [onGain]에 그 증가를 알린다 (물감 길 시작·끝 판정)
+/// 값이 늘 때마다(숨어 있어도) [onGain]에 그 증가를 알린다 (물감 길 시작·끝 판정).
+/// 걸음 감지 센서(안드로이드, 16장 11/19)도 같이 듣는다: 앱이 앞에 있을 때 감지한 걸음을 [LiveWalk.onDetect]에
+/// 먹이고 [onDetect]에 알린다 (화면을 걸음마다 움직이고 물감 길을 빨리 연다). 숨어 있는 동안 감지 걸음은 버린다
+/// (화면이 없고, 카운터가 그 걸음을 센다). 감지 센서가 없으면 카운터만 쓴다
 class LiveWalker {
   LiveWalker({
     required this._steps,
@@ -28,6 +31,7 @@ class LiveWalker {
     required this._onDenied,
     this.onHiddenSteps,
     this.onGain,
+    this.onDetect,
     this.onResume,
     this.ask = true,
   }) : walk = LiveWalk(rules);
@@ -47,6 +51,9 @@ class LiveWalker {
   /// 센서 값이 늘 때마다: 그 증가([SensorGain], 앞에 있었는지·숨었다 돌아와 처음 받은 값인지)와 누적값
   final void Function(SensorGain gain, int total)? onGain;
 
+  /// 앱이 앞에 있을 때 감지 센서가 걸음을 알아챌 때마다: 그 걸음([SensorGain.detected])
+  final void Function(SensorGain gain)? onDetect;
+
   /// 앱이 숨었다가 다시 앞으로 왔을 때 (iOS 화면 꺼짐 메우기가 health 분 걸음을 읽으려고)
   final void Function()? onResume;
 
@@ -57,6 +64,10 @@ class LiveWalker {
   LiveWalk walk;
 
   StreamSubscription<int>? _sub;
+  StreamSubscription<int>? _detectSub;
+
+  /// 감지 센서가 오류를 줬다 (센서가 없는 기기). 다시 읽지 않고 카운터만 쓴다
+  var _detectFailed = false;
   AppLifecycleListener? _lifecycle;
   var _ready = false;
   var _disposed = false;
@@ -125,6 +136,15 @@ class LiveWalker {
     if (last != null && !_hidden) walk.onCount(last, _clock());
   }
 
+  /// 감지 걸음 [gains]가 물감 길을 열었다: 새 걷기를 세고(카운터 기준은 마지막으로 받은 누적값) 그 걸음들을
+  /// 감지 걸음으로 먼저 넣는다. 카운터 값을 아직 못 받았으면 다음에 받는 값이 그 걸음까지 담았다고 본다
+  void restartDetected(List<SensorGain> gains) {
+    restart();
+    for (final g in gains) {
+      walk.onDetect(g.at, g.steps);
+    }
+  }
+
   /// 숨어 있는 동안 받아 둔 마지막 값을 지금 [LiveWalk]에 먹인다 (숨은 채 물감 길이 끝날 때 그 걸음까지 세려고).
   /// 숨어 있지 않거나 받은 값이 없으면 아무 일도 없다
   void feedHidden() {
@@ -138,6 +158,19 @@ class LiveWalker {
   }
 
   void _listen() {
+    if (!_detectFailed && _detectSub == null) {
+      _detectSub = _steps.stepDetections().listen(
+            _onDetect,
+            onError: (Object e) {
+              // 감지 센서가 없는 기기: 카운터만 쓴다
+              debugPrint('걸음 감지 센서 읽기 실패: $e');
+              _detectFailed = true;
+              _detectSub?.cancel();
+              _detectSub = null;
+            },
+            onDone: () => _detectSub = null,
+          );
+    }
     if (_sub != null) return;
     _sub = _steps.stepCounts().listen(
           _onCount,
@@ -155,6 +188,16 @@ class LiveWalker {
   void _unlisten() {
     _sub?.cancel();
     _sub = null;
+    _detectSub?.cancel();
+    _detectSub = null;
+  }
+
+  /// 감지 센서가 걸음 [steps]개를 알아챘다. 숨어 있으면 버린다
+  void _onDetect(int steps) {
+    if (_hidden || steps <= 0) return;
+    final at = _clock();
+    walk.onDetect(at, steps);
+    onDetect?.call(SensorGain(at, steps, detected: true));
   }
 
   void _onCount(int total) {
@@ -201,7 +244,7 @@ class LiveWalker {
     // 숨어 있는 동안 값을 받았으면(안드로이드) 그 걸음은 이미 [onGain]으로 알렸다
     if (total != null) _catchUpNext = false;
     if (total != null && at != null) walk.onCount(total, at);
-    if (_ready && _sub == null) _listen();
+    if (_ready && (_sub == null || (_detectSub == null && !_detectFailed))) _listen();
     // 묻지 않는 쪽([ask] false)은 권한이 없어 못 읽던 중이면 설정에서 켜고 왔을 수 있어 다시 확인한다
     if (!_ready && !ask && !_failed) unawaited(start());
     onResume?.call();

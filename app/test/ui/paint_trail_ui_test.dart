@@ -40,6 +40,13 @@ Future<void> _sensor(WidgetTester tester, UiEnv e, int sec, int total) async {
   await tester.pump(const Duration(milliseconds: 50));
 }
 
+/// 분당 100보로 [from] 뒤 [steps]보를 센서에 넣는다: 6초마다 10보 (분당 걸음 10초 창에서 걷기로 보이게, 16장 11/19)
+Future<void> _walk100(WidgetTester tester, UiEnv e, int from, int steps) async {
+  for (var n = 10; n <= steps; n += 10) {
+    await _sensor(tester, e, 6, from + n);
+  }
+}
+
 /// 쉼터에서 센서 값을 넣어 물감 길을 연다: 기준 [base] 뒤 30초에 10보 → 열림, 걷는 중으로 넘어가길 기다린다
 Future<void> _startTrail(WidgetTester tester, UiEnv e, {int base = 50000}) async {
   await _sensor(tester, e, 0, base);
@@ -125,6 +132,56 @@ void main() {
     expect(find.text('걷기 마치기'), findsNothing);
     expect(find.textContaining('×'), findsNothing);
     expect(find.byKey(const Key('walk-rest')), findsOneWidget);
+    await end(tester, e);
+  });
+
+  testWidgets('감지 센서(16장 11/19): 걸음마다 오는 감지 걸음 10개(약 5초)로 걷는 중이 열리고, '
+      '걸음 숫자는 카운터보다 먼저 오르며 카운터 값이 와도 뒤로 가지 않는다', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, e.startSketch);
+    await _pumpApp(tester, e);
+
+    Future<void> detect(int n) async {
+      for (var i = 0; i < n; i++) {
+        e.now = e.now.add(const Duration(milliseconds: 500));
+        e.live.detect();
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    // 카운터는 아직 아무 값도 안 줬다 (폰은 처음 10걸음쯤 뒤에야 첫 값)
+    await detect(9);
+    await settle(tester, () => false, tries: 10);
+    expect(find.byType(WalkingScreen), findsNothing);
+    await detect(1);
+    await settle(tester, () => find.byType(WalkingScreen).evaluate().isNotEmpty, tries: 80);
+    final rows = (await tester.runAsync(() => e.db.select(e.db.paintTrails).get()))!;
+    expect(rows, hasLength(1));
+    expect(e.walkNotice.running, isTrue);
+    await transition(tester);
+    int shown() => tester.widget<WalkingHud>(find.byType(WalkingHud)).shownSteps;
+    expect(shown(), 10);
+
+    await detect(6);
+    await tester.pump(const Duration(seconds: 2));
+    expect(shown(), 16);
+    // 카운터 첫 값은 지금까지 감지한 걸음을 담았다고 본다 (센 걸음 16)
+    await _sensor(tester, e, 0, 50000);
+    final trail = ProviderScope.containerOf(tester.element(find.byType(WalkingScreen)))
+        .read(paintTrailProvider.notifier);
+    expect(trail.live!.steps, 16);
+    // 4걸음 더 감지한 뒤 카운터가 2보만 담아 보내도 숫자는 뒤로 가지 않는다 (센 걸음은 카운터 값)
+    await detect(4);
+    await tester.pump(const Duration(seconds: 2));
+    expect(shown(), 20);
+    await _sensor(tester, e, 0, 50002);
+    await tester.pump(const Duration(seconds: 1));
+    expect(trail.live!.steps, 18);
+    expect(shown(), 20);
+    // 카운터가 더 세면 그 값으로 오른다
+    await _sensor(tester, e, 1, 50007);
+    await tester.pump(const Duration(seconds: 2));
+    expect(shown(), 23);
     await end(tester, e);
   });
 
@@ -378,10 +435,7 @@ void main() {
     await _startTrail(tester, e);
     expect(find.byType(PaintDropLayer), findsOneWidget);
     // 분당 100보로 2분 더: 모두 210보 = 147m → 방울 1개
-    await _sensor(tester, e, 30, 50060);
-    await _sensor(tester, e, 30, 50110);
-    await _sensor(tester, e, 30, 50160);
-    await _sensor(tester, e, 30, 50210);
+    await _walk100(tester, e, 50010, 200);
     final c = ProviderScope.containerOf(tester.element(find.byType(WalkingScreen)));
     expect(c.read(paintTrailProvider.notifier).live!.distanceM, closeTo(147, 1e-9));
     // 보이는 거리는 걷는 속도(분당 100보 = 1.17m/s)로 따라온다: 2분이면 다 온다
@@ -405,8 +459,7 @@ void main() {
       await e.seed(tester, () => e.svc.startJourney(_farDest(e), t1, useFund: false));
       await _pumpApp(tester, e, suspends: true);
       await _startTrail(tester, e);
-      await _sensor(tester, e, 30, 50060);
-      await _sensor(tester, e, 30, 50110);
+      await _walk100(tester, e, 50010, 100);
       expect(e.now, t1.add(const Duration(minutes: 1, seconds: 30)));
       _hide(tester);
       await tester.pump();

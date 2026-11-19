@@ -147,7 +147,7 @@ void main() {
       return e;
     }
 
-    /// 6초 뒤 센서가 [steps]보를 더 준다 (30초 창에서 75보 = 분당 150보, 뛰기)
+    /// 6초 뒤 센서가 [steps]보를 더 준다 (10초 창에서 25보 = 분당 150보, 뛰기. 장면 시계는 그대로라 창도 그대로)
     Future<void> sensor(WidgetTester tester, UiEnv e, int total) async {
       e.now = e.now.add(const Duration(seconds: 6));
       e.live.push(total);
@@ -181,7 +181,7 @@ void main() {
       expect(order, [WalkCompanionLayer, DoobalCharacter]);
 
       // 분당 150보로 뛴다: 2초 뒤에는 왼쪽으로 밀려 있고, 8초 뒤에는 화면 밖
-      await sensor(tester, e, 1075);
+      await sensor(tester, e, 1025);
       final home = tester.getCenter(_mate).dx;
       await frames(tester, 2);
       expect(tester.getCenter(_mate).dx, lessThan(home - 10));
@@ -207,7 +207,7 @@ void main() {
     testWidgets('심 박사(match): 뛰어도 곁에 있다, 마친 뒤 쉼터에 바로 앉아 있다', (tester) async {
       final e = await openWalking(tester, 'doctor');
       final home = tester.getCenter(_mate).dx;
-      await sensor(tester, e, 1075);
+      await sensor(tester, e, 1025);
       await frames(tester, 5);
       expect(tester.getCenter(_mate).dx, closeTo(home, 0.5));
 

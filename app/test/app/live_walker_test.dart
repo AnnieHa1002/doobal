@@ -2,6 +2,7 @@ import 'package:doobal/app/live_walker.dart';
 import 'package:doobal/data/live_steps.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/gait.dart';
+import 'package:doobal/domain/paint_trail.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,11 +21,14 @@ class _ThrowingLive extends FakeLiveSteps {
   }
 }
 
+/// 걸음·거리 숫자가 걷기 보폭으로 나오게 옛 30초 분당 걸음 창으로 센다 (config는 10초)
+final _rules30 = rulesWithCadenceSec(30);
+
 class _Walker {
   _Walker(this.live, {this.denied = false}) {
     walker = LiveWalker(
       steps: live,
-      rules: rules,
+      rules: _rules30,
       clock: () => now,
       denied: () => denied,
       onDenied: () {
@@ -32,8 +36,12 @@ class _Walker {
         deniedCalls++;
       },
       onHiddenSteps: hiddenSteps.add,
+      onDetect: detected.add,
     );
   }
+
+  /// 앞에 있을 때 알린 감지 걸음
+  final detected = <SensorGain>[];
 
   final FakeLiveSteps live;
   late final LiveWalker walker;
@@ -201,6 +209,95 @@ void main() {
       _back(tester);
       await tester.pump();
       expect(w.live.listeners, 0);
+    });
+  });
+
+  group('걸음 감지 센서 (16장 11/19)', () {
+    testWidgets('앞에 있을 때 감지 걸음은 걷기 화면 값에 바로 들고 onDetect에 알린다 (센 걸음은 그대로)', (tester) async {
+      final w = _Walker(FakeLiveSteps());
+      await w.walker.start();
+      expect(w.live.detectListeners, 1);
+      await w.sensorAt(tester, 0, 8000);
+      w.now = _t0.add(const Duration(seconds: 1));
+      w.live.detect();
+      w.live.detect();
+      await tester.pump();
+      expect(w.walker.walk.shownSteps, 2);
+      expect(w.walker.walk.steps, 0);
+      expect(w.detected.map((g) => (g.steps, g.detected, g.foreground)), [
+        (1, true, true),
+        (1, true, true),
+      ]);
+      w.walker.dispose();
+      expect(w.live.detectListeners, 0);
+    });
+
+    testWidgets('숨어 있는 동안 감지 걸음은 버린다 (카운터가 센다)', (tester) async {
+      final w = _Walker(FakeLiveSteps());
+      await w.walker.start();
+      await w.sensorAt(tester, 0, 8000);
+      _leave(tester);
+      w.live.detect();
+      await tester.pump();
+      expect(w.walker.walk.shownSteps, 0);
+      expect(w.detected, isEmpty);
+      // 구독은 그대로라 돌아오면 다시 받는다
+      _back(tester);
+      w.live.detect();
+      await tester.pump();
+      expect(w.detected, hasLength(1));
+      w.walker.dispose();
+    });
+
+    testWidgets('감지 센서가 없는 기기(오류)는 감지만 그만두고 카운터는 계속 읽는다', (tester) async {
+      final w = _Walker(FakeLiveSteps());
+      await w.walker.start();
+      w.live.detectError();
+      await tester.pump();
+      expect(w.live.detectListeners, 0);
+      expect(w.live.listeners, 1);
+      expect(w.walker.ready, isTrue);
+      await w.sensorAt(tester, 0, 100);
+      await w.sensorAt(tester, 10, 110);
+      expect(w.walker.walk.steps, 10);
+      // 앱을 다시 켜도 감지는 다시 열지 않는다
+      _leave(tester);
+      _back(tester);
+      await tester.pump();
+      expect(w.live.detectListeners, 0);
+      w.walker.dispose();
+    });
+
+    testWidgets('restartDetected: 새 걷기에 물감 길을 연 감지 걸음을 먼저 넣고, 카운터 기준은 마지막으로 받은 값', (tester) async {
+      final w = _Walker(FakeLiveSteps());
+      await w.walker.start();
+      await w.sensorAt(tester, 0, 8000);
+      final gains = [
+        for (var k = 1; k <= 10; k++)
+          SensorGain(_t0.add(Duration(milliseconds: 500 * k)), 1, detected: true),
+      ];
+      w.walker.restartDetected(gains);
+      expect(w.walker.walk.shownSteps, 10);
+      expect(w.walker.walk.steps, 0);
+      // 카운터가 그 10걸음과 2걸음을 더 담아 보낸다: 센 걸음 12, 화면도 12
+      await w.sensorAt(tester, 6, 8012);
+      expect(w.walker.walk.steps, 12);
+      expect(w.walker.walk.shownSteps, 12);
+      w.walker.dispose();
+    });
+
+    testWidgets('restartDetected 때 카운터 값을 아직 못 받았으면 다음 값이 그 걸음까지 담았다고 본다', (tester) async {
+      final w = _Walker(FakeLiveSteps());
+      await w.walker.start();
+      w.walker.restartDetected([
+        for (var k = 1; k <= 10; k++)
+          SensorGain(_t0.add(Duration(milliseconds: 500 * k)), 1, detected: true),
+      ]);
+      await w.sensorAt(tester, 6, 8000);
+      expect(w.walker.walk.steps, 10);
+      await w.sensorAt(tester, 8, 8004);
+      expect(w.walker.walk.steps, 14);
+      w.walker.dispose();
     });
   });
 

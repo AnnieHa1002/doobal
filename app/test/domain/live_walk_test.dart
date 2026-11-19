@@ -8,6 +8,10 @@ import 'helpers.dart';
 
 final _t0 = DateTime.utc(2026, 11, 18, 1);
 
+/// 창 길이와 상관없는 규칙(걷기/뛰기·따라잡기·분 쌓기)은 옛 30초 창으로 센다. config의 10초 창과 감지 센서는
+/// 아래 ‘감지 센서’ 묶음이 실제 config로 시험한다
+final _rules30 = rulesWithCadenceSec(30);
+
 DateTime _at(int sec) => _t0.add(Duration(seconds: sec));
 
 /// 누적값 [total]을 [sec]초에 받는다
@@ -20,8 +24,10 @@ List<(int, int, Gait)> _shape(LiveWalk w) {
 }
 
 void main() {
-  test('config의 분당 걸음 창은 30초', () {
-    expect(rules.liveCadenceWindowSec, 30);
+  test('config의 분당 걸음 창은 10초, 감지 걸음 앞섬은 최근 10초 (16장 11/19)', () {
+    expect(rules.liveCadenceWindowSec, 10);
+    expect(rules.liveDetectorLeadSec, 10);
+    expect(_rules30.liveCadenceWindowSec, 30);
   });
 
   test('config의 알림 갱신 간격은 60초 (1분마다)', () {
@@ -39,7 +45,7 @@ void main() {
 
   group('foregroundM: 길 위 이벤트가 세는 앱이 앞에 있는 동안의 거리', () {
     test('센 걸음 × 보폭이고, 첫 값(기준)은 세지 않는다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       expect(w.foregroundM, 0);
       _feed(w, 10, 1010);
@@ -49,7 +55,7 @@ void main() {
     });
 
     test('숨어 있던 동안 따라잡은 걸음은 거리에는 들어가도 foregroundM에는 안 들어간다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 10, 1020); // 앞에서 20걸음
       w.pause(_at(20));
@@ -64,7 +70,7 @@ void main() {
     });
 
     test('센서가 재부팅으로 기준을 다시 잡아도 쌓인 값은 그대로다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 10, 1010);
       _feed(w, 20, 5); // 카운터가 0부터 다시 시작
@@ -75,13 +81,13 @@ void main() {
 
   group('previewSteps: 숨어 있는 동안 본 센서 값으로 낸 걸음 (상태는 그대로)', () {
     test('기준을 받기 전에는 센 걸음(0) 그대로', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       expect(w.previewSteps(5000), 0);
       expect(w.active, isFalse);
     });
 
     test('센 걸음 + 기준 뒤 늘어난 만큼: 10 + (1,500 - 1,010) = 500', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 5, 1010);
       w.pause(_at(10));
@@ -91,7 +97,7 @@ void main() {
     });
 
     test('기준보다 작으면(재부팅) 더하지 않는다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 50000);
       _feed(w, 5, 50020);
       expect(w.previewSteps(30), 20);
@@ -99,7 +105,7 @@ void main() {
     });
 
     test('부르기만 해서는 걸음·기준·숨은 상태가 바뀌지 않는다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 5, 1010);
       w.pause(_at(10));
@@ -116,12 +122,12 @@ void main() {
 
   group('previewDistanceM: 숨어 있는 동안 본 센서 값으로 낸 거리 (걷기 보폭, 상태는 그대로)', () {
     test('기준을 받기 전에는 센 거리(0) 그대로', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       expect(w.previewDistanceM(5000), 0);
     });
 
     test('센 거리 + 기준 뒤 늘어난 걸음 × 걷기 보폭: 7 + (1,500 - 1,010) × 0.7 = 350', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 5, 1010); // 10보, 분당 120 → 걷기 → 7m
       w.pause(_at(10));
@@ -131,7 +137,7 @@ void main() {
     });
 
     test('뛰던 중에 숨어도 늘어난 걸음은 걷기 보폭으로 낸다 (센 거리는 뛰기 보폭 그대로)', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 10, 1080); // 30초 창에 80보 → 분당 160 → 뛰기 → 80m
       expect(w.gait, Gait.run);
@@ -142,7 +148,7 @@ void main() {
     });
 
     test('기준보다 작으면(재부팅) 더하지 않는다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 50000);
       _feed(w, 5, 50020); // 20보 → 14m
       expect(w.previewDistanceM(30), closeTo(14, 1e-9));
@@ -150,7 +156,7 @@ void main() {
     });
 
     test('부르기만 해서는 걸음·거리·기준·숨은 상태가 바뀌지 않는다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 5, 1010);
       w.pause(_at(10));
@@ -168,7 +174,7 @@ void main() {
 
   group('기준값과 증가', () {
     test('처음 받은 값은 기준값이라 세지 않는다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       expect(w.active, isFalse);
 
       _feed(w, 0, 123456);
@@ -179,7 +185,7 @@ void main() {
     });
 
     test('그 뒤 증가분만 센다. 같은 값이 또 오면 그대로', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 5, 1010);
       expect(w.steps, 10);
@@ -190,7 +196,7 @@ void main() {
     });
 
     test('누적값이 기준보다 작아지면(재부팅) 그 값이 새 기준이고, 쌓인 걸음은 그대로', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 50000);
       _feed(w, 5, 50020);
       expect(w.steps, 20);
@@ -204,7 +210,7 @@ void main() {
     });
 
     test('재부팅 값이 0이어도 새 기준이다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 900);
       _feed(w, 5, 910);
       _feed(w, 10, 0);
@@ -217,14 +223,14 @@ void main() {
   group('pause/resume: 숨어 있던 동안의 걸음도 센다', () {
     /// 0초에 [base]를 기준으로 받고 [pauseSec]초에 숨은 걸음
     LiveWalk hiddenAt(int base, int pauseSec) {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, base);
       w.pause(_at(pauseSec));
       return w;
     }
 
     test('걷다 숨어서 10분 뒤 600보가 한꺼번에: 분당 60 → 걷기, 숨은 분마다 60보, +420m', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 30, 1050); // 30초에 50보 → 분당 100 → 걷기, +35m (0분)
       _feed(w, 60, 1100); // 창(30초 전은 빠진다)에 50보 → 분당 100 → 걷기, +35m (1분)
@@ -292,7 +298,7 @@ void main() {
     });
 
     test('숨은 사이 값이 작아지면(재부팅) 그 값이 새 기준이고 숨은 채다: 다음 증가가 따라잡기', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 30, 1010); // 10보 → 분당 20 → 걷기, +7m (0분)
       w.pause(_at(60));
@@ -321,7 +327,7 @@ void main() {
     });
 
     test('기준값을 받기 전에 숨으면 따라잡을 게 없다: 첫 값은 기준, 그 뒤는 평소처럼 센다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       w.pause(_at(0));
       _feed(w, 600, 500);
       _feed(w, 610, 520); // 20보 → 창 20보 → 분당 40
@@ -332,7 +338,7 @@ void main() {
     });
 
     test('숨으면 분당 걸음 창을 비운다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 50);
       expect(w.stepsPerMin(_at(10)), 100);
@@ -373,7 +379,7 @@ void main() {
 
   group('분당 걸음', () {
     test('최근 30초의 증가를 분당으로 바꾼다: 30초에 50보 → 100보', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 20);
       _feed(w, 20, 50);
@@ -382,7 +388,7 @@ void main() {
     });
 
     test('창을 벗어난 증가는 빠진다: 30초가 지나면 오래된 것부터, 한참 멈추면 0', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 20);
       _feed(w, 20, 50);
@@ -394,7 +400,7 @@ void main() {
     });
 
     test('창이 차기 전에는 낮게 나와서 첫 몇 걸음으로 뛰기가 되지 않는다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 2, 6);
       expect(w.stepsPerMin(_at(2)), 12);
@@ -405,7 +411,7 @@ void main() {
   group('걷기/뛰기', () {
     /// 10초에 [a]보, 20초에 [b]보 더 늘어난 걸음 (창 30초 안에 둘 다 있으니 분당 = (a + b) × 2)
     LiveWalk twoBursts(int a, int b) {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, a);
       _feed(w, 20, a + b);
@@ -461,7 +467,7 @@ void main() {
 
   group('거리 누적: 증가분 × 그때의 보폭', () {
     test('걷다가 뛰면 뛰기부터는 보폭 1.0m', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       // 10초에 35보: 창 35보 → 70 → 걷기 → 24.5m
       _feed(w, 10, 35);
@@ -477,7 +483,7 @@ void main() {
     });
 
     test('재부팅으로 기준을 다시 잡아도 쌓인 거리는 그대로', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 10, 1010);
       _feed(w, 20, 5);
@@ -487,7 +493,7 @@ void main() {
     });
 
     test('따라잡은 걸음도 증가분 × 그 구간의 보폭: 걷기 구간은 0.7m, 뛰기 구간은 1.0m', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       w.pause(_at(0));
       // 10분에 600보 → 분당 60 → 걷기 → 420m
@@ -510,7 +516,7 @@ void main() {
         [for (final m in w.minutes) (m.minute - m0, m.steps, m.gait)];
 
     test('센 게 없거나 기준값만 받았으면 비어 있다 (첫 값은 버킷을 만들지 않는다)', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       expect(w.minutes, isEmpty);
       _feed(w, 0, 123456);
       expect(w.minutes, isEmpty);
@@ -520,7 +526,7 @@ void main() {
     });
 
     test('다른 두 분의 증가는 버킷 둘: 0분 10+15 = 25보, 1분 20보', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 10, 1010);
       _feed(w, 50, 1025);
@@ -531,7 +537,7 @@ void main() {
     });
 
     test('한 분 안에서 걷기에서 뛰기로 바뀌면 그 분이 두 번 나온다 (걷기 먼저)', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       // 10초에 35보: 창 35보 → 70 → 걷기. 20초에 35보 더: 창 70보 → 140 → 뛰기
       _feed(w, 10, 35);
@@ -542,7 +548,7 @@ void main() {
     });
 
     test('Σ 걸음 × 보폭은 distanceM과 같다: 35 × 0.7 + 45 × 1.0 = 24.5 + 45 = 69.5m', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 35);
       _feed(w, 20, 70);
@@ -553,7 +559,7 @@ void main() {
     });
 
     test('분 순서로 돌려주고, 같은 분이면 걷기가 먼저다 (뛰다가 걷기로 내려와도)', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 35); // 창 35보 → 70 → 걷기: 0분 걷기 35
       _feed(w, 20, 70); // 창 70보 → 140 → 뛰기: 0분 뛰기 35
@@ -574,7 +580,7 @@ void main() {
     });
 
     test('재부팅 뒤에도 쌓인 버킷은 그대로, 새로 센 것은 이어서 쌓인다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 10, 1010);
       expect(shape(w), [(0, 10, Gait.walk)]);
@@ -593,7 +599,7 @@ void main() {
     });
 
     test('따라잡은 걸음이 걸음이 있던 분과 겹치면 같은 걷기에 더한다 (0분 20 + 30 = 50보)', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 1000);
       _feed(w, 10, 1020); // 20보 → 분당 40 → 걷기 (0분)
       w.pause(_at(30));
@@ -606,7 +612,7 @@ void main() {
     });
 
     test('따라잡은 걸음이 뛰기고 그 분에 걷기가 있었으면 그 분이 두 번 나온다 (걷기 먼저)', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 35); // 35보 → 분당 70 → 걷기 (0분)
       w.pause(_at(20));
@@ -620,7 +626,7 @@ void main() {
     });
 
     test('돌려준 목록은 그 시점의 복사본이다 (이후 센 걸음이 섞이지 않는다)', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 20);
       final snapshot = w.minutes;
@@ -641,13 +647,13 @@ void main() {
     );
 
     test('센서가 아직 기준값을 못 잡았으면 health 그대로 (health도 없으면 null)', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       expect(identical(liveSummary(health, w, _at(0)), health), isTrue);
       expect(liveSummary(null, w, _at(0)), isNull);
     });
 
     test('센서 값이 더 크면 센서 값, health가 더 크면 health 값', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 35);
       final small = liveSummary(health, w, _at(10))!;
@@ -662,7 +668,7 @@ void main() {
     });
 
     test('분당 걸음과 걷기/뛰기는 센서 기준이고, 나머지(걸은 분·뛴 걸음)는 health 값', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 35);
       _feed(w, 20, 70);
@@ -674,7 +680,7 @@ void main() {
     });
 
     test('health 기록이 아직 없어도 센서 값으로 만든다', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 20);
       final s = liveSummary(null, w, _at(10))!;
@@ -685,7 +691,7 @@ void main() {
     });
 
     test('숨어 있던 동안 따라잡은 걸음도 합치고, 분당 걸음은 0이다 (그 구간의 걷기/뛰기는 유지)', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       w.pause(_at(0));
       // 10분에 600보 → 분당 60 → 걷기 → 420m
@@ -706,13 +712,157 @@ void main() {
     });
 
     test('가만히 서면 분당 걸음이 0으로 내려간다 (직전 걷기/뛰기는 유지)', () {
-      final w = LiveWalk(rules);
+      final w = LiveWalk(_rules30);
       _feed(w, 0, 0);
       _feed(w, 10, 35);
       _feed(w, 20, 70);
       final s = liveSummary(health, w, _at(100))!;
       expect(s.lastSteps, 0);
       expect(s.lastGait, Gait.run);
+    });
+  });
+
+  group('감지 센서 (16장 11/19): 걸음마다 화면을 먼저 움직이고, 센 걸음은 카운터로 맞춘다', () {
+    // 실제 config: 분당 걸음 창 10초, 감지 걸음 앞섬 최근 10초
+    DateTime ms(int milli) => _t0.add(Duration(milliseconds: milli));
+
+    /// [from]번째부터 [to]번째 걸음까지 [gapMs]마다 감지 (k번째 걸음은 k × gapMs)
+    void detect(LiveWalk w, int from, int to, {int gapMs = 600}) {
+      for (var k = from; k <= to; k++) {
+        w.onDetect(ms(k * gapMs));
+      }
+    }
+
+    test('감지 걸음은 화면 걸음·거리를 바로 올리고, 센 걸음은 카운터 값 그대로', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      detect(w, 1, 5);
+      expect(w.shownSteps, 5);
+      expect(w.shownM, closeTo(5 * rules.walkStrideM, 1e-9));
+      expect(w.steps, 0);
+      expect(w.distanceM, 0);
+      expect(w.minutes, isEmpty);
+      expect(w.detecting, isTrue);
+    });
+
+    test('카운터 값이 오면 먼저 센 몫에서 빼서 맞추고, 화면 숫자는 뒤로 가지 않는다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      detect(w, 1, 18); // 0.6~10.8초에 18걸음
+      expect(w.shownSteps, 18);
+      // 카운터가 11초에 16보만 담아 보냈다: 아직 안 든 2걸음이 앞서 있다
+      w.onCount(1016, ms(11000));
+      expect(w.steps, 16);
+      expect(w.shownSteps, 18);
+      w.onDetect(ms(11400));
+      expect(w.shownSteps, 19);
+      // 카운터가 나머지 3보를 담으면 앞선 몫은 0
+      w.onCount(1019, ms(12000));
+      expect(w.steps, 19);
+      expect(w.shownSteps, 19);
+      expect(w.shownM, closeTo(19 * rules.walkStrideM, 1e-9));
+    });
+
+    test('카운터가 감지보다 많으면(감지가 놓친 걸음) 화면이 카운터 값으로 올라간다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 1000);
+      detect(w, 1, 5);
+      w.onCount(1012, ms(4000));
+      expect(w.steps, 12);
+      expect(w.shownSteps, 12);
+    });
+
+    test('감지가 더 센 몫은 최근 10초 안에 감지한 것만 남는다: 화면은 뒤로 가지 않고 카운터가 따라올 때까지 기다린다', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      detect(w, 1, 20); // 0.6~12초에 20걸음을 감지했는데
+      // 카운터는 30초에 12보만 (감지가 8걸음 더 셌다). 최근 10초(20~30초)에 감지한 걸음이 없어 앞선 몫은 0
+      w.onCount(12, ms(30000));
+      expect(w.steps, 12);
+      expect(w.shownSteps, 20);
+      // 다시 걸으면 센 걸음 + 감지가 20을 넘을 때부터 화면이 오른다
+      for (var k = 1; k <= 8; k++) {
+        w.onDetect(ms(30000 + k * 600));
+      }
+      expect(w.shownSteps, 20);
+      w.onDetect(ms(30000 + 9 * 600));
+      expect(w.shownSteps, 21);
+    });
+
+    test('카운터 첫 값(기준) 전에 감지한 걸음은 그 값에 들었다고 보고 센 걸음으로 옮긴다', () {
+      final w = LiveWalk(rules);
+      detect(w, 1, 10);
+      expect(w.active, isTrue);
+      expect(w.steps, 0);
+      expect(w.shownSteps, 10);
+      w.onCount(5000, ms(7000));
+      expect(w.steps, 10);
+      expect(w.distanceM, closeTo(7, 1e-9));
+      expect(w.shownSteps, 10);
+      expect(_shape(w), [(0, 10, Gait.walk)]);
+      w.onCount(5005, ms(9000));
+      expect(w.steps, 15);
+    });
+
+    test('분당 걸음은 최근 10초의 감지 걸음으로 낸다: 0.5초마다 한 걸음 = 분당 120, 카운터가 몰아 보내도 그대로', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      detect(w, 1, 30, gapMs: 500); // 0.5~15초
+      expect(w.stepsPerMin(ms(15000)), 120);
+      w.onCount(30, ms(15000));
+      expect(w.stepsPerMin(ms(15000)), 120);
+      expect(w.gait, Gait.walk);
+      // 멈추면 10초 뒤 0
+      expect(w.stepsPerMin(ms(25000)), 0);
+    });
+
+    test('감지 걸음이 빠르면 뛰기: 먼저 센 거리도 뛰기 보폭으로', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      detect(w, 1, 30, gapMs: 400); // 분당 150
+      expect(w.gait, Gait.run);
+      expect(w.shownM, greaterThan(30 * rules.walkStrideM));
+    });
+
+    test('숨으면 감지 창을 비우고, 숨어 있던 걸음을 따라잡으면 먼저 센 몫은 0', () {
+      final w = LiveWalk(rules);
+      _feed(w, 0, 0);
+      detect(w, 1, 5);
+      w.pause(ms(3000));
+      expect(w.stepsPerMin(ms(3000)), 0);
+      w.onCount(100, ms(60000));
+      expect(w.catchUps, 1);
+      expect(w.steps, 100);
+      expect(w.shownSteps, 100);
+    });
+
+    test('liveSummary는 센 값(감지 걸음은 분당 걸음만), liveShown은 health와 화면 값 중 큰 쪽', () {
+      const health = WalkSummary(
+        steps: 3,
+        distanceM: 2.1,
+        activeMinutes: 1,
+        runSteps: 0,
+        lastSteps: 3,
+        lastGait: Gait.walk,
+      );
+      final w = LiveWalk(rules);
+      detect(w, 1, 10, gapMs: 500);
+      final s = liveSummary(health, w, ms(5000))!;
+      expect(s.steps, 3);
+      expect(s.lastSteps, 60);
+      final shown = liveShown(health, w);
+      expect(shown.steps, 10);
+      expect(shown.distanceM, closeTo(10 * rules.walkStrideM, 1e-9));
+      const big = WalkSummary(
+        steps: 500,
+        distanceM: 350,
+        activeMinutes: 5,
+        runSteps: 0,
+        lastSteps: 100,
+        lastGait: Gait.walk,
+      );
+      expect(liveShown(big, w).steps, 500);
+      expect(liveShown(big, w).distanceM, 350);
     });
   });
 }
