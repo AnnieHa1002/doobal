@@ -34,6 +34,7 @@ class SceneView extends StatelessWidget {
     this.camp,
     this.running = false,
     this.moving = true,
+    this.playback = 1,
     this.seated = true,
     this.sceneSeed = 'default',
     this.spirit = SpiritLook.base,
@@ -67,6 +68,9 @@ class SceneView extends StatelessWidget {
 
   /// 현재 걸음 기록이 있을 때만 움직인다.
   final bool moving;
+
+  /// 정령 걷기·뛰기 동작의 재생 빠르기 (걷는 중이 분당 걸음으로 낸다, config character.rive.walkPlayback)
+  final double playback;
 
   /// 쉼터에서는 기본으로 앉는다. 서서 쉬는 장면에서는 false를 전달한다.
   final bool seated;
@@ -291,6 +295,7 @@ class SceneView extends StatelessWidget {
         child: RepaintBoundary(
           child: DoobalCharacter(
             speed: speed,
+            playback: playback,
             pose: pose,
             spirit: spirit,
             // 쉼터에서만 정령을 연타하면 화낸다

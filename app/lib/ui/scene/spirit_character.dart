@@ -13,6 +13,7 @@ class SpiritCharacter extends StatefulWidget {
   const SpiritCharacter({
     super.key,
     this.speed = 0,
+    this.playback = 1,
     this.sitting = false,
     this.boat = false,
     this.lookX = 0,
@@ -37,6 +38,9 @@ class SpiritCharacter extends StatefulWidget {
   static void preload() => SpiritFile.preload(renderer);
   final double speed, lookX, lookY;
   final bool sitting, boat;
+
+  /// 걷기·뛰기 동작의 재생 빠르기 (분당 걸음에 맞춘 값, 16장 11/19). 다른 동작은 1배
+  final double playback;
 
   /// 고른 얼굴, 입은 소품, 몸 색
   final SpiritLook look;
@@ -103,6 +107,7 @@ class _SpiritCharacterState extends State<SpiritCharacter>
       if (!mounted) return;
       controller = SpiritController(file);
       controller.setAway(_away(WidgetsBinding.instance.lifecycleState));
+      controller.setPlayback(widget.playback);
       controller.setScene(
         speed: widget.speed,
         sitting: widget.sitting,
@@ -142,6 +147,7 @@ class _SpiritCharacterState extends State<SpiritCharacter>
         boat: widget.boat,
       );
     }
+    if (widget.playback != oldWidget.playback) _controller?.setPlayback(widget.playback);
     if (widget.lookX != oldWidget.lookX || widget.lookY != oldWidget.lookY) {
       _controller?.setLook(widget.lookX, widget.lookY);
     }

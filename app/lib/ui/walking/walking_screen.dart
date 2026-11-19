@@ -488,6 +488,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             landmarks: landmarks,
             running: meet == null && running,
             moving: meet == null && summary != null && summary.lastSteps > 0,
+            // 걷기·뛰기 동작을 분당 걸음에 맞춰 빠르게·느리게 (16장 11/19)
+            playback: rules.screen.spirit.walkPlayback.rateFor(summary?.lastSteps ?? 0),
             sceneSeed: snap.journey?.dest.id ?? 'home',
             spirit: spirit,
             spiritCue: _cue,

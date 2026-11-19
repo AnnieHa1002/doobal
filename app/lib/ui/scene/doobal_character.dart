@@ -13,6 +13,7 @@ class DoobalCharacter extends StatelessWidget {
   const DoobalCharacter({
     super.key,
     required this.speed,
+    this.playback = 1,
     this.pose = DoobalPose.standing,
     this.lookX = 0,
     this.lookY = 0,
@@ -25,6 +26,9 @@ class DoobalCharacter extends StatelessWidget {
     this.cues,
   });
   final double speed, lookX, lookY;
+
+  /// 걷기·뛰기 동작의 재생 빠르기 ([SpiritCharacter.playback])
+  final double playback;
   final DoobalPose pose;
   final SpiritLook spirit;
 
@@ -40,6 +44,7 @@ class DoobalCharacter extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SpiritCharacter(
     speed: speed,
+    playback: playback,
     sitting: pose == DoobalPose.sitting,
     boat: pose == DoobalPose.boat,
     lookX: lookX / 5,
