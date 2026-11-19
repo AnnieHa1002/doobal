@@ -560,7 +560,7 @@
    },
    "back": {
     "speed": 0.2,
-    "feetY": 1780,
+    "feetY": 1880,
     "scaleOfFront": [
      0.4,
      0.5
@@ -571,8 +571,7 @@
     "jitterPx": 800
    },
    "tallObjectClearX": 140,
-   "tallNearCharacterOpacity": 0.35,
-   "tallFadePx": 80
+   "note": "16장 11/19 Annie: 장면 물체는 어떤 경우에도 투명하게 하지 않음(키 큰 조각 흐리기 tallNearCharacterOpacity·tallFadePx 뺌). 뒤쪽 줄 발(back.feetY)은 들판 선 meadow.portraitY 1880에 맞춤(1780이라 들판보다 위, 산 위에 떠 보였음). 가로 화면도 들판 선에 서게 앱이 들판 y에 맞춰 놓는다"
   }
  },
  "ground": {
