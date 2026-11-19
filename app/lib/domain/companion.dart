@@ -58,6 +58,17 @@ class StoryChapter {
       );
 }
 
+/// 쉼터 한마디 하나 (companions v4 restLines, 16장 11/19 완결 동행 말풍선). [source]는 이야기 출처 표시(예: H5)
+class RestLine {
+  const RestLine(this.text, {this.source});
+
+  final String text;
+  final String? source;
+
+  factory RestLine.fromJson(Map<String, dynamic> j) =>
+      RestLine(j['text'] as String, source: j['source'] as String?);
+}
+
 /// 동행 한 명
 class Companion {
   const Companion({
@@ -72,6 +83,7 @@ class Companion {
     required this.chapters,
     this.hideLayerOnFinale,
     this.hideLayerWhen,
+    this.restLines = const [],
   });
 
   final String id;
@@ -98,6 +110,9 @@ class Companion {
   /// 장 번호 순서
   final List<StoryChapter> chapters;
 
+  /// 완결한 동행이 쉼터에서 하는 한마디 (v4). 읽기만 하고 화면은 T15
+  final List<RestLine> restLines;
+
   factory Companion.fromJson(Map<String, dynamic> j) => Companion(
         id: j['id'] as String,
         name: j['name'] as String,
@@ -121,6 +136,10 @@ class Companion {
         chapters: [
           for (final c in j['chapters'] as List) StoryChapter.fromJson(c as Map<String, dynamic>),
         ]..sort((a, b) => a.no.compareTo(b.no)),
+        restLines: [
+          for (final l in (j['restLines'] as List?) ?? const [])
+            RestLine.fromJson(l as Map<String, dynamic>),
+        ],
       );
 }
 

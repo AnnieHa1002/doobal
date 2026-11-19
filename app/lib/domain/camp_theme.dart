@@ -1,4 +1,6 @@
-// 쉼터 테마 themes/camp_wide.json v3. 좌표는 장면 왼쪽 위 기준 pt (기준 화면 390×844, 장면 폭 585)
+// 쉼터 테마 themes/camp_wide.json v5. 좌표는 장면 왼쪽 위 기준 pt (기준 화면 390×844, 장면 폭 585).
+// v5(16장 11/18): 땅 위 물건은 수레만 남고 배낭·노트·지도·방명록 표지판·동행 자리·hitOrder가 빠졌다.
+// 빠진 것은 없으면 안 그린다 (쉼터 옆 버튼은 T14, 꾸밈 물품 자리 decor는 T15)
 
 /// 장면 위의 사각형 (pt)
 class CampBox {
@@ -29,7 +31,7 @@ class CampArt {
       );
 }
 
-/// 쉼터 물건 하나 (배낭·노트·지도·수레·방명록 표지판·동행).
+/// 쉼터 물건 하나 (v5는 수레만, v3은 배낭·노트·지도·수레·방명록 표지판·동행).
 /// [box]는 누름 상자(이름표까지), 그림은 그 왼쪽 위에서 [artW]×[artH], 이름표는 위에서 [labelTop]
 class CampObject {
   const CampObject({
@@ -70,7 +72,8 @@ class CampObject {
         box: CampBox(_d(j['x']), _d(j['y']), _d(j['w']), _d(j['h'])),
         artW: _d(j['artW']),
         artH: _d(j['artH']),
-        labelTop: _d(j['labelTop']),
+        // v5 수레에는 없다: 그림 바로 아래
+        labelTop: _d(j['labelTop'] ?? j['artH']),
         onlyWhenTicket: j['onlyWhenTicket'] as bool? ?? false,
         art: j['art'] == null ? null : CampArt.fromJson(j['art'] as Map<String, dynamic>),
         artSourceFile: (j['artSource'] as Map?)?['file'] as String?,
@@ -142,14 +145,24 @@ class CampTheme {
   final double refH;
   final List<CampObject> objects;
   final CampCharacter character;
-  final CampObject companion;
+  /// 불 옆 동행 자리. v5에는 없어 null (동행을 쉼터에 그리지 않는다)
+  final CampObject? companion;
   final CampFire campfire;
   final CampSign firstSign;
 
-  /// 겹치면 먼저 눌리는 순서
+  /// 겹치면 먼저 눌리는 순서. 파일에 없으면(v5) 물건 순서, 동행, 정령
   final List<String> hitOrder;
 
   CampObject object(String id) => objects.firstWhere((o) => o.id == id);
+
+  /// [id] 물건. 테마에 없으면 null (동행은 [companion])
+  CampObject? objectOrNull(String id) {
+    if (id == campCompanionId) return companion;
+    for (final o in objects) {
+      if (o.id == id) return o;
+    }
+    return null;
+  }
 
   /// 기기 pt ÷ 장면 pt. 세로 화면은 폭 비례. 가로 화면은 장면 폭이 화면 폭과 같아지게(밀 곳 없음)
   double scaleFor(double width, double height) =>
@@ -157,10 +170,10 @@ class CampTheme {
 
   /// 누름 상자를 Stack에 쌓을 순서: 뒤에 쌓을수록 위라 hitOrder를 뒤집는다.
   /// 정령은 빠진다(누름 상자가 아니라 그림이 직접 받으므로 언제나 가장 아래).
-  /// [shown]은 지금 서 있는 물건 id
+  /// [shown]은 지금 서 있는 물건 id. 테마에 자리가 없는 물건은 빠진다
   List<String> hitStack(Set<String> shown) => [
         for (final id in hitOrder.reversed)
-          if (id != campCharacterId && shown.contains(id)) id,
+          if (id != campCharacterId && shown.contains(id) && objectOrNull(id) != null) id,
       ];
 
   factory CampTheme.fromJson(Map<String, dynamic> j) {
@@ -169,22 +182,24 @@ class CampTheme {
     final character = j['character'] as Map<String, dynamic>;
     final fire = j['campfire'] as Map<String, dynamic>;
     final sign = j['firstSign'] as Map<String, dynamic>;
+    final objects = [
+      for (final o in j['objects'] as List) CampObject.fromJson(o as Map<String, dynamic>),
+    ];
+    final companion = j['companion'] as Map<String, dynamic>?;
     return CampTheme(
       id: j['id'] as String,
       approx: j['approx'] as bool? ?? false,
       widthPt: _d(scene['widthPt']),
       refW: ref[0],
       refH: ref[1],
-      objects: [
-        for (final o in j['objects'] as List) CampObject.fromJson(o as Map<String, dynamic>),
-      ],
+      objects: objects,
       character: CampCharacter(
         x: _d(character['x']),
         y: _d(character['y']),
         w: _d(character['w']),
         heightPt: _d(character['heightPt']),
       ),
-      companion: CampObject.fromJson(j['companion'] as Map<String, dynamic>, id: campCompanionId),
+      companion: companion == null ? null : CampObject.fromJson(companion, id: campCompanionId),
       campfire: CampFire(
         box: CampBox(_d(fire['x']), _d(fire['y']), _d(fire['w']), _d(fire['h'])),
         frames: fire['frames'] as int,
@@ -194,7 +209,8 @@ class CampTheme {
         box: CampBox(_d(sign['x']), _d(sign['y']), _d(sign['w']), _d(sign['h'])),
         label: sign['label'] as String,
       ),
-      hitOrder: (j['hitOrder'] as List).cast<String>(),
+      hitOrder: (j['hitOrder'] as List?)?.cast<String>() ??
+          [for (final o in objects) o.id, campCompanionId, campCharacterId],
     );
   }
 }

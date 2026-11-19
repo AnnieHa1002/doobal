@@ -74,7 +74,7 @@ void main() {
     });
 
     test('줄 것이 없는 상품은 막는다', () {
-      const empty = ShopItem(id: 'x', tab: ShopTab.prop, name: 'x', price: 1, order: 1);
+      const empty = ShopItem(id: 'x', category: ShopCategory.prop, name: 'x', price: 1, order: 1);
       expect(buyBlock(empty, balance: 9, held: 0, maxHold: 9, owned: false), ShopBlock.unknownItem);
     });
   });

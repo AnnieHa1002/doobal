@@ -22,21 +22,22 @@ Set<String> _regionIds(String region) => {
 
 void main() {
   group('props.json 읽기', () {
-    test('전체 76개 중 mvp 63개만 읽는다 (pending·later는 뺀다)', () {
+    test('전체 85개 중 mvp 72개만 읽는다 (pending·later는 뺀다, v9 상점 미니 친구 8·물빛 구슬)', () {
       final json =
           jsonDecode(File('assets/data/props.json').readAsStringSync()) as Map<String, dynamic>;
-      expect((json['props'] as List), hasLength(76));
-      expect(props, hasLength(63));
-      expect(props.map((p) => p.id).toSet(), hasLength(63));
+      expect((json['props'] as List), hasLength(85));
+      expect(props, hasLength(72));
+      expect(props.map((p) => p.id).toSet(), hasLength(72));
     });
 
-    test('해금 조건 개수: 기본 6 · 거리 10 · 권역 7 · 걸음 1 · 동료 3', () {
+    test('해금 조건 개수: 기본 6 · 거리 10 · 권역 7 · 걸음 1 · 동료 3 · 상점 44 · 선물 1', () {
       expect(_idsOf(PropUnlockKind.initial), hasLength(6));
       expect(_idsOf(PropUnlockKind.distance), hasLength(10));
       expect(_idsOf(PropUnlockKind.region), hasLength(7));
       expect(_idsOf(PropUnlockKind.steps), hasLength(1));
       expect(_idsOf(PropUnlockKind.companion), hasLength(3));
-      expect(_idsOf(PropUnlockKind.shop), hasLength(36));
+      expect(_idsOf(PropUnlockKind.shop), hasLength(44));
+      expect(_idsOf(PropUnlockKind.gift), {'float_04'});
     });
 
     test('동행 소품 3개: 퐁이 달 핀 · 휴 꾹꾹이 장갑 · 심 박사 안경 (companions.json id)', () {
@@ -47,13 +48,13 @@ void main() {
           {'hat_10': 'bright', 'hat_11': 'doctor', 'hand_09': 'rest'});
     });
 
-    test('MVP 슬롯 개수: 색 소품 21개 포함 모자 16·옷 11·신발 8, 나머지는 그대로', () {
+    test('MVP 슬롯 개수: 색 소품 21개 포함 모자 16·옷 11·신발 8, 미니 친구 13(상점 8)·둥실 6(물빛 구슬)', () {
       final slots = <String, int>{};
       for (final p in props) {
         slots.update(p.slot, (n) => n + 1, ifAbsent: () => 1);
       }
       expect(slots,
-          {'hat': 16, 'face': 3, 'cloth': 11, 'shoe': 8, 'hand': 5, 'bag': 5, 'pet': 5, 'float': 5, 'effect': 5});
+          {'hat': 16, 'face': 3, 'cloth': 11, 'shoe': 8, 'hand': 5, 'bag': 5, 'pet': 13, 'float': 6, 'effect': 5});
     });
 
     test('동료 id가 들어 있으면 읽는다', () {
@@ -65,6 +66,11 @@ void main() {
       });
       expect(p.kind, PropUnlockKind.companion);
       expect(p.companion, 'bright');
+    });
+
+    test('시작 선물(gift) 물빛 구슬을 읽는다 (v9, 얻는 길은 T17)', () {
+      final gift = props.singleWhere((p) => p.kind == PropUnlockKind.gift);
+      expect((gift.id, gift.slot, gift.name), ('float_04', 'float', '물빛 구슬'));
     });
 
     test('모르는 해금 조건은 받아들이지 않는다', () {
@@ -131,7 +137,7 @@ void main() {
       expect(all.intersection(_idsOf(PropUnlockKind.companion)), isEmpty);
     });
 
-    test('거리·권역·걸음 전부 채우면 24개 (MVP 63개 - 동료 3개 - 상점 36개)', () {
+    test('거리·권역·걸음 전부 채우면 24개 (MVP 72개 - 동료 3개 - 상점 44개 - 선물 1개)', () {
       final regions = landmarks.map((l) => l.region).toSet();
       final all = _earned(km: 1000, steps: 1000000, regions: regions);
       expect(all, hasLength(24));
@@ -141,7 +147,8 @@ void main() {
               .map((p) => p.id)
               .toSet()
               .difference(_idsOf(PropUnlockKind.companion))
-              .difference(_idsOf(PropUnlockKind.shop)));
+              .difference(_idsOf(PropUnlockKind.shop))
+              .difference(_idsOf(PropUnlockKind.gift)));
     });
   });
 

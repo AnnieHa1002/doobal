@@ -107,7 +107,7 @@ void main() {
       expect(_balance(tester), '1,240');
       for (final t in ShopTab.values) {
         expect(
-          find.descendant(of: _tab(t), matching: find.text(shopCatalog.tabLabels[t]!)),
+          find.descendant(of: _tab(t), matching: find.text(t.label)),
           findsOneWidget,
         );
       }
@@ -659,7 +659,7 @@ void main() {
     testWidgets('상품이 없으면 입구를 숨긴다 (스키마 13장)', (tester) async {
       final c = ProviderContainer(overrides: [
         shopCatalogProvider.overrideWith(
-          (ref) => ShopCatalog(tabLabels: const {}, defaultBoat: 'boat_raft', items: const []),
+          (ref) => ShopCatalog(defaultBoat: 'boat_raft', items: const []),
         ),
         // 동행 자리는 동기화 서비스를 읽으므로 비운다 (동행 쪽은 companion_rest_test)
         companionRestSlotProvider.overrideWithValue(null),

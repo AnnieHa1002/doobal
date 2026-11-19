@@ -648,8 +648,8 @@ void main() {
       expect(find.byType(ItemCell), findsNWidgets(5));
       expect(_key('prop-none'), findsNothing);
 
-      // 칸마다 MVP 소품 수 (+ 없음)
-      for (final (slot, count) in [('hand', 5), ('bag', 5), ('shoe', 5), ('pet', 5), ('face', 3), ('float', 5), ('effect', 5)]) {
+      // 칸마다 MVP 소품 수 (+ 없음). props v9: 미니 친구 13(상점 8), 둥실 6(물빛 구슬) — 가지면 보인다
+      for (final (slot, count) in [('hand', 5), ('bag', 5), ('shoe', 5), ('pet', 13), ('face', 3), ('float', 6), ('effect', 5)]) {
         await _goTab(tester, slot);
         expect(find.byType(ItemCell), findsNWidgets(count + 1), reason: slot);
         expect(props.where((p) => p.slot == slot && !_isColorVariant(p)), hasLength(count));

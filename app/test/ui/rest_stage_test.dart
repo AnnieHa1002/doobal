@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import '../domain/helpers.dart' show campTheme;
 import 'ui_env.dart';
 
 final _backpack = find.byKey(const ValueKey('camp-object-backpack'));
@@ -308,6 +309,34 @@ void main() {
       expect(taps, 1);
       await settle(tester, () => find.text('내 방명록').evaluate().isNotEmpty);
       expect(find.text('내 방명록'), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('실제 v5 테마(수레만): 배낭·노트·지도·동행 자리가 없어 동행을 끼워도 안 그리고, 수레는 그대로 선다', (tester) async {
+      final e = UiEnv(camp: campTheme);
+      await e.seed(tester);
+      await _open(tester, e, more: [
+        restSlotsProvider.overrideWithValue(RestSlots(
+          cart: RestObjectSlot(
+            art: (_) => const ColoredBox(key: ValueKey('cart-art'), color: Colors.brown),
+            label: '상점',
+            onTap: (_) {},
+          ),
+          companion: RestObjectSlot(
+            art: (_) => const ColoredBox(key: ValueKey('companion-art'), color: Colors.yellow),
+            notice: true,
+            onTap: (_) {},
+          ),
+        )),
+      ]);
+      for (final id in ['backpack', 'note', 'map', 'companion']) {
+        expect(find.byKey(ValueKey('camp-object-$id')), findsNothing, reason: id);
+      }
+      expect(find.byKey(const ValueKey('companion-art')), findsNothing);
+      expect(find.byKey(const ValueKey('camp-object-cart')), findsOneWidget);
+      expect(tester.getRect(find.byKey(const ValueKey('cart-art'))), const Rect.fromLTWH(440, 530, 120, 109));
+      // 이름표 자리가 없으면 그림 바로 아래
+      expect(tester.getTopLeft(find.text('상점')).dy, greaterThanOrEqualTo(530 + 109));
       await end(tester, e);
     });
 

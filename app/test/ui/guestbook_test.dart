@@ -129,8 +129,19 @@ void main() {
       expect(_sign, findsOneWidget);
       expect(find.descendant(of: _sign, matching: find.text('방명록')), findsOneWidget);
       // 자리는 테마의 표지판 상자 (기준 화면 390×844에서 pt 그대로)
-      final box = campTheme.object('guestbookSign').box;
+      final box = campThemeV3.object('guestbookSign').box;
       expect(tester.getRect(_sign), Rect.fromLTWH(box.x, box.y, box.w, box.h));
+      await end(tester, e);
+    });
+
+    testWidgets('실제 v5 테마(수레만)에는 표지판 자리가 없어 기회가 있어도 서지 않고, 쉼터는 그대로 뜬다 (16장 11/18)', (tester) async {
+      final e = UiEnv(camp: campTheme);
+      await e.seed(tester, () async {
+        await _putTicket(e, 'a:j1', TicketKind.arrival, 'kr001');
+      });
+      await openRest(tester, e);
+      expect(find.byType(RestScreen), findsOneWidget);
+      expect(_sign, findsNothing);
       await end(tester, e);
     });
 

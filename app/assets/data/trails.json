@@ -1,0 +1,59 @@
+{
+ "version": 1,
+ "asOf": "2026-11-19",
+ "source": "v1(11/19 밤 개발 기획, 16장 11/19 꾸밈 제안 세부·상점 무늬·물감·선물 이름, 기획/럭_상점.md v2.12·소품_목록.md v04.13, 디자인기획/꾸밈제안_모양_가안.md 확정판·codex_trail_patterns_gift_v01): 물감 길 무늬 목록. 소품이 아니라 물감처럼 ‘칠하는 재료’라 props.json 밖에 둠(boats.json·decor.json처럼 따로 된 목록). 규칙 값은 config paintPattern",
+ "default": "drops",
+ "patterns": [
+  {
+   "id": "drops",
+   "name": "방울",
+   "unlock": {
+    "kind": "default"
+   },
+   "tile": "map_trail_drops_tile_v02",
+   "cap": "map_trail_drops_cap_v02",
+   "icon": null,
+   "note": "기본 무늬(처음부터, 무제한). 아이콘은 앱이 방울 타일로 만듦(codex_trail_patterns_gift_v01 5장)"
+  },
+  {
+   "id": "trail_01",
+   "name": "발자국",
+   "unlock": {
+    "kind": "trailKm",
+    "km": 10,
+    "shopPrice": 200
+   },
+   "tile": "map_trail_step_tile_v01",
+   "cap": "map_trail_step_cap_v01",
+   "icon": "ui_trail_step_icon_v01",
+   "pending": true
+  },
+  {
+   "id": "trail_02",
+   "name": "꽃잎",
+   "unlock": {
+    "kind": "trailKm",
+    "km": 50,
+    "shopPrice": 200
+   },
+   "tile": "map_trail_petal_tile_v01",
+   "cap": "map_trail_petal_cap_v01",
+   "icon": "ui_trail_petal_icon_v01",
+   "pending": true
+  },
+  {
+   "id": "trail_03",
+   "name": "별가루",
+   "unlock": {
+    "kind": "trailKm",
+    "km": 100,
+    "shopPrice": 200
+   },
+   "tile": "map_trail_star_tile_v01",
+   "cap": "map_trail_star_cap_v01",
+   "icon": "ui_trail_star_icon_v01",
+   "pending": true
+  }
+ ],
+ "note": "pending = 그림 납품 전(Assets/05_UI_화면/trail_patterns_v01_검토_<날짜>). 그림이 없으면 앱은 그 무늬 구간도 방울 타일로 그리고, 상점·배낭 칸은 점선 자리표시(16장 11/6 그림 없는 소품 규칙과 같음). 타일 512×64·끝 64×64 회색조(RGB × 구간 색), 지도에서 높이 10pt·끝 12pt, 끝 한 장을 양쪽에 돌려 씀. 값 200 럭·거리 10·50·100km는 가안"
+}

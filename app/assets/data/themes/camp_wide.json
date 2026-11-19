@@ -1,8 +1,8 @@
 {
- "version": 3,
+ "version": 5,
  "id": "camp",
  "approx": true,
- "source": "v3(11/6 개발 기획): 프로토타입 캔버스 2-2 쉼터 메모(11/5 디자인 기획, 출시 수준 완료) 값. v2(11/4)는 Codex 넓은 판 지시서 가안(장면 폭 비율·가운데 기준)이라 이 값으로 바꿈 / 개발 T3(11/6): 물건 w·h(누름 상자)·artW·artH·labelTop·art, character.w, companion·campfire 크기, firstSign을 캔버스 Main.dc.html 값으로 더함",
+ "source": "v5(11/19 개발 기획, 16장 11/19 오늘의 수레 ④): 수레를 장식으로 되살림(누르면 상점 가안, 수레 위에 오늘의 물건 아이콘). v4(11/19 개발 기획, 16장 11/18 3탭·쉼터 꾸미기·동행 걷기 탭만·표지판 걷기 탭만, 11/19 쉼터·상점 세부): 땅 위 물건(배낭·노트·지도·수레)·동행 자리·방명록 표지판을 뺌(옆 세로 버튼은 config rest.sideButtons, 동행은 걷기 탭, 표지판은 config guestbook.sign). decor(꾸밈 물품 땅 띠·못 놓는 자리·이젤 첫 자리) 새로 — 값은 개발 기획 가안, 캔버스 쉼터 편집 화면이 나오면 디자인 기획 값으로 바꿈. v3(11/6 개발 기획): 프로토타입 캔버스 2-2 쉼터 메모(11/5 디자인 기획, 출시 수준 완료) 값 / 개발 T3(11/6): 물건 w·h·artW·artH·labelTop·art, character.w, companion·campfire 크기, firstSign을 캔버스 Main.dc.html 값으로 더함",
  "unit": "pt",
  "scene": {
   "widthPt": 585,
@@ -16,78 +16,6 @@
  },
  "objects": [
   {
-   "id": "backpack",
-   "label": "배낭",
-   "x": 268,
-   "y": 510,
-   "w": 64,
-   "h": 80,
-   "artW": 64,
-   "artH": 62.5,
-   "labelTop": 62,
-   "art": {
-    "file": "assets/backgrounds/v11/obj_rest_backpack_v11_clean.png",
-    "canvas": [
-     384,
-     384
-    ],
-    "bbox": [
-     25,
-     29,
-     334,
-     326
-    ]
-   }
-  },
-  {
-   "id": "note",
-   "label": "노트",
-   "x": 184,
-   "y": 572,
-   "w": 55,
-   "h": 72,
-   "artW": 54.5,
-   "artH": 56,
-   "labelTop": 55,
-   "art": {
-    "file": "assets/backgrounds/v11/obj_rest_note_v11_clean.png",
-    "canvas": [
-     384,
-     384
-    ],
-    "bbox": [
-     30,
-     25,
-     324,
-     334
-    ]
-   }
-  },
-  {
-   "id": "map",
-   "label": "지도",
-   "x": 318,
-   "y": 596,
-   "w": 64,
-   "h": 64,
-   "artW": 64,
-   "artH": 48,
-   "labelTop": 47,
-   "art": {
-    "file": "assets/backgrounds/v11/obj_rest_map_v11_clean.png",
-    "canvas": [
-     384,
-     384
-    ],
-    "bbox": [
-     25,
-     67,
-     334,
-     250
-    ]
-   }
-  },
-  {
    "id": "cart",
    "label": "수레",
    "x": 440,
@@ -96,43 +24,27 @@
    "h": 132,
    "artW": 120,
    "artH": 109,
-   "labelTop": 110,
+   "decorOnly": false,
+   "tap": "8-1",
+   "itemsOn": {
+    "pending": true,
+    "max": 6,
+    "iconPt": 28,
+    "note": "오늘의 수레 칸 물건을 아이콘 그림(item_icons)으로 수레 위에 얹음. 자리 좌표는 캔버스 2-2(디자인 기획)"
+   },
    "artSource": {
     "file": "obj_rest_cart_v01_clean.png",
     "nightLantern": "obj_rest_cart_lantern_v01_clean.png",
-    "drive": "Assets 1APDxAIwdCagR9m_XdxtTrZDG6oV-jkdO",
-    "note": "11/6 개발 기획(R27): 그림 연결(art·bbox·scene_art)은 개발. 랜턴은 밤에 얹는 층(추정)"
+    "drive": "Assets 1APDxAIwdCagR9m_XdxtTrZDG6oV-jkdO"
    }
-  },
-  {
-   "id": "guestbookSign",
-   "label": "방명록 표지판",
-   "x": 2,
-   "y": 470,
-   "onlyWhenTicket": true,
-   "w": 48,
-   "h": 70,
-   "artW": 48,
-   "artH": 56,
-   "labelTop": 54
   }
  ],
+ "objectsNote": "11/18: 배낭·노트·지도·표지판은 땅 위에서 뺌. 11/19: 수레만 장식으로 남김(오늘의 물건이 보이는 자리, 누르면 상점 — 개발 기획 가안, 옆 버튼 상점과 같은 곳)",
  "character": {
   "x": 20,
   "y": 545,
   "heightPt": 180,
   "w": 144
- },
- "companion": {
-  "x": 236,
-  "y": 612,
-  "note": "캔버스는 퐁이 자리. 동행이 없으면 비어 있음(첫날)",
-  "label": "동행",
-  "w": 69,
-  "h": 106,
-  "artW": 69,
-  "artH": 90,
-  "labelTop": 90
  },
  "campfire": {
   "x": 174,
@@ -142,35 +54,51 @@
   "w": 46,
   "h": 69
  },
- "hitOrder": [
-  "cart",
-  "map",
-  "backpack",
-  "note",
-  "guestbookSign",
-  "companion",
-  "character"
- ],
+ "decor": {
+  "approx": true,
+  "pending": true,
+  "groundBand": {
+   "xMin": 8,
+   "xMax": 577,
+   "footYMin": 650,
+   "footYMax": 800
+  },
+  "blocked": [
+   {
+    "id": "character",
+    "from": "characterFloat",
+    "padPt": 8
+   },
+   {
+    "id": "campfire",
+    "x": 166,
+    "y": 676,
+    "w": 62,
+    "h": 85
+   },
+   {
+    "id": "cart",
+    "x": 432,
+    "y": 522,
+    "w": 136,
+    "h": 148
+   }
+  ],
+  "easelStart": {
+   "footX": 300,
+   "footY": 700
+  },
+  "roamBand": "groundBand",
+  "note": "개발 기획 가안(캔버스 2-2 값에서 셈): 땅 띠 = 물품 발 디딤점이 들어갈 수 있는 범위(정령 발 y 725·모닥불 아래 753 둘레, 장면 폭 585 안 좌우 8pt 여백). 못 놓는 자리 = 정령 상자(characterFloat, 둘레 8pt)·모닥불(둘레 8pt). 이젤 첫 자리는 처음 화면 안 정령 오른쪽. 완결 동행 돌아다니기도 같은 띠. 디자인 기획이 캔버스 편집 화면에서 정하면 바꿈"
+ },
  "drag": {
   "snapToEnds": true,
   "farParallax": 0.45
  },
  "zoom": "config rest.zoom",
- "objectSizes": "캔버스 Main.dc.html의 그림 크기를 따름(이 파일에 없음, 개발이 그림 크기로 판정 상자)",
  "exits": {
-  "profile": "9-1",
-  "settings": "10-1",
-  "map": "4-1",
-  "backpack": "6-1",
-  "note": "6-3",
-  "companion": "7-1",
-  "cart": "8-1",
-  "gem": "8-1",
-  "guestbookSign": "5-1",
-  "depart": {
-   "journey": "3-1",
-   "none": "4-1"
-  }
+  "sideButtons": "config rest.sideButtons.exits",
+  "characterLongPress": "customize"
  },
  "firstSign": {
   "x": 334,
@@ -178,7 +106,7 @@
   "w": 56,
   "h": 22,
   "label": "첫 스케치 →",
-  "note": "첫날 이정표(UI 명세 v3 2장). 캔버스 2-1에는 자리가 없어 v11 이정표 판 위에 둔 개발 가안"
+  "note": "첫날 이정표(UI 명세 v3 2장). 캔버스 2-1에는 자리가 없어 v11 이정표 판 위에 둔 개발 가안. 11/19 이젤 첫 자리(decor.easelStart)와 겹치지 않음"
  },
  "characterFloat": {
   "approx": true,

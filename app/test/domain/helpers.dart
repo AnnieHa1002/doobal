@@ -85,9 +85,16 @@ final AssetIndex assetIndex = AssetIndex([
     if (f is File) f.path,
 ]);
 
-/// 실제 themes/camp_wide.json
+/// 실제 themes/camp_wide.json (v5: 땅 위 물건은 수레만)
 final CampTheme campTheme = CampTheme.fromJson(
   jsonDecode(File('assets/data/themes/camp_wide.json').readAsStringSync()) as Map<String, dynamic>,
+);
+
+/// 옛 쉼터 테마 v3 (test/fixtures, 11/18 개편 전 리포 데이터 그대로): 배낭·노트·지도·방명록 표지판·동행 자리가 있다.
+/// v5에서 빠진 이 물건으로 지도·화집·노트·방명록·동행에 들어가던 UI 시험이 쓴다(UiEnv 기본).
+/// T14가 쉼터 옆 버튼으로 입구를 옮기면 그 시험을 옆 버튼으로 바꾸고 지운다
+final CampTheme campThemeV3 = CampTheme.fromJson(
+  jsonDecode(File('test/fixtures/camp_wide_v3.json').readAsStringSync()) as Map<String, dynamic>,
 );
 
 /// 실제 지도 투영 (assets/map/ui_map_projection_v01.json)

@@ -165,6 +165,14 @@ def _camel(stem):
     a = stem.split('_')
     return a[0] + ''.join(w[:1].upper() + w[1:] for w in a[1:])
 
+PROPS_CHANGES = "v9(11/19 밤 개발 기획, 16장 11/19 상점 미니 친구 8종·꾸밈 제안 세부·상점 무늬·물감·선물 이름): 상점 미니 친구 8종 pet_06~13(Rive petChoice 6~13·Color 입력 이름은 codex_shop_mini_friends_v01 6장, 500 럭 가안), 이전 pending 이벤트 미니 친구 pet_06~08(다람쥐·길고양이·반딧불이)은 id를 evt_pet_01~03으로 옮김(출시 후 후보, 그림·코드 없음), 시작 선물 둥실 float_04 ‘물빛 구슬’(이름 기획 가안, unlock gift·equipOnStart, Rive floatChoice 6 가안 — riv 납품 뒤 실제 빈 번호로). 물감 길 무늬 3종은 소품이 아니라 trails.json. 이 파일은 리포 main의 props v8(rive.riveVerified·unusedChoices 포함)을 기준으로 함 — 프로젝트 사본 v8은 그 두 키가 빠진 옛 사본이었음"
+SHOP_PET_PRICE = 500
+SHOP_PETS = [('pet_06', '파랑새', 'float', 'bluebird'), ('pet_07', '카나리아', 'float', 'canary'),
+             ('pet_08', '잠자리', 'float', 'dragonfly'), ('pet_09', '도깨비불', 'float', 'wisp'),
+             ('pet_10', '꼬마 인삼', 'ground', 'ginseng_kid'), ('pet_11', '두더지', 'ground', 'mole'),
+             ('pet_12', '고슴도치', 'ground', 'hedgehog'), ('pet_13', '너구리', 'ground', 'raccoon_dog')]
+
+
 def build_props():
     props = [
         # 모자 4 (베레모는 색 바꾸기, 11/4)
@@ -228,9 +236,9 @@ def build_props():
         p('hand_07', 'float', '바람개비', 'event', 'pending', terrain='coast'),
         p('hand_08', None, '랜턴', 'event', 'pending', terrain='city', dayNight='night'),
         p('shoe_03', None, '장화', 'event', 'pending', terrain='coast'),
-        p('pet_06', 'pet', '다람쥐', 'event', 'pending', terrain='mountain', dayNight='day'),
-        p('pet_07', 'pet', '길고양이', 'event', 'pending', terrain='city', dayNight='day'),
-        p('pet_08', 'pet', '반딧불이', 'event', 'pending', terrain='field', season='summer', dayNight='night'),
+        p('evt_pet_01', 'pet', '다람쥐', 'event', 'pending', terrain='mountain', dayNight='day'),
+        p('evt_pet_02', 'pet', '길고양이', 'event', 'pending', terrain='city', dayNight='day'),
+        p('evt_pet_03', 'pet', '반딧불이', 'event', 'pending', terrain='field', season='summer', dayNight='night'),
         # 출시 후: 1,000km 자리를 금빛 날개 팔에 넘김
         p('hat_03', 'hat', '금빛 베레모', 'none', 'later'),
     ]
@@ -243,6 +251,23 @@ def build_props():
              'effect_05': '반딧불'}
     for x in props:
         x['name'] = SHORT.get(x['id'], x['name'])
+    # 16장 11/19: 이벤트 미니 친구(출시 후) id를 evt_pet_로 옮김 — pet_06~13은 상점 미니 친구가 씀
+    for x in props:
+        if x['id'].startswith('evt_pet_'):
+            x['oldId'] = 'pet_0' + str(5 + int(x['id'][-1]))
+    # 16장 11/19: 상점 미니 친구 8종(codex_shop_mini_friends_v01 6장, 500 럭 가안) — 종이새·갈매기 뒤
+    at = [x['id'] for x in props].index('pet_05') + 1
+    for n, (pid, name, stance, stem) in enumerate(SHOP_PETS, 6):
+        props.insert(at + n - 6, {'id': pid, 'slot': 'pet', 'name': name, 'unlock': {'kind': 'shop', 'price': SHOP_PET_PRICE},
+                                  'status': 'mvp', 'shopPet': True, 'stance': stance, 'icon': f'item_pet_{stem}_v01',
+                                  'rive': {'choice': 'petChoice', 'n': n, 'color': _camel(stem) + 'FriendColor', 'pending': True}})
+    # 16장 11/19 밤(창구 Q003·Q007): 시작 선물 둥실 ‘물빛 구슬’(이름 기획 가안), 정령 만들기를 마치면 입은 채 시작
+    at = [x['id'] for x in props].index('float_01') + 1
+    props.insert(at, {'id': 'float_04', 'slot': 'float', 'name': '물빛 구슬', 'unlock': {'kind': 'gift', 'on': 'spiritMakerDone'},
+                      'equipOnStart': True, 'status': 'mvp', 'icon': 'ui_icon_float_04_v01',
+                      'rive': {'choice': 'floatChoice', 'n': 6, 'color': 'waterBeadFloatColor', 'pending': True,
+                               'note': 'codex_trail_patterns_gift_v01 T05: 둥실 다음 빈 번호 가안 6, Color 입력 이름은 가안 — riv 납품 README로 고침'},
+                      'nameDraft': True})
     # 색 소품: 기본 소품과 같은 슬롯, 고정 색, 상점 100 럭, 기본 소품을 가져야 보임
     base = {x['id']: x for x in props}
     for bid, colors in START_COLORS.items():
@@ -258,6 +283,8 @@ def build_props():
                           'status': 'mvp', 'variantOf': bid,
                           'material': {'catalogId': MATERIAL[bid][0], 'hex': hexv, **MATERIAL_SOURCE.get(bid, {})}})
     for x in props:
+        if 'icon' in x:
+            continue
         if x['id'] in ICONS:
             x['icon'] = f"item_{ICONS[x['id']]}_v01"
         elif 'variantOf' in x:
@@ -267,14 +294,14 @@ def build_props():
     rive = {pid: (slot, n) for slot, ids in RIVE_ORDER.items() for n, pid in enumerate(ids, 1)}
     for x in props:
         b = x.get('variantOf', x['id'])
-        if b in rive:
+        if b in rive and 'rive' not in x:
             slot, n = rive[b]
             assert x['slot'] == slot, f'Rive 슬롯이 다름: {x["id"]}'
             x['rive'] = {'choice': f'{slot}Choice', 'n': n, 'color': _camel(ICONS[b].replace('_khaki', '')) + 'Color'}
     assert len(rive) == 37 and all('rive' in x for x in props if x['status'] == 'mvp' and x['slot'] != 'effect'), 'Rive 번호 없는 소품'
     assert rive['cloth_02'] == ('cloth', 4), '인계 문서: 여행복 = clothChoice 4'
 
-    assert len({x['icon'] for x in props if 'icon' in x}) == 37 + 21, '칸 그림 이름 중복'
+    assert len({x['icon'] for x in props if 'icon' in x}) == 37 + 21 + 9, '칸 그림 이름 중복'
     ids = [x['id'] for x in props]
     assert len(ids) == len(set(ids)), 'id 중복'
     assert all(len(x['name'].split()) <= 2 for x in props if x['status'] == 'mvp' and 'variantOf' not in x), '이름은 두 낱말 이내(14장)'
@@ -283,21 +310,21 @@ def build_props():
     mvp = [x for x in props if x['status'] == 'mvp' and 'variantOf' not in x]
     assert all(x['slot'] in SLOTS for x in mvp)
     c = collections.Counter(x['slot'] for x in mvp)
-    assert dict(c) == {'hat': 4, 'face': 3, 'cloth': 5, 'shoe': 5, 'hand': 5, 'bag': 5, 'pet': 5, 'float': 5, 'effect': 5}, c
+    assert dict(c) == {'hat': 4, 'face': 3, 'cloth': 5, 'shoe': 5, 'hand': 5, 'bag': 5, 'pet': 13, 'float': 6, 'effect': 5}, c
     k = collections.Counter(x['unlock']['kind'] for x in mvp)
-    assert dict(k) == {'default': 6, 'distance': 10, 'region': 7, 'companion': 3, 'steps': 1, 'shop': 15}, k
-    assert len(mvp) - c['effect'] == 37
+    assert dict(k) == {'default': 6, 'distance': 10, 'region': 7, 'companion': 3, 'steps': 1, 'shop': 23, 'gift': 1}, k
+    assert len(mvp) - c['effect'] == 46  # 16장 11/19: 37 + 상점 미니 친구 8 + 시작 선물 1
     assert sorted(x['unlock']['companion'] for x in mvp if x['unlock']['kind'] == 'companion') == ['bright', 'doctor', 'rest']
     assert sorted(x['unlock']['km'] for x in mvp if x['unlock']['kind'] == 'distance') == [10, 25, 50, 100, 150, 200, 300, 500, 700, 1000]
     assert sum(x['status'] == 'pending' for x in props) == 12
     assert all('일체형' not in x['name'] for x in props), '화면 글 원칙: 이름에 설명을 넣지 않음'
-    dump('props.json', {'version': 8, 'slots': SLOTS, 'rive': {'viewModel': 'WardrobeColors', 'riveVerified': True, 'unusedChoices': {'hatChoice': [5, 6]}, 'note': '계약 v0.7 5장. 11/13 v33 색 속성 38개 이름·슬롯별 순서 대조 끝, 11/14 v36도 입력 같음(그림 확인은 개발 T5). hatChoice 5 새싹·6 꽃은 riv에만 있고 MVP에서 안 씀(16장 11/14, 앱은 0~4만). choice 0 = 안 입음, 색 소품은 같은 번호 + 그 색 hex를 color 속성에. 효과는 Rive 밖(앱 입자)'},
+    dump('props.json', {'version': 9, 'slots': SLOTS, 'rive': {'viewModel': 'WardrobeColors', 'riveVerified': True, 'unusedChoices': {'hatChoice': [5, 6]}, 'note': '계약 v0.7 5장. 11/13 v33 색 속성 38개 이름·슬롯별 순서 대조 끝, 11/14 v36도 입력 같음(그림 확인은 개발 T5). hatChoice 5 새싹·6 꽃은 riv에만 있고 MVP에서 안 씀(16장 11/14, 앱은 0~4만). choice 0 = 안 입음, 색 소품은 같은 번호 + 그 색 hex를 color 속성에. 효과는 Rive 밖(앱 입자)'},
                         'material': {'neutralReference': 180, 'formula': 'rgb = clamp(neutral.rgb × hex.rgb ÷ 180) 위에 고정 무늬 층',
                                      'source': 'Codex 기본 소품 v07 recolor/materials_v07.json'},
                         'colorVariants': {'price': COLOR_VARIANT_PRICE, 'perBase': 3, 'bases': list(MATERIAL),
                                           'pending': not COLOR_VARIANTS,
                                           'note': '기준 문서 11장(11/6 Annie): 색 = 몸 색 견본, 이름 = 색을 떠올리게 하는 말 + 소품(세 낱말까지), id <기본 id>_c<n>, color = 견본 이름'},
-                        'props': props})
+                        'props': props, 'changes': PROPS_CHANGES})
     return props
 
 

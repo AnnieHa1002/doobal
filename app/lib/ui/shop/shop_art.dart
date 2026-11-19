@@ -70,7 +70,7 @@ class ShopCartArt extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(assetIndexProvider).value;
-    final cart = ref.watch(campThemeProvider).value?.object(campCartId);
+    final cart = ref.watch(campThemeProvider).value?.objectOrNull(campCartId);
     String? find(String? name) =>
         index == null || name == null ? null : index.file(WideCampImages.dir, name);
     final file = find(cart?.artSourceFile);

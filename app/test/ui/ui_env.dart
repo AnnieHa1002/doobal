@@ -13,6 +13,7 @@ import 'package:doobal/data/step_source.dart';
 import 'package:doobal/data/walk_notice.dart';
 import 'package:doobal/domain/asset_index.dart';
 import 'package:doobal/domain/bucket.dart';
+import 'package:doobal/domain/camp_theme.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/landmark.dart';
@@ -55,14 +56,18 @@ StepRecord walkRecord(DateTime start, int minutes, int spm) => StepRecord(
 class UiEnv {
   /// [appRules]를 주면 config.json 대신 그 규칙으로 앱이 돈다 (config 숫자가 화면에 나오는지 볼 때).
   /// [appLandmarks]를 주면 화면이 읽는 명소 목록(landmarksProvider)만 그것으로 바뀐다 (서비스는 101곳 그대로).
-  /// [live]를 주면 기기 걸음 센서가 그것으로 바뀐다
+  /// [live]를 주면 기기 걸음 센서가 그것으로 바뀐다.
+  /// [camp]를 주지 않으면 옛 쉼터 테마 v3([campThemeV3]): 쉼터 물건으로 다른 화면에 들어가는 시험이 T14까지 그대로 돈다.
+  /// 실제 v5(수레만)는 `camp: campTheme`
   UiEnv({
     FakeStepSource? source,
     Rules? appRules,
     List<Landmark>? appLandmarks,
     FakeLiveSteps? live,
     AssetIndex? assets,
+    CampTheme? camp,
   })  : db = AppDb(NativeDatabase.memory()),
+        camp = camp ?? campThemeV3,
         source = source ?? FakeStepSource(),
         live = live ?? FakeLiveSteps(),
         appRules = appRules ?? rules,
@@ -84,6 +89,9 @@ class UiEnv {
 
   final AppDb db;
   final FakeStepSource source;
+
+  /// 쉼터 테마 (campThemeProvider)
+  final CampTheme camp;
 
   /// 기기 걸음 센서 (테스트가 값을 밀어 넣는다). 권한은 처음부터 있다
   final FakeLiveSteps live;
@@ -129,7 +137,7 @@ class UiEnv {
         appSettingsOpenerProvider.overrideWithValue(appSettings),
         paintingSharerProvider.overrideWithValue(sharer),
         paintingSaverProvider.overrideWithValue(saver),
-        campThemeProvider.overrideWith((ref) => campTheme),
+        campThemeProvider.overrideWith((ref) => camp),
         mapProjectionProvider.overrideWith((ref) => mapProjection),
         mapRegionsProvider.overrideWith((ref) => mapRegions),
         sigunguProvider.overrideWith((ref) => sigungu),
