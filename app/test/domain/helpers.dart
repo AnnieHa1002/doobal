@@ -32,6 +32,14 @@ Rules rulesWithLapKm(double lapKm) {
   return Rules.fromJson(j);
 }
 
+/// 분당 걸음 창(live.cadenceWindowSec)만 바꾼 규칙. 창 길이와 상관없는 걷기/뛰기·따라잡기 시험은
+/// 옛 30초 창으로 센다 (config는 16장 11/19부터 10초)
+Rules rulesWithCadenceSec(int sec) {
+  final j = jsonDecode(File('assets/data/config.json').readAsStringSync()) as Map<String, dynamic>;
+  (j['live'] as Map<String, dynamic>)['cadenceWindowSec'] = sec;
+  return Rules.fromJson(j);
+}
+
 /// 실제 landmarks.json의 명소 101곳
 final List<Landmark> landmarks = [
   for (final l in (jsonDecode(File('assets/data/landmarks.json').readAsStringSync())

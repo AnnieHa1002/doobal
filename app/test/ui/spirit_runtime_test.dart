@@ -189,6 +189,35 @@ void main() {
     tick(c, 300);
     expect(c.expression, 4);
   });
+  test('걷기·뛰기 재생 빠르기(16장 11/19): 걷기·뛰기 동안만 그 배, 반응 중·다른 동작은 1배, 표정·반응 시간은 실제 시간', () async {
+    final (f, c) = await load();
+    addTearDown(() {
+      c.dispose();
+      f.dispose();
+    });
+    c.setPlayback(1.5);
+    c.setScene(speed: 0, sitting: false);
+    expect(c.playbackRate, 1);
+    c.setScene(speed: 1, sitting: false);
+    expect((c.motion, c.playbackRate), (SpiritMotion.walk, 1.5));
+    c.setScene(speed: 2, sitting: false);
+    expect((c.motion, c.playbackRate), (SpiritMotion.run, 1.5));
+    c.setPlayback(0.7);
+    expect(c.playbackRate, 0.7);
+    // 반응(기쁨 1.8초)이 도는 동안은 1배. 표정 1초·반응 1.8초는 빠르기와 상관없이 실제 시간으로 끝난다
+    c.cue(const SpiritCue(1, holdSec: 1, trigger: 'joy'));
+    expect((c.playbackRate, c.expression), (1, 1));
+    tick(c, 66);
+    expect(c.expression, 0);
+    expect(c.playbackRate, 1);
+    tick(c, 48);
+    expect((c.motion, c.playbackRate), (SpiritMotion.run, 0.7));
+    // 이상한 값은 1배
+    c.setPlayback(double.nan);
+    expect(c.playbackRate, 1);
+    c.setPlayback(-1);
+    expect(c.playbackRate, 1);
+  });
   test('누르기는 행복 표정(palette tap 1초), 연타 화남은 화남 표정 2초 (config tapReaction)', () async {
     final (f, c) = await load();
     addTearDown(() {

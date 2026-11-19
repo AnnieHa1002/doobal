@@ -60,6 +60,7 @@ class SpiritStageRules {
     required this.flipSideOn,
     required this.customizeSwipe,
     required this.customizeExprButton,
+    required this.walkPlayback,
   });
 
   /// [rive]는 config character.rive
@@ -87,6 +88,7 @@ class SpiritStageRules {
       for (final p in preview['swipe'] as List) pose(p as String, 'customizePreview.swipe'),
     ];
     if (swipe.isEmpty) throw const FormatException('character.rive.customizePreview.swipe가 비었다');
+    final playback = rive['walkPlayback'] as Map<String, dynamic>;
     return SpiritStageRules(
       poses: poses,
       screens: screens,
@@ -101,6 +103,7 @@ class SpiritStageRules {
       flipSideOn: {for (final s in rive['flipSideOn'] as List? ?? const []) s as String},
       customizeSwipe: swipe,
       customizeExprButton: preview['exprButton'] as bool? ?? false,
+      walkPlayback: WalkPlaybackRules.fromJson(playback),
     );
   }
 
@@ -122,6 +125,9 @@ class SpiritStageRules {
 
   /// 꾸미기 표정 미리보기 단추 (16장 11/13: 없음)
   final bool customizeExprButton;
+
+  /// 걷는 중 걷기·뛰기 동작의 재생 빠르기 (16장 11/19)
+  final WalkPlaybackRules walkPlayback;
 
   /// [screen] 화면의 자세 번호. 쉼터(restSwap)는 바꾸기 첫 자세
   int poseOf(String screen) {
@@ -213,4 +219,31 @@ class SpiritCues {
 
   /// [event]의 표정. 표에 없으면 null
   SpiritCue? of(String event) => _byEvent[event];
+}
+
+/// 걷는 중 정령 걷기·뛰기 동작의 재생 빠르기 (config character.rive.walkPlayback, 16장 11/19 가안):
+/// 분당 걸음 ÷ [refStepsPerMin]을 [min]~[max]로 자른다 (분당 100보 = 1배, 0.7~1.6배)
+class WalkPlaybackRules {
+  const WalkPlaybackRules({required this.refStepsPerMin, required this.min, required this.max});
+
+  factory WalkPlaybackRules.fromJson(Map<String, dynamic> j) {
+    final ref = (j['refStepsPerMin'] as num).toDouble();
+    final lo = (j['min'] as num).toDouble();
+    final hi = (j['max'] as num).toDouble();
+    if (ref <= 0 || lo <= 0 || hi < lo) {
+      throw const FormatException('character.rive.walkPlayback: refStepsPerMin > 0, 0 < min ≤ max');
+    }
+    return WalkPlaybackRules(refStepsPerMin: ref, min: lo, max: hi);
+  }
+
+  /// 1배가 되는 분당 걸음
+  final double refStepsPerMin;
+
+  /// 재생 빠르기 아래·위 끝
+  final double min;
+  final double max;
+
+  /// 분당 걸음 [stepsPerMin]일 때 재생 빠르기. 걸음이 없으면(0 이하) 1배 (서 있는 동작은 늘 1배다)
+  double rateFor(int stepsPerMin) =>
+      stepsPerMin <= 0 ? 1 : (stepsPerMin / refStepsPerMin).clamp(min, max).toDouble();
 }

@@ -41,20 +41,31 @@ class PaintTrailWindow {
 }
 
 /// 기기 걸음 센서가 늘어난 한 번: [at]에 [steps]보. [foreground]는 그때 앱이 앞에 있었는지,
-/// [catchUp]은 앱이 숨어 있던 동안 쌓인 걸음이 돌아올 때 한꺼번에 들어온 것인지 (시작 판정에 안 쓴다)
+/// [catchUp]은 앱이 숨어 있던 동안 쌓인 걸음이 돌아올 때 한꺼번에 들어온 것인지 (시작 판정에 안 쓴다).
+/// [detected]면 걸음 감지 센서(걸음마다 바로, 안드로이드)가 알아챈 걸음이고, 아니면 걸음 카운터가 늘어난 것이다
+/// (같은 걸음을 두 센서가 따로 알리므로 둘을 더하지 않는다)
 class SensorGain {
-  const SensorGain(this.at, this.steps, {this.foreground = true, this.catchUp = false});
+  const SensorGain(
+    this.at,
+    this.steps, {
+    this.foreground = true,
+    this.catchUp = false,
+    this.detected = false,
+  });
 
   final DateTime at;
   final int steps;
   final bool foreground;
   final bool catchUp;
+  final bool detected;
 }
 
 /// 센서 걸음으로 물감 길의 시작·끝을 가리는 판정기 (화면·DB 없이 순수하게, 시각은 부르는 쪽이 넘긴다).
 /// - 시작: 열린 물감 길이 없고 앱이 앞에 있을 때, 최근 config paintTrail.startMinSteps.withinSec초 안에
 ///   늘어난 걸음이 steps 이상이면 그 걸음들 중 첫 걸음의 분(분 시작)에 연다
 ///   (앞 창이 그 분 가운데에 끝났으면 앞 창의 끝에).
+///   감지 센서 걸음과 카운터 걸음은 따로 세서 어느 한쪽이 넘으면 연다 (16장 11/19: 감지 걸음이면 약 5초,
+///   카운터는 걸음을 모아 늦게 보낸다. 같은 걸음이라 더하지 않는다).
 ///   숨어 있던 걸음이 한꺼번에 들어온 것(catchUp)과 숨어 있을 때 센 걸음은 시작에 세지 않는다.
 /// - 끝: 마지막 걸음이 든 분의 끝 뒤로 걸음 없이 idleEndMin분이 지나면 그 분의 끝에 닫는다 (idle).
 ///   열려 있는 동안은 숨어 있어도 걸음을 센다 (화면을 꺼도 앱이 살아 있으면 이어진다).
@@ -64,16 +75,26 @@ class PaintTrailTracker {
   PaintTrailTracker(this.rules);
 
   final Rules rules;
+
+  /// 시작 판정 창 안의 카운터 걸음·감지 걸음
   final _recent = <SensorGain>[];
+  final _recentDetected = <SensorGain>[];
   DateTime? _start;
   DateTime? _lastStep;
   var _lastStartSteps = 0;
+  List<SensorGain> _lastStartGains = const [];
 
   /// 마지막으로 닫은 창의 끝. 새 창은 이보다 앞에서 시작하지 않는다 (도착 시각은 분 가운데일 수 있다)
   DateTime? _closedAt;
 
   /// 마지막으로 물감 길을 연 걸음들의 합 (시작 판정 창 안에서 늘어난 걸음)
   int get lastStartSteps => _lastStartSteps;
+
+  /// 마지막으로 물감 길을 연 걸음들 (모두 감지 걸음이거나 모두 카운터 걸음)
+  List<SensorGain> get lastStartGains => _lastStartGains;
+
+  /// 마지막 물감 길을 감지 센서 걸음이 열었는가
+  bool get lastStartDetected => _lastStartGains.isNotEmpty && _lastStartGains.first.detected;
 
   /// 열린 물감 길이 있는가
   bool get active => _start != null;
@@ -88,7 +109,12 @@ class PaintTrailTracker {
   void resume(DateTime start, {DateTime? lastStep}) {
     _start = start;
     _lastStep = lastStep ?? start;
+    _clearRecent();
+  }
+
+  void _clearRecent() {
     _recent.clear();
+    _recentDetected.clear();
   }
 
   /// 걸음 증가 하나를 넣는다. 이 걸음으로 물감 길이 열렸으면 그 시작 시각, 아니면 null
@@ -100,22 +126,24 @@ class PaintTrailTracker {
       return null;
     }
     if (!g.foreground || g.catchUp) {
-      _recent.clear();
+      _clearRecent();
       return null;
     }
     final within = Duration(seconds: rules.paintTrailStartWithinSec);
-    _recent
+    final recent = g.detected ? _recentDetected : _recent;
+    recent
       ..removeWhere((r) => g.at.difference(r.at) > within)
       ..add(g);
-    final sum = _recent.fold(0, (a, r) => a + r.steps);
+    final sum = recent.fold(0, (a, r) => a + r.steps);
     if (sum < rules.paintTrailStartSteps) return null;
-    final first = minuteStart(_recent.first.at);
+    final first = minuteStart(recent.first.at);
     final floor = _closedAt;
     final start = floor != null && first.isBefore(floor) ? floor : first;
     _start = start;
     _lastStartSteps = sum;
+    _lastStartGains = List.unmodifiable(recent);
     _lastStep = g.at;
-    _recent.clear();
+    _clearRecent();
     return start;
   }
 
@@ -145,7 +173,7 @@ class PaintTrailTracker {
     if (start == null) return null;
     _start = null;
     _lastStep = null;
-    _recent.clear();
+    _clearRecent();
     final at = end.isBefore(start) ? start : end;
     _closedAt = at;
     return PaintTrailWindow(start, at, reason);

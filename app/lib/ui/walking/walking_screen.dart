@@ -42,8 +42,9 @@ import 'walking_hud.dart';
 /// 물감 길이 열리면 열고 걸음이 멈춰 끝나면 쉼터로 닫는다 (16장 11/16 쉼터↔걷는 중 6규칙). 왼쪽 위 쉼터 아이콘은
 /// 화면만 쉼터로 돌린다 (물감 길은 이어지고 그 물감 길 동안 저절로 돌아오지 않는다). ‘걷기 마치기’도, 물감을 고르는
 /// 버튼도 없다 (물감은 쉼터 배낭 물감 탭에서 바꾼다, 16장 11/16).
-/// 숫자는 PaintTrailController가 주는 이번 물감 길 값이다: 걸음·거리는 health 기록과 센서 중 큰 쪽,
-/// 분당 걸음과 걷기/뛰기는 센서 기준. 보이는 거리는 새 값을 향해 부드럽게 따라간다.
+/// 숫자는 PaintTrailController가 주는 이번 물감 길 값이다: 걸음·거리는 health 기록과 센서 중 큰 쪽(안드로이드는
+/// 감지 센서가 카운터보다 먼저 센 걸음까지, 16장 11/19), 분당 걸음과 걷기/뛰기는 센서 기준.
+/// 보이는 거리는 새 값을 향해 부드럽게 따라간다.
 /// 화면이 꺼져 있던 동안 센 걸음은 앱이 돌아올 때 한꺼번에 들어오고, 그때 거리는 바로 맞춘다.
 /// 땅 위로 이번 물감 길 거리 config paintDrop.spacingM마다 물감 방울이 흘러와 정령에 닿으면 줍는다 (연출만).
 /// 이정표 카드(길 위 이벤트)는 컨트롤러가 만든 것을 config hud.eventCardSec 동안 띄운다 (화면이 꺼진 동안
@@ -150,9 +151,9 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     Future.microtask(() => _setActive(true));
     _now = clock();
     _start = ref.read(paintTrailProvider).start ?? _now;
-    final summary = _trail.summaryAt(_now);
-    _shownM = summary?.distanceM ?? 0;
-    _stepFollower.snap(summary?.steps ?? 0);
+    final shown = _trail.shownAt(_now);
+    _shownM = shown?.distanceM ?? 0;
+    _stepFollower.snap(shown?.steps ?? 0);
     _catchUps = _trail.live?.catchUps ?? 0;
     _ticker = createTicker(_onTick)..start();
     ref.listenManual(snapshotProvider, (_, next) {
@@ -315,25 +316,27 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
     _rules = rules;
     final now = ref.read(clockProvider)();
     final summary = _trail.summaryAt(now);
+    // 화면 숫자·땅은 감지 센서가 먼저 센 걸음까지 (걸음마다 바로 움직인다, 16장 11/19)
+    final target = _trail.shownAt(now);
     _probeArrival(summary, now);
     _trail.flushEvents(now);
     final walkMps = summary == null ? 0.0 : speedMps(summary.lastSteps, summary.lastGait, rules);
     _stepCompanion(summary, walkMps, dt, rules);
     var shown = followDistance(
       _shownM,
-      summary?.distanceM ?? 0,
+      target?.distanceM ?? 0,
       math.max(walkMps, _catchUpMps),
       dt,
       rules.walkingRefreshSec.toDouble(),
     );
     final shownSteps = _stepFollower.shown;
-    _stepFollower.step(summary?.steps ?? 0, dt);
+    _stepFollower.step(target?.steps ?? 0, dt);
     // 숨어 있던 동안의 걸음이 한꺼번에 들어왔으면 따라가지 않고 바로 맞춘다
     final catchUps = _trail.live?.catchUps ?? 0;
     if (catchUps != _catchUps) {
       _catchUps = catchUps;
-      shown = math.max(shown, summary?.distanceM ?? 0);
-      _stepFollower.snap(summary?.steps ?? 0);
+      shown = math.max(shown, target?.distanceM ?? 0);
+      _stepFollower.snap(target?.steps ?? 0);
     }
     // 거리·걸음 숫자가 움직이거나 초가 바뀔 때만 다시 그린다
     final secondChanged =
@@ -485,6 +488,8 @@ class _WalkingScreenState extends ConsumerState<WalkingScreen>
             landmarks: landmarks,
             running: meet == null && running,
             moving: meet == null && summary != null && summary.lastSteps > 0,
+            // 걷기·뛰기 동작을 분당 걸음에 맞춰 빠르게·느리게 (16장 11/19)
+            playback: rules.screen.spirit.walkPlayback.rateFor(summary?.lastSteps ?? 0),
             sceneSeed: snap.journey?.dest.id ?? 'home',
             spirit: spirit,
             spiritCue: _cue,

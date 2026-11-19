@@ -282,6 +282,7 @@ class Rules {
     required this.aliveSaveSec,
     required this.backgroundSyncMin,
     required this.liveCadenceWindowSec,
+    required this.liveDetectorLeadSec,
     required this.liveNoticeUpdateSec,
     required this.lapKm,
     required this.paintTrailStartSteps,
@@ -447,8 +448,12 @@ class Rules {
   /// 안드로이드가 정하는 최소는 15분이고, 실제로 도는 때는 안드로이드가 배터리에 맞춰 늦출 수 있다
   final int backgroundSyncMin;
 
-  /// 걸음 센서로 분당 걸음을 낼 때 보는 최근 시간(초) (config live.cadenceWindowSec)
+  /// 걸음 센서로 분당 걸음을 낼 때 보는 최근 시간(초) (config live.cadenceWindowSec, 16장 11/19 10초)
   final int liveCadenceWindowSec;
+
+  /// 걷는 중 화면이 걸음 카운터보다 앞서 보여 주는 감지 센서 걸음은 최근 이 초 안에 감지한 것까지
+  /// (config live.detectorLeadSec). 카운터는 늦어도 약 10초 안에 그 걸음을 담는다 (안드로이드 문서)
+  final int liveDetectorLeadSec;
 
   /// 걷는 중 상시 알림(안드로이드)의 걸음·거리를 새로 쓰는 가장 짧은 간격(초) (config live.noticeUpdateSec)
   final int liveNoticeUpdateSec;
@@ -798,6 +803,7 @@ class Rules {
       aliveSaveSec: sync['aliveSaveSec'] as int,
       backgroundSyncMin: sync['backgroundMin'] as int,
       liveCadenceWindowSec: live['cadenceWindowSec'] as int,
+      liveDetectorLeadSec: live['detectorLeadSec'] as int,
       liveNoticeUpdateSec: live['noticeUpdateSec'] as int,
       lapKm: _d(record['lapKm']),
       paintTrailStartSteps: trailStart['steps'] as int,

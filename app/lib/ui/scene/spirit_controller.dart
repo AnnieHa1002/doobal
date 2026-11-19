@@ -65,6 +65,9 @@ final class SpiritController extends rive.RiveWidgetController {
 
   /// 앱이 뒤로 가 있는 중([setAway])과, 돌아온 뒤 첫 프레임의 지난 시간을 버릴지
   bool _away = false, _skipGap = false;
+
+  /// 걷기·뛰기 동작의 재생 빠르기 ([setPlayback], 16장 11/19)
+  double _playback = 1;
   Rules? tapRules;
 
   /// 누르기 행복·연타 화남의 표정 (palette customPartsV33 tap·rapidTap). 없으면 동작만
@@ -265,6 +268,16 @@ final class SpiritController extends rive.RiveWidgetController {
     }
   }
 
+  /// 걷기·뛰기 동작의 재생 빠르기 (config character.rive.walkPlayback, 분당 걸음에 맞춘 값). 걷기·뛰기 동안만
+  /// Rive를 이 배로 돌리고, 반응(트리거)이 도는 동안과 다른 동작은 1배다. 표정·반응이 남은 시간은 늘 실제 시간으로 잰다
+  void setPlayback(double rate) {
+    _playback = rate.isFinite && rate > 0 ? rate : 1;
+  }
+
+  /// 지금 Rive를 돌리는 배 (걷기·뛰기이고 반응이 없을 때만 [setPlayback] 값)
+  double get playbackRate =>
+      (_motion == SpiritMotion.walk || _motion == SpiritMotion.run) && _actionLeft <= 0 ? _playback : 1;
+
   /// 앱이 뒤로 갔다(true)·돌아왔다(false). 뒤에 있는 동안은 프레임이 없어 그리지 않는데, Rive 타이머는 켜진 채라
   /// 돌아온 첫 프레임이 뒤에 있던 시간 전체를 들고 온다. 그 한 번을 버려 떠 있기·반응·표정 시간을 멈춘 자리에서 잇는다.
   /// (다른 화면에 덮이면 Navigator가 TickerMode를 꺼서 Rive 타이머가 멈추고, 다시 켜면 0초부터 잰다)
@@ -282,7 +295,7 @@ final class SpiritController extends rive.RiveWidgetController {
       _skipGap = false;
       dt = 0;
     }
-    final active = super.advance(dt);
+    final active = super.advance(dt * playbackRate);
     if (_actionLeft > 0) {
       _actionLeft = math.max(0, _actionLeft - dt);
       if (_actionLeft == 0) {

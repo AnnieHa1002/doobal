@@ -18,6 +18,36 @@ void main() {
   final screen = rules.screen;
   final stage = screen.spirit;
 
+  group('걷기 동작 재생 빠르기 (config character.rive.walkPlayback, 16장 11/19 가안)', () {
+    final playback = stage.walkPlayback;
+
+    test('분당 100보 = 1배, 0.7~1.6배로 자른다', () {
+      expect(playback.refStepsPerMin, 100);
+      expect(playback.rateFor(100), 1);
+      expect(playback.rateFor(130), closeTo(1.3, 1e-9));
+      expect(playback.rateFor(80), closeTo(0.8, 1e-9));
+      expect(playback.rateFor(50), 0.7);
+      expect(playback.rateFor(200), 1.6);
+    });
+
+    test('걸음이 없으면(분당 0) 1배', () {
+      expect(playback.rateFor(0), 1);
+      expect(playback.rateFor(-5), 1);
+    });
+
+    test('0 이하 기준·뒤집힌 범위는 config를 못 읽는다', () {
+      for (final edit in <void Function(Map<String, dynamic>)>[
+        (p) => p['refStepsPerMin'] = 0,
+        (p) => p['min'] = 0,
+        (p) => p['max'] = 0.5,
+      ]) {
+        final c = _config();
+        edit(_rive(c)['walkPlayback'] as Map<String, dynamic>);
+        expect(() => ScreenRules.fromJson(c), throwsFormatException);
+      }
+    });
+  });
+
   group('config ui (16장 11/13 화면 세부)', () {
     test('새 소식 점은 배낭·동행·수레(새 상품일 때만), 노트에는 없다', () {
       expect(screen.newDots, {'backpack', 'companion', 'cart'});

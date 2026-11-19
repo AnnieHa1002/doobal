@@ -600,17 +600,17 @@ void main() {
         expect(find.byIcon(Icons.directions_walk), findsOneWidget);
 
         e.live.push(0);
-        // 30초 창에 70보 → 분당 140보 → 뛰기 (health 기록은 없다)
-        await sensorTo(tester, e, 5, 70);
+        // 10초 창(16장 11/19)에 25보 → 분당 150보 → 뛰기 (health 기록은 없다)
+        await sensorTo(tester, e, 5, 25);
         expect(find.byIcon(Icons.directions_run), findsOneWidget);
         expect(find.byIcon(Icons.directions_walk), findsNothing);
         await tester.tap(find.byKey(const Key('walk-pill')));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
-        expect(find.text('140보'), findsOneWidget);
-        expect(find.text('8.4 km/h'), findsOneWidget);
-        // 3600 ÷ 8.4 = 428.57 → 429초 = 7분 9초
-        expect(find.text('7\'09"/km'), findsOneWidget);
+        expect(find.text('150보'), findsOneWidget);
+        expect(find.text('9.0 km/h'), findsOneWidget);
+        // 3600 ÷ 9.0 = 400초 = 6분 40초
+        expect(find.text('6\'40"/km'), findsOneWidget);
         expect(find.text('1.00 m'), findsOneWidget);
 
         // 가만히 서면 창이 비어 분당 걸음이 0이 되고 달리는 중이 아니게 된다
@@ -850,16 +850,18 @@ void main() {
         expect(e.notice.startRunning, [false]);
 
         e.live.push(0);
-        // 60초 동안 걷기(분당 100보 이하): 60초에 첫 갱신, 걷는 중 제목
-        await sensorTo(tester, e, 60, 60);
+        // 60초 동안 걷기(10초마다 10보 = 분당 60): 60초에 첫 갱신, 걷는 중 제목
+        for (var i = 1; i <= 6; i++) {
+          await sensorTo(tester, e, 10, i * 10);
+        }
         expect(e.notice.updateRunning, [false]);
-        // 그다음 30초 창에 70보(분당 140보) → 뛰기. 갱신 뒤 60초가 지나야 보낸다
-        await sensorTo(tester, e, 5, 130);
+        // 그다음 10초 창(16장 11/19)에 25보 더(분당 150보 이상) → 뛰기. 갱신 뒤 60초가 지나야 보낸다
+        await sensorTo(tester, e, 5, 85);
         expect(find.byIcon(Icons.directions_run), findsOneWidget);
         expect(e.notice.updateRunning, [false]);
         // 걸음은 그대로 두고 시간만 채우면 창이 비어 다시 걷기가 되므로, 계속 뛰며 60초를 채운다
         for (var i = 0; i < 11; i++) {
-          await sensorTo(tester, e, 5, 130 + (i + 1) * 12);
+          await sensorTo(tester, e, 5, 85 + (i + 1) * 12);
         }
         expect(e.notice.updateRunning.last, isTrue);
         await _end(tester, e);
@@ -870,7 +872,10 @@ void main() {
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
         e.live.push(0);
-        await sensorTo(tester, e, 60, 30); // 60초: 30보 · 21m → 갱신
+        // 20초마다 10보(분당 30, 걷기): 60초에 30보 · 21m → 갱신
+        await sensorTo(tester, e, 20, 10);
+        await sensorTo(tester, e, 20, 20);
+        await sensorTo(tester, e, 20, 30);
         expect(sentSteps(e), [30]);
         expect(sentMeters(e), [closeTo(21, 1e-9)]);
 
@@ -922,7 +927,10 @@ void main() {
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
         e.live.push(0);
-        await sensorTo(tester, e, 60, 30); // 60초: 30보 → 갱신
+        // 20초마다 10보(분당 30, 걷기): 60초에 30보 → 갱신
+        await sensorTo(tester, e, 20, 10);
+        await sensorTo(tester, e, 20, 20);
+        await sensorTo(tester, e, 20, 30);
         // health에 1,000보가 들어와서 1,000을 보냈다
         await walkAndRefresh(tester, e, 10, 100);
         expect(sentSteps(e), [30, 1000]);
@@ -942,7 +950,10 @@ void main() {
         await e.seed(tester, dest: 'kr003');
         await openWalking(tester, e);
         e.live.push(0);
-        await sensorTo(tester, e, 60, 30); // 60초: 30보 · 21m → 갱신
+        // 20초마다 10보(분당 30, 걷기): 60초에 30보 · 21m → 갱신
+        await sensorTo(tester, e, 20, 10);
+        await sensorTo(tester, e, 20, 20);
+        await sensorTo(tester, e, 20, 30);
         // 10분 × 150보는 뛰기라 1,500보 · 1,500m(보폭 1.0m)가 health에 들어왔다
         await walkAndRefresh(tester, e, 10, 150);
         expect(sentSteps(e), [30, 1500]);

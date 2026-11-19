@@ -225,12 +225,12 @@ class SceneArtPainter extends CustomPainter {
           spec.feetY,
           row: row,
           haze: spec.haze,
-          tall: p.piece.tall,
         );
       }
     }
   }
 
+  /// 장면 조각 하나. 어떤 조각도 투명하게 그리지 않는다 (16장 11/19 Annie: 정령 뒤를 지나는 키 큰 조각도 불투명)
   void _sprite(
     String id,
     double x,
@@ -238,26 +238,12 @@ class SceneArtPainter extends CustomPainter {
     double feet, {
     required SceneRow row,
     double haze = 0,
-    bool tall = false,
   }) {
     final b = (_assets[id]['bbox'] as List).cast<num>();
     x *= _groundScale;
     final h = height * _k * _groundScale, w = b[2] * h / b[3];
-    feet = _layout.n('groundY') + (feet - (art.data['portrait']['groundY'] as num)) * _groundScale;
     if (x > _size.width || x + w < 0) return;
-    final rect = Rect.fromLTWH(x, _layout.y(feet) - h, w, h);
-    final plan = art.plan!;
-    // 키 큰 조각은 정령 뒤를 지나는 동안 흐려진다 (scene.json tallObjectClearX)
-    final opacity = tall
-        ? ScenePlan.tallOpacity(
-            left: rect.left,
-            right: rect.right,
-            center: _layout.foot.dx,
-            clear: plan.tallClearX * _k * _groundScale,
-            near: plan.tallNearOpacity,
-            fade: plan.tallFadePx * _k * _groundScale,
-          )
-        : 1.0;
+    final rect = Rect.fromLTWH(x, _layout.rowFeetY(row, feet) - h, w, h);
     final paint = _tinted(
       chainAll([
         if (row == SceneRow.grove) seasonTintMatrix(_season, SceneLayerId.grove),
@@ -266,7 +252,6 @@ class SceneArtPainter extends CustomPainter {
         _time,
       ]),
     );
-    if (opacity < 1) paint.color = Colors.white.withValues(alpha: opacity);
     _draw(id, rect, crop: true, paint: paint);
   }
 

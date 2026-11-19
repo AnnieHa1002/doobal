@@ -211,6 +211,49 @@ void main() {
       expect(paintTrailWindows(edge, now: _at(3), rules: rules), [PaintTrailWindow(_at(0))]);
     });
 
+    test('감지 걸음(16장 11/19): 0.5초마다 한 걸음이면 10번째 걸음(약 5초)에 첫 걸음의 분으로 연다', () {
+      final tracker = PaintTrailTracker(rules);
+      DateTime step(int k) => _at(0, 20).add(Duration(milliseconds: 500 * k));
+      for (var k = 0; k < 9; k++) {
+        expect(tracker.add(SensorGain(step(k), 1, detected: true)), isNull);
+      }
+      expect(tracker.add(SensorGain(step(9), 1, detected: true)), _at(0));
+      expect(step(9).difference(step(0)), const Duration(milliseconds: 4500));
+      expect(tracker.lastStartSteps, 10);
+      expect(tracker.lastStartDetected, isTrue);
+      expect(tracker.lastStartGains.map((g) => g.at), [for (var k = 0; k < 10; k++) step(k)]);
+      // 열린 뒤 감지 걸음은 마지막 걸음을 옮긴다
+      tracker.add(SensorGain(_at(3), 1, detected: true));
+      expect(tracker.lastStep, _at(3));
+    });
+
+    test('감지 걸음과 카운터 걸음은 같은 걸음이라 더하지 않는다: 어느 한쪽이 10보를 넘어야 연다', () {
+      final mixed = [
+        for (var k = 0; k < 6; k++) SensorGain(_at(0, 10 + k), 1, detected: true),
+        SensorGain(_at(0, 20), 6),
+      ];
+      expect(paintTrailWindows(mixed, now: _at(1), rules: rules), isEmpty);
+      // 카운터가 몰아 보낸 10보로도 열린다 (감지 센서가 없는 기기·감지가 늦을 때)
+      final counter = [...mixed, SensorGain(_at(0, 40), 4)];
+      final tracker = PaintTrailTracker(rules);
+      DateTime? opened;
+      for (final g in counter) {
+        opened ??= tracker.add(g);
+      }
+      expect(opened, _at(0));
+      expect(tracker.lastStartDetected, isFalse);
+      expect(tracker.lastStartSteps, 10);
+    });
+
+    test('숨었다 돌아오면 감지 걸음 창도 비운다', () {
+      final tracker = PaintTrailTracker(rules);
+      for (var k = 0; k < 9; k++) {
+        tracker.add(SensorGain(_at(0, k), 1, detected: true));
+      }
+      tracker.add(SensorGain(_at(0, 10), 50, foreground: false));
+      expect(tracker.add(SensorGain(_at(0, 11), 1, detected: true)), isNull);
+    });
+
     test('앱이 뒤에 있을 때·숨었던 걸음이 한꺼번에 온 것으로는 시작하지 않는다', () {
       final back = _gains(0, 3, 100, foreground: false);
       expect(paintTrailWindows(back, now: _at(5), rules: rules), isEmpty);

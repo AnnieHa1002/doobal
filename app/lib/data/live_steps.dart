@@ -5,11 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:pedometer/pedometer.dart';
 
 /// 기기 걸음 센서. health 기록은 안드로이드에서 몇 분씩 늦게 들어와서, 걷는 중 화면의 숫자와
-/// 땅 움직임만 이 센서로 바로 보여 준다 (진행·보상의 기준은 StepSource). 테스트는 FakeLiveSteps를 쓴다
+/// 땅 움직임만 이 센서로 바로 보여 준다 (진행·보상의 기준은 StepSource). 걸음 카운터(누적값)와,
+/// 안드로이드는 걸음 감지 센서(걸음마다 바로)를 같이 읽는다. 테스트는 FakeLiveSteps를 쓴다
 abstract class LiveSteps {
   /// 부팅 이후 누적 걸음. 구독하는 동안만 센서를 읽지만 누적값이라, 구독을 쉬었다 다시 하면
   /// 첫 값에 쉬는 동안의 걸음이 들어 있다. 센서가 없으면 오류가 흐른다
   Stream<int> stepCounts();
+
+  /// 걸음 감지 센서: 걸음을 알아챌 때마다 그 걸음 수(보통 1)가 바로 온다 (16장 11/19). 카운터는 걸음을 모아
+  /// 늦게 보내서 걷는 중 화면을 먼저 움직이는 데만 쓴다. 센서가 없는 기기·iOS는 비었거나 오류가 흐른다
+  Stream<int> stepDetections();
 
   /// 센서를 읽을 권한이 있는가
   Future<bool> hasPermission();
@@ -30,9 +35,18 @@ class PedometerLiveSteps implements LiveSteps {
 
   static const _channel = MethodChannel('doobal/activity');
 
+  /// MainActivity의 걸음 감지 센서 채널 (pedometer의 step_detection과 따로 연다)
+  static const _detector = EventChannel('doobal/step_detector');
+
   @override
   Stream<int> stepCounts() => Platform.isAndroid || Platform.isIOS
       ? Pedometer.stepCountStream.map((c) => c.steps)
+      : const Stream.empty();
+
+  /// 안드로이드만. iOS는 지금처럼 CMPedometer 누적값만 쓴다
+  @override
+  Stream<int> stepDetections() => Platform.isAndroid
+      ? _detector.receiveBroadcastStream().map((e) => (e as num).toInt())
       : const Stream.empty();
 
   @override
@@ -76,14 +90,31 @@ class FakeLiveSteps implements LiveSteps {
     onCancel: () => listeners--,
   );
 
+  /// 감지 센서를 구독 중인 곳의 수
+  int detectListeners = 0;
+
+  late final _detects = StreamController<int>.broadcast(
+    onListen: () => detectListeners++,
+    onCancel: () => detectListeners--,
+  );
+
   /// 센서가 누적 걸음 [total]을 준 것처럼 밀어 넣는다 (구독자가 없으면 버려진다)
   void push(int total) => _controller.add(total);
 
   /// 센서가 없는 기기: 구독자에게 오류를 보낸다
   void pushError() => _controller.addError(StateError('걸음 센서가 없다'));
 
+  /// 감지 센서가 걸음 [steps]개를 알아챈 것처럼 밀어 넣는다 (구독자가 없으면 버려진다)
+  void detect([int steps = 1]) => _detects.add(steps);
+
+  /// 감지 센서가 없는 기기: 감지 구독자에게 오류를 보낸다
+  void detectError() => _detects.addError(StateError('걸음 감지 센서가 없다'));
+
   @override
   Stream<int> stepCounts() => _controller.stream;
+
+  @override
+  Stream<int> stepDetections() => _detects.stream;
 
   @override
   Future<bool> hasPermission() async => permitted;

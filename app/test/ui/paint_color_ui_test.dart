@@ -200,13 +200,13 @@ void main() {
     await settle(tester, () => find.byType(RestScreen).evaluate().isNotEmpty, tries: 80);
     await settle(tester, () => false, tries: 8);
 
-    // 30초마다 50보(분당 100보 걷기): 1,500보 = 1,050m
+    // 12초마다 20보(분당 100보 걷기, 10초 창에서 분당 120 이하): 1,500보 = 1,050m
     var total = 50000;
     e.live.push(total);
     await tester.pump(const Duration(milliseconds: 50));
-    for (var i = 0; i < 30; i++) {
-      e.now = e.now.add(const Duration(seconds: 30));
-      total += 50;
+    for (var i = 0; i < 75; i++) {
+      e.now = e.now.add(const Duration(seconds: 12));
+      total += 20;
       e.live.push(total);
       await tester.pump(paintTrailTick);
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
