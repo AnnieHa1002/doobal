@@ -13,9 +13,17 @@ cd "$V/app" || exit 1
 echo "커밋 $(git rev-parse --short HEAD)"
 git status --short | wc -l | tr -d ' ' | sed 's/^/미커밋 /'
 python3 -I ../tools/check_secrets.py --range origin/main..HEAD | head -5
-# rive_native 시험 라이브러리는 무시 목록이라 통합 워크트리 빌드에서 복사한다
+# rive_native 시험 라이브러리(macOS dylib)는 무시 목록이라 이 커밋의 pubspec.lock 판을 pub 캐시에서 복사한다.
+# 통합 워크트리 빌드의 dylib은 그 워크트리 미커밋 작업의 판일 수 있어 쓰지 않는다 (11/20: rive 0.15용이라 정령 시험이 모두 깨짐)
+RV=$(awk '/^  rive_native:/{f=1} f&&/version:/{gsub(/"/,"",$2); print $2; exit}' pubspec.lock)
+LIB="$HOME/.pub-cache/hosted/pub.dev/rive_native-$RV/native/build/macosx/bin/debug_shared/librive_native.dylib"
 mkdir -p build/rive_native/native/build/macosx/bin/debug_shared
-cp "$I/app/build/rive_native/native/build/macosx/bin/debug_shared/librive_native.dylib" build/rive_native/native/build/macosx/bin/debug_shared/
+if [ -f "$LIB" ]; then
+  cp "$LIB" build/rive_native/native/build/macosx/bin/debug_shared/
+  echo "rive_native $RV (pub 캐시)"
+else
+  echo "rive_native $RV dylib 없음: $LIB — 정령 시험이 깨질 수 있음"
+fi
 flutter pub get --offline > /dev/null 2>&1 || flutter pub get > /dev/null 2>&1
 flutter analyze 2>&1 | tail -1 | cut -c1-100
 flutter test --no-pub --timeout 120s test/domain test/app test/data test/widget_test.dart > "$S/final_core.log" 2>&1
