@@ -71,6 +71,13 @@ class BackupService {
     db.paintTubes: {},
     // 물감 길 색 구간 (스키마 20, 스키마 v10.7). 18~19 백업의 물감 길 색 두 열은 옮기지 않는다 (출시 전, 기본 물감으로)
     db.paintTrailColors: {},
+    // 수레에 나온 기록·쉼터 물품(가진 것·놓은 자리·건 그림)·가진 무늬 (스키마 21, M2~M6 AB·AC 가안, 서버_저장항목 v05).
+    // 20 이하 백업에는 없어서 비고, 물감 길 구간의 무늬 열·프로필의 고른 무늬 열은 null(기본 방울)이 된다
+    db.shopShown: {},
+    db.decorOwned: {},
+    db.decorPlaced: {},
+    db.decorPaintings: {},
+    db.patternsOwned: {},
     db.profile: {
       db.profile.ageConfirmedAt.$name,
       db.profile.onboardedAt.$name,
@@ -81,9 +88,11 @@ class BackupService {
 
   /// 백업에 넣지 않는 표 (기기 상태). 복원할 때 걸음 분과 동기화 상태는 다시 만들고,
   /// 알림 기록은 지금 기기 것을 그대로 둔다. 동기화 상태의 restoreFloorDay(복원한 마지막 날)와
-  /// lastAliveUtc(앱이 살아 있던 마지막 시각)도 이 기기의 값이라 표째 넣지 않는다
+  /// lastAliveUtc(앱이 살아 있던 마지막 시각)도 이 기기의 값이라 표째 넣지 않는다.
+  /// 오늘의 수레 칸(스키마 21)은 그날의 기기 상태라 넣지 않는다 (복원하면 그날 줄을 다시 정하고, 가진 물품은
+  /// 어차피 수레에 안 나온다)
   List<TableInfo<Table, dynamic>> get skippedTables =>
-      [db.stepMinutes, db.syncState, db.notificationLog];
+      [db.stepMinutes, db.syncState, db.notificationLog, db.shopCartSlots];
 
   /// 백업에 넣는 표 (SQL 이름)
   List<String> get includedTableNames => [for (final t in _included.keys) t.actualTableName];

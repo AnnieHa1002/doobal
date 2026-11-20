@@ -4057,6 +4057,17 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _paintPatternIdMeta = const VerificationMeta(
+    'paintPatternId',
+  );
+  @override
+  late final GeneratedColumn<String> paintPatternId = GeneratedColumn<String>(
+    'paint_pattern_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4073,6 +4084,7 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
     guestbookConsentAt,
     boatId,
     paintColorId,
+    paintPatternId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4182,6 +4194,15 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
         ),
       );
     }
+    if (data.containsKey('paint_pattern_id')) {
+      context.handle(
+        _paintPatternIdMeta,
+        paintPatternId.isAcceptableOrUnknown(
+          data['paint_pattern_id']!,
+          _paintPatternIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4247,6 +4268,10 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileRow> {
         DriftSqlType.string,
         data['${effectivePrefix}paint_color_id'],
       ),
+      paintPatternId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}paint_pattern_id'],
+      ),
     );
   }
 
@@ -4288,6 +4313,10 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
   /// 쉼터 배낭 ‘물감’ 탭에서 고른 물감 색 id (스키마 18, 스키마 v10.5 Profile.paintColorId).
   /// null이면 기본 물감. 고른 색을 다 쓰면 null로 돌아간다
   final String? paintColorId;
+
+  /// 배낭 물감 탭 맨 위 무늬 줄에서 고른 물감 길 무늬 id (스키마 21, trails.json patterns[].id).
+  /// null이면 기본 무늬 (trails.json default 방울). 새 무늬를 얻어도 저절로 고르지 않는다 (config paintPattern.choose)
+  final String? paintPatternId;
   const ProfileRow({
     required this.id,
     this.homeName,
@@ -4303,6 +4332,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     this.guestbookConsentAt,
     this.boatId,
     this.paintColorId,
+    this.paintPatternId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4347,6 +4377,9 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     if (!nullToAbsent || paintColorId != null) {
       map['paint_color_id'] = Variable<String>(paintColorId);
     }
+    if (!nullToAbsent || paintPatternId != null) {
+      map['paint_pattern_id'] = Variable<String>(paintPatternId);
+    }
     return map;
   }
 
@@ -4390,6 +4423,9 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       paintColorId: paintColorId == null && nullToAbsent
           ? const Value.absent()
           : Value(paintColorId),
+      paintPatternId: paintPatternId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paintPatternId),
     );
   }
 
@@ -4413,6 +4449,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       guestbookConsentAt: serializer.fromJson<int?>(json['guestbookConsentAt']),
       boatId: serializer.fromJson<String?>(json['boatId']),
       paintColorId: serializer.fromJson<String?>(json['paintColorId']),
+      paintPatternId: serializer.fromJson<String?>(json['paintPatternId']),
     );
   }
   @override
@@ -4433,6 +4470,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       'guestbookConsentAt': serializer.toJson<int?>(guestbookConsentAt),
       'boatId': serializer.toJson<String?>(boatId),
       'paintColorId': serializer.toJson<String?>(paintColorId),
+      'paintPatternId': serializer.toJson<String?>(paintPatternId),
     };
   }
 
@@ -4451,6 +4489,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     Value<int?> guestbookConsentAt = const Value.absent(),
     Value<String?> boatId = const Value.absent(),
     Value<String?> paintColorId = const Value.absent(),
+    Value<String?> paintPatternId = const Value.absent(),
   }) => ProfileRow(
     id: id ?? this.id,
     homeName: homeName.present ? homeName.value : this.homeName,
@@ -4472,6 +4511,9 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
         : this.guestbookConsentAt,
     boatId: boatId.present ? boatId.value : this.boatId,
     paintColorId: paintColorId.present ? paintColorId.value : this.paintColorId,
+    paintPatternId: paintPatternId.present
+        ? paintPatternId.value
+        : this.paintPatternId,
   );
   ProfileRow copyWithCompanion(ProfileCompanion data) {
     return ProfileRow(
@@ -4499,6 +4541,9 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
       paintColorId: data.paintColorId.present
           ? data.paintColorId.value
           : this.paintColorId,
+      paintPatternId: data.paintPatternId.present
+          ? data.paintPatternId.value
+          : this.paintPatternId,
     );
   }
 
@@ -4518,7 +4563,8 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
           ..write('linkConsentAt: $linkConsentAt, ')
           ..write('guestbookConsentAt: $guestbookConsentAt, ')
           ..write('boatId: $boatId, ')
-          ..write('paintColorId: $paintColorId')
+          ..write('paintColorId: $paintColorId, ')
+          ..write('paintPatternId: $paintPatternId')
           ..write(')'))
         .toString();
   }
@@ -4539,6 +4585,7 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
     guestbookConsentAt,
     boatId,
     paintColorId,
+    paintPatternId,
   );
   @override
   bool operator ==(Object other) =>
@@ -4557,7 +4604,8 @@ class ProfileRow extends DataClass implements Insertable<ProfileRow> {
           other.linkConsentAt == this.linkConsentAt &&
           other.guestbookConsentAt == this.guestbookConsentAt &&
           other.boatId == this.boatId &&
-          other.paintColorId == this.paintColorId);
+          other.paintColorId == this.paintColorId &&
+          other.paintPatternId == this.paintPatternId);
 }
 
 class ProfileCompanion extends UpdateCompanion<ProfileRow> {
@@ -4575,6 +4623,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
   final Value<int?> guestbookConsentAt;
   final Value<String?> boatId;
   final Value<String?> paintColorId;
+  final Value<String?> paintPatternId;
   const ProfileCompanion({
     this.id = const Value.absent(),
     this.homeName = const Value.absent(),
@@ -4590,6 +4639,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     this.guestbookConsentAt = const Value.absent(),
     this.boatId = const Value.absent(),
     this.paintColorId = const Value.absent(),
+    this.paintPatternId = const Value.absent(),
   });
   ProfileCompanion.insert({
     this.id = const Value.absent(),
@@ -4606,6 +4656,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     this.guestbookConsentAt = const Value.absent(),
     this.boatId = const Value.absent(),
     this.paintColorId = const Value.absent(),
+    this.paintPatternId = const Value.absent(),
   });
   static Insertable<ProfileRow> custom({
     Expression<int>? id,
@@ -4622,6 +4673,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     Expression<int>? guestbookConsentAt,
     Expression<String>? boatId,
     Expression<String>? paintColorId,
+    Expression<String>? paintPatternId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4639,6 +4691,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
         'guestbook_consent_at': guestbookConsentAt,
       if (boatId != null) 'boat_id': boatId,
       if (paintColorId != null) 'paint_color_id': paintColorId,
+      if (paintPatternId != null) 'paint_pattern_id': paintPatternId,
     });
   }
 
@@ -4657,6 +4710,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     Value<int?>? guestbookConsentAt,
     Value<String?>? boatId,
     Value<String?>? paintColorId,
+    Value<String?>? paintPatternId,
   }) {
     return ProfileCompanion(
       id: id ?? this.id,
@@ -4673,6 +4727,7 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
       guestbookConsentAt: guestbookConsentAt ?? this.guestbookConsentAt,
       boatId: boatId ?? this.boatId,
       paintColorId: paintColorId ?? this.paintColorId,
+      paintPatternId: paintPatternId ?? this.paintPatternId,
     );
   }
 
@@ -4721,6 +4776,9 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
     if (paintColorId.present) {
       map['paint_color_id'] = Variable<String>(paintColorId.value);
     }
+    if (paintPatternId.present) {
+      map['paint_pattern_id'] = Variable<String>(paintPatternId.value);
+    }
     return map;
   }
 
@@ -4740,7 +4798,8 @@ class ProfileCompanion extends UpdateCompanion<ProfileRow> {
           ..write('linkConsentAt: $linkConsentAt, ')
           ..write('guestbookConsentAt: $guestbookConsentAt, ')
           ..write('boatId: $boatId, ')
-          ..write('paintColorId: $paintColorId')
+          ..write('paintColorId: $paintColorId, ')
+          ..write('paintPatternId: $paintPatternId')
           ..write(')'))
         .toString();
   }
@@ -10445,8 +10504,19 @@ class $PaintTrailColorsTable extends PaintTrailColors
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _patternIdMeta = const VerificationMeta(
+    'patternId',
+  );
   @override
-  List<GeneratedColumn> get $columns => [trailId, fromUtc, colorId];
+  late final GeneratedColumn<String> patternId = GeneratedColumn<String>(
+    'pattern_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [trailId, fromUtc, colorId, patternId];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -10483,6 +10553,12 @@ class $PaintTrailColorsTable extends PaintTrailColors
     } else if (isInserting) {
       context.missing(_colorIdMeta);
     }
+    if (data.containsKey('pattern_id')) {
+      context.handle(
+        _patternIdMeta,
+        patternId.isAcceptableOrUnknown(data['pattern_id']!, _patternIdMeta),
+      );
+    }
     return context;
   }
 
@@ -10504,6 +10580,10 @@ class $PaintTrailColorsTable extends PaintTrailColors
         DriftSqlType.string,
         data['${effectivePrefix}color_id'],
       )!,
+      patternId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pattern_id'],
+      ),
     );
   }
 
@@ -10518,10 +10598,15 @@ class PaintTrailColorRow extends DataClass
   final int trailId;
   final int fromUtc;
   final String colorId;
+
+  /// 이 구간의 무늬 id (스키마 21, config paintPattern.segmentKey, trails.json patterns[].id). null이면 기본 무늬
+  /// (방울) — 스키마 21 전 구간도 그렇다. 색이 바뀔 때처럼 무늬만 바뀌어도 새 구간 줄을 연다
+  final String? patternId;
   const PaintTrailColorRow({
     required this.trailId,
     required this.fromUtc,
     required this.colorId,
+    this.patternId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -10529,6 +10614,9 @@ class PaintTrailColorRow extends DataClass
     map['trail_id'] = Variable<int>(trailId);
     map['from_utc'] = Variable<int>(fromUtc);
     map['color_id'] = Variable<String>(colorId);
+    if (!nullToAbsent || patternId != null) {
+      map['pattern_id'] = Variable<String>(patternId);
+    }
     return map;
   }
 
@@ -10537,6 +10625,9 @@ class PaintTrailColorRow extends DataClass
       trailId: Value(trailId),
       fromUtc: Value(fromUtc),
       colorId: Value(colorId),
+      patternId: patternId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(patternId),
     );
   }
 
@@ -10549,6 +10640,7 @@ class PaintTrailColorRow extends DataClass
       trailId: serializer.fromJson<int>(json['trailId']),
       fromUtc: serializer.fromJson<int>(json['fromUtc']),
       colorId: serializer.fromJson<String>(json['colorId']),
+      patternId: serializer.fromJson<String?>(json['patternId']),
     );
   }
   @override
@@ -10558,20 +10650,27 @@ class PaintTrailColorRow extends DataClass
       'trailId': serializer.toJson<int>(trailId),
       'fromUtc': serializer.toJson<int>(fromUtc),
       'colorId': serializer.toJson<String>(colorId),
+      'patternId': serializer.toJson<String?>(patternId),
     };
   }
 
-  PaintTrailColorRow copyWith({int? trailId, int? fromUtc, String? colorId}) =>
-      PaintTrailColorRow(
-        trailId: trailId ?? this.trailId,
-        fromUtc: fromUtc ?? this.fromUtc,
-        colorId: colorId ?? this.colorId,
-      );
+  PaintTrailColorRow copyWith({
+    int? trailId,
+    int? fromUtc,
+    String? colorId,
+    Value<String?> patternId = const Value.absent(),
+  }) => PaintTrailColorRow(
+    trailId: trailId ?? this.trailId,
+    fromUtc: fromUtc ?? this.fromUtc,
+    colorId: colorId ?? this.colorId,
+    patternId: patternId.present ? patternId.value : this.patternId,
+  );
   PaintTrailColorRow copyWithCompanion(PaintTrailColorsCompanion data) {
     return PaintTrailColorRow(
       trailId: data.trailId.present ? data.trailId.value : this.trailId,
       fromUtc: data.fromUtc.present ? data.fromUtc.value : this.fromUtc,
       colorId: data.colorId.present ? data.colorId.value : this.colorId,
+      patternId: data.patternId.present ? data.patternId.value : this.patternId,
     );
   }
 
@@ -10580,37 +10679,42 @@ class PaintTrailColorRow extends DataClass
     return (StringBuffer('PaintTrailColorRow(')
           ..write('trailId: $trailId, ')
           ..write('fromUtc: $fromUtc, ')
-          ..write('colorId: $colorId')
+          ..write('colorId: $colorId, ')
+          ..write('patternId: $patternId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(trailId, fromUtc, colorId);
+  int get hashCode => Object.hash(trailId, fromUtc, colorId, patternId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is PaintTrailColorRow &&
           other.trailId == this.trailId &&
           other.fromUtc == this.fromUtc &&
-          other.colorId == this.colorId);
+          other.colorId == this.colorId &&
+          other.patternId == this.patternId);
 }
 
 class PaintTrailColorsCompanion extends UpdateCompanion<PaintTrailColorRow> {
   final Value<int> trailId;
   final Value<int> fromUtc;
   final Value<String> colorId;
+  final Value<String?> patternId;
   final Value<int> rowid;
   const PaintTrailColorsCompanion({
     this.trailId = const Value.absent(),
     this.fromUtc = const Value.absent(),
     this.colorId = const Value.absent(),
+    this.patternId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PaintTrailColorsCompanion.insert({
     required int trailId,
     required int fromUtc,
     required String colorId,
+    this.patternId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : trailId = Value(trailId),
        fromUtc = Value(fromUtc),
@@ -10619,12 +10723,14 @@ class PaintTrailColorsCompanion extends UpdateCompanion<PaintTrailColorRow> {
     Expression<int>? trailId,
     Expression<int>? fromUtc,
     Expression<String>? colorId,
+    Expression<String>? patternId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (trailId != null) 'trail_id': trailId,
       if (fromUtc != null) 'from_utc': fromUtc,
       if (colorId != null) 'color_id': colorId,
+      if (patternId != null) 'pattern_id': patternId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -10633,12 +10739,14 @@ class PaintTrailColorsCompanion extends UpdateCompanion<PaintTrailColorRow> {
     Value<int>? trailId,
     Value<int>? fromUtc,
     Value<String>? colorId,
+    Value<String?>? patternId,
     Value<int>? rowid,
   }) {
     return PaintTrailColorsCompanion(
       trailId: trailId ?? this.trailId,
       fromUtc: fromUtc ?? this.fromUtc,
       colorId: colorId ?? this.colorId,
+      patternId: patternId ?? this.patternId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -10655,6 +10763,9 @@ class PaintTrailColorsCompanion extends UpdateCompanion<PaintTrailColorRow> {
     if (colorId.present) {
       map['color_id'] = Variable<String>(colorId.value);
     }
+    if (patternId.present) {
+      map['pattern_id'] = Variable<String>(patternId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -10667,6 +10778,1753 @@ class PaintTrailColorsCompanion extends UpdateCompanion<PaintTrailColorRow> {
           ..write('trailId: $trailId, ')
           ..write('fromUtc: $fromUtc, ')
           ..write('colorId: $colorId, ')
+          ..write('patternId: $patternId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ShopCartSlotsTable extends ShopCartSlots
+    with TableInfo<$ShopCartSlotsTable, ShopCartSlotRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ShopCartSlotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _kstDayMeta = const VerificationMeta('kstDay');
+  @override
+  late final GeneratedColumn<String> kstDay = GeneratedColumn<String>(
+    'kst_day',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _slotMeta = const VerificationMeta('slot');
+  @override
+  late final GeneratedColumn<int> slot = GeneratedColumn<int>(
+    'slot',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
+    'item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _soldUtcMeta = const VerificationMeta(
+    'soldUtc',
+  );
+  @override
+  late final GeneratedColumn<int> soldUtc = GeneratedColumn<int>(
+    'sold_utc',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [kstDay, slot, itemId, soldUtc];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shop_cart_slots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ShopCartSlotRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('kst_day')) {
+      context.handle(
+        _kstDayMeta,
+        kstDay.isAcceptableOrUnknown(data['kst_day']!, _kstDayMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kstDayMeta);
+    }
+    if (data.containsKey('slot')) {
+      context.handle(
+        _slotMeta,
+        slot.isAcceptableOrUnknown(data['slot']!, _slotMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_slotMeta);
+    }
+    if (data.containsKey('item_id')) {
+      context.handle(
+        _itemIdMeta,
+        itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_itemIdMeta);
+    }
+    if (data.containsKey('sold_utc')) {
+      context.handle(
+        _soldUtcMeta,
+        soldUtc.isAcceptableOrUnknown(data['sold_utc']!, _soldUtcMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {kstDay, slot};
+  @override
+  ShopCartSlotRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ShopCartSlotRow(
+      kstDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kst_day'],
+      )!,
+      slot: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}slot'],
+      )!,
+      itemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_id'],
+      )!,
+      soldUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sold_utc'],
+      ),
+    );
+  }
+
+  @override
+  $ShopCartSlotsTable createAlias(String alias) {
+    return $ShopCartSlotsTable(attachedDatabase, alias);
+  }
+}
+
+class ShopCartSlotRow extends DataClass implements Insertable<ShopCartSlotRow> {
+  final String kstDay;
+  final int slot;
+  final String itemId;
+  final int? soldUtc;
+  const ShopCartSlotRow({
+    required this.kstDay,
+    required this.slot,
+    required this.itemId,
+    this.soldUtc,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['kst_day'] = Variable<String>(kstDay);
+    map['slot'] = Variable<int>(slot);
+    map['item_id'] = Variable<String>(itemId);
+    if (!nullToAbsent || soldUtc != null) {
+      map['sold_utc'] = Variable<int>(soldUtc);
+    }
+    return map;
+  }
+
+  ShopCartSlotsCompanion toCompanion(bool nullToAbsent) {
+    return ShopCartSlotsCompanion(
+      kstDay: Value(kstDay),
+      slot: Value(slot),
+      itemId: Value(itemId),
+      soldUtc: soldUtc == null && nullToAbsent
+          ? const Value.absent()
+          : Value(soldUtc),
+    );
+  }
+
+  factory ShopCartSlotRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ShopCartSlotRow(
+      kstDay: serializer.fromJson<String>(json['kstDay']),
+      slot: serializer.fromJson<int>(json['slot']),
+      itemId: serializer.fromJson<String>(json['itemId']),
+      soldUtc: serializer.fromJson<int?>(json['soldUtc']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'kstDay': serializer.toJson<String>(kstDay),
+      'slot': serializer.toJson<int>(slot),
+      'itemId': serializer.toJson<String>(itemId),
+      'soldUtc': serializer.toJson<int?>(soldUtc),
+    };
+  }
+
+  ShopCartSlotRow copyWith({
+    String? kstDay,
+    int? slot,
+    String? itemId,
+    Value<int?> soldUtc = const Value.absent(),
+  }) => ShopCartSlotRow(
+    kstDay: kstDay ?? this.kstDay,
+    slot: slot ?? this.slot,
+    itemId: itemId ?? this.itemId,
+    soldUtc: soldUtc.present ? soldUtc.value : this.soldUtc,
+  );
+  ShopCartSlotRow copyWithCompanion(ShopCartSlotsCompanion data) {
+    return ShopCartSlotRow(
+      kstDay: data.kstDay.present ? data.kstDay.value : this.kstDay,
+      slot: data.slot.present ? data.slot.value : this.slot,
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      soldUtc: data.soldUtc.present ? data.soldUtc.value : this.soldUtc,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShopCartSlotRow(')
+          ..write('kstDay: $kstDay, ')
+          ..write('slot: $slot, ')
+          ..write('itemId: $itemId, ')
+          ..write('soldUtc: $soldUtc')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(kstDay, slot, itemId, soldUtc);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ShopCartSlotRow &&
+          other.kstDay == this.kstDay &&
+          other.slot == this.slot &&
+          other.itemId == this.itemId &&
+          other.soldUtc == this.soldUtc);
+}
+
+class ShopCartSlotsCompanion extends UpdateCompanion<ShopCartSlotRow> {
+  final Value<String> kstDay;
+  final Value<int> slot;
+  final Value<String> itemId;
+  final Value<int?> soldUtc;
+  final Value<int> rowid;
+  const ShopCartSlotsCompanion({
+    this.kstDay = const Value.absent(),
+    this.slot = const Value.absent(),
+    this.itemId = const Value.absent(),
+    this.soldUtc = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ShopCartSlotsCompanion.insert({
+    required String kstDay,
+    required int slot,
+    required String itemId,
+    this.soldUtc = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : kstDay = Value(kstDay),
+       slot = Value(slot),
+       itemId = Value(itemId);
+  static Insertable<ShopCartSlotRow> custom({
+    Expression<String>? kstDay,
+    Expression<int>? slot,
+    Expression<String>? itemId,
+    Expression<int>? soldUtc,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (kstDay != null) 'kst_day': kstDay,
+      if (slot != null) 'slot': slot,
+      if (itemId != null) 'item_id': itemId,
+      if (soldUtc != null) 'sold_utc': soldUtc,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ShopCartSlotsCompanion copyWith({
+    Value<String>? kstDay,
+    Value<int>? slot,
+    Value<String>? itemId,
+    Value<int?>? soldUtc,
+    Value<int>? rowid,
+  }) {
+    return ShopCartSlotsCompanion(
+      kstDay: kstDay ?? this.kstDay,
+      slot: slot ?? this.slot,
+      itemId: itemId ?? this.itemId,
+      soldUtc: soldUtc ?? this.soldUtc,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (kstDay.present) {
+      map['kst_day'] = Variable<String>(kstDay.value);
+    }
+    if (slot.present) {
+      map['slot'] = Variable<int>(slot.value);
+    }
+    if (itemId.present) {
+      map['item_id'] = Variable<String>(itemId.value);
+    }
+    if (soldUtc.present) {
+      map['sold_utc'] = Variable<int>(soldUtc.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShopCartSlotsCompanion(')
+          ..write('kstDay: $kstDay, ')
+          ..write('slot: $slot, ')
+          ..write('itemId: $itemId, ')
+          ..write('soldUtc: $soldUtc, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ShopShownTable extends ShopShown
+    with TableInfo<$ShopShownTable, ShopShownRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ShopShownTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
+    'item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _timesShownMeta = const VerificationMeta(
+    'timesShown',
+  );
+  @override
+  late final GeneratedColumn<int> timesShown = GeneratedColumn<int>(
+    'times_shown',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _firstShownDayMeta = const VerificationMeta(
+    'firstShownDay',
+  );
+  @override
+  late final GeneratedColumn<String> firstShownDay = GeneratedColumn<String>(
+    'first_shown_day',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [itemId, timesShown, firstShownDay];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shop_shown';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ShopShownRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('item_id')) {
+      context.handle(
+        _itemIdMeta,
+        itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_itemIdMeta);
+    }
+    if (data.containsKey('times_shown')) {
+      context.handle(
+        _timesShownMeta,
+        timesShown.isAcceptableOrUnknown(data['times_shown']!, _timesShownMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timesShownMeta);
+    }
+    if (data.containsKey('first_shown_day')) {
+      context.handle(
+        _firstShownDayMeta,
+        firstShownDay.isAcceptableOrUnknown(
+          data['first_shown_day']!,
+          _firstShownDayMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_firstShownDayMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {itemId};
+  @override
+  ShopShownRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ShopShownRow(
+      itemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_id'],
+      )!,
+      timesShown: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}times_shown'],
+      )!,
+      firstShownDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}first_shown_day'],
+      )!,
+    );
+  }
+
+  @override
+  $ShopShownTable createAlias(String alias) {
+    return $ShopShownTable(attachedDatabase, alias);
+  }
+}
+
+class ShopShownRow extends DataClass implements Insertable<ShopShownRow> {
+  final String itemId;
+  final int timesShown;
+  final String firstShownDay;
+  const ShopShownRow({
+    required this.itemId,
+    required this.timesShown,
+    required this.firstShownDay,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['item_id'] = Variable<String>(itemId);
+    map['times_shown'] = Variable<int>(timesShown);
+    map['first_shown_day'] = Variable<String>(firstShownDay);
+    return map;
+  }
+
+  ShopShownCompanion toCompanion(bool nullToAbsent) {
+    return ShopShownCompanion(
+      itemId: Value(itemId),
+      timesShown: Value(timesShown),
+      firstShownDay: Value(firstShownDay),
+    );
+  }
+
+  factory ShopShownRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ShopShownRow(
+      itemId: serializer.fromJson<String>(json['itemId']),
+      timesShown: serializer.fromJson<int>(json['timesShown']),
+      firstShownDay: serializer.fromJson<String>(json['firstShownDay']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'itemId': serializer.toJson<String>(itemId),
+      'timesShown': serializer.toJson<int>(timesShown),
+      'firstShownDay': serializer.toJson<String>(firstShownDay),
+    };
+  }
+
+  ShopShownRow copyWith({
+    String? itemId,
+    int? timesShown,
+    String? firstShownDay,
+  }) => ShopShownRow(
+    itemId: itemId ?? this.itemId,
+    timesShown: timesShown ?? this.timesShown,
+    firstShownDay: firstShownDay ?? this.firstShownDay,
+  );
+  ShopShownRow copyWithCompanion(ShopShownCompanion data) {
+    return ShopShownRow(
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      timesShown: data.timesShown.present
+          ? data.timesShown.value
+          : this.timesShown,
+      firstShownDay: data.firstShownDay.present
+          ? data.firstShownDay.value
+          : this.firstShownDay,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShopShownRow(')
+          ..write('itemId: $itemId, ')
+          ..write('timesShown: $timesShown, ')
+          ..write('firstShownDay: $firstShownDay')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(itemId, timesShown, firstShownDay);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ShopShownRow &&
+          other.itemId == this.itemId &&
+          other.timesShown == this.timesShown &&
+          other.firstShownDay == this.firstShownDay);
+}
+
+class ShopShownCompanion extends UpdateCompanion<ShopShownRow> {
+  final Value<String> itemId;
+  final Value<int> timesShown;
+  final Value<String> firstShownDay;
+  final Value<int> rowid;
+  const ShopShownCompanion({
+    this.itemId = const Value.absent(),
+    this.timesShown = const Value.absent(),
+    this.firstShownDay = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ShopShownCompanion.insert({
+    required String itemId,
+    required int timesShown,
+    required String firstShownDay,
+    this.rowid = const Value.absent(),
+  }) : itemId = Value(itemId),
+       timesShown = Value(timesShown),
+       firstShownDay = Value(firstShownDay);
+  static Insertable<ShopShownRow> custom({
+    Expression<String>? itemId,
+    Expression<int>? timesShown,
+    Expression<String>? firstShownDay,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (itemId != null) 'item_id': itemId,
+      if (timesShown != null) 'times_shown': timesShown,
+      if (firstShownDay != null) 'first_shown_day': firstShownDay,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ShopShownCompanion copyWith({
+    Value<String>? itemId,
+    Value<int>? timesShown,
+    Value<String>? firstShownDay,
+    Value<int>? rowid,
+  }) {
+    return ShopShownCompanion(
+      itemId: itemId ?? this.itemId,
+      timesShown: timesShown ?? this.timesShown,
+      firstShownDay: firstShownDay ?? this.firstShownDay,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (itemId.present) {
+      map['item_id'] = Variable<String>(itemId.value);
+    }
+    if (timesShown.present) {
+      map['times_shown'] = Variable<int>(timesShown.value);
+    }
+    if (firstShownDay.present) {
+      map['first_shown_day'] = Variable<String>(firstShownDay.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShopShownCompanion(')
+          ..write('itemId: $itemId, ')
+          ..write('timesShown: $timesShown, ')
+          ..write('firstShownDay: $firstShownDay, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DecorOwnedTable extends DecorOwned
+    with TableInfo<$DecorOwnedTable, DecorOwnedRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DecorOwnedTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _decorIdMeta = const VerificationMeta(
+    'decorId',
+  );
+  @override
+  late final GeneratedColumn<String> decorId = GeneratedColumn<String>(
+    'decor_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _gotUtcMeta = const VerificationMeta('gotUtc');
+  @override
+  late final GeneratedColumn<int> gotUtc = GeneratedColumn<int>(
+    'got_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [decorId, gotUtc];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'decor_owned';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DecorOwnedRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('decor_id')) {
+      context.handle(
+        _decorIdMeta,
+        decorId.isAcceptableOrUnknown(data['decor_id']!, _decorIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_decorIdMeta);
+    }
+    if (data.containsKey('got_utc')) {
+      context.handle(
+        _gotUtcMeta,
+        gotUtc.isAcceptableOrUnknown(data['got_utc']!, _gotUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_gotUtcMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {decorId};
+  @override
+  DecorOwnedRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DecorOwnedRow(
+      decorId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decor_id'],
+      )!,
+      gotUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}got_utc'],
+      )!,
+    );
+  }
+
+  @override
+  $DecorOwnedTable createAlias(String alias) {
+    return $DecorOwnedTable(attachedDatabase, alias);
+  }
+}
+
+class DecorOwnedRow extends DataClass implements Insertable<DecorOwnedRow> {
+  final String decorId;
+  final int gotUtc;
+  const DecorOwnedRow({required this.decorId, required this.gotUtc});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['decor_id'] = Variable<String>(decorId);
+    map['got_utc'] = Variable<int>(gotUtc);
+    return map;
+  }
+
+  DecorOwnedCompanion toCompanion(bool nullToAbsent) {
+    return DecorOwnedCompanion(decorId: Value(decorId), gotUtc: Value(gotUtc));
+  }
+
+  factory DecorOwnedRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DecorOwnedRow(
+      decorId: serializer.fromJson<String>(json['decorId']),
+      gotUtc: serializer.fromJson<int>(json['gotUtc']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'decorId': serializer.toJson<String>(decorId),
+      'gotUtc': serializer.toJson<int>(gotUtc),
+    };
+  }
+
+  DecorOwnedRow copyWith({String? decorId, int? gotUtc}) => DecorOwnedRow(
+    decorId: decorId ?? this.decorId,
+    gotUtc: gotUtc ?? this.gotUtc,
+  );
+  DecorOwnedRow copyWithCompanion(DecorOwnedCompanion data) {
+    return DecorOwnedRow(
+      decorId: data.decorId.present ? data.decorId.value : this.decorId,
+      gotUtc: data.gotUtc.present ? data.gotUtc.value : this.gotUtc,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DecorOwnedRow(')
+          ..write('decorId: $decorId, ')
+          ..write('gotUtc: $gotUtc')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(decorId, gotUtc);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DecorOwnedRow &&
+          other.decorId == this.decorId &&
+          other.gotUtc == this.gotUtc);
+}
+
+class DecorOwnedCompanion extends UpdateCompanion<DecorOwnedRow> {
+  final Value<String> decorId;
+  final Value<int> gotUtc;
+  final Value<int> rowid;
+  const DecorOwnedCompanion({
+    this.decorId = const Value.absent(),
+    this.gotUtc = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DecorOwnedCompanion.insert({
+    required String decorId,
+    required int gotUtc,
+    this.rowid = const Value.absent(),
+  }) : decorId = Value(decorId),
+       gotUtc = Value(gotUtc);
+  static Insertable<DecorOwnedRow> custom({
+    Expression<String>? decorId,
+    Expression<int>? gotUtc,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (decorId != null) 'decor_id': decorId,
+      if (gotUtc != null) 'got_utc': gotUtc,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DecorOwnedCompanion copyWith({
+    Value<String>? decorId,
+    Value<int>? gotUtc,
+    Value<int>? rowid,
+  }) {
+    return DecorOwnedCompanion(
+      decorId: decorId ?? this.decorId,
+      gotUtc: gotUtc ?? this.gotUtc,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (decorId.present) {
+      map['decor_id'] = Variable<String>(decorId.value);
+    }
+    if (gotUtc.present) {
+      map['got_utc'] = Variable<int>(gotUtc.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DecorOwnedCompanion(')
+          ..write('decorId: $decorId, ')
+          ..write('gotUtc: $gotUtc, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DecorPlacedTable extends DecorPlaced
+    with TableInfo<$DecorPlacedTable, DecorPlacedRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DecorPlacedTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _decorIdMeta = const VerificationMeta(
+    'decorId',
+  );
+  @override
+  late final GeneratedColumn<String> decorId = GeneratedColumn<String>(
+    'decor_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _xRatioMeta = const VerificationMeta('xRatio');
+  @override
+  late final GeneratedColumn<double> xRatio = GeneratedColumn<double>(
+    'x_ratio',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _yRatioMeta = const VerificationMeta('yRatio');
+  @override
+  late final GeneratedColumn<double> yRatio = GeneratedColumn<double>(
+    'y_ratio',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _flippedMeta = const VerificationMeta(
+    'flipped',
+  );
+  @override
+  late final GeneratedColumn<bool> flipped = GeneratedColumn<bool>(
+    'flipped',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("flipped" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _placedUtcMeta = const VerificationMeta(
+    'placedUtc',
+  );
+  @override
+  late final GeneratedColumn<int> placedUtc = GeneratedColumn<int>(
+    'placed_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    decorId,
+    xRatio,
+    yRatio,
+    flipped,
+    placedUtc,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'decor_placed';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DecorPlacedRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('decor_id')) {
+      context.handle(
+        _decorIdMeta,
+        decorId.isAcceptableOrUnknown(data['decor_id']!, _decorIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_decorIdMeta);
+    }
+    if (data.containsKey('x_ratio')) {
+      context.handle(
+        _xRatioMeta,
+        xRatio.isAcceptableOrUnknown(data['x_ratio']!, _xRatioMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_xRatioMeta);
+    }
+    if (data.containsKey('y_ratio')) {
+      context.handle(
+        _yRatioMeta,
+        yRatio.isAcceptableOrUnknown(data['y_ratio']!, _yRatioMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_yRatioMeta);
+    }
+    if (data.containsKey('flipped')) {
+      context.handle(
+        _flippedMeta,
+        flipped.isAcceptableOrUnknown(data['flipped']!, _flippedMeta),
+      );
+    }
+    if (data.containsKey('placed_utc')) {
+      context.handle(
+        _placedUtcMeta,
+        placedUtc.isAcceptableOrUnknown(data['placed_utc']!, _placedUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_placedUtcMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {decorId};
+  @override
+  DecorPlacedRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DecorPlacedRow(
+      decorId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decor_id'],
+      )!,
+      xRatio: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}x_ratio'],
+      )!,
+      yRatio: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}y_ratio'],
+      )!,
+      flipped: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}flipped'],
+      )!,
+      placedUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}placed_utc'],
+      )!,
+    );
+  }
+
+  @override
+  $DecorPlacedTable createAlias(String alias) {
+    return $DecorPlacedTable(attachedDatabase, alias);
+  }
+}
+
+class DecorPlacedRow extends DataClass implements Insertable<DecorPlacedRow> {
+  final String decorId;
+  final double xRatio;
+  final double yRatio;
+  final bool flipped;
+  final int placedUtc;
+  const DecorPlacedRow({
+    required this.decorId,
+    required this.xRatio,
+    required this.yRatio,
+    required this.flipped,
+    required this.placedUtc,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['decor_id'] = Variable<String>(decorId);
+    map['x_ratio'] = Variable<double>(xRatio);
+    map['y_ratio'] = Variable<double>(yRatio);
+    map['flipped'] = Variable<bool>(flipped);
+    map['placed_utc'] = Variable<int>(placedUtc);
+    return map;
+  }
+
+  DecorPlacedCompanion toCompanion(bool nullToAbsent) {
+    return DecorPlacedCompanion(
+      decorId: Value(decorId),
+      xRatio: Value(xRatio),
+      yRatio: Value(yRatio),
+      flipped: Value(flipped),
+      placedUtc: Value(placedUtc),
+    );
+  }
+
+  factory DecorPlacedRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DecorPlacedRow(
+      decorId: serializer.fromJson<String>(json['decorId']),
+      xRatio: serializer.fromJson<double>(json['xRatio']),
+      yRatio: serializer.fromJson<double>(json['yRatio']),
+      flipped: serializer.fromJson<bool>(json['flipped']),
+      placedUtc: serializer.fromJson<int>(json['placedUtc']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'decorId': serializer.toJson<String>(decorId),
+      'xRatio': serializer.toJson<double>(xRatio),
+      'yRatio': serializer.toJson<double>(yRatio),
+      'flipped': serializer.toJson<bool>(flipped),
+      'placedUtc': serializer.toJson<int>(placedUtc),
+    };
+  }
+
+  DecorPlacedRow copyWith({
+    String? decorId,
+    double? xRatio,
+    double? yRatio,
+    bool? flipped,
+    int? placedUtc,
+  }) => DecorPlacedRow(
+    decorId: decorId ?? this.decorId,
+    xRatio: xRatio ?? this.xRatio,
+    yRatio: yRatio ?? this.yRatio,
+    flipped: flipped ?? this.flipped,
+    placedUtc: placedUtc ?? this.placedUtc,
+  );
+  DecorPlacedRow copyWithCompanion(DecorPlacedCompanion data) {
+    return DecorPlacedRow(
+      decorId: data.decorId.present ? data.decorId.value : this.decorId,
+      xRatio: data.xRatio.present ? data.xRatio.value : this.xRatio,
+      yRatio: data.yRatio.present ? data.yRatio.value : this.yRatio,
+      flipped: data.flipped.present ? data.flipped.value : this.flipped,
+      placedUtc: data.placedUtc.present ? data.placedUtc.value : this.placedUtc,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DecorPlacedRow(')
+          ..write('decorId: $decorId, ')
+          ..write('xRatio: $xRatio, ')
+          ..write('yRatio: $yRatio, ')
+          ..write('flipped: $flipped, ')
+          ..write('placedUtc: $placedUtc')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(decorId, xRatio, yRatio, flipped, placedUtc);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DecorPlacedRow &&
+          other.decorId == this.decorId &&
+          other.xRatio == this.xRatio &&
+          other.yRatio == this.yRatio &&
+          other.flipped == this.flipped &&
+          other.placedUtc == this.placedUtc);
+}
+
+class DecorPlacedCompanion extends UpdateCompanion<DecorPlacedRow> {
+  final Value<String> decorId;
+  final Value<double> xRatio;
+  final Value<double> yRatio;
+  final Value<bool> flipped;
+  final Value<int> placedUtc;
+  final Value<int> rowid;
+  const DecorPlacedCompanion({
+    this.decorId = const Value.absent(),
+    this.xRatio = const Value.absent(),
+    this.yRatio = const Value.absent(),
+    this.flipped = const Value.absent(),
+    this.placedUtc = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DecorPlacedCompanion.insert({
+    required String decorId,
+    required double xRatio,
+    required double yRatio,
+    this.flipped = const Value.absent(),
+    required int placedUtc,
+    this.rowid = const Value.absent(),
+  }) : decorId = Value(decorId),
+       xRatio = Value(xRatio),
+       yRatio = Value(yRatio),
+       placedUtc = Value(placedUtc);
+  static Insertable<DecorPlacedRow> custom({
+    Expression<String>? decorId,
+    Expression<double>? xRatio,
+    Expression<double>? yRatio,
+    Expression<bool>? flipped,
+    Expression<int>? placedUtc,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (decorId != null) 'decor_id': decorId,
+      if (xRatio != null) 'x_ratio': xRatio,
+      if (yRatio != null) 'y_ratio': yRatio,
+      if (flipped != null) 'flipped': flipped,
+      if (placedUtc != null) 'placed_utc': placedUtc,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DecorPlacedCompanion copyWith({
+    Value<String>? decorId,
+    Value<double>? xRatio,
+    Value<double>? yRatio,
+    Value<bool>? flipped,
+    Value<int>? placedUtc,
+    Value<int>? rowid,
+  }) {
+    return DecorPlacedCompanion(
+      decorId: decorId ?? this.decorId,
+      xRatio: xRatio ?? this.xRatio,
+      yRatio: yRatio ?? this.yRatio,
+      flipped: flipped ?? this.flipped,
+      placedUtc: placedUtc ?? this.placedUtc,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (decorId.present) {
+      map['decor_id'] = Variable<String>(decorId.value);
+    }
+    if (xRatio.present) {
+      map['x_ratio'] = Variable<double>(xRatio.value);
+    }
+    if (yRatio.present) {
+      map['y_ratio'] = Variable<double>(yRatio.value);
+    }
+    if (flipped.present) {
+      map['flipped'] = Variable<bool>(flipped.value);
+    }
+    if (placedUtc.present) {
+      map['placed_utc'] = Variable<int>(placedUtc.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DecorPlacedCompanion(')
+          ..write('decorId: $decorId, ')
+          ..write('xRatio: $xRatio, ')
+          ..write('yRatio: $yRatio, ')
+          ..write('flipped: $flipped, ')
+          ..write('placedUtc: $placedUtc, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DecorPaintingsTable extends DecorPaintings
+    with TableInfo<$DecorPaintingsTable, DecorPaintingRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DecorPaintingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _decorIdMeta = const VerificationMeta(
+    'decorId',
+  );
+  @override
+  late final GeneratedColumn<String> decorId = GeneratedColumn<String>(
+    'decor_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _slotMeta = const VerificationMeta('slot');
+  @override
+  late final GeneratedColumn<int> slot = GeneratedColumn<int>(
+    'slot',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _paintingKeyMeta = const VerificationMeta(
+    'paintingKey',
+  );
+  @override
+  late final GeneratedColumn<String> paintingKey = GeneratedColumn<String>(
+    'painting_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [decorId, slot, paintingKey];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'decor_paintings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DecorPaintingRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('decor_id')) {
+      context.handle(
+        _decorIdMeta,
+        decorId.isAcceptableOrUnknown(data['decor_id']!, _decorIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_decorIdMeta);
+    }
+    if (data.containsKey('slot')) {
+      context.handle(
+        _slotMeta,
+        slot.isAcceptableOrUnknown(data['slot']!, _slotMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_slotMeta);
+    }
+    if (data.containsKey('painting_key')) {
+      context.handle(
+        _paintingKeyMeta,
+        paintingKey.isAcceptableOrUnknown(
+          data['painting_key']!,
+          _paintingKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_paintingKeyMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {decorId, slot};
+  @override
+  DecorPaintingRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DecorPaintingRow(
+      decorId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decor_id'],
+      )!,
+      slot: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}slot'],
+      )!,
+      paintingKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}painting_key'],
+      )!,
+    );
+  }
+
+  @override
+  $DecorPaintingsTable createAlias(String alias) {
+    return $DecorPaintingsTable(attachedDatabase, alias);
+  }
+}
+
+class DecorPaintingRow extends DataClass
+    implements Insertable<DecorPaintingRow> {
+  final String decorId;
+  final int slot;
+  final String paintingKey;
+  const DecorPaintingRow({
+    required this.decorId,
+    required this.slot,
+    required this.paintingKey,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['decor_id'] = Variable<String>(decorId);
+    map['slot'] = Variable<int>(slot);
+    map['painting_key'] = Variable<String>(paintingKey);
+    return map;
+  }
+
+  DecorPaintingsCompanion toCompanion(bool nullToAbsent) {
+    return DecorPaintingsCompanion(
+      decorId: Value(decorId),
+      slot: Value(slot),
+      paintingKey: Value(paintingKey),
+    );
+  }
+
+  factory DecorPaintingRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DecorPaintingRow(
+      decorId: serializer.fromJson<String>(json['decorId']),
+      slot: serializer.fromJson<int>(json['slot']),
+      paintingKey: serializer.fromJson<String>(json['paintingKey']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'decorId': serializer.toJson<String>(decorId),
+      'slot': serializer.toJson<int>(slot),
+      'paintingKey': serializer.toJson<String>(paintingKey),
+    };
+  }
+
+  DecorPaintingRow copyWith({
+    String? decorId,
+    int? slot,
+    String? paintingKey,
+  }) => DecorPaintingRow(
+    decorId: decorId ?? this.decorId,
+    slot: slot ?? this.slot,
+    paintingKey: paintingKey ?? this.paintingKey,
+  );
+  DecorPaintingRow copyWithCompanion(DecorPaintingsCompanion data) {
+    return DecorPaintingRow(
+      decorId: data.decorId.present ? data.decorId.value : this.decorId,
+      slot: data.slot.present ? data.slot.value : this.slot,
+      paintingKey: data.paintingKey.present
+          ? data.paintingKey.value
+          : this.paintingKey,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DecorPaintingRow(')
+          ..write('decorId: $decorId, ')
+          ..write('slot: $slot, ')
+          ..write('paintingKey: $paintingKey')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(decorId, slot, paintingKey);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DecorPaintingRow &&
+          other.decorId == this.decorId &&
+          other.slot == this.slot &&
+          other.paintingKey == this.paintingKey);
+}
+
+class DecorPaintingsCompanion extends UpdateCompanion<DecorPaintingRow> {
+  final Value<String> decorId;
+  final Value<int> slot;
+  final Value<String> paintingKey;
+  final Value<int> rowid;
+  const DecorPaintingsCompanion({
+    this.decorId = const Value.absent(),
+    this.slot = const Value.absent(),
+    this.paintingKey = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DecorPaintingsCompanion.insert({
+    required String decorId,
+    required int slot,
+    required String paintingKey,
+    this.rowid = const Value.absent(),
+  }) : decorId = Value(decorId),
+       slot = Value(slot),
+       paintingKey = Value(paintingKey);
+  static Insertable<DecorPaintingRow> custom({
+    Expression<String>? decorId,
+    Expression<int>? slot,
+    Expression<String>? paintingKey,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (decorId != null) 'decor_id': decorId,
+      if (slot != null) 'slot': slot,
+      if (paintingKey != null) 'painting_key': paintingKey,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DecorPaintingsCompanion copyWith({
+    Value<String>? decorId,
+    Value<int>? slot,
+    Value<String>? paintingKey,
+    Value<int>? rowid,
+  }) {
+    return DecorPaintingsCompanion(
+      decorId: decorId ?? this.decorId,
+      slot: slot ?? this.slot,
+      paintingKey: paintingKey ?? this.paintingKey,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (decorId.present) {
+      map['decor_id'] = Variable<String>(decorId.value);
+    }
+    if (slot.present) {
+      map['slot'] = Variable<int>(slot.value);
+    }
+    if (paintingKey.present) {
+      map['painting_key'] = Variable<String>(paintingKey.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DecorPaintingsCompanion(')
+          ..write('decorId: $decorId, ')
+          ..write('slot: $slot, ')
+          ..write('paintingKey: $paintingKey, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PatternsOwnedTable extends PatternsOwned
+    with TableInfo<$PatternsOwnedTable, PatternOwnedRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PatternsOwnedTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _patternIdMeta = const VerificationMeta(
+    'patternId',
+  );
+  @override
+  late final GeneratedColumn<String> patternId = GeneratedColumn<String>(
+    'pattern_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _gotUtcMeta = const VerificationMeta('gotUtc');
+  @override
+  late final GeneratedColumn<int> gotUtc = GeneratedColumn<int>(
+    'got_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rewardKmMeta = const VerificationMeta(
+    'rewardKm',
+  );
+  @override
+  late final GeneratedColumn<int> rewardKm = GeneratedColumn<int>(
+    'reward_km',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _seenMeta = const VerificationMeta('seen');
+  @override
+  late final GeneratedColumn<bool> seen = GeneratedColumn<bool>(
+    'seen',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("seen" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [patternId, gotUtc, rewardKm, seen];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'patterns_owned';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PatternOwnedRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('pattern_id')) {
+      context.handle(
+        _patternIdMeta,
+        patternId.isAcceptableOrUnknown(data['pattern_id']!, _patternIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_patternIdMeta);
+    }
+    if (data.containsKey('got_utc')) {
+      context.handle(
+        _gotUtcMeta,
+        gotUtc.isAcceptableOrUnknown(data['got_utc']!, _gotUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_gotUtcMeta);
+    }
+    if (data.containsKey('reward_km')) {
+      context.handle(
+        _rewardKmMeta,
+        rewardKm.isAcceptableOrUnknown(data['reward_km']!, _rewardKmMeta),
+      );
+    }
+    if (data.containsKey('seen')) {
+      context.handle(
+        _seenMeta,
+        seen.isAcceptableOrUnknown(data['seen']!, _seenMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {patternId};
+  @override
+  PatternOwnedRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PatternOwnedRow(
+      patternId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pattern_id'],
+      )!,
+      gotUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}got_utc'],
+      )!,
+      rewardKm: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reward_km'],
+      ),
+      seen: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}seen'],
+      )!,
+    );
+  }
+
+  @override
+  $PatternsOwnedTable createAlias(String alias) {
+    return $PatternsOwnedTable(attachedDatabase, alias);
+  }
+}
+
+class PatternOwnedRow extends DataClass implements Insertable<PatternOwnedRow> {
+  final String patternId;
+  final int gotUtc;
+  final int? rewardKm;
+  final bool seen;
+  const PatternOwnedRow({
+    required this.patternId,
+    required this.gotUtc,
+    this.rewardKm,
+    required this.seen,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['pattern_id'] = Variable<String>(patternId);
+    map['got_utc'] = Variable<int>(gotUtc);
+    if (!nullToAbsent || rewardKm != null) {
+      map['reward_km'] = Variable<int>(rewardKm);
+    }
+    map['seen'] = Variable<bool>(seen);
+    return map;
+  }
+
+  PatternsOwnedCompanion toCompanion(bool nullToAbsent) {
+    return PatternsOwnedCompanion(
+      patternId: Value(patternId),
+      gotUtc: Value(gotUtc),
+      rewardKm: rewardKm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rewardKm),
+      seen: Value(seen),
+    );
+  }
+
+  factory PatternOwnedRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PatternOwnedRow(
+      patternId: serializer.fromJson<String>(json['patternId']),
+      gotUtc: serializer.fromJson<int>(json['gotUtc']),
+      rewardKm: serializer.fromJson<int?>(json['rewardKm']),
+      seen: serializer.fromJson<bool>(json['seen']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'patternId': serializer.toJson<String>(patternId),
+      'gotUtc': serializer.toJson<int>(gotUtc),
+      'rewardKm': serializer.toJson<int?>(rewardKm),
+      'seen': serializer.toJson<bool>(seen),
+    };
+  }
+
+  PatternOwnedRow copyWith({
+    String? patternId,
+    int? gotUtc,
+    Value<int?> rewardKm = const Value.absent(),
+    bool? seen,
+  }) => PatternOwnedRow(
+    patternId: patternId ?? this.patternId,
+    gotUtc: gotUtc ?? this.gotUtc,
+    rewardKm: rewardKm.present ? rewardKm.value : this.rewardKm,
+    seen: seen ?? this.seen,
+  );
+  PatternOwnedRow copyWithCompanion(PatternsOwnedCompanion data) {
+    return PatternOwnedRow(
+      patternId: data.patternId.present ? data.patternId.value : this.patternId,
+      gotUtc: data.gotUtc.present ? data.gotUtc.value : this.gotUtc,
+      rewardKm: data.rewardKm.present ? data.rewardKm.value : this.rewardKm,
+      seen: data.seen.present ? data.seen.value : this.seen,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PatternOwnedRow(')
+          ..write('patternId: $patternId, ')
+          ..write('gotUtc: $gotUtc, ')
+          ..write('rewardKm: $rewardKm, ')
+          ..write('seen: $seen')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(patternId, gotUtc, rewardKm, seen);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PatternOwnedRow &&
+          other.patternId == this.patternId &&
+          other.gotUtc == this.gotUtc &&
+          other.rewardKm == this.rewardKm &&
+          other.seen == this.seen);
+}
+
+class PatternsOwnedCompanion extends UpdateCompanion<PatternOwnedRow> {
+  final Value<String> patternId;
+  final Value<int> gotUtc;
+  final Value<int?> rewardKm;
+  final Value<bool> seen;
+  final Value<int> rowid;
+  const PatternsOwnedCompanion({
+    this.patternId = const Value.absent(),
+    this.gotUtc = const Value.absent(),
+    this.rewardKm = const Value.absent(),
+    this.seen = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PatternsOwnedCompanion.insert({
+    required String patternId,
+    required int gotUtc,
+    this.rewardKm = const Value.absent(),
+    this.seen = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : patternId = Value(patternId),
+       gotUtc = Value(gotUtc);
+  static Insertable<PatternOwnedRow> custom({
+    Expression<String>? patternId,
+    Expression<int>? gotUtc,
+    Expression<int>? rewardKm,
+    Expression<bool>? seen,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (patternId != null) 'pattern_id': patternId,
+      if (gotUtc != null) 'got_utc': gotUtc,
+      if (rewardKm != null) 'reward_km': rewardKm,
+      if (seen != null) 'seen': seen,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PatternsOwnedCompanion copyWith({
+    Value<String>? patternId,
+    Value<int>? gotUtc,
+    Value<int?>? rewardKm,
+    Value<bool>? seen,
+    Value<int>? rowid,
+  }) {
+    return PatternsOwnedCompanion(
+      patternId: patternId ?? this.patternId,
+      gotUtc: gotUtc ?? this.gotUtc,
+      rewardKm: rewardKm ?? this.rewardKm,
+      seen: seen ?? this.seen,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (patternId.present) {
+      map['pattern_id'] = Variable<String>(patternId.value);
+    }
+    if (gotUtc.present) {
+      map['got_utc'] = Variable<int>(gotUtc.value);
+    }
+    if (rewardKm.present) {
+      map['reward_km'] = Variable<int>(rewardKm.value);
+    }
+    if (seen.present) {
+      map['seen'] = Variable<bool>(seen.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PatternsOwnedCompanion(')
+          ..write('patternId: $patternId, ')
+          ..write('gotUtc: $gotUtc, ')
+          ..write('rewardKm: $rewardKm, ')
+          ..write('seen: $seen, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10711,6 +12569,12 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $PaintTrailColorsTable paintTrailColors = $PaintTrailColorsTable(
     this,
   );
+  late final $ShopCartSlotsTable shopCartSlots = $ShopCartSlotsTable(this);
+  late final $ShopShownTable shopShown = $ShopShownTable(this);
+  late final $DecorOwnedTable decorOwned = $DecorOwnedTable(this);
+  late final $DecorPlacedTable decorPlaced = $DecorPlacedTable(this);
+  late final $DecorPaintingsTable decorPaintings = $DecorPaintingsTable(this);
+  late final $PatternsOwnedTable patternsOwned = $PatternsOwnedTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10742,6 +12606,12 @@ abstract class _$AppDb extends GeneratedDatabase {
     paintStock,
     paintTubes,
     paintTrailColors,
+    shopCartSlots,
+    shopShown,
+    decorOwned,
+    decorPlaced,
+    decorPaintings,
+    patternsOwned,
   ];
 }
 
@@ -12771,6 +14641,7 @@ typedef $$ProfileTableCreateCompanionBuilder = ProfileCompanion Function({
   Value<int?> guestbookConsentAt,
   Value<String?> boatId,
   Value<String?> paintColorId,
+  Value<String?> paintPatternId,
 });
 typedef $$ProfileTableUpdateCompanionBuilder = ProfileCompanion Function({
   Value<int> id,
@@ -12787,6 +14658,7 @@ typedef $$ProfileTableUpdateCompanionBuilder = ProfileCompanion Function({
   Value<int?> guestbookConsentAt,
   Value<String?> boatId,
   Value<String?> paintColorId,
+  Value<String?> paintPatternId,
 });
 
 class $$ProfileTableFilterComposer extends Composer<_$AppDb, $ProfileTable> {
@@ -12864,6 +14736,11 @@ class $$ProfileTableFilterComposer extends Composer<_$AppDb, $ProfileTable> {
 
   ColumnFilters<String> get paintColorId => $composableBuilder(
     column: $table.paintColorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paintPatternId => $composableBuilder(
+    column: $table.paintPatternId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12945,6 +14822,11 @@ class $$ProfileTableOrderingComposer extends Composer<_$AppDb, $ProfileTable> {
     column: $table.paintColorId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get paintPatternId => $composableBuilder(
+    column: $table.paintPatternId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProfileTableAnnotationComposer
@@ -13007,6 +14889,11 @@ class $$ProfileTableAnnotationComposer
     column: $table.paintColorId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get paintPatternId => $composableBuilder(
+    column: $table.paintPatternId,
+    builder: (column) => column,
+  );
 }
 
 class $$ProfileTableTableManager
@@ -13051,6 +14938,7 @@ class $$ProfileTableTableManager
                 Value<int?> guestbookConsentAt = const Value.absent(),
                 Value<String?> boatId = const Value.absent(),
                 Value<String?> paintColorId = const Value.absent(),
+                Value<String?> paintPatternId = const Value.absent(),
               }) => ProfileCompanion(
                 id: id,
                 homeName: homeName,
@@ -13066,6 +14954,7 @@ class $$ProfileTableTableManager
                 guestbookConsentAt: guestbookConsentAt,
                 boatId: boatId,
                 paintColorId: paintColorId,
+                paintPatternId: paintPatternId,
               ),
           createCompanionCallback:
               ({
@@ -13083,6 +14972,7 @@ class $$ProfileTableTableManager
                 Value<int?> guestbookConsentAt = const Value.absent(),
                 Value<String?> boatId = const Value.absent(),
                 Value<String?> paintColorId = const Value.absent(),
+                Value<String?> paintPatternId = const Value.absent(),
               }) => ProfileCompanion.insert(
                 id: id,
                 homeName: homeName,
@@ -13098,6 +14988,7 @@ class $$ProfileTableTableManager
                 guestbookConsentAt: guestbookConsentAt,
                 boatId: boatId,
                 paintColorId: paintColorId,
+                paintPatternId: paintPatternId,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -16402,6 +18293,7 @@ typedef $$PaintTrailColorsTableCreateCompanionBuilder =
       required int trailId,
       required int fromUtc,
       required String colorId,
+      Value<String?> patternId,
       Value<int> rowid,
     });
 typedef $$PaintTrailColorsTableUpdateCompanionBuilder =
@@ -16409,6 +18301,7 @@ typedef $$PaintTrailColorsTableUpdateCompanionBuilder =
       Value<int> trailId,
       Value<int> fromUtc,
       Value<String> colorId,
+      Value<String?> patternId,
       Value<int> rowid,
     });
 
@@ -16433,6 +18326,11 @@ class $$PaintTrailColorsTableFilterComposer
 
   ColumnFilters<String> get colorId => $composableBuilder(
     column: $table.colorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get patternId => $composableBuilder(
+    column: $table.patternId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -16460,6 +18358,11 @@ class $$PaintTrailColorsTableOrderingComposer
     column: $table.colorId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get patternId => $composableBuilder(
+    column: $table.patternId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PaintTrailColorsTableAnnotationComposer
@@ -16479,6 +18382,9 @@ class $$PaintTrailColorsTableAnnotationComposer
 
   GeneratedColumn<String> get colorId =>
       $composableBuilder(column: $table.colorId, builder: (column) => column);
+
+  GeneratedColumn<String> get patternId =>
+      $composableBuilder(column: $table.patternId, builder: (column) => column);
 }
 
 class $$PaintTrailColorsTableTableManager
@@ -16515,11 +18421,13 @@ class $$PaintTrailColorsTableTableManager
                 Value<int> trailId = const Value.absent(),
                 Value<int> fromUtc = const Value.absent(),
                 Value<String> colorId = const Value.absent(),
+                Value<String?> patternId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaintTrailColorsCompanion(
                 trailId: trailId,
                 fromUtc: fromUtc,
                 colorId: colorId,
+                patternId: patternId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -16527,11 +18435,13 @@ class $$PaintTrailColorsTableTableManager
                 required int trailId,
                 required int fromUtc,
                 required String colorId,
+                Value<String?> patternId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaintTrailColorsCompanion.insert(
                 trailId: trailId,
                 fromUtc: fromUtc,
                 colorId: colorId,
+                patternId: patternId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -16568,6 +18478,1085 @@ typedef $$PaintTrailColorsTableProcessedTableManager =
         BaseReferences<_$AppDb, $PaintTrailColorsTable, PaintTrailColorRow>,
       ),
       PaintTrailColorRow,
+      PrefetchHooks Function()
+    >;
+typedef $$ShopCartSlotsTableCreateCompanionBuilder =
+    ShopCartSlotsCompanion Function({
+      required String kstDay,
+      required int slot,
+      required String itemId,
+      Value<int?> soldUtc,
+      Value<int> rowid,
+    });
+typedef $$ShopCartSlotsTableUpdateCompanionBuilder =
+    ShopCartSlotsCompanion Function({
+      Value<String> kstDay,
+      Value<int> slot,
+      Value<String> itemId,
+      Value<int?> soldUtc,
+      Value<int> rowid,
+    });
+
+class $$ShopCartSlotsTableFilterComposer
+    extends Composer<_$AppDb, $ShopCartSlotsTable> {
+  $$ShopCartSlotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get kstDay => $composableBuilder(
+    column: $table.kstDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get slot => $composableBuilder(
+    column: $table.slot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get soldUtc => $composableBuilder(
+    column: $table.soldUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ShopCartSlotsTableOrderingComposer
+    extends Composer<_$AppDb, $ShopCartSlotsTable> {
+  $$ShopCartSlotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get kstDay => $composableBuilder(
+    column: $table.kstDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get slot => $composableBuilder(
+    column: $table.slot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get soldUtc => $composableBuilder(
+    column: $table.soldUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ShopCartSlotsTableAnnotationComposer
+    extends Composer<_$AppDb, $ShopCartSlotsTable> {
+  $$ShopCartSlotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get kstDay =>
+      $composableBuilder(column: $table.kstDay, builder: (column) => column);
+
+  GeneratedColumn<int> get slot =>
+      $composableBuilder(column: $table.slot, builder: (column) => column);
+
+  GeneratedColumn<String> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<int> get soldUtc =>
+      $composableBuilder(column: $table.soldUtc, builder: (column) => column);
+}
+
+class $$ShopCartSlotsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $ShopCartSlotsTable,
+          ShopCartSlotRow,
+          $$ShopCartSlotsTableFilterComposer,
+          $$ShopCartSlotsTableOrderingComposer,
+          $$ShopCartSlotsTableAnnotationComposer,
+          $$ShopCartSlotsTableCreateCompanionBuilder,
+          $$ShopCartSlotsTableUpdateCompanionBuilder,
+          (
+            ShopCartSlotRow,
+            BaseReferences<_$AppDb, $ShopCartSlotsTable, ShopCartSlotRow>,
+          ),
+          ShopCartSlotRow,
+          PrefetchHooks Function()
+        > {
+  $$ShopCartSlotsTableTableManager(_$AppDb db, $ShopCartSlotsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ShopCartSlotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ShopCartSlotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ShopCartSlotsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> kstDay = const Value.absent(),
+                Value<int> slot = const Value.absent(),
+                Value<String> itemId = const Value.absent(),
+                Value<int?> soldUtc = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ShopCartSlotsCompanion(
+                kstDay: kstDay,
+                slot: slot,
+                itemId: itemId,
+                soldUtc: soldUtc,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String kstDay,
+                required int slot,
+                required String itemId,
+                Value<int?> soldUtc = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ShopCartSlotsCompanion.insert(
+                kstDay: kstDay,
+                slot: slot,
+                itemId: itemId,
+                soldUtc: soldUtc,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ShopCartSlotsTable, ShopCartSlotRow>(table),
+                  BaseReferences<_$AppDb, $ShopCartSlotsTable, ShopCartSlotRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ShopCartSlotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $ShopCartSlotsTable,
+      ShopCartSlotRow,
+      $$ShopCartSlotsTableFilterComposer,
+      $$ShopCartSlotsTableOrderingComposer,
+      $$ShopCartSlotsTableAnnotationComposer,
+      $$ShopCartSlotsTableCreateCompanionBuilder,
+      $$ShopCartSlotsTableUpdateCompanionBuilder,
+      (
+        ShopCartSlotRow,
+        BaseReferences<_$AppDb, $ShopCartSlotsTable, ShopCartSlotRow>,
+      ),
+      ShopCartSlotRow,
+      PrefetchHooks Function()
+    >;
+typedef $$ShopShownTableCreateCompanionBuilder = ShopShownCompanion Function({
+  required String itemId,
+  required int timesShown,
+  required String firstShownDay,
+  Value<int> rowid,
+});
+typedef $$ShopShownTableUpdateCompanionBuilder = ShopShownCompanion Function({
+  Value<String> itemId,
+  Value<int> timesShown,
+  Value<String> firstShownDay,
+  Value<int> rowid,
+});
+
+class $$ShopShownTableFilterComposer
+    extends Composer<_$AppDb, $ShopShownTable> {
+  $$ShopShownTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get timesShown => $composableBuilder(
+    column: $table.timesShown,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get firstShownDay => $composableBuilder(
+    column: $table.firstShownDay,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ShopShownTableOrderingComposer
+    extends Composer<_$AppDb, $ShopShownTable> {
+  $$ShopShownTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get timesShown => $composableBuilder(
+    column: $table.timesShown,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get firstShownDay => $composableBuilder(
+    column: $table.firstShownDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ShopShownTableAnnotationComposer
+    extends Composer<_$AppDb, $ShopShownTable> {
+  $$ShopShownTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<int> get timesShown => $composableBuilder(
+    column: $table.timesShown,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get firstShownDay => $composableBuilder(
+    column: $table.firstShownDay,
+    builder: (column) => column,
+  );
+}
+
+class $$ShopShownTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $ShopShownTable,
+          ShopShownRow,
+          $$ShopShownTableFilterComposer,
+          $$ShopShownTableOrderingComposer,
+          $$ShopShownTableAnnotationComposer,
+          $$ShopShownTableCreateCompanionBuilder,
+          $$ShopShownTableUpdateCompanionBuilder,
+          (
+            ShopShownRow,
+            BaseReferences<_$AppDb, $ShopShownTable, ShopShownRow>,
+          ),
+          ShopShownRow,
+          PrefetchHooks Function()
+        > {
+  $$ShopShownTableTableManager(_$AppDb db, $ShopShownTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ShopShownTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ShopShownTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ShopShownTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> itemId = const Value.absent(),
+                Value<int> timesShown = const Value.absent(),
+                Value<String> firstShownDay = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ShopShownCompanion(
+                itemId: itemId,
+                timesShown: timesShown,
+                firstShownDay: firstShownDay,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String itemId,
+                required int timesShown,
+                required String firstShownDay,
+                Value<int> rowid = const Value.absent(),
+              }) => ShopShownCompanion.insert(
+                itemId: itemId,
+                timesShown: timesShown,
+                firstShownDay: firstShownDay,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ShopShownTable, ShopShownRow>(table),
+                  BaseReferences<_$AppDb, $ShopShownTable, ShopShownRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ShopShownTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $ShopShownTable,
+      ShopShownRow,
+      $$ShopShownTableFilterComposer,
+      $$ShopShownTableOrderingComposer,
+      $$ShopShownTableAnnotationComposer,
+      $$ShopShownTableCreateCompanionBuilder,
+      $$ShopShownTableUpdateCompanionBuilder,
+      (ShopShownRow, BaseReferences<_$AppDb, $ShopShownTable, ShopShownRow>),
+      ShopShownRow,
+      PrefetchHooks Function()
+    >;
+typedef $$DecorOwnedTableCreateCompanionBuilder = DecorOwnedCompanion Function({
+  required String decorId,
+  required int gotUtc,
+  Value<int> rowid,
+});
+typedef $$DecorOwnedTableUpdateCompanionBuilder = DecorOwnedCompanion Function({
+  Value<String> decorId,
+  Value<int> gotUtc,
+  Value<int> rowid,
+});
+
+class $$DecorOwnedTableFilterComposer
+    extends Composer<_$AppDb, $DecorOwnedTable> {
+  $$DecorOwnedTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get decorId => $composableBuilder(
+    column: $table.decorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get gotUtc => $composableBuilder(
+    column: $table.gotUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DecorOwnedTableOrderingComposer
+    extends Composer<_$AppDb, $DecorOwnedTable> {
+  $$DecorOwnedTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get decorId => $composableBuilder(
+    column: $table.decorId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get gotUtc => $composableBuilder(
+    column: $table.gotUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DecorOwnedTableAnnotationComposer
+    extends Composer<_$AppDb, $DecorOwnedTable> {
+  $$DecorOwnedTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get decorId =>
+      $composableBuilder(column: $table.decorId, builder: (column) => column);
+
+  GeneratedColumn<int> get gotUtc =>
+      $composableBuilder(column: $table.gotUtc, builder: (column) => column);
+}
+
+class $$DecorOwnedTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $DecorOwnedTable,
+          DecorOwnedRow,
+          $$DecorOwnedTableFilterComposer,
+          $$DecorOwnedTableOrderingComposer,
+          $$DecorOwnedTableAnnotationComposer,
+          $$DecorOwnedTableCreateCompanionBuilder,
+          $$DecorOwnedTableUpdateCompanionBuilder,
+          (
+            DecorOwnedRow,
+            BaseReferences<_$AppDb, $DecorOwnedTable, DecorOwnedRow>,
+          ),
+          DecorOwnedRow,
+          PrefetchHooks Function()
+        > {
+  $$DecorOwnedTableTableManager(_$AppDb db, $DecorOwnedTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DecorOwnedTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DecorOwnedTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DecorOwnedTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> decorId = const Value.absent(),
+                Value<int> gotUtc = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DecorOwnedCompanion(
+                decorId: decorId,
+                gotUtc: gotUtc,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String decorId,
+                required int gotUtc,
+                Value<int> rowid = const Value.absent(),
+              }) => DecorOwnedCompanion.insert(
+                decorId: decorId,
+                gotUtc: gotUtc,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$DecorOwnedTable, DecorOwnedRow>(table),
+                  BaseReferences<_$AppDb, $DecorOwnedTable, DecorOwnedRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DecorOwnedTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $DecorOwnedTable,
+      DecorOwnedRow,
+      $$DecorOwnedTableFilterComposer,
+      $$DecorOwnedTableOrderingComposer,
+      $$DecorOwnedTableAnnotationComposer,
+      $$DecorOwnedTableCreateCompanionBuilder,
+      $$DecorOwnedTableUpdateCompanionBuilder,
+      (DecorOwnedRow, BaseReferences<_$AppDb, $DecorOwnedTable, DecorOwnedRow>),
+      DecorOwnedRow,
+      PrefetchHooks Function()
+    >;
+typedef $$DecorPlacedTableCreateCompanionBuilder =
+    DecorPlacedCompanion Function({
+      required String decorId,
+      required double xRatio,
+      required double yRatio,
+      Value<bool> flipped,
+      required int placedUtc,
+      Value<int> rowid,
+    });
+typedef $$DecorPlacedTableUpdateCompanionBuilder =
+    DecorPlacedCompanion Function({
+      Value<String> decorId,
+      Value<double> xRatio,
+      Value<double> yRatio,
+      Value<bool> flipped,
+      Value<int> placedUtc,
+      Value<int> rowid,
+    });
+
+class $$DecorPlacedTableFilterComposer
+    extends Composer<_$AppDb, $DecorPlacedTable> {
+  $$DecorPlacedTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get decorId => $composableBuilder(
+    column: $table.decorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get xRatio => $composableBuilder(
+    column: $table.xRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get yRatio => $composableBuilder(
+    column: $table.yRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get flipped => $composableBuilder(
+    column: $table.flipped,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get placedUtc => $composableBuilder(
+    column: $table.placedUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DecorPlacedTableOrderingComposer
+    extends Composer<_$AppDb, $DecorPlacedTable> {
+  $$DecorPlacedTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get decorId => $composableBuilder(
+    column: $table.decorId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get xRatio => $composableBuilder(
+    column: $table.xRatio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get yRatio => $composableBuilder(
+    column: $table.yRatio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get flipped => $composableBuilder(
+    column: $table.flipped,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get placedUtc => $composableBuilder(
+    column: $table.placedUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DecorPlacedTableAnnotationComposer
+    extends Composer<_$AppDb, $DecorPlacedTable> {
+  $$DecorPlacedTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get decorId =>
+      $composableBuilder(column: $table.decorId, builder: (column) => column);
+
+  GeneratedColumn<double> get xRatio =>
+      $composableBuilder(column: $table.xRatio, builder: (column) => column);
+
+  GeneratedColumn<double> get yRatio =>
+      $composableBuilder(column: $table.yRatio, builder: (column) => column);
+
+  GeneratedColumn<bool> get flipped =>
+      $composableBuilder(column: $table.flipped, builder: (column) => column);
+
+  GeneratedColumn<int> get placedUtc =>
+      $composableBuilder(column: $table.placedUtc, builder: (column) => column);
+}
+
+class $$DecorPlacedTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $DecorPlacedTable,
+          DecorPlacedRow,
+          $$DecorPlacedTableFilterComposer,
+          $$DecorPlacedTableOrderingComposer,
+          $$DecorPlacedTableAnnotationComposer,
+          $$DecorPlacedTableCreateCompanionBuilder,
+          $$DecorPlacedTableUpdateCompanionBuilder,
+          (
+            DecorPlacedRow,
+            BaseReferences<_$AppDb, $DecorPlacedTable, DecorPlacedRow>,
+          ),
+          DecorPlacedRow,
+          PrefetchHooks Function()
+        > {
+  $$DecorPlacedTableTableManager(_$AppDb db, $DecorPlacedTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DecorPlacedTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DecorPlacedTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DecorPlacedTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> decorId = const Value.absent(),
+                Value<double> xRatio = const Value.absent(),
+                Value<double> yRatio = const Value.absent(),
+                Value<bool> flipped = const Value.absent(),
+                Value<int> placedUtc = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DecorPlacedCompanion(
+                decorId: decorId,
+                xRatio: xRatio,
+                yRatio: yRatio,
+                flipped: flipped,
+                placedUtc: placedUtc,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String decorId,
+                required double xRatio,
+                required double yRatio,
+                Value<bool> flipped = const Value.absent(),
+                required int placedUtc,
+                Value<int> rowid = const Value.absent(),
+              }) => DecorPlacedCompanion.insert(
+                decorId: decorId,
+                xRatio: xRatio,
+                yRatio: yRatio,
+                flipped: flipped,
+                placedUtc: placedUtc,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$DecorPlacedTable, DecorPlacedRow>(table),
+                  BaseReferences<_$AppDb, $DecorPlacedTable, DecorPlacedRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DecorPlacedTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $DecorPlacedTable,
+      DecorPlacedRow,
+      $$DecorPlacedTableFilterComposer,
+      $$DecorPlacedTableOrderingComposer,
+      $$DecorPlacedTableAnnotationComposer,
+      $$DecorPlacedTableCreateCompanionBuilder,
+      $$DecorPlacedTableUpdateCompanionBuilder,
+      (
+        DecorPlacedRow,
+        BaseReferences<_$AppDb, $DecorPlacedTable, DecorPlacedRow>,
+      ),
+      DecorPlacedRow,
+      PrefetchHooks Function()
+    >;
+typedef $$DecorPaintingsTableCreateCompanionBuilder =
+    DecorPaintingsCompanion Function({
+      required String decorId,
+      required int slot,
+      required String paintingKey,
+      Value<int> rowid,
+    });
+typedef $$DecorPaintingsTableUpdateCompanionBuilder =
+    DecorPaintingsCompanion Function({
+      Value<String> decorId,
+      Value<int> slot,
+      Value<String> paintingKey,
+      Value<int> rowid,
+    });
+
+class $$DecorPaintingsTableFilterComposer
+    extends Composer<_$AppDb, $DecorPaintingsTable> {
+  $$DecorPaintingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get decorId => $composableBuilder(
+    column: $table.decorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get slot => $composableBuilder(
+    column: $table.slot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paintingKey => $composableBuilder(
+    column: $table.paintingKey,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DecorPaintingsTableOrderingComposer
+    extends Composer<_$AppDb, $DecorPaintingsTable> {
+  $$DecorPaintingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get decorId => $composableBuilder(
+    column: $table.decorId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get slot => $composableBuilder(
+    column: $table.slot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get paintingKey => $composableBuilder(
+    column: $table.paintingKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DecorPaintingsTableAnnotationComposer
+    extends Composer<_$AppDb, $DecorPaintingsTable> {
+  $$DecorPaintingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get decorId =>
+      $composableBuilder(column: $table.decorId, builder: (column) => column);
+
+  GeneratedColumn<int> get slot =>
+      $composableBuilder(column: $table.slot, builder: (column) => column);
+
+  GeneratedColumn<String> get paintingKey => $composableBuilder(
+    column: $table.paintingKey,
+    builder: (column) => column,
+  );
+}
+
+class $$DecorPaintingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $DecorPaintingsTable,
+          DecorPaintingRow,
+          $$DecorPaintingsTableFilterComposer,
+          $$DecorPaintingsTableOrderingComposer,
+          $$DecorPaintingsTableAnnotationComposer,
+          $$DecorPaintingsTableCreateCompanionBuilder,
+          $$DecorPaintingsTableUpdateCompanionBuilder,
+          (
+            DecorPaintingRow,
+            BaseReferences<_$AppDb, $DecorPaintingsTable, DecorPaintingRow>,
+          ),
+          DecorPaintingRow,
+          PrefetchHooks Function()
+        > {
+  $$DecorPaintingsTableTableManager(_$AppDb db, $DecorPaintingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DecorPaintingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DecorPaintingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DecorPaintingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> decorId = const Value.absent(),
+                Value<int> slot = const Value.absent(),
+                Value<String> paintingKey = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DecorPaintingsCompanion(
+                decorId: decorId,
+                slot: slot,
+                paintingKey: paintingKey,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String decorId,
+                required int slot,
+                required String paintingKey,
+                Value<int> rowid = const Value.absent(),
+              }) => DecorPaintingsCompanion.insert(
+                decorId: decorId,
+                slot: slot,
+                paintingKey: paintingKey,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$DecorPaintingsTable, DecorPaintingRow>(table),
+                  BaseReferences<
+                    _$AppDb,
+                    $DecorPaintingsTable,
+                    DecorPaintingRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DecorPaintingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $DecorPaintingsTable,
+      DecorPaintingRow,
+      $$DecorPaintingsTableFilterComposer,
+      $$DecorPaintingsTableOrderingComposer,
+      $$DecorPaintingsTableAnnotationComposer,
+      $$DecorPaintingsTableCreateCompanionBuilder,
+      $$DecorPaintingsTableUpdateCompanionBuilder,
+      (
+        DecorPaintingRow,
+        BaseReferences<_$AppDb, $DecorPaintingsTable, DecorPaintingRow>,
+      ),
+      DecorPaintingRow,
+      PrefetchHooks Function()
+    >;
+typedef $$PatternsOwnedTableCreateCompanionBuilder =
+    PatternsOwnedCompanion Function({
+      required String patternId,
+      required int gotUtc,
+      Value<int?> rewardKm,
+      Value<bool> seen,
+      Value<int> rowid,
+    });
+typedef $$PatternsOwnedTableUpdateCompanionBuilder =
+    PatternsOwnedCompanion Function({
+      Value<String> patternId,
+      Value<int> gotUtc,
+      Value<int?> rewardKm,
+      Value<bool> seen,
+      Value<int> rowid,
+    });
+
+class $$PatternsOwnedTableFilterComposer
+    extends Composer<_$AppDb, $PatternsOwnedTable> {
+  $$PatternsOwnedTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get patternId => $composableBuilder(
+    column: $table.patternId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get gotUtc => $composableBuilder(
+    column: $table.gotUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rewardKm => $composableBuilder(
+    column: $table.rewardKm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get seen => $composableBuilder(
+    column: $table.seen,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PatternsOwnedTableOrderingComposer
+    extends Composer<_$AppDb, $PatternsOwnedTable> {
+  $$PatternsOwnedTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get patternId => $composableBuilder(
+    column: $table.patternId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get gotUtc => $composableBuilder(
+    column: $table.gotUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rewardKm => $composableBuilder(
+    column: $table.rewardKm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get seen => $composableBuilder(
+    column: $table.seen,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PatternsOwnedTableAnnotationComposer
+    extends Composer<_$AppDb, $PatternsOwnedTable> {
+  $$PatternsOwnedTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get patternId =>
+      $composableBuilder(column: $table.patternId, builder: (column) => column);
+
+  GeneratedColumn<int> get gotUtc =>
+      $composableBuilder(column: $table.gotUtc, builder: (column) => column);
+
+  GeneratedColumn<int> get rewardKm =>
+      $composableBuilder(column: $table.rewardKm, builder: (column) => column);
+
+  GeneratedColumn<bool> get seen =>
+      $composableBuilder(column: $table.seen, builder: (column) => column);
+}
+
+class $$PatternsOwnedTableTableManager
+    extends
+        RootTableManager<
+          _$AppDb,
+          $PatternsOwnedTable,
+          PatternOwnedRow,
+          $$PatternsOwnedTableFilterComposer,
+          $$PatternsOwnedTableOrderingComposer,
+          $$PatternsOwnedTableAnnotationComposer,
+          $$PatternsOwnedTableCreateCompanionBuilder,
+          $$PatternsOwnedTableUpdateCompanionBuilder,
+          (
+            PatternOwnedRow,
+            BaseReferences<_$AppDb, $PatternsOwnedTable, PatternOwnedRow>,
+          ),
+          PatternOwnedRow,
+          PrefetchHooks Function()
+        > {
+  $$PatternsOwnedTableTableManager(_$AppDb db, $PatternsOwnedTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PatternsOwnedTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PatternsOwnedTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PatternsOwnedTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> patternId = const Value.absent(),
+                Value<int> gotUtc = const Value.absent(),
+                Value<int?> rewardKm = const Value.absent(),
+                Value<bool> seen = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PatternsOwnedCompanion(
+                patternId: patternId,
+                gotUtc: gotUtc,
+                rewardKm: rewardKm,
+                seen: seen,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String patternId,
+                required int gotUtc,
+                Value<int?> rewardKm = const Value.absent(),
+                Value<bool> seen = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PatternsOwnedCompanion.insert(
+                patternId: patternId,
+                gotUtc: gotUtc,
+                rewardKm: rewardKm,
+                seen: seen,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PatternsOwnedTable, PatternOwnedRow>(table),
+                  BaseReferences<_$AppDb, $PatternsOwnedTable, PatternOwnedRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PatternsOwnedTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDb,
+      $PatternsOwnedTable,
+      PatternOwnedRow,
+      $$PatternsOwnedTableFilterComposer,
+      $$PatternsOwnedTableOrderingComposer,
+      $$PatternsOwnedTableAnnotationComposer,
+      $$PatternsOwnedTableCreateCompanionBuilder,
+      $$PatternsOwnedTableUpdateCompanionBuilder,
+      (
+        PatternOwnedRow,
+        BaseReferences<_$AppDb, $PatternsOwnedTable, PatternOwnedRow>,
+      ),
+      PatternOwnedRow,
       PrefetchHooks Function()
     >;
 
@@ -16626,4 +19615,16 @@ class $AppDbManager {
       $$PaintTubesTableTableManager(_db, _db.paintTubes);
   $$PaintTrailColorsTableTableManager get paintTrailColors =>
       $$PaintTrailColorsTableTableManager(_db, _db.paintTrailColors);
+  $$ShopCartSlotsTableTableManager get shopCartSlots =>
+      $$ShopCartSlotsTableTableManager(_db, _db.shopCartSlots);
+  $$ShopShownTableTableManager get shopShown =>
+      $$ShopShownTableTableManager(_db, _db.shopShown);
+  $$DecorOwnedTableTableManager get decorOwned =>
+      $$DecorOwnedTableTableManager(_db, _db.decorOwned);
+  $$DecorPlacedTableTableManager get decorPlaced =>
+      $$DecorPlacedTableTableManager(_db, _db.decorPlaced);
+  $$DecorPaintingsTableTableManager get decorPaintings =>
+      $$DecorPaintingsTableTableManager(_db, _db.decorPaintings);
+  $$PatternsOwnedTableTableManager get patternsOwned =>
+      $$PatternsOwnedTableTableManager(_db, _db.patternsOwned);
 }

@@ -221,6 +221,10 @@ class Profile extends Table {
   /// null이면 기본 물감. 고른 색을 다 쓰면 null로 돌아간다
   TextColumn get paintColorId => text().nullable()();
 
+  /// 배낭 물감 탭 맨 위 무늬 줄에서 고른 물감 길 무늬 id (스키마 21, trails.json patterns[].id).
+  /// null이면 기본 무늬 (trails.json default 방울). 새 무늬를 얻어도 저절로 고르지 않는다 (config paintPattern.choose)
+  TextColumn get paintPatternId => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -316,6 +320,10 @@ class PaintTrailColors extends Table {
   IntColumn get trailId => integer()();
   IntColumn get fromUtc => integer()();
   TextColumn get colorId => text()();
+
+  /// 이 구간의 무늬 id (스키마 21, config paintPattern.segmentKey, trails.json patterns[].id). null이면 기본 무늬
+  /// (방울) — 스키마 21 전 구간도 그렇다. 색이 바뀔 때처럼 무늬만 바뀌어도 새 구간 줄을 연다
+  TextColumn get patternId => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {trailId, fromUtc};
@@ -477,6 +485,88 @@ class PaintTubes extends Table {
   Set<Column> get primaryKey => {trailId, dropNo};
 }
 
+/// 오늘의 수레 칸 (스키마 21, M2~M6 명세 AC 가안 ShopCartDays{kstDay, itemIds}와 칸마다 sold(개발인계_20261120
+/// 3장)를 칸 한 줄로 폈다). [kstDay]는 수레 날 키 'YYYY-MM-DD'(한국 시간 새벽 새로 고침 기준, config shop.cart),
+/// [slot]은 칸 순서(0부터), [itemId]는 shop.json id. 그날 첫 실행 때 한 번 정해 넣고 그날은 바꾸지 않는다.
+/// [soldUtc]는 사거나 걸어서 얻어 그 칸이 팔린 시각, null이면 아직 팔지 않은 칸. 지난 날 줄은 지워도 된다.
+/// 백업에 넣지 않는다 (그날의 기기 상태, 복원하면 그날 줄을 다시 정한다)
+@DataClassName('ShopCartSlotRow')
+class ShopCartSlots extends Table {
+  TextColumn get kstDay => text()();
+  IntColumn get slot => integer()();
+  TextColumn get itemId => text()();
+  IntColumn get soldUtc => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {kstDay, slot};
+}
+
+/// 수레에 나온 기록 (스키마 21, M2~M6 명세 AC 가안 ShopSeen{itemId, timesShown, firstShownDay}): 안 나온 상품 먼저,
+/// 그다음 덜 나온 상품 먼저 고르고, [firstShownDay]가 그날이면 새 상품 점. 이름은 DB 19의 sync_state.shop_seen_utc
+/// (상점을 본 시각)와 헷갈리지 않게 ShopShown으로 했다. 백업에 넣는다 (AC ‘백업에 ShopSeen 포함’)
+@DataClassName('ShopShownRow')
+class ShopShown extends Table {
+  TextColumn get itemId => text()();
+  IntColumn get timesShown => integer()();
+  TextColumn get firstShownDay => text()();
+
+  @override
+  Set<Column> get primaryKey => {itemId};
+}
+
+/// 가진 쉼터 물품 (스키마 21, M2~M6 명세 AB 가안 DecorOwned{id, at}). [decorId]는 decor.json id이고 물품마다 하나
+/// (하나 사면 하나), [gotUtc]는 사거나 받은 시각. 백업에 넣는다 (개발기획/서버_저장항목 v05)
+@DataClassName('DecorOwnedRow')
+class DecorOwned extends Table {
+  TextColumn get decorId => text()();
+  IntColumn get gotUtc => integer()();
+
+  @override
+  Set<Column> get primaryKey => {decorId};
+}
+
+/// 쉼터에 놓은 물품 (스키마 21, AB 가안 DecorPlaced{id, xRatio, yRatio, flipped, placedAt}). 줄이 없는 가진 물품은
+/// 서랍에 있다. [xRatio]는 발 x ÷ 장면 폭, [yRatio]는 발 y의 땅 띠 안 비율(camp_wide decor.groundBand),
+/// [flipped]는 좌우 뒤집기, [placedUtc]는 놓은 시각. 백업에 넣는다
+@DataClassName('DecorPlacedRow')
+class DecorPlaced extends Table {
+  TextColumn get decorId => text()();
+  RealColumn get xRatio => real()();
+  RealColumn get yRatio => real()();
+  BoolColumn get flipped => boolean().withDefault(const Constant(false))();
+  IntColumn get placedUtc => integer()();
+
+  @override
+  Set<Column> get primaryKey => {decorId};
+}
+
+/// 쉼터 물품에 건 화집 그림 (스키마 21, AB 가안 DecorPaintings{decorId, slot, paintingKey}). [slot]은 decor.json
+/// paintingSlotsAt의 칸 번호(0부터), [paintingKey]는 그림 표의 landmarkId (첫 그림은 'sketch'). 같은 그림을 여러
+/// 곳에 걸 수 있다 (가안). 백업에 넣는다
+@DataClassName('DecorPaintingRow')
+class DecorPaintings extends Table {
+  TextColumn get decorId => text()();
+  IntColumn get slot => integer()();
+  TextColumn get paintingKey => text()();
+
+  @override
+  Set<Column> get primaryKey => {decorId, slot};
+}
+
+/// 가진 물감 길 무늬 (스키마 21, 16장 11/19 상점 무늬·거리 보상). [patternId]는 trails.json id이고 기본 방울은 줄이
+/// 없어도 가진 것으로 본다. [rewardKm]은 물감 길 누적 거리 보상(config paintPattern.reward, 10·50·100km)으로 받았으면
+/// 그 km, 상점에서 샀으면 null. seen이 false면 배낭에 새 무늬 표시. 백업에 넣는다
+@DataClassName('PatternOwnedRow')
+class PatternsOwned extends Table {
+  TextColumn get patternId => text()();
+  IntColumn get gotUtc => integer()();
+  IntColumn get rewardKm => integer().nullable()();
+  BoolColumn get seen => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {patternId};
+}
+
 @DriftDatabase(
   tables: [
     StepMinutes,
@@ -505,13 +595,19 @@ class PaintTubes extends Table {
     PaintStock,
     PaintTubes,
     PaintTrailColors,
+    ShopCartSlots,
+    ShopShown,
+    DecorOwned,
+    DecorPlaced,
+    DecorPaintings,
+    PatternsOwned,
   ],
 )
 class AppDb extends _$AppDb {
   AppDb(super.e);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -728,6 +824,23 @@ class AppDb extends _$AppDb {
             if (await lacks('sync_state', 'weather_day')) {
               await m.addColumn(syncState, syncState.weatherDay);
               await m.addColumn(syncState, syncState.weatherKind);
+            }
+          }
+          // 21: 오늘의 수레·쉼터 꾸미기·물감 길 무늬 (T16·T15·T17b가 쓸 표를 통합 세션이 먼저 만든다, 개발_계획 0장).
+          // 새 표는 행 없이 만든다. 20 전에서 올라올 때 위 createTable(paintTrailColors)·createTable(profile)은 지금
+          // 정의라 무늬 열이 이미 있어서, 열은 없을 때만 더한다 (옛 구간·프로필은 null = 기본 방울)
+          if (from < 21) {
+            await m.createTable(shopCartSlots);
+            await m.createTable(shopShown);
+            await m.createTable(decorOwned);
+            await m.createTable(decorPlaced);
+            await m.createTable(decorPaintings);
+            await m.createTable(patternsOwned);
+            if (await lacks('paint_trail_colors', 'pattern_id')) {
+              await m.addColumn(paintTrailColors, paintTrailColors.patternId);
+            }
+            if (await lacks('profile', 'paint_pattern_id')) {
+              await m.addColumn(profile, profile.paintPatternId);
             }
           }
         },

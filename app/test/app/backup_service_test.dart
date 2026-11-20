@@ -284,6 +284,7 @@ Future<void> _fill(AppDb db) async {
         guestbookConsentAt: const Value(_guestbookAt),
         boatId: const Value('boat_skiff'),
         paintColorId: const Value('rain_run'),
+        paintPatternId: const Value('petals'),
       ),
     );
     // 안 들어가는 표
@@ -347,8 +348,35 @@ Future<void> _fill(AppDb db) async {
     // 물감 길 색 구간 (스키마 20): 첫 물감 길을 노을로 열고 걷는 중에 지역 색, 다 써서 기본
     b.insertAll(db.paintTrailColors, [
       PaintTrailColorsCompanion.insert(trailId: 1, fromUtc: _ms(_synced) - 3600000, colorId: 'autumn.sunset'),
-      PaintTrailColorsCompanion.insert(trailId: 1, fromUtc: _ms(_synced) - 3000000, colorId: 'region.kr.capital'),
+      PaintTrailColorsCompanion.insert(
+          trailId: 1,
+          fromUtc: _ms(_synced) - 3000000,
+          colorId: 'region.kr.capital',
+          patternId: const Value('petals')),
       PaintTrailColorsCompanion.insert(trailId: 1, fromUtc: _ms(_synced) - 2000000, colorId: 'basic'),
+    ]);
+    // 수레에 나온 기록·쉼터 물품·가진 무늬 (스키마 21). 오늘의 수레 칸은 백업에 넣지 않는다
+    b.insertAll(db.shopShown, [
+      ShopShownCompanion.insert(itemId: 'hat_02', timesShown: 2, firstShownDay: '2026-11-17'),
+      ShopShownCompanion.insert(itemId: 'decor_bench', timesShown: 1, firstShownDay: '2026-11-18'),
+    ]);
+    b.insert(db.shopCartSlots,
+        ShopCartSlotsCompanion.insert(kstDay: '2026-11-18', slot: 0, itemId: 'hat_02'));
+    b.insertAll(db.decorOwned, [
+      DecorOwnedCompanion.insert(decorId: 'decor_easel', gotUtc: 100),
+      DecorOwnedCompanion.insert(decorId: 'decor_clothesline', gotUtc: 200),
+    ]);
+    b.insert(
+        db.decorPlaced,
+        DecorPlacedCompanion.insert(
+            decorId: 'decor_easel', xRatio: 0.375, yRatio: 0.5, flipped: const Value(true), placedUtc: 150));
+    b.insertAll(db.decorPaintings, [
+      DecorPaintingsCompanion.insert(decorId: 'decor_easel', slot: 0, paintingKey: 'sketch'),
+      DecorPaintingsCompanion.insert(decorId: 'decor_clothesline', slot: 2, paintingKey: 'kr001'),
+    ]);
+    b.insertAll(db.patternsOwned, [
+      PatternsOwnedCompanion.insert(patternId: 'footprints', gotUtc: 300, rewardKm: const Value(10)),
+      PatternsOwnedCompanion.insert(patternId: 'petals', gotUtc: 400, seen: const Value(true)),
     ]);
     b.insert(
       db.syncState,
@@ -391,6 +419,11 @@ Future<Map<String, Object?>> _userState(AppDb db) async => {
       'paintStock': await db.select(db.paintStock).get(),
       'paintTubes': await db.select(db.paintTubes).get(),
       'paintTrailColors': await db.select(db.paintTrailColors).get(),
+      'shopShown': await db.select(db.shopShown).get(),
+      'decorOwned': await db.select(db.decorOwned).get(),
+      'decorPlaced': await db.select(db.decorPlaced).get(),
+      'decorPaintings': await db.select(db.decorPaintings).get(),
+      'patternsOwned': await db.select(db.patternsOwned).get(),
       'profile': [
         for (final r in await db.select(db.profile).get())
           r.copyWith(
@@ -435,7 +468,7 @@ void main() {
     final included = svcA.includedTableNames.toSet();
     expect(included.intersection(skipped), isEmpty);
     expect({...included, ...skipped}, {for (final t in a.allTables) t.actualTableName});
-    expect(skipped, {'step_minutes', 'sync_state', 'notification_log'});
+    expect(skipped, {'step_minutes', 'sync_state', 'notification_log', 'shop_cart_slots'});
   });
 
   group('왕복 (export → 빈 DB에 restore)', () {
@@ -461,7 +494,7 @@ void main() {
       final json = _json(await svcA.exportBackup(_now));
       expect(json['format'], 1);
       expect(json['schema'], a.schemaVersion);
-      expect(json['schema'], 20);
+      expect(json['schema'], 21);
       expect(json['createdUtc'], _ms(_now));
       expect(json['syncedUtc'], _ms(_synced));
       expect((json['tables'] as Map<String, dynamic>).keys, svcA.includedTableNames);
@@ -1036,6 +1069,29 @@ void main() {
       expect((profile.nickname, profile.installId, profile.homeName), (null, null, null));
       expect([profile.ageConfirmedAt, profile.onboardedAt, profile.linkConsentAt,
           profile.guestbookConsentAt], [_ageAt, _onboardedAt, _linkAt, _guestbookAt]);
+    });
+
+    test('스키마 20 백업: 수레 기록·쉼터 물품·무늬 표는 비고, 물감 길 구간·프로필의 무늬는 null(기본 방울)', () async {
+      final text = _pack(_backupJson(schema: 20, tables: {
+        'paint_trail_colors': _table(['trail_id', 'from_utc', 'color_id'], [
+          [1, 1000, 'autumn.sunset'],
+        ]),
+        'profile': _table(['id', 'nickname', 'paint_color_id'], [
+          [1, '두발', 'autumn.sunset'],
+        ]),
+      }));
+      await _fill(b);
+      await svcB.restoreBackup(text);
+
+      final seg = await b.select(b.paintTrailColors).getSingle();
+      expect((seg.colorId, seg.patternId), ('autumn.sunset', null));
+      final profile = await b.select(b.profile).getSingle();
+      expect((profile.nickname, profile.paintColorId, profile.paintPatternId), ('두발', 'autumn.sunset', null));
+      for (final name in const ['shop_shown', 'decor_owned', 'decor_placed', 'decor_paintings', 'patterns_owned']) {
+        expect(await _count(b, name), 0, reason: name);
+      }
+      // 오늘의 수레 칸은 백업 밖이라 이 기기 것이 그대로다
+      expect((await b.select(b.shopCartSlots).getSingle()).itemId, 'hat_02');
     });
   });
 
