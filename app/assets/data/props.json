@@ -1,5 +1,5 @@
 {
- "version": 9,
+ "version": 10,
  "slots": [
   "hat",
   "face",
@@ -620,8 +620,7 @@
    "rive": {
     "choice": "petChoice",
     "n": 6,
-    "color": "bluebirdFriendColor",
-    "pending": true
+    "color": "bluebirdFriendColor"
    }
   },
   {
@@ -639,8 +638,7 @@
    "rive": {
     "choice": "petChoice",
     "n": 7,
-    "color": "canaryFriendColor",
-    "pending": true
+    "color": "canaryFriendColor"
    }
   },
   {
@@ -658,8 +656,7 @@
    "rive": {
     "choice": "petChoice",
     "n": 8,
-    "color": "dragonflyFriendColor",
-    "pending": true
+    "color": "dragonflyFriendColor"
    }
   },
   {
@@ -677,8 +674,7 @@
    "rive": {
     "choice": "petChoice",
     "n": 9,
-    "color": "wispFriendColor",
-    "pending": true
+    "color": "wispFriendColor"
    }
   },
   {
@@ -696,8 +692,7 @@
    "rive": {
     "choice": "petChoice",
     "n": 10,
-    "color": "ginsengKidFriendColor",
-    "pending": true
+    "color": "ginsengKidFriendColor"
    }
   },
   {
@@ -715,8 +710,7 @@
    "rive": {
     "choice": "petChoice",
     "n": 11,
-    "color": "moleFriendColor",
-    "pending": true
+    "color": "moleFriendColor"
    }
   },
   {
@@ -734,8 +728,7 @@
    "rive": {
     "choice": "petChoice",
     "n": 12,
-    "color": "hedgehogFriendColor",
-    "pending": true
+    "color": "hedgehogFriendColor"
    }
   },
   {
@@ -753,8 +746,7 @@
    "rive": {
     "choice": "petChoice",
     "n": 13,
-    "color": "raccoonDogFriendColor",
-    "pending": true
+    "color": "raccoonDogFriendColor"
    }
   },
   {
@@ -851,9 +843,8 @@
    "rive": {
     "choice": "floatChoice",
     "n": 6,
-    "color": "waterBeadFloatColor",
-    "pending": true,
-    "note": "codex_trail_patterns_gift_v01 T05: 둥실 다음 빈 번호 가안 6, Color 입력 이름은 가안 — riv 납품 README로 고침"
+    "color": null,
+    "note": "11/20 v11 inputs.md: floatChoice 6 확인, 원화 색 고정이라 공개 Color 입력 없음(앱은 색을 넣지 않음)"
    },
    "nameDraft": true
   },
@@ -1546,5 +1537,5 @@
    }
   }
  ],
- "changes": "v9(11/19 밤 개발 기획, 16장 11/19 상점 미니 친구 8종·꾸밈 제안 세부·상점 무늬·물감·선물 이름): 상점 미니 친구 8종 pet_06~13(Rive petChoice 6~13·Color 입력 이름은 codex_shop_mini_friends_v01 6장, 500 럭 가안), 이전 pending 이벤트 미니 친구 pet_06~08(다람쥐·길고양이·반딧불이)은 id를 evt_pet_01~03으로 옮김(출시 후 후보, 그림·코드 없음), 시작 선물 둥실 float_04 ‘물빛 구슬’(이름 기획 가안, unlock gift·equipOnStart, Rive floatChoice 6 가안 — riv 납품 뒤 실제 빈 번호로). 물감 길 무늬 3종은 소품이 아니라 trails.json. 이 파일은 리포 main의 props v8(rive.riveVerified·unusedChoices 포함)을 기준으로 함 — 프로젝트 사본 v8은 그 두 키가 빠진 옛 사본이었음"
+ "changes": "v10(11/20 밤 개발 기획, 정령 옷 v11 inputs.md 대조 — 검수 A24·A25·A26 통과): 상점 미니 친구 pet_06~13 rive.pending 지움(Color 이름 8개가 v11 inputs.md ‘추가’ 8개와 같음), 물빛 구슬 float_04는 floatChoice 6 확인·rive.color null(공개 Color 입력 없음, 원화 색 고정 — Codex 앱 패치 spirit_actual_app_v01과 같음). 옷 부분색 입력 23개(…Inner·Lining·Trim·Detail·PantsColor 등)는 앱이 넣지 않고 riv 기본값 그대로(색 소품은 겉감 …Color 하나만 바꿈, 계약 v0.11 5장). / v9(11/19 밤 개발 기획, 16장 11/19 상점 미니 친구 8종·꾸밈 제안 세부·상점 무늬·물감·선물 이름): 상점 미니 친구 8종 pet_06~13(Rive petChoice 6~13·Color 입력 이름은 codex_shop_mini_friends_v01 6장, 500 럭 가안), 이전 pending 이벤트 미니 친구 pet_06~08(다람쥐·길고양이·반딧불이)은 id를 evt_pet_01~03으로 옮김(출시 후 후보, 그림·코드 없음), 시작 선물 둥실 float_04 ‘물빛 구슬’(이름 기획 가안, unlock gift·equipOnStart, Rive floatChoice 6 가안 — riv 납품 뒤 실제 빈 번호로). 물감 길 무늬 3종은 소품이 아니라 trails.json. 이 파일은 리포 main의 props v8(rive.riveVerified·unusedChoices 포함)을 기준으로 함 — 프로젝트 사본 v8은 그 두 키가 빠진 옛 사본이었음"
 }

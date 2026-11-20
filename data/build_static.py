@@ -165,7 +165,7 @@ def _camel(stem):
     a = stem.split('_')
     return a[0] + ''.join(w[:1].upper() + w[1:] for w in a[1:])
 
-PROPS_CHANGES = "v9(11/19 밤 개발 기획, 16장 11/19 상점 미니 친구 8종·꾸밈 제안 세부·상점 무늬·물감·선물 이름): 상점 미니 친구 8종 pet_06~13(Rive petChoice 6~13·Color 입력 이름은 codex_shop_mini_friends_v01 6장, 500 럭 가안), 이전 pending 이벤트 미니 친구 pet_06~08(다람쥐·길고양이·반딧불이)은 id를 evt_pet_01~03으로 옮김(출시 후 후보, 그림·코드 없음), 시작 선물 둥실 float_04 ‘물빛 구슬’(이름 기획 가안, unlock gift·equipOnStart, Rive floatChoice 6 가안 — riv 납품 뒤 실제 빈 번호로). 물감 길 무늬 3종은 소품이 아니라 trails.json. 이 파일은 리포 main의 props v8(rive.riveVerified·unusedChoices 포함)을 기준으로 함 — 프로젝트 사본 v8은 그 두 키가 빠진 옛 사본이었음"
+PROPS_CHANGES = "v10(11/20 밤 개발 기획, 정령 옷 v11 inputs.md 대조 — 검수 A24·A25·A26 통과): 상점 미니 친구 pet_06~13 rive.pending 지움(Color 이름 8개가 v11 inputs.md ‘추가’ 8개와 같음), 물빛 구슬 float_04는 floatChoice 6 확인·rive.color null(공개 Color 입력 없음, 원화 색 고정 — Codex 앱 패치 spirit_actual_app_v01과 같음). 옷 부분색 입력 23개(…Inner·Lining·Trim·Detail·PantsColor 등)는 앱이 넣지 않고 riv 기본값 그대로(색 소품은 겉감 …Color 하나만 바꿈, 계약 v0.11 5장). / v9(11/19 밤 개발 기획, 16장 11/19 상점 미니 친구 8종·꾸밈 제안 세부·상점 무늬·물감·선물 이름): 상점 미니 친구 8종 pet_06~13(Rive petChoice 6~13·Color 입력 이름은 codex_shop_mini_friends_v01 6장, 500 럭 가안), 이전 pending 이벤트 미니 친구 pet_06~08(다람쥐·길고양이·반딧불이)은 id를 evt_pet_01~03으로 옮김(출시 후 후보, 그림·코드 없음), 시작 선물 둥실 float_04 ‘물빛 구슬’(이름 기획 가안, unlock gift·equipOnStart, Rive floatChoice 6 가안 — riv 납품 뒤 실제 빈 번호로). 물감 길 무늬 3종은 소품이 아니라 trails.json. 이 파일은 리포 main의 props v8(rive.riveVerified·unusedChoices 포함)을 기준으로 함 — 프로젝트 사본 v8은 그 두 키가 빠진 옛 사본이었음"
 SHOP_PET_PRICE = 500
 SHOP_PETS = [('pet_06', '파랑새', 'float', 'bluebird'), ('pet_07', '카나리아', 'float', 'canary'),
              ('pet_08', '잠자리', 'float', 'dragonfly'), ('pet_09', '도깨비불', 'float', 'wisp'),
@@ -260,13 +260,13 @@ def build_props():
     for n, (pid, name, stance, stem) in enumerate(SHOP_PETS, 6):
         props.insert(at + n - 6, {'id': pid, 'slot': 'pet', 'name': name, 'unlock': {'kind': 'shop', 'price': SHOP_PET_PRICE},
                                   'status': 'mvp', 'shopPet': True, 'stance': stance, 'icon': f'item_pet_{stem}_v01',
-                                  'rive': {'choice': 'petChoice', 'n': n, 'color': _camel(stem) + 'FriendColor', 'pending': True}})
+                                  'rive': {'choice': 'petChoice', 'n': n, 'color': _camel(stem) + 'FriendColor'}})
     # 16장 11/19 밤(창구 Q003·Q007): 시작 선물 둥실 ‘물빛 구슬’(이름 기획 가안), 정령 만들기를 마치면 입은 채 시작
     at = [x['id'] for x in props].index('float_01') + 1
     props.insert(at, {'id': 'float_04', 'slot': 'float', 'name': '물빛 구슬', 'unlock': {'kind': 'gift', 'on': 'spiritMakerDone'},
                       'equipOnStart': True, 'status': 'mvp', 'icon': 'ui_icon_float_04_v01',
-                      'rive': {'choice': 'floatChoice', 'n': 6, 'color': 'waterBeadFloatColor', 'pending': True,
-                               'note': 'codex_trail_patterns_gift_v01 T05: 둥실 다음 빈 번호 가안 6, Color 입력 이름은 가안 — riv 납품 README로 고침'},
+                      'rive': {'choice': 'floatChoice', 'n': 6, 'color': None,
+                               'note': '11/20 v11 inputs.md: floatChoice 6 확인, 원화 색 고정이라 공개 Color 입력 없음(앱은 색을 넣지 않음)'},
                       'nameDraft': True})
     # 색 소품: 기본 소품과 같은 슬롯, 고정 색, 상점 100 럭, 기본 소품을 가져야 보임
     base = {x['id']: x for x in props}
@@ -318,7 +318,7 @@ def build_props():
     assert sorted(x['unlock']['km'] for x in mvp if x['unlock']['kind'] == 'distance') == [10, 25, 50, 100, 150, 200, 300, 500, 700, 1000]
     assert sum(x['status'] == 'pending' for x in props) == 12
     assert all('일체형' not in x['name'] for x in props), '화면 글 원칙: 이름에 설명을 넣지 않음'
-    dump('props.json', {'version': 9, 'slots': SLOTS, 'rive': {'viewModel': 'WardrobeColors', 'riveVerified': True, 'unusedChoices': {'hatChoice': [5, 6]}, 'note': '계약 v0.7 5장. 11/13 v33 색 속성 38개 이름·슬롯별 순서 대조 끝, 11/14 v36도 입력 같음(그림 확인은 개발 T5). hatChoice 5 새싹·6 꽃은 riv에만 있고 MVP에서 안 씀(16장 11/14, 앱은 0~4만). choice 0 = 안 입음, 색 소품은 같은 번호 + 그 색 hex를 color 속성에. 효과는 Rive 밖(앱 입자)'},
+    dump('props.json', {'version': 10, 'slots': SLOTS, 'rive': {'viewModel': 'WardrobeColors', 'riveVerified': True, 'unusedChoices': {'hatChoice': [5, 6]}, 'note': '계약 v0.7 5장. 11/13 v33 색 속성 38개 이름·슬롯별 순서 대조 끝, 11/14 v36도 입력 같음(그림 확인은 개발 T5). hatChoice 5 새싹·6 꽃은 riv에만 있고 MVP에서 안 씀(16장 11/14, 앱은 0~4만). choice 0 = 안 입음, 색 소품은 같은 번호 + 그 색 hex를 color 속성에. 효과는 Rive 밖(앱 입자)'},
                         'material': {'neutralReference': 180, 'formula': 'rgb = clamp(neutral.rgb × hex.rgb ÷ 180) 위에 고정 무늬 층',
                                      'source': 'Codex 기본 소품 v07 recolor/materials_v07.json'},
                         'colorVariants': {'price': COLOR_VARIANT_PRICE, 'perBase': 3, 'bases': list(MATERIAL),

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""두발 정적 데이터 파일끼리 값 맞춰 보기 (개발 기획, 2026-11-06)
+"""두발 정적 데이터 파일끼리 값 맞춰 보기 (개발 기획, 2026-11-06 / 11-20 프로젝트 사본 검사 합침·상점 안 가진 것만·무늬 규칙·연출 5)
 
     python3 data/check_data.py [데이터 폴더, 기본 app/assets/data]
 
@@ -377,6 +377,144 @@ for c in companions['companions']:
 wp = config['character']['rive'].get('walkPlayback', {})
 if not (0 < wp.get('min', 0) <= wp.get('max', 0)) or wp.get('refStepsPerMin', 0) <= 0:
     err("character.rive.walkPlayback: refStepsPerMin > 0, 0 < min ≤ max 아님")
+
+# 11/20 밤(개발 기획): 프로젝트 사본 데이터/check_data.py(11/19)에만 있던 검사를 합침 — 이제 이 파일 하나가 원본
+def _get(d, *keys):
+    for k in keys:
+        if not isinstance(d, dict) or k not in d:
+            return None
+        d = d[k]
+    return d
+for it in shop['items']:
+    if 'tab' in it:
+        err(f"shop {it['id']}: tab은 11/19부터 안 씀(category)")
+    if it.get('propId') and it.get('category') != 'prop':
+        err(f"shop {it['id']}: 소품인데 분류가 prop이 아님")
+    if it.get('decorId') and it.get('category') != 'decor':
+        err(f"shop {it['id']}: 쉼터 물품인데 분류가 decor가 아님")
+night_items = _get(config, 'rest', 'decor', 'nightLight', 'items') or []
+for did, d in decor_ids.items():
+    k = d['unlock']['kind']
+    if k not in ('shop', 'gift', 'landmarksVisited'):
+        err(f"decor {did}: 모르는 얻는 법 {k}")
+    if k == 'landmarksVisited' and not 1 <= d['unlock']['n'] <= len(landmarks):
+        err(f"decor {did}: 명소 수 {d['unlock']['n']}가 1~{len(landmarks)} 밖")
+    if d.get('nightLight') and did not in night_items:
+        err(f"decor {did}: nightLight인데 config rest.decor.nightLight.items에 없음")
+for did in night_items:
+    if not decor_ids.get(did, {}).get('nightLight'):
+        err(f"config rest.decor.nightLight {did}: decor.json에서 nightLight가 아님")
+sk = _get(config, 'coins', 'firstSketchGift', 'decor')
+if sk and _get(decor_ids.get(sk, {}), 'unlock', 'kind') != 'gift':
+    err(f"config coins.firstSketchGift.decor {sk}: decor.json의 gift 물품이 아님")
+if decor.get('maxPlaced') != _get(config, 'rest', 'decor', 'maxPlaced'):
+    err("decor.json maxPlaced ≠ config rest.decor.maxPlaced")
+for n in {d['name'] for d in decor_ids.values()} & {p['name'] for p in mvp.values()}:
+    err(f"decor 이름 '{n}'이 소품 이름과 겹침")
+dsum = sum(d['unlock']['price'] for d in decor_ids.values() if d['unlock']['kind'] == 'shop')
+if dsum != 3100:
+    warn(f"쉼터 상점 물품 합계 {dsum} 럭 ≠ 럭_상점 v2.7 3,100 럭")
+if 'tallNearCharacterOpacity' in layers['roadside'] or 'tallNearCharacterOpacity' in scene['layout']['roadside']:
+    err("tallNearCharacterOpacity: 16장 11/19 장면 물체는 투명하게 하지 않음(키 지울 것)")
+if rv:
+    for pose in rv['restSwap']['poses']:
+        if not pose.endswith('Front'):
+            err(f"character.rive.restSwap: 쉼터는 정면만인데 {pose}(16장 11/19)")
+    for scr in ('walking', 'walkingIdle'):
+        if scr in rv['screens'] and not rv['screens'][scr].endswith('Side'):
+            err(f"character.rive.screens {scr}: 걷기 탭은 옆면만(16장 11/19)")
+    if _get(config, 'companions', 'facing', 'walkTabIdle') not in (None, 'side'):
+        err("companions.facing.walkTabIdle: 걷기 탭 쉬는 중 동행은 옆면")
+tabs = config['ui'].get('tabs')
+if isinstance(tabs, dict) and 'labels' in tabs and 'items' in tabs:
+    if set(tabs['labels']) != set(tabs['items']):
+        err("ui.tabs labels 키 ≠ items")
+    for lab in tabs['labels'].values():
+        if len(lab) > 3:
+            warn(f"ui.tabs 이름 '{lab}'이 김(화면 글 짧게)")
+cdec = camp_doc.get('decor')
+if cdec:
+    gb = cdec['groundBand']
+    if not (0 <= gb['xMin'] < gb['xMax'] <= camp_doc['scene']['widthPt']):
+        err("camp_wide decor.groundBand x가 장면 폭 밖")
+    es = cdec.get('easelStart')
+    if es and not (gb['xMin'] <= es['footX'] <= gb['xMax'] and gb['footYMin'] <= es['footY'] <= gb['footYMax']):
+        err("camp_wide decor.easelStart가 땅 띠 밖")
+    for b in cdec.get('blocked', []):
+        if b['id'] not in (_get(config, 'rest', 'decor', 'blocked') or []):
+            err(f"camp_wide decor.blocked {b['id']}: config rest.decor.blocked에 없음")
+for oid in ('companion', 'guestbookSign'):
+    if oid in camp_doc or any(o['id'] == oid for o in camp_doc['objects']):
+        err(f"camp_wide {oid}: 16장 11/18 쉼터에서 뺌")
+for pkg in config.get('allowedSources', {}).get('android', []):
+    if pkg != pkg.strip() or pkg.endswith('.'):
+        err(f"allowedSources.android '{pkg}': 앞뒤 공백·끝 점 없이")
+fx_ids = {x['id'] for x in mvp.values() if x['slot'] == 'effect'}
+if 'items' in config.get('effects', {}) and set(config['effects']['items']) != fx_ids:
+    err(f"config effects.items ≠ props 꾸밈 효과 {sorted(fx_ids)}")
+for c in companions['companions']:
+    rl = [x.get('text', '') for x in c.get('restLines', [])]
+    if len(set(rl)) != len(rl) or not all(rl):
+        err(f"companions {c['id']}: restLines에 빈 줄·같은 줄")
+
+# 11/20 밤(16장 11/20 4줄): 상점은 안 가진 것만·팔림 도장, 배낭은 가진 것만, 무늬 숫자 규칙, 연출 5, 쉼터 물품 자리, 정령 v11
+if cart.get('boughtToday') != 'removeOnBuy':
+    err("shop.cart.boughtToday: 16장 11/20 산 칸은 빠짐(removeOnBuy)")
+if 'owned' not in cart.get('exclude', []):
+    err("shop.cart.exclude에 owned가 없음(가진 것은 수레에 안 나옴)")
+sm = cart.get('soldMark') or {}
+for k in ('diameterPt', 'color', 'text', 'rotateDeg', 'opacity'):
+    if k not in sm:
+        err(f"shop.cart.soldMark.{k} 없음(팔림 도장, 16장 11/20 Q016)")
+if sm.get('tappable') is not False:
+    err("shop.cart.soldMark.tappable: 팔림 칸은 누를 수 없음(false)")
+for k in cart.get('ownedStillSold', []):
+    if k not in set(cart.get('consumableKinds', [])) | set(cart.get('fixed', [])):
+        err(f"shop.cart.ownedStillSold {k}: 소모품·고정 칸만 예외")
+if config['album'].get('ownedOnly') is not True or pp.get('choose', {}).get('ownedOnly') is not True:
+    err("album.ownedOnly·paintPattern.choose.ownedOnly: 16장 11/20 배낭은 가진 것만(true)")
+for t in trails['patterns']:
+    if t.get('pending'):
+        err(f"trails {t['id']}: 그림이 들어왔는데 pending(검수 A27 통과)")
+mp = config['mapTrail'].get('patterns', {})
+if _get(mp, 'night', 'outlinePt') != 1.2 or str(_get(mp, 'night', 'outlineColor')).upper() != '#D9E4EF':
+    err("mapTrail.patterns.night: 밤 윤곽 #D9E4EF 1.2pt(16장 11/20 Q010·Q012)")
+if (_get(mp, 'shortSegment', 'underPt'), _get(mp, 'shortSegment', 'gapPt')) != (36, 18):
+    err("mapTrail.patterns.shortSegment: 36pt 미만 끝 1개·여백 18pt(Q010 ③)")
+if _get(mp, 'curve', 'chunkPx') != 64:
+    err("mapTrail.patterns.curve.chunkPx 64가 아님(Q010 ③)")
+if _get(mp, 'switch', 'gapPt') != 8:
+    err("mapTrail.patterns.switch.gapPt 8이 아님(Q010 ④)")
+mo = config['ui'].get('motion', {})
+for k in ('arrivalPin', 'restPet', 'decorWiggle', 'cartSlot', 'dropPickup', 'albumFlip'):
+    if k not in mo:
+        err(f"ui.motion.{k} 없음(16장 11/20 연출 5개)")
+for did, d in decor_ids.items():
+    cw, chh = d.get('canvasPx', [0, 0])
+    if not cw:
+        if not decor.get('art', {}).get('pending'):
+            err(f"decor {did}: 그림이 들어왔는데 canvasPx·groundAt 없음(검수 A29)")
+        continue
+    gx, gy = d['groundAt']
+    if not (0 <= gx <= cw and 0 <= gy <= chh):
+        err(f"decor {did}: groundAt이 캔버스 밖")
+    slots = d.get('paintingSlotsAt', [])
+    if len(slots) != d.get('paintingSlots', 0):
+        err(f"decor {did}: paintingSlotsAt {len(slots)}개 ≠ paintingSlots {d.get('paintingSlots', 0)}")
+    for sl in slots:
+        x, y, w, h = sl['slot']
+        if x < 0 or y < 0 or x + w > cw or y + h > chh:
+            err(f"decor {did}: 걸 자리 {sl['slot']}가 캔버스 밖")
+    if d.get('nightLight') and 'light' not in d:
+        err(f"decor {did}: nightLight인데 light(lightAt·lightRadiusPx) 없음")
+nx = rv.get('next', {}) if rv else {}
+if nx and not nx.get('pending'):
+    for k in ('file', 'fileId', 'fileBytes'):
+        if k not in nx:
+            err(f"character.rive.next.{k} 없음(정식 v11 들어오면 채움)")
+for x in riv_props:
+    if x['rive'].get('pending') and x['status'] == 'mvp' and x['rive']['choice'] in ('petChoice', 'floatChoice'):
+        warn(f"props {x['id']}: rive.pending(정령 v11 inputs.md로 확인됨 — 지울 것)")
 
 for w in warns:
     print('경고:', w)
