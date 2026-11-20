@@ -5,17 +5,26 @@ import '../../app/paint_providers.dart';
 import '../../app/paint_trail_controller.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
-import '../../domain/badge.dart' as stamp;
+import '../../domain/album_wear.dart';
 import '../../domain/color_props.dart';
 import '../../domain/landmark.dart';
+import '../../domain/look.dart';
+import '../../domain/map_album_rules.dart';
+import '../../domain/prop.dart';
+import '../../domain/rules.dart';
+import '../../domain/screen_rules.dart';
 import '../../domain/sketch.dart';
+import '../../domain/spirit_look.dart';
 import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
+import '../common/game_button.dart';
 import '../common/palette.dart';
+import '../common/toast.dart';
+import '../decorate/decorate_screen.dart';
+import '../scene/spirit_character.dart';
 import 'album_diary.dart';
 import 'album_paints.dart';
-import 'album_stamps.dart';
 import 'album_widgets.dart';
 import 'painting_viewer.dart';
 
@@ -25,7 +34,15 @@ const albumFirstOnlyHint = '걸어서 명소에 닿으면 여기에 걸려요';
 /// 소품 탭에 얻은 소품이 하나도 없을 때의 한 줄. 가안
 const albumNoPropsLine = '아직 모은 소품이 없어요';
 
-/// 화집: 그림 탭(얻은 그림만: 첫 그림 + 얻은 명소)·소품 탭(얻은 소품만)·도장 탭·물감 탭(가진 물감, 고르기, 11/15).
+/// 소품 탭 머리 카드 글 (캔버스 6-1)
+const albumWearTitle = '누르면 바로 입어요';
+
+/// 소품 탭 아래 꾸미기 링크 (16장 11/19 ③)
+const albumDecorateLink = '꾸미기에서 색·얼굴 바꾸기';
+
+/// 화집 = 배낭 (16장 11/19 ③·11/20, 캔버스 6-1): 탭은 config album.tabs 차례로 그림·소품·물감, 도장은 나 탭.
+/// 가진 것만 보인다(album.ownedOnly): 그림 탭은 얻은 그림(첫 그림 + 얻은 명소), 소품 탭은 가진 소품, 물감 탭은 가진 물감.
+/// 소품 탭은 누르면 바로 입고 다시 누르면 벗는다(옷은 안 벗음, album.propsTab): 위 정령이 바로 바뀌고 잠깐 기뻐하며 한 줄 토스트.
 /// 위 배경·벽 액자는 없다 (11/4). 그림 탭은 ‘일기 · 전체’ 두 보기이고 기본은 일기다 (캔버스 6-1, 16장 11/2)
 class AlbumScreen extends ConsumerStatefulWidget {
   const AlbumScreen({super.key});
@@ -35,7 +52,12 @@ class AlbumScreen extends ConsumerStatefulWidget {
 }
 
 class _AlbumScreenState extends ConsumerState<AlbumScreen> {
-  var _tab = 0;
+  /// 지금 탭 id. null이면 config album.tabs의 첫 탭
+  String? _tab;
+
+  /// 바로 입기로 위 정령에 보낸 기쁨 신호 (입을 때마다 새 값)
+  SpiritCue? _joy;
+  var _wearing = false;
 
   /// 그림 탭 보기: 일기(기본)인가, 전체(3열 격자)인가
   var _diary = true;
@@ -52,11 +74,14 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     _seePaintings();
   }
 
-  void _openTab(int i) {
-    setState(() => _tab = i);
-    if (i == 1) _seeProps();
-    if (i == 2) _seeStamps();
-    if (i == 3) _seePaints();
+  void _openTab(String id) {
+    setState(() {
+      _tab = id;
+      // 소품 탭 정령은 다시 만들 때 남은 신호를 다시 받으므로 지운다 (돌아와도 다시 기뻐하지 않게)
+      _joy = null;
+    });
+    if (id == 'props') _seeProps();
+    if (id == 'paints') _seePaints();
   }
 
   /// 물감 탭을 열면 새 색 표시(배낭의 점)를 지운다
@@ -70,13 +95,6 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   Future<void> _choosePaint(String colorId) async {
     await ref.read(paintTrailProvider.notifier).choosePaint(colorId);
     if (mounted) ref.invalidate(paintShelfProvider);
-  }
-
-  /// 도장 탭을 열면 새 도장 표시(배낭의 점)를 지운다
-  Future<void> _seeStamps() async {
-    final svc = await ref.read(syncServiceProvider.future);
-    await svc.markBadgesSeen();
-    if (mounted) ref.invalidate(snapshotProvider);
   }
 
   /// 화집을 열면 안 본 그림을 이번 방문의 새 그림 칸으로 담고, 새 그림 표시(배낭의 점)를 지운다
@@ -100,7 +118,8 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   Widget build(BuildContext context) {
     final paintings = ref.watch(paintingsProvider).value;
     final landmarks = ref.watch(landmarksProvider).value;
-    final ready = paintings != null && landmarks != null;
+    final rules = ref.watch(rulesProvider).value;
+    final ready = paintings != null && landmarks != null && rules != null;
 
     return Scaffold(
       body: SafeArea(
@@ -125,28 +144,31 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
                 ],
               ),
             ),
-            Expanded(child: ready ? _content(paintings, landmarks) : const SizedBox.shrink()),
+            Expanded(child: ready ? _content(paintings, landmarks, rules) : const SizedBox.shrink()),
           ],
         ),
       ),
     );
   }
 
-  Widget _content(List<OwnedPaintingView> paintings, List<Landmark> landmarks) {
+  Widget _content(List<OwnedPaintingView> paintings, List<Landmark> landmarks, Rules rules) {
     final owned = {for (final p in paintings) p.landmark.id: p};
+    final tabIds = rules.mapAlbum.albumTabs;
+    final tab = tabIds.contains(_tab) ? _tab! : tabIds.first;
     final snap = ref.watch(snapshotProvider).value;
     final propsDot = (snap?.unseenProps ?? 0) > 0;
-    // 도장 탭 안에 있으면 그 자리에서 바로 본 것이라 점을 달지 않는다
-    final stampsDot = (snap?.unseenBadges ?? 0) > 0 && _tab != 2;
-    final badges = ref.watch(badgeCatalogProvider).value?.badges;
-    final ownedBadges = ref.watch(ownedBadgesProvider).value;
-    // 탭이 넷이라 받은 수만 (캔버스 6-1 11/15 ‘도장 n’)
-    final stampsLabel = badges == null || ownedBadges == null
-        ? '도장'
-        : '도장 ${badges.where((b) => ownedBadges.containsKey(b.id)).length}';
     final shelf = ref.watch(paintShelfProvider).value;
     final paintsLabel = shelf == null ? '물감' : '물감 ${shelf.colors.length}';
-    final paintsDot = (ref.watch(unseenPaintsProvider).value ?? 0) > 0 && _tab != 3;
+    // 그 탭 안에 있으면 그 자리에서 바로 본 것이라 점을 달지 않는다
+    final paintsDot = (ref.watch(unseenPaintsProvider).value ?? 0) > 0 && tab != 'paints';
+    final tabs = [
+      for (final id in tabIds)
+        switch (id) {
+          'paintings' => const AlbumTab('paintings', '그림'),
+          'props' => AlbumTab('props', '소품', dot: propsDot),
+          _ => AlbumTab('paints', paintsLabel, dot: paintsDot),
+        },
+    ];
     const gutter = EdgeInsets.symmetric(horizontal: 16);
     return CustomScrollView(
       slivers: [
@@ -156,46 +178,22 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AlbumTabs(
-                  selected: _tab,
-                  onSelect: _openTab,
-                  propsDot: propsDot,
-                  stampsDot: stampsDot,
-                  stampsLabel: stampsLabel,
-                  paintsDot: paintsDot,
-                  paintsLabel: paintsLabel,
-                ),
+                AlbumTabs(tabs: tabs, selected: tab, onSelect: _openTab),
                 const SizedBox(height: 4),
               ],
             ),
           ),
         ),
-        if (_tab == 0) ...[
+        if (tab == 'paintings') ...[
           SliverToBoxAdapter(
             child: _ViewSwitch(diary: _diary, onSelect: (d) => setState(() => _diary = d)),
           ),
           if (_diary) ..._diarySlivers(owned) else ..._paintingSlivers(owned, landmarks),
-        ] else if (_tab == 1)
-          _propSliver()
-        else if (_tab == 2)
-          _stampSliver()
+        ] else if (tab == 'props')
+          ..._propSlivers(rules.mapAlbum.propsTab)
         else
           _paintSliver(),
       ],
-    );
-  }
-
-  /// 도장 탭: 묶음별 격자. 받은 도장만 진하게, 못 받은 도장은 흐린 빈 고리 (이름·진행도 없음)
-  Widget _stampSliver() {
-    final badges = ref.watch(badgeCatalogProvider).value?.badges;
-    final owned = ref.watch(ownedBadgesProvider).value;
-    // 읽어 오는 동안은 비워 둔다
-    if (badges == null || owned == null) return const SliverToBoxAdapter();
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      sliver: SliverToBoxAdapter(
-        child: StampSections(sections: stamp.badgeSections(badges), owned: owned),
-      ),
     );
   }
 
@@ -294,17 +292,45 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     ];
   }
 
-  /// 소품 탭: 얻은 소품만 칸별로 (모자·얼굴 소품·옷·신발·손·가방·미니 친구·둥실·효과). 얻은 소품이 없는 칸은 감추고,
-  /// 하나도 없으면 한 줄 안내. 얻는 방법은 꾸미기의 잠긴 칸에서 본다
-  Widget _propSliver() {
+  /// 바로 입기 (16장 11/19, album.propsTab): 지금 모습에서 [p]를 입거나 벗고 꾸미기와 같은 저장(ProfileService.saveLook)으로
+  /// 남긴다. 위 정령은 내 모습(meProvider)을 다시 읽어 바로 바뀌고, 잠깐 기뻐하며 한 줄 토스트
+  Future<void> _wear(Prop p, PropsTabRules rules) async {
+    if (_wearing) return;
+    _wearing = true;
+    try {
+      final profile = ref.read(profileServiceProvider);
+      final look = (await profile.me()).look;
+      final out = tapToWear(look, p.slot, p.id, rules);
+      if (out == null) return;
+      await profile.saveLook(out.look);
+      ref.invalidate(meProvider);
+      if (!mounted) return;
+      // 기쁨: 칭찬과 같은 표정(palette expressionTriggers happy) + Rive joy 트리거, joy.sec초
+      final happy = ref.read(spiritPaletteProvider).value?.cues.of('praise');
+      setState(() => _joy = SpiritCue(happy?.expr ?? 0, holdSec: rules.joySec, trigger: rules.joyTrigger));
+      if (rules.toast) showToast(context, wearToast(p.name, p.slot, out.change));
+    } catch (e) {
+      // 가지지 않은 소품(StateError)이나 저장 실패
+      debugPrint('바로 입기 실패: $e');
+      if (mounted) showToast(context, '입지 못했어요');
+    } finally {
+      _wearing = false;
+    }
+  }
+
+  /// 소품 탭: 위에 내 정령(누르면 바로 입어요 + 입은 소품 줄, 붙어 있음), 아래에 가진 소품만 칸별로
+  /// (모자·얼굴 소품·옷·신발·손·가방·미니 친구·둥실·효과, 색 소품은 기본 소품 바로 뒤), 맨 아래 꾸미기 링크.
+  /// 가진 소품이 없는 칸은 감추고, 하나도 없으면 한 줄 안내. 얻는 방법·잠긴 칸은 없다 (album.ownedOnly)
+  List<Widget> _propSlivers(PropsTabRules rules) {
     final props = ref.watch(propsProvider).value;
     final ownedProps = ref.watch(ownedPropIdsProvider).value;
+    final me = ref.watch(meProvider).value;
     // 읽어 오는 동안은 비워 둔다 (안내 글이 잠깐 비치지 않게)
-    if (props == null || ownedProps == null) return const SliverToBoxAdapter();
+    if (props == null || ownedProps == null || me == null) return const [SliverToBoxAdapter()];
 
+    final worn = me.look.slots;
     final children = <Widget>[];
     for (final slot in propSlotLabels.entries) {
-      // 색 소품은 꾸미기처럼 기본 소품 바로 뒤
       final mine = [
         for (final p in variantsAfterBase(props))
           if (p.slot == slot.key && ownedProps.contains(p.id)) p,
@@ -312,23 +338,127 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
       if (mine.isEmpty) continue;
       children.add(Padding(
         padding: const EdgeInsets.only(top: 10),
-        child: PropSlotCard(name: slot.value, props: mine),
-      ));
-    }
-    if (children.isEmpty) {
-      children.add(const Padding(
-        padding: EdgeInsets.only(top: 24),
-        child: Text(
-          albumNoPropsLine,
-          key: ValueKey('album-no-props'),
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: Palette.subInk),
+        child: PropSlotCard(
+          name: slot.value,
+          props: mine,
+          worn: worn[slot.key],
+          onTap: rules.tapToWear ? (p) => _wear(p, rules) : null,
         ),
       ));
     }
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      sliver: SliverList(delegate: SliverChildListDelegate(children)),
+    if (children.isEmpty) {
+      return const [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(16, 24, 16, 24),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              albumNoPropsLine,
+              key: ValueKey('album-no-props'),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Palette.subInk),
+            ),
+          ),
+        ),
+      ];
+    }
+    final byId = {for (final p in props) p.id: p.name};
+    final line = [
+      for (final slot in lookSlots)
+        if (worn[slot] case final id? when byId[id] != null) byId[id]!,
+    ].join(' · ');
+    children.add(Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Center(
+        child: GameButton(
+          key: const ValueKey('album-decorate-link'),
+          label: albumDecorateLink,
+          kind: GameButtonKind.secondary,
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute<void>(builder: (_) => const DecorateScreen())),
+        ),
+      ),
+    ));
+    return [
+      // 위 카드는 소품을 내려도 붙어 있다 (캔버스 6-1 sticky). 높이는 글자 크기에 따라 카드가 정한다
+      PinnedHeaderSliver(
+        child: ColoredBox(
+          color: Palette.paper,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: _WearCard(
+              look: ref.watch(spiritLookProvider),
+              cue: _joy,
+              cues: ref.watch(spiritPaletteProvider).value?.cues,
+              line: line,
+            ),
+          ),
+        ),
+      ),
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        sliver: SliverList(delegate: SliverChildListDelegate(children)),
+      ),
+    ];
+  }
+}
+
+/// 소품 탭 위 카드의 정령 상자와 글 스타일
+const _wearSpiritBox = 92.0;
+const _wearTitleGap = 3.0;
+const _wearLineStyle = TextStyle(fontSize: 13, height: 1.4, color: Palette.subInk);
+
+/// 소품 탭 위 카드 (캔버스 6-1): 내 정령(바로 입은 모습, 입으면 기뻐함) + `누르면 바로 입어요` + 입은 소품 줄
+class _WearCard extends StatelessWidget {
+  const _WearCard({required this.look, required this.cue, required this.cues, required this.line});
+
+  final SpiritLook look;
+  final SpiritCue? cue;
+  final SpiritCues? cues;
+  final String line;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('album-wear-card'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Palette.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Palette.line, width: InkLine.pill),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            key: const ValueKey('album-wear-spirit'),
+            width: 84,
+            height: _wearSpiritBox,
+            child: SpiritStanding(look: look, share: 0.8, footAt: 0.95, cue: cue, cues: cues),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 좁은 화면에서 글자를 키워도 한 줄 (넘치면 줄여 맞춘다)
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(albumWearTitle, maxLines: 1, style: context.display(15)),
+                ),
+                const SizedBox(height: _wearTitleGap),
+                Text(
+                  line,
+                  key: const ValueKey('album-wear-line'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: _wearLineStyle,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

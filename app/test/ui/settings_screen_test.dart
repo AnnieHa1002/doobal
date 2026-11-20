@@ -545,6 +545,10 @@ void main() {
       // 설정은 나 탭 목록 줄에서 (16장 11/18 ⑥)
       await openTab(tester, 'me');
       await settle(tester, () => find.byKey(const ValueKey('me-settings')).evaluate().isNotEmpty);
+      // 설정 줄은 도장(T18) 아래라 도장이 다 뜬 뒤 내려서 누른다
+      await settle(tester, () => find.byKey(const ValueKey('me-stamps')).evaluate().isNotEmpty);
+      await tester.ensureVisible(find.byKey(const ValueKey('me-settings')));
+      await tester.pump();
       await tester.tap(find.byKey(const ValueKey('me-settings')));
       await transition(tester);
       await tester.tap(find.text('계정 삭제'));

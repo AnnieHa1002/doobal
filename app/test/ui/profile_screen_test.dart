@@ -8,6 +8,7 @@ import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../domain/helpers.dart' show badgeCatalog;
 import 'ui_env.dart';
 
 /// 한 화면에 다 보이도록 길게 잡은 높이
@@ -230,5 +231,88 @@ void main() {
     await transition(tester);
     expect(find.text('열기'), findsOneWidget);
     await end(tester, e);
+  });
+
+  group('나 탭 도장 (16장 11/19 ③: 화집에서 옮겨 옴)', () {
+    Future<void> owned(UiEnv e, Map<String, int> badges, {bool seen = false}) =>
+        e.db.batch((b) => b.insertAll(e.db.badgesOwned, [
+              for (final x in badges.entries)
+                BadgesOwnedCompanion.insert(badgeId: x.key, atUtc: x.value, seen: Value(seen)),
+            ]));
+
+    Future<void> openStamps(WidgetTester tester, UiEnv e) =>
+        openOnTop(tester, e, const ProfileScreen(),
+            height: 3000, ready: () => find.byKey(const ValueKey('me-stamps')).evaluate().isNotEmpty);
+
+    testWidgets('최근 14일 아래·노트 위에 `도장` + 받은 수, 묶음별: 받은 도장은 이름·받은 날, 못 받은 도장은 이름·조건 글',
+        (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => owned(e, {
+            'b_first_walk': DateTime.utc(2026, 11, 18, 3).millisecondsSinceEpoch,
+            'b_night': DateTime.utc(2026, 11, 19, 14).millisecondsSinceEpoch,
+          }));
+      await openStamps(tester, e);
+      await settle(tester, () => find.text('첫 걸음').evaluate().isNotEmpty);
+
+      // 차례: 최근 14일 → 도장 → 노트 (config ui.tabs.me: records · badges · … · note)
+      final days = tester.getTopLeft(find.text('최근 14일')).dy;
+      final stamps = tester.getTopLeft(find.byKey(const ValueKey('me-stamps'))).dy;
+      final note = tester.getTopLeft(find.byKey(const ValueKey('me-note'))).dy;
+      expect(days < stamps && stamps < note, isTrue);
+      expect(find.text('도장'), findsOneWidget);
+      expect(find.text('2 / ${badgeCatalog.badges.length}'), findsOneWidget);
+      // 묶음 이름과 묶음별 받은 수
+      for (final name in ['걷기 습관', '시간대', '지형·계절', '여정', '동행']) {
+        expect(find.text(name), findsOneWidget, reason: name);
+      }
+      expect(find.text('1 / 6'), findsOneWidget);
+      expect(find.text('1 / 3'), findsOneWidget);
+      expect(find.text('0 / 5'), findsOneWidget);
+      // 받은 도장: 이름과 받은 날(한국 날짜)
+      expect(find.text('첫 걸음'), findsOneWidget);
+      expect(find.text('11월 18일'), findsOneWidget);
+      expect(find.text('밤 산책'), findsOneWidget);
+      expect(find.text('11월 19일'), findsOneWidget);
+      // 못 받은 도장은 이름과 조건 글만 있고 진행도·자물쇠는 없다
+      final locked = badgeCatalog.badges.firstWhere((b) => b.id == 'b_walk_5km');
+      expect(find.text(locked.name), findsOneWidget);
+      expect(find.text(locked.desc), findsOneWidget);
+      expect(find.byIcon(Icons.lock), findsNothing);
+      expect(find.byIcon(Icons.lock_outline), findsNothing);
+
+      // 나 탭에는 새 소식 점이 없어(ui.tabs.dots.me 비었음) 보이면 본 것으로 적는다
+      await settle(tester, () => false, tries: 6);
+      final rows = (await tester.runAsync(() => e.db.select(e.db.badgesOwned).get()))!;
+      expect(rows.every((r) => r.seen), isTrue);
+      await end(tester, e);
+    });
+
+    testWidgets('받은 도장 칸을 누르면 이름·설명·받은 날 시트가 뜨고, 못 받은 칸은 눌러도 안 뜬다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => owned(e, {
+            'b_walk_5km': DateTime.utc(2026, 11, 20, 3).millisecondsSinceEpoch,
+          }, seen: true));
+      await openStamps(tester, e);
+      await settle(tester, () => find.text('한 번에 5km').evaluate().isNotEmpty);
+
+      await tester.tap(find.byKey(const ValueKey('stamp-b_walk_5km')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      final sheet = find.byKey(const ValueKey('stamp-sheet'));
+      expect(sheet, findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('한 번에 5km')), findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('걷기 한 번에 5km')), findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('11월 20일에 받았어요')), findsOneWidget);
+
+      // 시트를 닫고, 못 받은 칸을 누른다
+      Navigator.of(tester.element(sheet)).pop();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.tap(find.byKey(const ValueKey('stamp-b_walk_10km')), warnIfMissed: false);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byKey(const ValueKey('stamp-sheet')), findsNothing);
+      await end(tester, e);
+    });
   });
 }

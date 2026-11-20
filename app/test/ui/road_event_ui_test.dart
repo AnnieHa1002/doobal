@@ -1,7 +1,6 @@
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/main.dart';
-import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:doobal/ui/walking/walking_hud.dart';
 import 'package:doobal/ui/walking/walking_screen.dart';
@@ -17,7 +16,7 @@ import '../app/helpers.dart';
 import '../domain/helpers.dart';
 import 'ui_env.dart';
 
-// 길 위 이벤트(2km 이정표 카드)·도장(걸음 알약 아래 줄, 토스트, 화집 도장 탭, 배낭 점)의 화면 쪽.
+// 길 위 이벤트(2km 이정표 카드)·도장(걸음 알약 아래 줄, 토스트, 배낭 점)의 화면 쪽. 도장 목록은 나 탭(profile_screen_test).
 // 계산·판정은 test/app/road_event_sync_test.dart가 본다
 
 Landmark _farDest() => landmarks.firstWhere((l) {
@@ -206,86 +205,7 @@ void main() {
     });
   });
 
-  group('화집 도장 탭', () {
-    Future<void> owned(UiEnv e, Map<String, int> badges, {bool seen = false}) =>
-        e.db.batch((b) => b.insertAll(e.db.badgesOwned, [
-              for (final x in badges.entries)
-                BadgesOwnedCompanion.insert(
-                    badgeId: x.key, atUtc: x.value, seen: Value(seen)),
-            ]));
-
-    testWidgets('도장 n 탭: 받은 도장은 이름·받은 날, 못 받은 도장은 이름 없는 흐린 칸', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => owned(e, {
-            'b_first_walk': DateTime.utc(2026, 11, 18, 3).millisecondsSinceEpoch,
-            'b_night': DateTime.utc(2026, 11, 19, 14).millisecondsSinceEpoch,
-          }));
-      await openOnTop(tester, e, const AlbumScreen(),
-          ready: () => find.byKey(const ValueKey('tab-stamps')).evaluate().isNotEmpty);
-      await settle(tester, () => find.text('도장 2').evaluate().isNotEmpty);
-      expect(find.text('도장 2'), findsOneWidget);
-      // 그림 탭에 있는 동안 도장 탭에 알림 점
-      expect(find.byKey(const ValueKey('stamps-tab-dot')), findsOneWidget);
-
-      await tester.tap(find.byKey(const ValueKey('tab-stamps')));
-      await settle(tester, () => find.text('첫 걸음').evaluate().isNotEmpty);
-      // 묶음 이름과 묶음별 받은 수
-      expect(find.text('걷기 습관'), findsOneWidget);
-      expect(find.text('시간대'), findsOneWidget);
-      expect(find.text('지형·계절'), findsOneWidget);
-      expect(find.text('여정'), findsOneWidget);
-      expect(find.text('동행'), findsOneWidget);
-      expect(find.text('1 / 6'), findsOneWidget);
-      expect(find.text('1 / 3'), findsOneWidget);
-      expect(find.text('0 / 5'), findsOneWidget);
-      // 받은 도장: 이름과 받은 날(한국 날짜)
-      expect(find.text('첫 걸음'), findsOneWidget);
-      expect(find.text('11월 18일'), findsOneWidget);
-      expect(find.text('밤 산책'), findsOneWidget);
-      expect(find.text('11월 19일'), findsOneWidget);
-      // 못 받은 도장은 이름과 조건 글만 있고 진행도·자물쇠는 없다 (캔버스 6-1)
-      final locked = badgeCatalog.badges.firstWhere((b) => b.id == 'b_walk_5km');
-      expect(find.text(locked.name), findsOneWidget);
-      expect(find.text(locked.desc), findsOneWidget);
-      expect(find.byIcon(Icons.lock), findsNothing);
-      expect(find.byIcon(Icons.lock_outline), findsNothing);
-
-      // 도장 탭을 열면 안 본 표시가 지워진다
-      final rows = (await tester.runAsync(() => e.db.select(e.db.badgesOwned).get()))!;
-      expect(rows.every((r) => r.seen), isTrue);
-      await end(tester, e);
-    });
-
-    testWidgets('받은 도장 칸을 누르면 이름·설명·받은 날 시트가 뜨고, 못 받은 칸은 눌러도 안 뜬다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => owned(e, {
-            'b_walk_5km': DateTime.utc(2026, 11, 20, 3).millisecondsSinceEpoch,
-          }, seen: true));
-      await openOnTop(tester, e, const AlbumScreen(),
-          ready: () => find.byKey(const ValueKey('tab-stamps')).evaluate().isNotEmpty);
-      await tester.tap(find.byKey(const ValueKey('tab-stamps')));
-      await settle(tester, () => find.text('한 번에 5km').evaluate().isNotEmpty);
-
-      await tester.tap(find.byKey(const ValueKey('stamp-b_walk_5km')));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-      final sheet = find.byKey(const ValueKey('stamp-sheet'));
-      expect(sheet, findsOneWidget);
-      expect(find.descendant(of: sheet, matching: find.text('한 번에 5km')), findsOneWidget);
-      expect(find.descendant(of: sheet, matching: find.text('걷기 한 번에 5km')), findsOneWidget);
-      expect(find.descendant(of: sheet, matching: find.text('11월 20일에 받았어요')), findsOneWidget);
-
-      // 시트를 닫고, 못 받은 칸을 누른다
-      Navigator.of(tester.element(sheet)).pop();
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-      await tester.tap(find.byKey(const ValueKey('stamp-b_walk_10km')), warnIfMissed: false);
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.byKey(const ValueKey('stamp-sheet')), findsNothing);
-      await end(tester, e);
-    });
-  });
+  // 도장 탭 시험은 16장 11/19 ③(도장은 나 탭)로 profile_screen_test.dart ‘나 탭 도장’으로 옮겼다
 
   group('걷기 기록 다시 보기: 그 걷기 시간대의 이정표', () {
     testWidgets('이정표 줄(칭찬 + 풍경)이 걷기 시간대 안의 것만 나온다', (tester) async {

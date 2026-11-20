@@ -182,12 +182,18 @@ void main() {
     await settle(tester, () => _onstage(ProfileScreen).evaluate().isNotEmpty, tries: 40);
     expect(find.text('나의 정보'), findsOneWidget);
     expect(find.byTooltip('뒤로'), findsNothing);
+    // 노트·설정 줄은 도장(T18, config ui.tabs.me 차례) 아래라 도장이 다 뜬 뒤 내려서 누른다
+    await settle(tester, () => find.byKey(const ValueKey('me-stamps')).evaluate().isNotEmpty);
+    await tester.ensureVisible(find.byKey(const ValueKey('me-note')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('me-note')));
     await transition(tester);
     expect(_onstage(NoteScreen), findsOneWidget);
     expect(_bar, findsOneWidget);
     await tester.tap(find.byTooltip('뒤로'));
     await transition(tester);
+    await tester.ensureVisible(find.byKey(const ValueKey('me-settings')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('me-settings')));
     await transition(tester);
     expect(_onstage(SettingsScreen), findsOneWidget);

@@ -6,7 +6,7 @@ import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 
-/// 화집 도장 탭 (캔버스 Gallery): 묶음마다 카드 하나, 안에 4열 도장 칸. 받은 도장은 진하게(테라코타 고리 +
+/// 도장 묶음 (캔버스 Gallery, 16장 11/19 ③부터 나 탭에 보인다 — profile_screen): 묶음마다 카드 하나, 안에 4열 도장 칸. 받은 도장은 진하게(테라코타 고리 +
 /// 이름 + 받은 날), 못 받은 도장은 흐린 고리에 이름과 조건 글. 진행도·자물쇠는 없다.
 /// 도장 아이콘 그림(ui_stamp_*)이 리포에 들어오기 전까지는 Material 아이콘 자리표시
 
@@ -28,7 +28,7 @@ IconData stampIcon(stamp.Badge b) => switch (b.id) {
       _ => Icons.directions_walk,
     };
 
-/// 도장 탭 내용: [owned]는 받은 도장 id → 받은 시각. 칸을 누르면 받은 도장의 이름·설명·받은 날
+/// 도장 내용: [owned]는 받은 도장 id → 받은 시각. 칸을 누르면 받은 도장의 이름·설명·받은 날
 class StampSections extends StatelessWidget {
   const StampSections({super.key, required this.sections, required this.owned});
 

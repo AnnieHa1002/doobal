@@ -282,6 +282,10 @@ void main() {
       expect(find.byType(AlbumScreen), findsNothing);
 
       await openTab(tester, 'me');
+      // 노트 줄은 도장(T18) 아래라 도장이 다 뜬 뒤 내려서 누른다
+      await _settle(tester, () => find.byKey(const ValueKey('me-stamps')).evaluate().isNotEmpty);
+      await tester.ensureVisible(find.byKey(const ValueKey('me-note')));
+      await tester.pump();
       await tester.tap(find.byKey(const ValueKey('me-note')));
       await _transition(tester);
       expect(find.text('노트'), findsOneWidget);
@@ -305,6 +309,7 @@ void main() {
       await _settle(tester, () => find.text('최근 14일').evaluate().isNotEmpty);
       expect(find.text('최근 14일'), findsOneWidget);
 
+      await _settle(tester, () => find.byKey(const ValueKey('me-stamps')).evaluate().isNotEmpty);
       await tester.scrollUntilVisible(find.byKey(const ValueKey('me-settings')), 200);
       await tester.tap(find.byKey(const ValueKey('me-settings')));
       await _transition(tester);

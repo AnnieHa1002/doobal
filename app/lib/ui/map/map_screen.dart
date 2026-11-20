@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/geo.dart';
+import '../../domain/journey.dart' show Frame;
 import '../../domain/landmark.dart';
 import '../../domain/map_first_view.dart';
 import '../../domain/map_projection.dart';
@@ -16,6 +18,7 @@ import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
+import '../album/painting_viewer.dart';
 import 'landmark_card.dart';
 import 'map_geometry.dart';
 import 'map_painter.dart';
@@ -59,6 +62,12 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
   MapGeometry? _geometry;
   Size _view = Size.zero;
   EdgeInsets _padding = EdgeInsets.zero;
+
+  /// 다음 길·뱃길: 같은 값이면 같은 목록을 넘겨 지도를 다시 그리지 않게 한다
+  Snapshot? _routeOf;
+  List<LatLng> _nextRoute = const [];
+  Rules? _seaOf;
+  List<(LatLng, LatLng)> _seaRoutes = const [];
 
   /// 고른 명소. 처음엔 여정이 있으면 그 목적지, 빈 곳을 누르면 비운다
   String? _selectedId;
@@ -260,6 +269,30 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     }
   }
 
+  /// 진행 중인 여정의 남은 길 (지금 자리 → 목적지). 스냅샷이 바뀔 때만 새로 센다
+  List<LatLng> _next(Snapshot snap) {
+    if (identical(snap, _routeOf)) return _nextRoute;
+    _routeOf = snap;
+    final j = snap.journey;
+    final route = j?.route;
+    return _nextRoute = j == null || route == null ? const [] : remainingRoute(route, j.progress.progressKm);
+  }
+
+  /// 늘 그리는 뱃길 (항구 → 항구)
+  List<(LatLng, LatLng)> _sea(Rules rules) {
+    if (identical(rules, _seaOf)) return _seaRoutes;
+    _seaOf = rules;
+    return _seaRoutes = [
+      for (final (a, b) in seaRoutePorts)
+        if (rules.ports[a] case final from?)
+          if (rules.ports[b] case final to?) (from, to),
+    ];
+  }
+
+  /// 받은 그림 칸을 누르면 크게 보기 (한 장, config map.card.paintingSlot.tap)
+  void _openPainting(Landmark l, Frame frame) =>
+      openPaintingViewer(context, [BigPainting(landmark: l, frame: frame)], 0);
+
   String _distanceLine(double km, int days) => '남은 거리 ${formatKm(km)} · 약 ${math.max(1, days)}일';
 
   @override
@@ -295,10 +328,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
             TransformationController(_firstMatrix(geometry, data, rules));
         return Stack(
           children: [
-            Positioned.fill(child: _map(geometry, data, tc, rules)),
+            Positioned.fill(child: _map(geometry, data, snap, tc, rules)),
             _topBar(landmarks, data, geometry),
             ..._searchResults(landmarks),
-            ..._selectedCard(geometry, data, snap),
+            ..._selectedCard(geometry, data, snap, rules),
           ],
         );
       }),
@@ -306,11 +339,21 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
   }
 
   /// 확대·이동할 수 있는 지도. 캔버스는 화면 너비에 맞추고, 처음엔 내 위치 기준 첫 보기
-  Widget _map(MapGeometry g, MapData data, TransformationController tc, Rules rules) {
+  Widget _map(MapGeometry g, MapData data, Snapshot snap, TransformationController tc, Rules rules) {
     final size = Size(_view.width, _view.width * g.projection.height / g.projection.width);
+    final body = ref.watch(spiritLookProvider).bodyArgb;
     return ListenableBuilder(
       listenable: tc,
-      builder: (context, _) => _viewer(g, data, tc, size, tc.value.getMaxScaleOnAxis(), rules),
+      builder: (context, _) => _viewer(
+        g,
+        data,
+        tc,
+        size,
+        tc.value.getMaxScaleOnAxis(),
+        rules,
+        nextRoute: _next(snap),
+        faceColor: body == null ? null : Color(body),
+      ),
     );
   }
 
@@ -320,8 +363,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     TransformationController tc,
     Size size,
     double zoom,
-    Rules rules,
-  ) {
+    Rules rules, {
+    required List<LatLng> nextRoute,
+    required Color? faceColor,
+  }) {
     return InteractiveViewer(
       transformationController: tc,
       constrained: false,
@@ -351,6 +396,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                 zoom: zoom,
                 trail: rules.mapTrail,
                 palette: rules.paintColor,
+                style: rules.mapAlbum.map,
+                nextRoute: nextRoute,
+                seaRoutes: _sea(rules),
+                faceColor: faceColor,
               ),
             ),
           ),
@@ -423,7 +472,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
   /// 고른 명소가 있으면 아래 카드. 주 버튼은 늘 `출발하기`(여정이 있으면 쉼터로, 없으면 이 명소로 정하고 쉼터로).
   /// 여정 중이면 보조 버튼: 현재 목적지는 `여정 멈추기`, 다른 명소는 `목적지 바꾸기`.
   /// 첫 여정(내 동네 스케치) 중에는 보조 버튼을 숨긴다 (바꾸기·멈추기 없음)
-  List<Widget> _selectedCard(MapGeometry g, MapData data, Snapshot snap) {
+  List<Widget> _selectedCard(MapGeometry g, MapData data, Snapshot snap, Rules rules) {
     final id = _selectedId;
     final l = g.byId[id];
     if (id == null || l == null) return const [];
@@ -444,6 +493,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
 
     final hasJourney = data.destId != null;
     final isFirstJourney = data.destId == sketchId;
+    final frame = data.visited[id];
+    final slot = rules.mapAlbum.paintingSlot;
     final canChange = hasJourney && !isFirstJourney;
     return [
       Positioned(
@@ -456,8 +507,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
             padding: const EdgeInsets.only(bottom: 16),
             child: LandmarkCard(
               landmark: l,
-              frame: data.visited[id],
+              frame: frame,
               distance: distance,
+              slots: slot.count,
+              onPainting: frame == null || !slot.tapBigView ? null : () => _openPainting(l, frame),
               primaryLabel: '출발하기',
               onPrimary: hasJourney ? _toRest : () => _onGo(l, snap, change: false),
               secondaryLabel: !canChange ? null : (isJourneyDest ? '여정 멈추기' : '목적지 바꾸기'),

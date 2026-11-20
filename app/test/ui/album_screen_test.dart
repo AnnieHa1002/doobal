@@ -1,4 +1,6 @@
+import 'package:doobal/app/profile_service.dart';
 import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/prop.dart';
 import 'package:doobal/domain/sketch.dart';
@@ -12,7 +14,9 @@ import 'package:doobal/ui/common/framed_painting.dart';
 import 'package:doobal/ui/common/item_cell.dart';
 import 'package:doobal/ui/common/notice_dot.dart';
 import 'package:doobal/ui/common/palette.dart';
+import 'package:doobal/ui/decorate/decorate_screen.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
+import 'package:doobal/ui/scene/spirit_character.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -72,6 +76,21 @@ Future<void> _walk11km(UiEnv e) async {
 
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
+
+  testWidgets('탭은 config album.tabs 차례로 그림·소품·물감, 도장 탭은 없다 (16장 11/19 ③: 도장은 나 탭)', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester);
+    await _openAlbum(tester, e, all: false);
+    expect(_keyNames(tester, 'tab-'), ['paintings', 'props', 'paints']);
+    final xs = [
+      for (final id in ['paintings', 'props', 'paints'])
+        tester.getTopLeft(find.byKey(ValueKey('tab-$id'))).dx,
+    ];
+    expect(xs, orderedEquals([...xs]..sort()));
+    expect(find.byKey(const ValueKey('tab-stamps')), findsNothing);
+    expect(find.textContaining('도장'), findsNothing);
+    await end(tester, e);
+  });
 
   testWidgets('뒤로와 제목 `화집`, 위 배경·벽 액자는 없다 (11/4)', (tester) async {
     final e = UiEnv();
@@ -454,7 +473,9 @@ void main() {
       expect(find.descendant(of: _prop('hand_02'), matching: find.byType(ItemPlaceholder)), findsOneWidget);
       expect(find.descendant(of: _prop('hat_01'), matching: find.text('베레모')), findsOneWidget);
       expect(find.descendant(of: _prop('hat_01'), matching: find.byType(Image)), findsOneWidget);
-      expect(find.descendant(of: _prop('hat_01'), matching: find.text('가짐')), findsOneWidget);
+      // 입고 있는 베레모는 `입는 중`, 새로 얻은 봇짐은 `가짐` (16장 11/19 바로 입기, 캔버스 6-1)
+      expect(find.descendant(of: _prop('hat_01'), matching: find.text('입는 중')), findsOneWidget);
+      expect(find.descendant(of: _prop('hand_02'), matching: find.text('가짐')), findsOneWidget);
       // 25km에 얻는 모자는 아직 없다
       expect(_prop('hat_02'), findsNothing);
       await end(tester, e);
@@ -537,6 +558,110 @@ void main() {
       // 그림 탭으로 돌아오면 보던 보기(전체)와 칩이 그대로다
       expect(find.byKey(const ValueKey('album-chip-all')), findsOneWidget);
       expect(find.text('모자'), findsNothing);
+      await end(tester, e);
+    });
+  });
+
+  group('소품 바로 입기 (16장 11/19, config album.propsTab)', () {
+    Future<void> openProps(WidgetTester tester, UiEnv e) async {
+      await _openAlbum(tester, e, height: 3000, all: false);
+      await tester.tap(find.byKey(const ValueKey('tab-props')));
+      await tester.pump();
+      await settle(tester, () => _prop('hat_01').evaluate().isNotEmpty);
+    }
+
+    Future<Look> look(WidgetTester tester, UiEnv e) async =>
+        (await tester.runAsync(() => ProfileService(e.db).me()))!.look;
+
+    String state(String id) {
+      for (final s in ['입는 중', '가짐']) {
+        if (find.descendant(of: _prop(id), matching: find.text(s)).evaluate().isNotEmpty) return s;
+      }
+      return '';
+    }
+
+    String line(WidgetTester tester) =>
+        tester.widget<Text>(find.byKey(const ValueKey('album-wear-line'))).data!;
+
+    SpiritStanding spirit(WidgetTester tester) => tester.widget<SpiritStanding>(find.descendant(
+        of: find.byKey(const ValueKey('album-wear-spirit')), matching: find.byType(SpiritStanding)));
+
+    testWidgets('위에 내 정령 + `누르면 바로 입어요` + 입은 소품 줄, 입은 칸은 `입는 중`·점선 고리, 나머지 `가짐`', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await openProps(tester, e);
+
+      expect(find.byKey(const ValueKey('album-wear-card')), findsOneWidget);
+      expect(find.text('누르면 바로 입어요'), findsOneWidget);
+      expect(line(tester), '베레모 · 여행복 · 갈색 신발 · 큰 붓 · 종이새');
+      for (final id in ['hat_01', 'cloth_02', 'shoe_01', 'hand_01', 'pet_01']) {
+        expect(state(id), '입는 중', reason: id);
+        expect(tester.widget<ItemCell>(_prop(id)).selected, isTrue, reason: id);
+      }
+      expect(state('bag_01'), '가짐');
+      expect(tester.widget<ItemCell>(_prop('bag_01')).selected, isFalse);
+      // 정령 미리보기는 정령 화면들과 같은 정령, 처음엔 기쁨 신호가 없다
+      expect(spirit(tester).cue, isNull);
+      // 맨 아래 꾸미기 링크
+      expect(find.text('꾸미기에서 색·얼굴 바꾸기'), findsOneWidget);
+      await end(tester, e);
+    });
+
+    testWidgets('안 입은 소품을 누르면 그 칸에 바로 입고(저장), 위 정령이 기뻐하고, 한 줄 토스트', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await openProps(tester, e);
+
+      // 가방 칸: 큰 붓 → 화구 가방
+      await tester.tap(_prop('bag_01'));
+      await settle(tester, () => state('bag_01') == '입는 중');
+      expect(state('bag_01'), '입는 중');
+      expect(state('hand_01'), '가짐');
+      expect((await look(tester, e)).slots['bag'], 'bag_01');
+      expect(line(tester), contains('화구 가방'));
+      expect(find.text('화구 가방 멨어요'), findsOneWidget);
+      // 기쁨: 칭찬과 같은 표정 + Rive joy 트리거, config joy.sec초
+      final cue = spirit(tester).cue!;
+      expect(cue.trigger, 'joy');
+      expect(cue.holdSec, 1);
+      expect(cue.expr, spiritPalette.cues.of('praise')!.expr);
+      await end(tester, e);
+    });
+
+    testWidgets('입은 것을 다시 누르면 벗는다. 옷은 다시 눌러도 벗지 않는다', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await openProps(tester, e);
+
+      await tester.tap(_prop('hat_01'));
+      await settle(tester, () => state('hat_01') == '가짐');
+      expect((await look(tester, e)).slots['hat'], isNull);
+      expect(find.text('베레모 벗었어요'), findsOneWidget);
+      expect(line(tester), isNot(contains('베레모')));
+      final joy = spirit(tester).cue;
+      expect(joy, isNotNull);
+
+      // 토스트가 사라진 뒤 옷을 누른다: 그대로, 토스트·기쁨 없음 (토스트 시간은 들어오는 움직임이 끝난 뒤부터 센다)
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(seconds: 2));
+      }
+      expect(find.byType(SnackBar), findsNothing);
+      await tester.tap(_prop('cloth_02'));
+      await settle(tester, () => false, tries: 8);
+      expect((await look(tester, e)).slots['cloth'], 'cloth_02');
+      expect(state('cloth_02'), '입는 중');
+      expect(find.byType(SnackBar), findsNothing);
+      expect(identical(spirit(tester).cue, joy), isTrue);
+      await end(tester, e);
+    });
+
+    testWidgets('꾸미기 링크를 누르면 꾸미기 화면 (색·얼굴 바꾸기)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await openProps(tester, e);
+      await tester.tap(find.text('꾸미기에서 색·얼굴 바꾸기'));
+      await transition(tester);
+      expect(find.byType(DecorateScreen), findsOneWidget);
       await end(tester, e);
     });
   });

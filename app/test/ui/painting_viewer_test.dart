@@ -1,16 +1,17 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/data/painting_saver.dart';
+import 'package:doobal/ui/album/album_screen.dart';
 import 'package:doobal/ui/album/painting_viewer.dart';
 import 'package:doobal/ui/common/framed_painting.dart';
 import 'package:doobal/ui/album/painting_share.dart';
 import 'package:doobal/ui/common/palette.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../domain/helpers.dart';
@@ -71,6 +72,22 @@ Future<void> _open(WidgetTester tester, UiEnv e, List<BigPainting> items, {int i
 /// 이미지를 뜨는 것(toImage)은 실제 시간이 걸려서 실제 비동기를 기다리며 화면을 갱신한다
 Future<void> _waitFor(WidgetTester tester, bool Function() done) =>
     settle(tester, done, tries: 80);
+
+/// 앱이 요청한 화면 방향을 차례로 적는다 (SystemChrome.setPreferredOrientations)
+List<List<String>> _recordOrientations(WidgetTester tester) {
+  final log = <List<String>>[];
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+    if (call.method == 'SystemChrome.setPreferredOrientations') {
+      log.add([for (final o in call.arguments as List) (o as String).split('.').last]);
+    }
+    return null;
+  });
+  addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+  return log;
+}
+
+const _rotatable = ['portraitUp', 'landscapeLeft', 'landscapeRight'];
+const _portrait = ['portraitUp'];
 
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
@@ -250,6 +267,96 @@ void main() {
       await nav.maybePop();
       await tester.pumpAndSettle();
       expect(find.byType(PaintingViewer), findsNothing);
+      await end(tester, e);
+    });
+  });
+
+  group('크게 보기만 가로 (16장 11/19, config album.bigView·ui.orientation)', () {
+    /// 폰을 돌린 것처럼 화면 크기를 바꾼다
+    Future<void> rotate(WidgetTester tester, {required bool landscape}) async {
+      tester.view.physicalSize = landscape ? const Size(844, 390) : const Size(390, 844);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('열면 세로·가로를 풀고(센서, 버튼 없음), 닫으면 세로로 되돌린다', (tester) async {
+      final log = _recordOrientations(tester);
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e, [_big('kr001')]);
+      expect(log.last, _rotatable);
+      // 돌리기 버튼은 없다 (위 아이콘은 저장·닫기 둘)
+      expect(find.byType(IconButton), findsNWidgets(2));
+
+      await tester.tap(_key('viewer-close'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PaintingViewer), findsNothing);
+      expect(log.last, _portrait);
+      await end(tester, e);
+    });
+
+    testWidgets('가로에서는 그림을 높이에 맞춰 화면 안에(contain) 둔다. 확대는 돌리면 1배로', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e, [_big('kr001'), _big('kr002')]);
+      // 세로: 폭에 맞춤 (좌우 12pt)
+      expect(tester.getSize(_key('viewer-painting-kr001')).width, closeTo(366, 1));
+
+      // 두 손가락으로 2배
+      final center = tester.getCenter(_key('viewer-painting-kr001'));
+      final a = await tester.startGesture(center - const Offset(20, 0));
+      final b = await tester.startGesture(center + const Offset(20, 0), pointer: 2);
+      for (var i = 1; i <= 6; i++) {
+        await a.moveTo(center - Offset(20.0 + i * 20, 0));
+        await b.moveTo(center + Offset(20.0 + i * 20, 0));
+        await tester.pump();
+      }
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+      expect(tester.widget<Transform>(_key('viewer-zoom-0')).transform.getMaxScaleOnAxis(), greaterThan(1.5));
+
+      await rotate(tester, landscape: true);
+      // 1배로 돌아오고, 그림(4:3 액자)은 화면 높이에 맞아 화면 안에 다 보인다
+      expect(tester.widget<Transform>(_key('viewer-zoom-0')).transform.getMaxScaleOnAxis(), closeTo(1, 0.001));
+      final rect = tester.getRect(_key('viewer-painting-kr001'));
+      expect(rect.height, closeTo(390, 1));
+      expect(rect.width, closeTo(390 * 4 / 3, 1));
+      expect(rect.left, greaterThanOrEqualTo(0));
+      expect(rect.right, lessThanOrEqualTo(844));
+      expect(rect.center.dx, closeTo(422, 1));
+
+      // 가로에서도 넘기기·아래로 밀어 닫기는 그대로
+      await tester.fling(_key('viewer-drag'), const Offset(-300, 0), 1500);
+      await tester.pumpAndSettle();
+      expect(_key('viewer-painting-kr002'), findsOneWidget);
+      await tester.drag(_key('viewer-drag'), const Offset(0, 200));
+      await tester.pumpAndSettle();
+      expect(find.byType(PaintingViewer), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('가로에서 저장해도 같은 크기의 그림 PNG (원본 폭에 맞춤)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e, [_big('kr001')]);
+      await rotate(tester, landscape: true);
+      await tester.tap(_key('viewer-save'));
+      await _waitFor(tester, () => _key('viewer-toast').evaluate().isNotEmpty);
+      final (w, h) = _pngSize(e.saver.calls.single.png)!;
+      expect((w - 1536).abs() <= 1, isTrue, reason: '$w');
+      expect((h - 1152).abs() <= 1, isTrue, reason: '$h');
+      await end(tester, e);
+    });
+
+    testWidgets('다른 화면(화집)은 세로 고정 그대로: 가로를 풀지 않는다', (tester) async {
+      final log = _recordOrientations(tester);
+      final e = UiEnv();
+      await e.seed(tester);
+      await openOnTop(tester, e, const AlbumScreen(),
+          ready: () => find.byKey(const ValueKey('view-all')).evaluate().isNotEmpty);
+      await settle(tester, () => false, tries: 6);
+      expect(log.where((o) => o.length > 1), isEmpty);
       await end(tester, e);
     });
   });

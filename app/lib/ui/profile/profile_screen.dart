@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/profile_service.dart';
 import '../../app/providers.dart';
 import '../../app/sync_service.dart';
+import '../../domain/badge.dart' as stamp;
 import '../../domain/rules.dart';
 import '../../domain/spirit_look.dart';
 import '../../domain/time_kst.dart';
@@ -15,6 +16,7 @@ import '../common/game_button.dart';
 import '../common/ink_card.dart';
 import '../common/palette.dart';
 import '../common/screen_header.dart';
+import '../album/album_stamps.dart';
 import '../decorate/decorate_screen.dart';
 import '../note/note_screen.dart';
 import '../settings/settings_screen.dart';
@@ -28,19 +30,43 @@ const _barMinHeight = 4.0;
 const _weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
 
 /// 나의 정보 = 아래 탭 ‘나’의 처음 화면 (16장 11/18 ⑥·11/19, 캔버스 9-1): 프로필(정령·닉네임 연필·꾸미기),
-/// 숫자 카드 4개, 최근 14일 걸음 막대, 목록 줄 노트(내 방명록·걷기 기록)·설정. 탭 처음 화면이라 뒤로 버튼이 없다.
-/// 출발 동네 바꾸기는 없다 (가안). 도장(배지)은 화집에서 옮겨 오는 일(T18) 때 더한다
-class ProfileScreen extends ConsumerWidget {
+/// 숫자 카드 4개, 최근 14일 걸음 막대, 도장(16장 11/19 ③, 화집에서 옮겨 옴), 목록 줄 노트(내 방명록·걷기 기록)·설정.
+/// 차례는 config ui.tabs.me(profile·records·badges·customize·nickname·note·settings). 탭 처음 화면이라 뒤로 버튼이 없다.
+/// 출발 동네 바꾸기는 없다 (가안). 나 탭에는 새 소식 점이 없어(ui.tabs.dots.me 비었음) 보이면 새 도장을 본 것으로 둔다
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  var _marking = false;
+
+  /// 안 본 도장이 있고 이 화면이 보이면(탭이 숨으면 TickerMode가 꺼진다) 본 것으로 적는다
+  void _seeStamps(Snapshot snap) {
+    if (_marking || snap.unseenBadges <= 0 || !TickerMode.valuesOf(context).enabled) return;
+    _marking = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final svc = await ref.read(syncServiceProvider.future);
+        await svc.markBadgesSeen();
+        if (mounted) ref.invalidate(snapshotProvider);
+      } finally {
+        _marking = false;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final snap = ref.watch(snapshotProvider).value;
     final me = ref.watch(meProvider).value;
     final spirit = ref.watch(spiritLookProvider);
     final bars = ref.watch(recentDaysProvider).value;
     final rules = ref.watch(rulesProvider).value;
     final ready = snap != null && me != null && bars != null && rules != null;
+    if (snap != null) _seeStamps(snap);
 
     return Scaffold(
       body: SafeArea(
@@ -120,7 +146,9 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _DaysCard(bars: bars, today: snap.today),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
+          const _Stamps(),
+          const SizedBox(height: 16),
           InkCard(
             padding: EdgeInsets.zero,
             child: Column(
@@ -329,6 +357,36 @@ class _DaysCard extends StatelessWidget {
           border: Border.all(color: Palette.ink, width: 1.5),
         ),
       ),
+    );
+  }
+}
+
+/// 도장 (16장 11/19 ③, 화집 도장 탭을 옮겨 옴): 제목 `도장` + 받은 수, 묶음별 카드(받은 도장만 진하게, 못 받은 도장은
+/// 흐린 빈 고리와 조건 글). 도장 목록은 그림·소품과 달리 ‘가진 것만’이 아니다(16장 11/20은 배낭 줄)
+class _Stamps extends ConsumerWidget {
+  const _Stamps();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final badges = ref.watch(badgeCatalogProvider).value?.badges;
+    final owned = ref.watch(ownedBadgesProvider).value;
+    // 읽어 오는 동안은 비워 둔다
+    if (badges == null || owned == null) return const SizedBox.shrink();
+    final got = badges.where((b) => owned.containsKey(b.id)).length;
+    return Column(
+      key: const ValueKey('me-stamps'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Expanded(child: Text('도장', style: AppText.cardTitle(context))),
+            Text('$got / ${badges.length}', key: const ValueKey('me-stamps-count'), style: AppText.label),
+          ],
+        ),
+        StampSections(sections: stamp.badgeSections(badges), owned: owned),
+      ],
     );
   }
 }
