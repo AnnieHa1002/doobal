@@ -3,7 +3,7 @@ import 'package:rive/rive.dart' as rive;
 
 import 'spirit_character.dart';
 
-/// 정령 riv(`spirit_v36.riv` 11.8MB)를 그리기(Factory)마다 한 번 읽어 여러 정령이 같이 쓴다 (정령 계약 7장).
+/// 정령 riv(`spirit_final_v11.riv` 17.7MB, 지금은 워터마크 판)를 그리기(Factory)마다 한 번 읽어 여러 정령이 같이 쓴다 (정령 계약 7장).
 /// 컨트롤러(아트보드·상태 머신·뷰 모델 인스턴스)는 정령마다 따로 만든다.
 /// 앱 기본 그리기는 앱 시작 때 [SpiritCharacter.preload]로 읽어 끝까지 두고, 다른 그리기(하루 카드 공유 이미지의 Flutter 그리기)는
 /// 쓰는 정령이 하나도 없으면 놓는다 (전처럼 다 쓰면 dispose)

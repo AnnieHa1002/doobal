@@ -16,7 +16,7 @@ dependencies:
   drift: ^2.35.3
   drift_flutter: ^0.3.1
   health: ^13.3.2
-  rive: ^0.14.11
+  rive: 0.15.0-dev.4
   app_settings: ^9.0.1
   share_plus: ^13.3.1
   pedometer: ^4.2.0

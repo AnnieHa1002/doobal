@@ -53,7 +53,9 @@ void main() {
         tick(c, 1);
         expect(c.instance.number('${p.slot}Choice')!.value, p.choice);
         // 소품 색은 직접 고르지 않아서 Rive에 넣는 기본색 그대로 (16장 11/4)
-        expect(c.instance.color(p.colorField)!.value.toARGB32(), p.argb);
+        if (p.colorField case final field?) {
+          expect(c.instance.color(field)!.value.toARGB32(), p.argb);
+        }
       }
     }
     c.play(SpiritMotion.idle, direction: 2);

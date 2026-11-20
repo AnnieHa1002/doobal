@@ -28,9 +28,11 @@ class SpiritCharacter extends StatefulWidget {
     this.onReady,
     this.riveFactory,
   });
-  /// 앱용 정령 Rive v36 (16장 11/14 정령 기준, 아트보드 `Spirit` 502×600, 바탕 투명, 입력은 v33과 같다.
-  /// 머리 선택 5 새싹·6 꽃은 riv에만 있고 앱은 보내지 않는다)
-  static const asset = 'assets/rive/spirit_v36.riv';
+  /// 앱용 정령 Rive 옷 최종 v11 (16장 11/20, 정령 계약 v0.11, config `character.rive.next.file`). 아트보드 `Spirit`
+  /// 502×600, 바탕 투명, 입력 이름은 v36과 같고 친구 pet 6~13·물빛 구슬 float 6·친구 색 8개가 늘었다.
+  /// 3월 초 정식(워터마크 없는) 내보내기 전까지는 워터마크 판(config `next.fileIdWatermarked`)을 같은 이름으로 둔다.
+  /// 머리 선택 5 새싹·6 꽃은 riv에만 있고 앱은 보내지 않는다
+  static const asset = 'assets/rive/spirit_final_v11.riv';
   @visibleForTesting
   static rive.Factory renderer = rive.Factory.rive;
 
@@ -179,7 +181,15 @@ class _SpiritCharacterState extends State<SpiritCharacter>
   Widget build(BuildContext context) {
     final controller = _controller;
     if (controller == null) return const SizedBox.expand();
-    // v36 `Spirit` 아트보드(502×600)를 기존 600 캔버스(머리 위 y150~발 y440 잣대)에 놓는다.
+    // rive 0.15는 바뀐 때만 다시 그리는데, v11 안 스크립트 그림(ScriptedDrawable: 갈매기–연잎 자리·친구)은 바뀜으로
+    // 잡히지 않아 멈춰 보일 수 있어 매 프레임 그린다 (개발인계_20261120 2장, config next.runtime.drawOptimization).
+    // 폰에서 쉼터 프레임 시간을 잰다
+    final art = rive.RiveWidget(
+      controller: controller,
+      fit: rive.Fit.contain,
+      drawOptimization: rive.DrawOptimization.alwaysDraw,
+    );
+    // v11 `Spirit` 아트보드(502×600)를 기존 600 캔버스(머리 위 y150~발 y440 잣대)에 놓는다.
     // 발 디딤점과 몸 키를 v33 자리(11/12 통합본과 픽셀까지 같게 맞춘 것)와 같게 둔다
     final view = FittedBox(
       fit: BoxFit.contain,
@@ -198,9 +208,9 @@ class _SpiritCharacterState extends State<SpiritCharacter>
                       key: const ValueKey('spirit-mirrored'),
                       alignment: _footAxis,
                       transform: Matrix4.diagonal3Values(-1, 1, 1),
-                      child: rive.RiveWidget(controller: controller, fit: rive.Fit.contain),
+                      child: art,
                     )
-                  : rive.RiveWidget(controller: controller, fit: rive.Fit.contain),
+                  : art,
             ),
           ],
         ),

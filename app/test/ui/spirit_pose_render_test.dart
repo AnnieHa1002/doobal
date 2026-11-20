@@ -11,10 +11,14 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rive/rive.dart' as rive;
 
-/// v36을 아트보드 그대로(502×600, 1px = 1px) 그려 자세·누르기가 실제 그림을 바꾸는지 본다.
+import 'spirit_capture.dart';
+
+/// 앱 정령 riv를 아트보드 그대로(502×600, 1px = 1px) 그려 자세·누르기가 실제 그림을 바꾸는지 본다.
 /// 11/16 T5 정리: 옛 사람형 파일(doobal_custom.riv)로 보던 자세·투명 바탕·누르기 시험을 v36으로 옮김.
-/// 숫자는 11/16 이 방법으로 잰 값(자세 0·여행복·소품 없음): 정면 x 105~384·y 86~559(둥둥 ±6px),
-/// 앉기 정면 발 줄 y 547 고정, 앉기 옆 y 536 고정, 잠들기 y 247~460, 옆 이동 x 126~408
+/// 11/21 T17a: 옷 최종 v11(rive 0.15)로. 그림을 뜨기 전 실시간 틈을 준다(spirit_capture.dart, 지연 그리기).
+/// 숫자는 이 방법으로 잰 값(자세 0·여행복·소품 없음). 정면 x 105~384·y 86~559(둥둥 ±6px)는 v36과 같다.
+/// v11에서 바뀐 것: 앉기 정면 발 줄 y 547 → 538~540(앉아서도 2px쯤 움직임), 앉기 옆 536 → 517,
+/// 잠들기 y 247~460 → 165~468(머리가 더 위, Codex 납품 qa/clothes_5x7과 같은 모양)
 
 const _w = 502, _h = 600;
 
@@ -67,8 +71,7 @@ void main() {
     for (var i = 0; i < frames; i++) {
       c.advance(1 / 60);
     }
-    c.scheduleRepaint();
-    await tester.pump();
+    await settleSpirit(tester, [c]);
     return (await tester.runAsync(() async {
       final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       final image = await boundary.toImage();
@@ -113,6 +116,7 @@ void main() {
   testWidgets('자세 7개를 실제로 그린다: 바탕은 투명, 앉기는 발이 땅에 붙고 잠들기는 눕는다, 정면으로 돌아오면 처음 자리',
       (tester) async {
     await show(tester);
+    await warmUpSpirit(tester, [c], (_) async => box(await capture(tester)).$2 > 130);
     c.setPose(0);
     final front = box(await capture(tester, 60));
     frontFloat(front, '정면');
@@ -130,17 +134,19 @@ void main() {
       }
     }
 
-    // 앉기(정면·옆)는 둥둥 오르내림이 없어 발 줄이 그대로이고, 정면 둥둥의 발보다 위다(그림자가 몸에 붙음)
+    // 앉기(정면·옆)는 둥둥 오르내림이 없어 발 줄이 거의 그대로이고(v11은 2px 안), 정면 둥둥의 발보다 위다
     for (final pose in [2, 3]) {
-      final bottoms = {for (final b in seen[pose]!) b.$4};
-      expect(bottoms, hasLength(1), reason: '앉기 $pose 발 줄이 움직였다: $bottoms');
-      expect(bottoms.single, inInclusiveRange(520, 552), reason: '앉기 $pose 발 줄');
+      final bottoms = [for (final b in seen[pose]!) b.$4]..sort();
+      expect(bottoms.last - bottoms.first, lessThanOrEqualTo(3), reason: '앉기 $pose 발 줄이 움직였다: $bottoms');
+      for (final y in bottoms) {
+        expect(y, inInclusiveRange(510, 552), reason: '앉기 $pose 발 줄');
+      }
     }
     // 앉기 정면은 다리·팔이 옆으로 나와 정면 둥둥보다 넓다
     expect(seen[2]!.first.$3 - seen[2]!.first.$1, greaterThan(front.$3 - front.$1 + 40));
-    // 잠들기는 누워서 몸 위 끝이 200 아래로 내려가고 아래 끝은 480 위다
+    // 잠들기는 누워서 몸 위 끝이 150 아래로 내려가고(서 있으면 86) 아래 끝은 480 위다
     for (final b in seen[4]!) {
-      expect(b.$2, greaterThan(200), reason: '잠들기 머리 위');
+      expect(b.$2, greaterThan(150), reason: '잠들기 머리 위');
       expect(b.$4, lessThan(480), reason: '잠들기 아래');
     }
     // 옆 이동은 몸이 오른쪽으로 쏠린다 (옆모습은 왼쪽을 본다)
@@ -170,6 +176,7 @@ void main() {
 
   testWidgets('머리를 누르면 머리가 눌리고 배를 누르면 배가 옆으로 퍼진다, 반응이 끝나면 정면 둥둥 그대로', (tester) async {
     await show(tester);
+    await warmUpSpirit(tester, [c], (_) async => box(await capture(tester)).$2 > 130);
     c.setPose(0);
     await capture(tester, 120);
 
@@ -205,7 +212,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('개발 화면 ‘정령 움직임’: 자세 7·표정 6·소품·뒤집기를 고르면 v36 정령에 그대로 넘긴다', (tester) async {
+  testWidgets('개발 화면 ‘정령 움직임’: 자세 7·표정 6·소품·뒤집기를 고르면 앱 정령에 그대로 넘긴다', (tester) async {
     tester.view.physicalSize = const Size(420, 1500);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -217,7 +224,8 @@ void main() {
       await tester.pump();
     }
     expect(tester.widget<OutlinedButton>(react).onPressed, isNotNull, reason: '정령을 읽으면 반응 단추가 켜진다');
-    expect(find.byType(ChoiceChip), findsNWidgets(7 + 6 + 6));
+    // 소품 줄은 v36 때 6 + v11 옷·친구 8·구슬 미리보기 11 (T17a, Codex 앱 패치)
+    expect(find.byType(ChoiceChip), findsNWidgets(7 + 6 + 17));
     expect((spirit().pose, spirit().expression, spirit().mirrored), (0, 0, false));
 
     await tester.tap(find.text('4 잠들기'));

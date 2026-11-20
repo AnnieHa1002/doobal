@@ -8,6 +8,7 @@ import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart' show Frame;
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/onboarding.dart';
+import 'package:doobal/domain/prop.dart' show PropUnlockKind;
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -102,6 +103,47 @@ void main() {
       expect(r.nickname, '둘');
       expect((jsonDecode(r.look!) as Map<String, dynamic>)['body'],
           {'kind': 'custom', 'hex': '#102030'});
+    });
+  });
+
+  // T17a: 정령 만들기를 마칠 때 시작 선물 물빛 구슬(props float_04, unlock gift·on spiritMakerDone·equipOnStart)
+  group('saveMaker', () {
+    test('물빛 구슬을 주고(새 소품) 입힌 모습으로 닉네임과 같이 적는다, 다음 단계는 출발 동네', () async {
+      await svc.confirmAge(_at);
+      const look = Look(eyes: 'cat', body: SwatchBodyColor(7));
+      await svc.saveMaker('나그네', look, props, _later);
+      final r = (await svc.row())!;
+      expect(r.nickname, '나그네');
+      expect(Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>), look.withSlot('float', 'float_04'));
+      final owned = await db.select(db.propsOwned).get();
+      expect([for (final o in owned) (o.propId, o.unlockedUtc, o.seen)],
+          [('float_04', _later.millisecondsSinceEpoch, false)]);
+      expect(await svc.step(), OnboardingStep.home);
+    });
+
+    test('선물은 props의 gift·spiritMakerDone만: 지금 데이터에서는 물빛 구슬 하나', () {
+      final gifts = [
+        for (final p in props)
+          if (p.kind == PropUnlockKind.gift && p.unlockOn == 'spiritMakerDone') (p.id, p.slot, p.equipOnStart),
+      ];
+      expect(gifts, [('float_04', 'float', true)]);
+    });
+
+    test('입힌 뒤 꾸미기로 벗으면 다시 읽어도 벗은 채 (saveMe·saveLook은 선물을 다시 입히지 않는다)', () async {
+      await svc.saveMaker('나그네', Look.initial, props, _later);
+      expect((await svc.me()).look.slots['float'], 'float_04');
+      await svc.saveLook((await svc.me()).look.withSlot('float', null));
+      expect((await ProfileService(db).me()).look.slots['float'], isNull);
+      await svc.saveMe('바꾼 이름', (await svc.me()).look);
+      expect((await svc.me()).look.slots['float'], isNull);
+      expect((await db.select(db.propsOwned).get()).map((o) => o.propId), ['float_04']);
+    });
+
+    test('거래 하나: 모습 저장이 실패하면 선물 기록도 남지 않는다', () async {
+      await db.customStatement(
+          "CREATE TRIGGER no_profile BEFORE INSERT ON profile BEGIN SELECT RAISE(ABORT, 'test'); END");
+      await expectLater(svc.saveMaker('나그네', Look.initial, props, _later), throwsA(anything));
+      expect(await db.select(db.propsOwned).get(), isEmpty);
     });
   });
 

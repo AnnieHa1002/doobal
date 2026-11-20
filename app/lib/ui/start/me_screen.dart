@@ -64,7 +64,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final check = _check;
     if (!check.ok) return;
     FocusManager.instance.primaryFocus?.unfocus();
-    await ref.read(profileServiceProvider).saveMe(check.value, _look);
+    await ref.read(profileServiceProvider).saveMaker(
+      check.value, _look, await ref.read(propsProvider.future), ref.read(clockProvider)(),
+    );
     ref.invalidate(onboardingStepProvider);
   }
 

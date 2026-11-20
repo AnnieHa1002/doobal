@@ -47,11 +47,12 @@ void main() {
     await db.close();
   });
 
-  test('원본 PSD 목록 수와 기본 얼굴 값, 소품 색 입력 37개', () {
+  // 소품 색 입력: v32 37개 + 정령 v11 상점 친구 8개 (물빛 구슬은 색 입력 없음, 11/21 T17a)
+  test('원본 PSD 목록 수와 기본 얼굴 값, 소품 색 입력 45개', () {
     expect([eyeParts.length, browParts.length, noseParts.length, mouthParts.length], [6, 7, 8, 8]);
     final s = spiritLookOf(Look.initial);
     expect([s.eye, s.brow, s.nose, s.mouth], [0, 1, 6, 6]);
-    expect(s.colors.length, 37);
+    expect(s.colors.length, 45);
     expect(Look.fromJson(jsonDecode(jsonEncode(Look.initial.toJson())) as Map<String, dynamic>), Look.initial);
   });
 }
