@@ -281,7 +281,8 @@ void main() {
           (TrailUnlockKind.initial, null, false));
       final rest = _trails.patterns.skip(1);
       expect(rest.map((p) => p.km), [10, 50, 100]);
-      expect(rest.every((p) => p.kind == TrailUnlockKind.trailKm && p.shopPrice == 200 && p.pending),
+      // trails v2: 무늬 그림이 들어와 pending을 지웠다 (검수 A27, 16장 11/20)
+      expect(rest.every((p) => p.kind == TrailUnlockKind.trailKm && p.shopPrice == 200 && !p.pending),
           isTrue);
       expect((_trails.byId('trail_02')!.tile, _trails.byId('trail_02')!.cap),
           ('map_trail_petal_tile_v01', 'map_trail_petal_cap_v01'));

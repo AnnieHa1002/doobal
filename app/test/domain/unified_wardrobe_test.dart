@@ -19,7 +19,14 @@ const _rigColors = [
   'starLanternColor', 'lotusLeafFloatColor', 'smallMoonFloatColor', 'floatCloudColor', 'floatBalloonColor',
 ];
 
-/// props.json에서 `rive.pending`인 소품: riv 납품 전이라 코드 표(unifiedProps)에 아직 없다 (props v9)
+/// 코드 표(unifiedProps)에 아직 없는 소품: 상점 미니 친구 8(petChoice 6~13)과 물빛 구슬(floatChoice 6).
+/// props v10은 정령 옷 v11 inputs.md로 확인돼 `rive.pending`을 지웠지만, 앱이 쓰는 riv는 아직 v36이라
+/// 표에는 정령 v11 연결(T17, 개발인계_20261120 2·7장) 때 더한다
+const _notInRivYet = {
+  'pet_06', 'pet_07', 'pet_08', 'pet_09', 'pet_10', 'pet_11', 'pet_12', 'pet_13', 'float_04',
+};
+
+/// props.json에서 `rive.pending`인 소품 (props v10부터 없음)
 Set<String> _rivePending() {
   final raw = jsonDecode(File('assets/data/props.json').readAsStringSync()) as Map<String, dynamic>;
   return {
@@ -31,19 +38,22 @@ Set<String> _rivePending() {
 void main() {
   // 11/12 통합 작업의 표(unified_wardrobe.dart)가 v32 Rive 소스 시험 버튼 이름과 맞는지 (11/13 대조)
   group('소품 → Rive 칸·번호·색 (unifiedProps)', () {
-    final pending = _rivePending();
     final mvp = [
       for (final p in props)
-        if (!p.isColorVariant && p.slot != 'effect' && !pending.contains(p.id)) p,
+        if (!p.isColorVariant && p.slot != 'effect' && !_notInRivYet.contains(p.id)) p,
     ];
     final byId = {for (final u in unifiedProps) u.id: u};
 
-    test('riv 납품 전 소품은 상점 미니 친구 8(petChoice 6~13)과 물빛 구슬(floatChoice 6)뿐이고 코드 표에 없다', () {
-      expect(pending, {for (var n = 6; n <= 13; n++) 'pet_${n.toString().padLeft(2, '0')}', 'float_04'});
-      expect(pending.where(byId.containsKey), isEmpty);
+    test('props v10은 rive.pending이 없고, 코드 표에 아직 없는 것은 상점 미니 친구 8과 물빛 구슬(정령 v11 연결 전)뿐', () {
+      expect(_rivePending(), isEmpty);
+      expect(_notInRivYet, {for (var n = 6; n <= 13; n++) 'pet_${n.toString().padLeft(2, '0')}', 'float_04'});
+      expect(_notInRivYet.where(byId.containsKey), isEmpty);
+      // 물빛 구슬은 공개 Color 입력이 없어 색 이름이 null이다 (props v10)
+      final bead = props.firstWhere((p) => p.id == 'float_04');
+      expect(bead.slot, 'float');
     });
 
-    test('효과·riv 납품 전 말고 모든 소품(37)이 자기 칸에 있다', () {
+    test('효과·정령 v11 전 소품 말고 모든 소품(37)이 자기 칸에 있다', () {
       expect(mvp, hasLength(37));
       expect(byId.keys.toSet(), {for (final p in mvp) p.id});
       for (final p in mvp) {
@@ -74,7 +84,7 @@ void main() {
       final withRive = <String>{};
       for (final m in (raw['props'] as List).cast<Map<String, dynamic>>()) {
         final rive = m['rive'] as Map<String, dynamic>?;
-        if (rive == null || rive['pending'] == true) continue;
+        if (rive == null || rive['pending'] == true || _notInRivYet.contains(m['id'])) continue;
         final base = byId[m['variantOf'] ?? m['id']];
         expect(base, isNotNull, reason: '${m['id']}: 코드 표에 없다');
         expect((rive['choice'], rive['n'], rive['color']), ('${base!.slot}Choice', base.choice, base.colorField),
