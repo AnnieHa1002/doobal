@@ -1,7 +1,7 @@
 {
- "version": 1,
- "asOf": "2026-11-19",
- "source": "v1(11/19 개발 기획, 16장 11/18 쉼터 꾸미기·11/19 쉼터·상점 세부, 기획/럭_상점.md v2.7 쉼터 꾸밈 물품 12개): 보상 4 + 상점 8. 이름·값·얻는 법은 럭_상점 v2.7 그대로(값은 가안, 베타 뒤 조정). 그림·크기는 Codex 쉼터 물품 12장 납품 뒤(art pending). 놓는 규칙은 config rest.decor, 땅 띠·못 놓는 자리는 themes/camp_wide.json v4 decor",
+ "version": 2,
+ "asOf": "2026-11-20",
+ "source": "v2(11/20 밤 개발 기획, 검수 A29 통과 camp_deco_v01_20261120 README): 물품마다 canvasPx·showPx(세로 1170×2532 화면 px, 가안)·groundAt·걸 자리 paintingSlotsAt(slot=[x,y,w,h]·hangAt, 캔버스 px)·빛 light(lightAt·lightRadiusPx 화면 px, 낮엔 꺼짐). 좌우 뒤집기는 x→W−x, slot x→W−x−w. 액자·그림은 PNG에 없고 앱이 얹음. / v1(11/19 개발 기획, 16장 11/18 쉼터 꾸미기·11/19 쉼터·상점 세부, 기획/럭_상점.md v2.7 쉼터 꾸밈 물품 12개): 보상 4 + 상점 8. 이름·값·얻는 법은 럭_상점 v2.7 그대로(값은 가안, 베타 뒤 조정). 그림·크기는 Codex 쉼터 물품 12장 납품 뒤(art pending). 놓는 규칙은 config rest.decor, 땅 띠·못 놓는 자리는 themes/camp_wide.json v4 decor",
  "maxPlaced": 20,
  "perItem": 1,
  "items": [
@@ -15,7 +15,35 @@
    "paintingSlots": 1,
    "startPainting": "sketch",
    "order": 1,
-   "art": "obj_camp_deco_easel_v01_clean"
+   "art": "obj_camp_deco_easel_v01_clean",
+   "canvasPx": [
+    768,
+    768
+   ],
+   "showPx": [
+    216,
+    330
+   ],
+   "groundAt": [
+    384,
+    707
+   ],
+   "paintingSlotsAt": [
+    {
+     "slot": [
+      192,
+      202,
+      391,
+      293
+     ],
+     "hangAt": [
+      387,
+      202
+     ],
+     "frameVisiblePx": 150,
+     "attach": "bottom_on_ledge"
+    }
+   ]
   },
   {
    "id": "decor_hanging_frame",
@@ -26,7 +54,35 @@
    },
    "paintingSlots": 1,
    "order": 2,
-   "art": "obj_camp_deco_hanging_frame_v01_clean"
+   "art": "obj_camp_deco_hanging_frame_v01_clean",
+   "canvasPx": [
+    768,
+    768
+   ],
+   "showPx": [
+    221,
+    300
+   ],
+   "groundAt": [
+    384,
+    707
+   ],
+   "paintingSlotsAt": [
+    {
+     "slot": [
+      266,
+      230,
+      429,
+      322
+     ],
+     "hangAt": [
+      480,
+      230
+     ],
+     "frameVisiblePx": 150,
+     "attach": "top_at_brass_ring"
+    }
+   ]
   },
   {
    "id": "decor_clothesline",
@@ -37,7 +93,63 @@
    },
    "paintingSlots": 3,
    "order": 3,
-   "art": "obj_camp_deco_clothesline_v01_clean"
+   "art": "obj_camp_deco_clothesline_v01_clean",
+   "canvasPx": [
+    1024,
+    768
+   ],
+   "showPx": [
+    700,
+    235
+   ],
+   "groundAt": [
+    512,
+    707
+   ],
+   "paintingSlotsAt": [
+    {
+     "slot": [
+      168,
+      522,
+      211,
+      158
+     ],
+     "hangAt": [
+      273,
+      522
+     ],
+     "frameVisiblePx": 120,
+     "attach": "top_at_peg_tip"
+    },
+    {
+     "slot": [
+      408,
+      522,
+      211,
+      158
+     ],
+     "hangAt": [
+      513,
+      522
+     ],
+     "frameVisiblePx": 120,
+     "attach": "top_at_peg_tip"
+    },
+    {
+     "slot": [
+      646,
+      522,
+      211,
+      158
+     ],
+     "hangAt": [
+      751,
+      522
+     ],
+     "frameVisiblePx": 120,
+     "attach": "top_at_peg_tip"
+    }
+   ]
   },
   {
    "id": "decor_big_frame",
@@ -48,7 +160,35 @@
    },
    "paintingSlots": 1,
    "order": 4,
-   "art": "obj_camp_deco_big_frame_v01_clean"
+   "art": "obj_camp_deco_big_frame_v01_clean",
+   "canvasPx": [
+    768,
+    1024
+   ],
+   "showPx": [
+    347,
+    420
+   ],
+   "groundAt": [
+    384,
+    942
+   ],
+   "paintingSlotsAt": [
+    {
+     "slot": [
+      52,
+      291,
+      637,
+      478
+     ],
+     "hangAt": [
+      371,
+      291
+     ],
+     "frameVisiblePx": 240,
+     "attach": "bottom_on_ledge"
+    }
+   ]
   },
   {
    "id": "decor_lantern",
@@ -59,7 +199,27 @@
    },
    "nightLight": true,
    "order": 5,
-   "art": "obj_camp_deco_lantern_v01_clean"
+   "art": "obj_camp_deco_lantern_v01_clean",
+   "canvasPx": [
+    512,
+    512
+   ],
+   "showPx": [
+    146,
+    230
+   ],
+   "groundAt": [
+    256,
+    471
+   ],
+   "light": {
+    "lightAt": [
+     323,
+     231
+    ],
+    "lightRadiusPx": 220,
+    "dayOff": true
+   }
   },
   {
    "id": "decor_stone_lantern",
@@ -70,7 +230,27 @@
    },
    "nightLight": true,
    "order": 6,
-   "art": "obj_camp_deco_stone_lantern_v01_clean"
+   "art": "obj_camp_deco_stone_lantern_v01_clean",
+   "canvasPx": [
+    512,
+    768
+   ],
+   "showPx": [
+    207,
+    300
+   ],
+   "groundAt": [
+    256,
+    707
+   ],
+   "light": {
+    "lightAt": [
+     242,
+     357
+    ],
+    "lightRadiusPx": 260,
+    "dayOff": true
+   }
   },
   {
    "id": "decor_bench",
@@ -80,7 +260,19 @@
     "price": 400
    },
    "order": 7,
-   "art": "obj_camp_deco_bench_v01_clean"
+   "art": "obj_camp_deco_bench_v01_clean",
+   "canvasPx": [
+    768,
+    512
+   ],
+   "showPx": [
+    360,
+    128
+   ],
+   "groundAt": [
+    384,
+    471
+   ]
   },
   {
    "id": "decor_stump",
@@ -90,7 +282,19 @@
     "price": 200
    },
    "order": 8,
-   "art": "obj_camp_deco_stump_v01_clean"
+   "art": "obj_camp_deco_stump_v01_clean",
+   "canvasPx": [
+    512,
+    512
+   ],
+   "showPx": [
+    241,
+    140
+   ],
+   "groundAt": [
+    256,
+    471
+   ]
   },
   {
    "id": "decor_flower_pot",
@@ -100,7 +304,19 @@
     "price": 200
    },
    "order": 9,
-   "art": "obj_camp_deco_flower_pot_v01_clean"
+   "art": "obj_camp_deco_flower_pot_v01_clean",
+   "canvasPx": [
+    512,
+    512
+   ],
+   "showPx": [
+    111,
+    150
+   ],
+   "groundAt": [
+    256,
+    471
+   ]
   },
   {
    "id": "decor_woodpile",
@@ -110,7 +326,19 @@
     "price": 200
    },
    "order": 10,
-   "art": "obj_camp_deco_woodpile_v01_clean"
+   "art": "obj_camp_deco_woodpile_v01_clean",
+   "canvasPx": [
+    768,
+    512
+   ],
+   "showPx": [
+    320,
+    162
+   ],
+   "groundAt": [
+    384,
+    471
+   ]
   },
   {
    "id": "decor_hammock",
@@ -120,7 +348,19 @@
     "price": 600
    },
    "order": 11,
-   "art": "obj_camp_deco_hammock_v01_clean"
+   "art": "obj_camp_deco_hammock_v01_clean",
+   "canvasPx": [
+    1024,
+    768
+   ],
+   "showPx": [
+    620,
+    321
+   ],
+   "groundAt": [
+    512,
+    707
+   ]
   },
   {
    "id": "decor_pond",
@@ -130,12 +370,24 @@
     "price": 800
    },
    "order": 12,
-   "art": "obj_camp_deco_pond_v01_clean"
+   "art": "obj_camp_deco_pond_v01_clean",
+   "canvasPx": [
+    1024,
+    512
+   ],
+   "showPx": [
+    560,
+    172
+   ],
+   "groundAt": [
+    512,
+    471
+   ]
   }
  ],
  "art": {
-  "pending": true,
-  "folder": "Assets/02_Backgrounds_배경/camp_deco_v01/",
+  "pending": false,
+  "folder": "Assets/02_Backgrounds_배경/camp_deco_v01_20261120/",
   "fileRule": "obj_camp_deco_{id 뒤 이름}_v01_clean.png(디자인기획/codex_camp_deco_v01 6장 id와 같음)",
   "fromReadme": [
    "slot",
@@ -144,7 +396,13 @@
    "lightRadiusPx",
    "바닥 선(캔버스 아래 8%)"
   ],
-  "note": "Codex 납품 README의 걸 자리(slot·hangAt)·빛 자리(lightAt·lightRadiusPx)·바닥 선을 받아 물품마다 채움. 화면 크기는 지시서 6장 가안(세로 1170×2532 px). 그전엔 앱이 자리표시 상자"
+  "note": "Codex 납품 README의 걸 자리(slot·hangAt)·빛 자리(lightAt·lightRadiusPx)·바닥 선을 받아 물품마다 채움. 화면 크기는 지시서 6장 가안(세로 1170×2532 px). 그전엔 앱이 자리표시 상자",
+  "driveId": "1ZEQUM-980bviEtI1Eq4HSVSu1Ggj4_W_",
+  "icons": {
+   "folder": "camp_deco_icons_v01_20261120",
+   "driveId": "1xHabt15CLgfOz05gMiWUQfD__N8yWLV-",
+   "sideCustomize": "기본안(망치 + 화분, 16장 11/20 Q014) — 팻말안은 안 씀"
+  }
  },
  "unlockNote": "landmarksVisited = 도착한 서로 다른 명소 수(내 동네 스케치 제외, 재방문은 안 셈). 럭_상점 v2.7 ‘첫 명소 도착·명소 5곳·10곳’을 이렇게 셈(11/19 Annie 확정). 판정은 동기화 끝 소품 해금과 같은 자리. gift는 coins.firstSketchGift",
  "paintingNote": "그림 거는 물품마다 화집에서 얻은 그림을 따로 고름(같은 그림을 여러 물품에 걸어도 됨, 가안). 액자 등급은 그 그림 그대로. 이젤은 처음에 첫 그림(sketch)이 걸린 채 놓임"
