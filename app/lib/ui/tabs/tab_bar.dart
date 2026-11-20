@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 import '../common/notice_dot.dart';
@@ -18,9 +19,14 @@ abstract final class TabBarMetrics {
   /// 장면(쉼터·걷기 탭)이 탭 바 밑으로 들어가는 높이 (캔버스 2-2·3-1 sceneBottom = 탭 바 − 30)
   static const sceneOverlap = 30.0;
 
-  /// 아래 여백: 기기의 아래 안전 영역에서 12pt를 탭 바 안으로 겹친다 (캔버스: 홈 막대 34pt 폰에서 22).
+  /// 아래 여백: 안드로이드는 시스템 버튼 줄(3버튼 48dp·제스처 막대)을 다 비운다 (11/20 폰: 12pt 겹치면 탭 이름이
+  /// 버튼 줄에 가렸다). iOS는 얇은 홈 막대라 12pt를 탭 바 안으로 겹친다 (캔버스: 홈 막대 34pt 폰에서 22).
   /// 안전 영역이 없는 폰은 4
-  static double bottomPad(double safeBottom) => safeBottom > 16 ? safeBottom - 12 : 4;
+  static double bottomPad(double safeBottom, [TargetPlatform? platform]) {
+    if (safeBottom <= 0) return 4;
+    if ((platform ?? defaultTargetPlatform) != TargetPlatform.iOS) return safeBottom < 4 ? 4 : safeBottom;
+    return safeBottom > 16 ? safeBottom - 12 : 4;
+  }
 
   /// 탭 바 전체 높이 (아래 여백 포함)
   static double height(Size screen, double safeBottom) =>

@@ -15,12 +15,14 @@ import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/settings/settings_screen.dart';
 import 'package:doobal/ui/shop/shop_screen.dart';
 import 'package:doobal/ui/tabs/home_tabs.dart';
+import 'package:doobal/ui/tabs/tab_bar.dart' show TabBarMetrics;
 import 'package:doobal/ui/walk_record/walk_record_screen.dart';
 import 'package:doobal/ui/walking/walking_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rive/rive.dart' as rive;
 
 import 'ui_env.dart';
 
@@ -43,6 +45,33 @@ Finder _onstage(Type t) => find.byType(t);
 
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
+
+  test('탭 바 아래 여백: 안드로이드는 버튼 줄을 다 비우고, iOS는 홈 막대에 12pt 겹친다, 안전 영역이 없으면 4', () {
+    expect(TabBarMetrics.bottomPad(48, TargetPlatform.android), 48);
+    expect(TabBarMetrics.bottomPad(16, TargetPlatform.android), 16);
+    expect(TabBarMetrics.bottomPad(34, TargetPlatform.iOS), 22);
+    expect(TabBarMetrics.bottomPad(0, TargetPlatform.android), 4);
+    expect(TabBarMetrics.bottomPad(0, TargetPlatform.iOS), 4);
+  });
+
+  testWidgets('좁은 폰(360pt)에서도 걷기 탭 표지판은 화면 안에 있다', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () async {
+      await e.startSketch();
+      await e.db.into(e.db.guestbookTickets).insert(GuestbookTicketsCompanion.insert(
+            id: 'a:j1',
+            kind: TicketKind.arrival,
+            scope: 'kr001',
+            openedUtc: t1.millisecondsSinceEpoch,
+          ));
+    });
+    await _pumpApp(tester, e, width: 360, height: 880);
+    await openTab(tester, 'walk');
+    final sign = find.byKey(const ValueKey('road-signpost'));
+    await settle(tester, () => sign.evaluate().isNotEmpty, tries: 40);
+    expect(tester.getRect(sign).right, lessThanOrEqualTo(360 - 4 + 0.01));
+    await end(tester, e);
+  });
 
   testWidgets('앱은 쉼터 탭으로 열리고 아래 탭 바는 쉼터·걷기·나, 위에는 럭 보석과 쉬는 중 알약만', (tester) async {
     final e = UiEnv();
@@ -198,7 +227,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('me-note')));
     await transition(tester);
     expect(_onstage(NoteScreen), findsOneWidget);
+    // 뒤로는 비동기(maybePop)라 닫힘 애니메이션이 한 박자 늦게 시작한다: 닫힐 때까지 본다
     await tester.binding.handlePopRoute();
+    await settle(tester, () => _onstage(NoteScreen).evaluate().isEmpty, tries: 40);
     await transition(tester);
     expect(_onstage(NoteScreen), findsNothing);
     expect(_onstage(ProfileScreen), findsOneWidget);
@@ -213,6 +244,8 @@ void main() {
     final e = UiEnv();
     await e.seed(tester, e.startSketch);
     await _pumpApp(tester, e);
+    // 정령 riv(11.8MB)를 다 읽어야 정령이 눌린다
+    await settle(tester, () => find.byType(rive.RiveWidget).evaluate().isNotEmpty, tries: 200);
     await tester.longPress(find.byKey(const ValueKey('spirit-long-press')));
     await transition(tester);
     await settle(tester, () => _onstage(DecorateScreen).evaluate().isNotEmpty, tries: 40);

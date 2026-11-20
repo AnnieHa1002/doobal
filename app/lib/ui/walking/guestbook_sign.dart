@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../common/palette.dart';
@@ -9,13 +11,17 @@ const _signH = 104.0;
 const _boardH = 40.0;
 const _postW = 8.0;
 
+/// 표지판과 화면 오른쪽 끝 사이 최소 여백
+const _edge = 4.0;
+
 /// 판 색 (캔버스 --sign·--wood)
 const _board = Color(0xFFE9D3A8);
 const _wood = Color(0xFF8A6A4A);
 
 /// 방명록을 쓸 수 있을 때 걷기 탭 길가에 서는 표지판 (16장 11/18·11/19, config guestbook.sign, 캔버스 3-1).
-/// 장면과 같이 흐르지 않고 화면에 고정돼 정령 오른쪽 길가에 선다: 왼쪽 끝 = 화면 폭 × [screenX],
-/// 기둥 발 = 정령 발과 같은 길 높이. 걷는 중·쉬는 중 모두, 누르면 방명록 쓰기
+/// 장면과 같이 흐르지 않고 화면에 고정돼 정령 오른쪽 길가에 선다: 왼쪽 끝 = 화면 폭 × [screenX]
+/// (좁은 폰에서는 화면 안 4pt까지만, 11/20 폰 360pt), 기둥 발 = 정령 발과 같은 길 높이.
+/// 걷는 중·쉬는 중 모두, 누르면 방명록 쓰기
 class GuestbookRoadSign extends StatelessWidget {
   const GuestbookRoadSign({super.key, required this.spot, required this.screenX, required this.onTap});
 
@@ -25,7 +31,7 @@ class GuestbookRoadSign extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final left = spot.size.width * screenX;
+    final left = math.min(spot.size.width * screenX, math.max(0.0, spot.size.width - _signW - _edge));
     final foot = spot.spiritFoot.dy;
     return Stack(
       children: [
