@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/boat.dart';
+import '../domain/shop_cart.dart';
 import 'providers.dart';
 import 'sync_service.dart';
 
@@ -41,3 +42,29 @@ final sceneBoatProvider = FutureProvider<BoatArt?>((ref) async {
   if (boat == null) return null;
   return (await ref.watch(boatCatalogProvider.future)).artOf(boat);
 });
+
+/// 지금 수레 날 키 (config shop.cart.refreshHour, 한국 시간 새벽 5시에 바뀐다). 분마다 시계를 보지만 값은 날이
+/// 바뀔 때만 달라져서, 이것을 읽는 수레는 새벽에 한 번 새로 읽는다
+final cartDayProvider = Provider.autoDispose<String?>((ref) {
+  final rules = ref.watch(rulesProvider).value;
+  if (rules == null) return null;
+  final now = ref.watch(minuteClockProvider).value ?? ref.read(clockProvider)();
+  return rules.shopCart.dayOf(now);
+});
+
+/// 그날 수레 (상점 화면·쉼터 수레 위 물건·새 상품 점). 그날 줄이 없으면 이때 정해 저장한다.
+/// 동기화(snapshot)마다 다시 읽어서 걸어서 얻은 물건의 칸도 팔림이 된다. 사기 뒤에는 snapshotProvider를 invalidate
+final todayCartProvider = FutureProvider.autoDispose<TodayCart>((ref) async {
+  final svc = await ref.watch(syncServiceProvider.future);
+  await ref.watch(snapshotProvider.future);
+  ref.watch(cartDayProvider);
+  return svc.todayCart(ref.read(clockProvider)());
+});
+
+/// 상점을 본 것으로 적는다 (새 상품 점이 꺼진다, 상점 화면이 열려 있는 동안 지금 시각)
+Future<void> markShopSeen(WidgetRef ref) async {
+  if (ref.read(todayCartProvider).value?.news != true) return;
+  final svc = await ref.read(syncServiceProvider.future);
+  await svc.markShopSeen(ref.read(clockProvider)());
+  ref.invalidate(todayCartProvider);
+}

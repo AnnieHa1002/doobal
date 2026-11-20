@@ -22,17 +22,16 @@ final _trails = parseTrails(_json('trails.json'));
 
 void main() {
   group('shop.json', () {
-    test('지금 상점 화면의 탭 4개는 옛 탭(v6)과 같은 상품을 order 순서로 (v9는 탭 대신 분류)', () {
-      expect(ShopTab.values.map((t) => _shop.inTab(t).length), [2, 10, 5, 6]);
-      expect(ShopTab.values.map((t) => t.label), ['여행 효과', '소품', '꾸밈 효과', '배']);
-      for (final t in ShopTab.values) {
-        final orders = _shop.inTab(t).map((i) => i.order).toList();
-        expect(orders, [...orders]..sort(), reason: t.name);
+    test('분류마다 상품 수 (여행 효과 2·소품 27·쉼터 물품 8·배 6), 분류 안은 order 순서', () {
+      int count(ShopCategory c) => _shop.items.where((i) => i.category == c).length;
+      expect([for (final c in ShopCategory.values) count(c)], [2, 27, 8, 6]);
+      for (final c in ShopCategory.values) {
+        final orders = [for (final i in _shop.items) if (i.category == c) i.order];
+        expect(orders, [...orders]..sort(), reason: c.name);
       }
-      expect(_shop.inTab(ShopTab.effect).every((i) => i.slot == 'effect'), isTrue);
     });
 
-    test('v9 분류: 분류 순서·아이콘을 읽고, 꾸밈 물품·무늬·물감 통·상점 미니 친구는 지금 탭에 없다', () {
+    test('v9 분류: 분류 순서·아이콘을 읽고, 꾸밈 물품·무늬·물감 통·상점 미니 친구도 살 수 있는 상품이다', () {
       expect(_shop.categories, ShopCategory.values);
       expect(_shop.categoryIcons, {
         ShopCategory.travel: 'icon_shop_cat_effect_v01',
@@ -40,18 +39,12 @@ void main() {
         ShopCategory.decor: 'icon_shop_cat_deco_v01',
         ShopCategory.boat: 'icon_shop_cat_boat_v01',
       });
-      final hidden = [for (final i in _shop.items) if (i.tab == null) i.id];
-      expect(hidden, [
-        for (var n = 6; n <= 13; n++) 'pet_${n.toString().padLeft(2, '0')}',
-        'trail_01',
-        'trail_02',
-        'trail_03',
-        'paint_tube',
-        for (final d in _decor.items)
-          if (d.kind == DecorUnlockKind.shop) d.id,
-      ]);
+      expect([for (final i in _shop.items) if (!isSellable(i)) i.id], isEmpty);
       final tube = _shop.byId('paint_tube')!;
       expect((tube.category, tube.slot, tube.consumable, tube.effect), (ShopCategory.prop, 'paintTube', true, null));
+      // 물감 통: 하루 약 50%·하루 최대 1칸·3통 (shop v9 cart·paint)
+      expect((tube.cartChancePerDay, tube.cartMaxPerDay, tube.paintTubes), (0.5, 1, 3));
+      expect(_shop.byId('decor_lantern')!.paintTubes, isNull);
       expect((_shop.byId('trail_02')!.trailId, _shop.byId('trail_02')!.slot), ('trail_02', 'trail'));
       expect(_shop.byId('decor_pond')!.decorId, 'decor_pond');
       expect(_shop.byId('pet_06')!.propId, 'pet_06');
@@ -75,7 +68,7 @@ void main() {
       final tailwind = _shop.byId('fx_tailwind')!;
       expect((tailwind.effect!.kind, tailwind.effect!.ratio, tailwind.price, tailwind.dailyLimit),
           (ShopEffectKind.travelRatioUntilWalkEnd, 0.2, 40, 1));
-      for (final i in _shop.inTab(ShopTab.travel)) {
+      for (final i in _shop.items.where((i) => i.category == ShopCategory.travel)) {
         expect(i.requiresJourney, isTrue, reason: i.id);
         expect(i.maxHold, rules.shopMaxHoldPerItem, reason: i.id);
       }
@@ -83,17 +76,15 @@ void main() {
 
     test('소품·꾸밈 효과 상품은 props.json과 값이 같다', () {
       final byId = {for (final p in parseProps(_json('props.json'))) p.id: p};
-      for (final tab in [ShopTab.prop, ShopTab.effect]) {
-        for (final i in _shop.inTab(tab)) {
-          final p = byId[i.propId];
-          expect(p, isNotNull, reason: '${i.id}: props.json에 없다');
-          expect((p!.kind, p.price), (PropUnlockKind.shop, i.price), reason: i.id);
-        }
+      for (final i in _shop.items.where((i) => i.propId != null)) {
+        final p = byId[i.propId];
+        expect(p, isNotNull, reason: '${i.id}: props.json에 없다');
+        expect((p!.kind, p.price), (PropUnlockKind.shop, i.price), reason: i.id);
       }
     });
 
     test('배 상품은 boats.json 상점 배와 값이 같고, 빠진 배가 없다', () {
-      final sold = {for (final i in _shop.inTab(ShopTab.boat)) i.boatId: i.price};
+      final sold = {for (final i in _shop.items) if (i.boatId != null) i.boatId: i.price};
       expect(sold, {
         for (final b in _boats.boats)
           if (b.kind == BoatUnlockKind.shop) b.id: b.price,
@@ -105,7 +96,11 @@ void main() {
           {'categories': categories, 'defaultBoat': 'b', 'items': [item]};
       Map<String, dynamic> item(String category, [Object? effect]) =>
           {'id': 'x', 'category': category, 'name': 'x', 'price': 1, 'order': 1, 'effect': effect};
-      expect(parseShop(withItem(item('decor'))).items.single.tab, isNull);
+      expect(parseShop(withItem(item('decor'))).items.single.category, ShopCategory.decor);
+      expect(
+        () => parseShop(withItem({...item('prop'), 'paint': {'color': 'fixed', 'excludeRegion': true}})),
+        throwsFormatException,
+      );
       expect(() => parseShop(withItem(item('hat'))), throwsFormatException);
       expect(() => parseShop(withItem(item('travel', {'kind': 'warp'}))), throwsFormatException);
       expect(() => parseShop(withItem(item('travel'), ['effect'])), throwsFormatException);

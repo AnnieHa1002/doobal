@@ -65,12 +65,24 @@ void main() {
       expect(_buy('fx_tailwind', held: max), ShopBlock.holdFull);
     });
 
-    test('소품·꾸밈 효과·배는 한 번만 산다', () {
-      for (final tab in [ShopTab.prop, ShopTab.effect, ShopTab.boat]) {
-        final id = shopCatalog.inTab(tab).first.id;
+    test('소품·꾸밈 효과·미니 친구·쉼터 물품·무늬·배는 한 번만 산다', () {
+      for (final id in ['face_01', 'effect_01', 'pet_06', 'decor_lantern', 'trail_01', 'boat_cruise']) {
         expect(_buy(id), isNull, reason: id);
         expect(_buy(id, owned: true), ShopBlock.owned, reason: id);
       }
+    });
+
+    test('물감 통은 소모품: 가져도 다시 사고, 그 색 통이 상한이면 막는다', () {
+      expect(_buy('paint_tube', owned: true), isNull);
+      final max = rules.paintColor.maxTubesPerColor;
+      expect(
+        buyBlock(_item('paint_tube'), balance: 100, held: max - 1, maxHold: max, owned: false),
+        isNull,
+      );
+      expect(
+        buyBlock(_item('paint_tube'), balance: 100, held: max, maxHold: max, owned: false),
+        ShopBlock.holdFull,
+      );
     });
 
     test('줄 것이 없는 상품은 막는다', () {
@@ -106,7 +118,7 @@ void main() {
     });
 
     test('여행 효과가 아니면 막는다', () {
-      expect(_use(shopCatalog.inTab(ShopTab.prop).first.id), ShopBlock.unknownItem);
+      expect(_use('face_01'), ShopBlock.unknownItem);
     });
   });
 

@@ -1,13 +1,15 @@
-import 'dart:ui' show Tristate;
-
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/shop_providers.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/asset_index.dart';
 import 'package:doobal/domain/color_props.dart';
+import 'package:doobal/domain/shop_cart.dart';
+import 'package:doobal/domain/time_kst.dart';
+import 'package:doobal/ui/shop/cart_widgets.dart';
 import 'package:doobal/domain/shop.dart';
 import 'package:doobal/ui/common/item_cell.dart';
+import 'package:doobal/ui/common/paint_art.dart';
 import 'package:doobal/ui/rest/prop_wiggle.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/rest/rest_slots.dart';
@@ -22,16 +24,41 @@ import 'package:flutter_test/flutter_test.dart';
 import '../domain/helpers.dart';
 import 'ui_env.dart';
 
-// 행상 수레 (캔버스 8-1): 탭별 상품, 구매 시트, 막힘, 구매 뒤 갱신, 쉼터에서 들어가기
+// 오늘의 수레 (캔버스 8-1, 16장 11/19·11/20): 여행 효과 고정 칸, 그날 수레 칸·SOLD 도장·잠긴 칸, 구매 시트, 막힘,
+// 구매 뒤 갱신, 쉼터에서 들어가기·수레 위 물건. 설치 KST 11/18 09:00, 화면은 10:00 (수레 날 11/18)
 
 const _day = '2026-11-18';
 
-/// 처음부터 보이는 색 소품 (기본 소품 베레모·여행복·갈색 신발의 색)
-final _firstColorItems = shownColorItems(props, havePropIds(props, const {}));
-
 Finder _key(String k) => find.byKey(ValueKey(k));
 Finder _item(String id) => _key('shop-item-$id');
-Finder _tab(ShopTab t) => _key('shop-tab-${t.name}');
+Finder _slot(int n) => _key('cart-slot-$n');
+
+/// 처음 여는 날(빈 기록)의 수레 줄: 앱과 같은 규칙으로 미리 계산한다 (설치 번호 0×32, 누적 0km)
+List<String> _firstLine(String day, {double km = 0}) {
+  final have = havePropIds(props, const {});
+  return planCart(
+    rules: rules.shopCart,
+    items: [...shopCatalog.items, ...colorShopItems(props)],
+    owned: (i) => have.contains(i.propId),
+    haveBase: have.contains,
+    totalKm: km,
+    timesShown: const {},
+    seed: '0' * 32,
+    day: day,
+  );
+}
+
+/// 11/18부터 처음 줄에 물감 통이 [tube]대로 나오는 날
+String _dayWith({required bool tube}) {
+  for (var n = 0; n < 40; n++) {
+    final day = addDays(_day, n);
+    if (_firstLine(day).contains('paint_tube') == tube) return day;
+  }
+  throw StateError('그런 날이 없다');
+}
+
+/// 한국 시간 [day] 정오
+DateTime _noon(String day) => kstDayStartUtc(day).add(const Duration(hours: 12));
 
 Future<void> _giveCoins(UiEnv e, int n) => e.db
     .into(e.db.coinLedger)
@@ -43,16 +70,13 @@ Future<void> _open(WidgetTester tester, UiEnv e) async {
   await settle(tester, () => false, tries: 4);
 }
 
-Future<void> _goTab(WidgetTester tester, ShopTab t) async {
-  await tester.tap(_tab(t));
-  await tester.pump();
-}
-
 /// 칸을 누르고 시트가 다 올라올 때까지. 막혀서 시트가 안 뜨면 토스트가 뜬다
-Future<void> _press(WidgetTester tester, String id) async {
-  await tester.ensureVisible(_item(id));
+Future<void> _press(WidgetTester tester, String id) => _tapCell(tester, _item(id));
+
+Future<void> _tapCell(WidgetTester tester, Finder cell) async {
+  await tester.ensureVisible(cell);
   await tester.pump();
-  await tester.tap(_item(id));
+  await tester.tap(cell);
   await settle(tester, () => false, tries: 6);
   await tester.pump(const Duration(milliseconds: 400));
 }
@@ -68,6 +92,8 @@ Future<void> _answer(WidgetTester tester, String label) async {
 /// 칸의 꼬리표 상태 글자
 Finder _state(String id, String text) =>
     find.descendant(of: _item(id), matching: find.text(text));
+
+Finder _inSlot(int n, Finder f) => find.descendant(of: _slot(n), matching: f);
 
 String _balance(WidgetTester tester) =>
     tester.widget<Text>(_key('shop-balance')).data!;
@@ -95,136 +121,203 @@ void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   group('진열', () {
-    testWidgets('제목·잔액, 탭 4는 shop.json 이름, 처음 탭은 여행 효과', (tester) async {
+    testWidgets('제목·잔액, 여행 효과 고정 칸 2(설명 한 줄), 오늘의 수레 3칸, 잠긴 칸 3, 다음 종류 한 줄', (tester) async {
       final e = UiEnv();
       await e.seed(tester, () => _giveCoins(e, 1240));
       await _open(tester, e);
 
-      expect(find.text('행상 수레'), findsOneWidget);
+      expect(find.text('오늘의 수레'), findsNWidgets(2)); // 제목 + 수레 묶음 머리
+      expect(find.text('여행 효과'), findsOneWidget);
+      expect(find.text('늘 있어요'), findsOneWidget);
+      expect(find.text('새벽 5시에 바뀌어요'), findsOneWidget);
       expect(find.byTooltip('뒤로'), findsOneWidget);
       await settle(tester, () => _balance(tester) == '1,240');
-      expect(_balance(tester), '1,240');
-      for (final t in ShopTab.values) {
-        expect(
-          find.descendant(of: _tab(t), matching: find.text(t.label)),
-          findsOneWidget,
-        );
-      }
-      expect(tester.getSemantics(_tab(ShopTab.travel)).flagsCollection.isSelected, Tristate.isTrue);
-      expect(tester.getSemantics(_tab(ShopTab.prop)).flagsCollection.isSelected, Tristate.isFalse);
-      expect(_item('fx_shortcut'), findsOneWidget);
-      await end(tester, e);
-    });
-
-    testWidgets('탭마다 그 탭 상품만 order 순서로, 값은 천 단위 쉼표 + 럭', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
-
-      for (final t in [ShopTab.travel, ShopTab.prop, ShopTab.effect]) {
-        await _goTab(tester, t);
-        final items = shopCatalog.inTab(t);
-        expect(items, isNotEmpty);
-        // 소품 탭은 아래에 처음부터 보이는 색 소품 묶음이 더 있다
-        final colors = t == ShopTab.prop ? _firstColorItems.length : 0;
-        expect(find.byType(ItemCell), findsNWidgets(items.length + colors), reason: t.name);
-        var last = -1.0;
-        for (final item in items) {
-          await tester.ensureVisible(_item(item.id));
-          await tester.pump();
-          expect(_state(item.id, '${item.price} 럭'), findsOneWidget, reason: item.id);
-          final y = tester.getTopLeft(_item(item.id)).dy;
-          expect(y, greaterThanOrEqualTo(last - 400), reason: item.id);
-          last = y;
-        }
-      }
-      await end(tester, e);
-    });
-
-    testWidgets('여행 효과 칸만 이름 아래 설명 한 줄 (shop v6 desc, 16장 11/13)', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
-
-      Finder desc(String id) =>
-          find.descendant(of: _item(id), matching: find.byKey(const ValueKey('item-desc')));
       expect(find.descendant(of: _item('fx_shortcut'), matching: find.text('목적지와의 거리가 1km 줄어요')),
           findsOneWidget);
       expect(find.descendant(of: _item('fx_tailwind'), matching: find.text('이번 물감 길에서 20% 더 멀리 가요')),
           findsOneWidget);
-      for (final t in [ShopTab.prop, ShopTab.effect, ShopTab.boat]) {
-        await _goTab(tester, t);
-        for (final item in shopCatalog.inTab(t)) {
-          expect(item.desc, isNull, reason: item.id);
-          expect(desc(item.id), findsNothing, reason: item.id);
-        }
+      expect(_state('fx_shortcut', '50 럭'), findsOneWidget);
+      expect(_state('fx_tailwind', '40 럭'), findsOneWidget);
+
+      final line = _firstLine(_day);
+      expect(find.byType(ItemCell), findsNWidgets(line.length));
+      for (final (i, id) in line.indexed) {
+        final item = shopCatalog.byId(id) ?? colorShopItem(props, id)!;
+        expect(_inSlot(i, find.text(coinAmountText(item.price, rules))), findsOneWidget, reason: id);
       }
+      // 칸이 늘어나는 누적 거리 (캔버스 8-1 자물쇠 칸)
+      for (final (i, km) in ['50km', '150km', '300km'].indexed) {
+        expect(find.descendant(of: _key('cart-locked-$i'), matching: find.text(km)), findsOneWidget);
+      }
+      expect(tester.getSemantics(_key('cart-locked-0')).label, '4번째 칸, 누적 50km에 열림');
+      expect(find.text('누적 5km를 걸으면 물감 길 무늬도 수레에 실려요'), findsOneWidget);
+      // 가진 상점 배가 없으면 배 줄도 없다
+      expect(find.text('가진 배 · 색 바꾸기'), findsNothing);
       await end(tester, e);
     });
 
-    testWidgets('배 탭: 맨 앞은 처음부터 가진 뗏목, 뒤로 상점 배 6척', (tester) async {
+    testWidgets('50km를 넘긴 다음 날은 4칸, 자물쇠는 150·300km 둘', (tester) async {
       final e = UiEnv();
-      await e.seed(tester);
+      e.now = _noon('2026-11-20');
+      await e.seed(tester, () => e.db.into(e.db.daySummaries).insert(DaySummariesCompanion.insert(
+          day: '2026-11-19', steps: 70000, distanceM: 52000, countedSessions: 1)));
       await _open(tester, e);
-      await _goTab(tester, ShopTab.boat);
-
-      expect(find.byType(ItemCell), findsNWidgets(7));
-      expect(_state('boat_raft', '가짐'), findsOneWidget);
-      expect(_state('boat_cruise', '5,000 럭'), findsOneWidget);
-      expect(_state('boat_canopy', '8,000 럭'), findsOneWidget);
-      await tester.ensureVisible(_item('boat_starlight'));
-      await tester.pump();
-      expect(_state('boat_starlight', '12,000 럭'), findsOneWidget);
-      // 보상 배는 상점에 없다
-      expect(_item('boat_skiff'), findsNothing);
-      expect(_item('boat_voyage'), findsNothing);
+      await settle(tester, () => find.byType(ItemCell).evaluate().length == 4);
+      expect(find.byType(ItemCell), findsNWidgets(4));
+      expect(find.byType(LockedCartSlot), findsNWidgets(2));
+      expect(find.text('누적 75km를 걸으면 액세서리도 수레에 실려요'), findsOneWidget);
       await end(tester, e);
     });
 
-    testWidgets('그림 없는 칸은 점선 + 이름, 파일을 넣으면 그 그림', (tester) async {
+    testWidgets('그림 없는 칸은 점선 + 이름, 아이콘 파일을 넣으면 그 그림', (tester) async {
+      final day = _dayWith(tube: false);
+      final first = _firstLine(day).first;
       final e = UiEnv();
+      e.now = _noon(day);
       await e.seed(tester);
       await _open(tester, e);
-      expect(
-        find.descendant(of: _item('fx_shortcut'), matching: find.byType(ItemPlaceholder)),
-        findsOneWidget,
-      );
-      expect(find.descendant(of: _item('fx_shortcut'), matching: find.text('지름길')), findsNWidgets(2));
+      final item = shopCatalog.byId(first) ?? colorShopItem(props, first)!;
+      // 색 소품은 그림이 없으면 색 상자 (11/6 규칙)
+      final none = item.requires == null ? ItemPlaceholder : ItemSwatch;
+      expect(_inSlot(0, find.byType(none)), findsOneWidget);
       await end(tester, e);
 
-      final f = UiEnv(
-        assets: AssetIndex([
-          'assets/items/icons/ui_shop_fx_shortcut_v01_clean.png',
-          'assets/ui/ui_gem_sky_v01_clean.png',
-        ]),
-      );
+      final f = UiEnv(assets: AssetIndex(['assets/items/icons/item_${first}_icon_v01_clean.webp']));
+      f.now = _noon(day);
       await f.seed(tester);
       await _open(tester, f);
-      await settle(tester, () => false, tries: 4);
-      expect(find.descendant(of: _item('fx_shortcut'), matching: find.byType(Image)), findsOneWidget);
-      expect(find.descendant(of: _item('fx_tailwind'), matching: find.byType(Image)), findsNothing);
-      expect(find.descendant(of: find.byType(LuckGemArt), matching: find.byType(Image)), findsOneWidget);
+      await settle(tester, () => _inSlot(0, find.byType(Image)).evaluate().isNotEmpty, tries: 8);
+      expect(_inSlot(0, find.byType(Image)), findsOneWidget);
       await end(tester, f);
     });
 
-    testWidgets('배 칸: 뒤판·앞판 파일이 있으면 겹쳐 그린다', (tester) async {
-      final e = UiEnv(
-        assets: AssetIndex([
-          'assets/boats/v01fix/prop_boat_theme_01_rear_v02_clean.png',
-          'assets/boats/v01fix/prop_boat_theme_01_front_v02_clean.png',
-          // 뒤판만 있는 배는 점선
-          'assets/boats/v01fix/prop_boat_theme_02_rear_v02_clean.png',
-        ]),
-      );
+    testWidgets('가진 상점 배는 수레에 안 나오고 ‘가진 배’ 줄에 (색 시트는 T4c)', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () => e.db.into(e.db.boatsOwned).insert(
+          BoatsOwnedCompanion.insert(boatId: 'boat_cruise', atUtc: 1)));
+      await _open(tester, e);
+      await tester.ensureVisible(_key('owned-boat-boat_cruise'));
+      await tester.pump();
+      expect(find.text('가진 배 · 색 바꾸기'), findsOneWidget);
+      expect(find.descendant(of: _key('owned-boat-boat_cruise'), matching: find.text('유람선')), findsOneWidget);
+      // 뗏목·보상 배는 상점 배가 아니라 없다
+      expect(_key('owned-boat-boat_raft'), findsNothing);
+      await end(tester, e);
+    });
+  });
+
+  group('수레 칸 사기 (SOLD)', () {
+    testWidgets('사면 그 칸은 SOLD 도장만(그림·꼬리표 지움), 다른 칸 그대로, 도장 칸은 눌러도 아무 일 없다', (tester) async {
+      final day = _dayWith(tube: false);
+      final line = _firstLine(day);
+      final item = shopCatalog.byId(line.first) ?? colorShopItem(props, line.first)!;
+      final e = UiEnv();
+      e.now = _noon(day);
+      await e.seed(tester, () => _giveCoins(e, 1000));
+      await _open(tester, e);
+
+      await _tapCell(tester, _slot(0));
+      expect(find.text('구매하시겠습니까?'), findsOneWidget);
+      expect(find.text(coinsLeftText(1000 - item.price)), findsOneWidget);
+      await _answer(tester, '구매');
+      expect(find.text(boughtText(item.name)), findsOneWidget);
+      await settle(tester, () => _inSlot(0, find.byType(SoldStamp)).evaluate().isNotEmpty);
+
+      expect(_inSlot(0, find.byType(SoldStamp)), findsOneWidget);
+      expect(_inSlot(0, find.text('SOLD')), findsOneWidget);
+      expect(_inSlot(0, find.text(item.name)), findsNothing);
+      expect(_inSlot(0, find.text(coinAmountText(item.price, rules))), findsNothing);
+      expect(tester.getSemantics(_slot(0)).label, '${item.name}, SOLD');
+      expect(tester.getSemantics(_slot(0)).flagsCollection.isButton, isFalse);
+      // 칸 수·다른 칸은 그대로 (다시 채우지 않는다)
+      expect(find.byType(ItemCell), findsNWidgets(line.length));
+      expect(_inSlot(1, find.byType(SoldStamp)), findsNothing);
+      // 도장: 지름 56, 상자 왼쪽 위 14pt, −12°
+      expect(tester.getSize(find.byKey(const ValueKey('sold-stamp'))), const Size(56, 56));
+      // 가운데는 그림 상자(84) 왼쪽 위 14 + 반지름 28 = 42 (돌려도 가운데는 그대로)
+      final center = tester.getCenter(find.byKey(const ValueKey('sold-stamp')));
+      final cell = tester.getRect(_slot(0));
+      expect(center.dy - cell.top, closeTo(42, 0.5));
+      final rotate = tester.widget<Transform>(
+          find.ancestor(of: find.byKey(const ValueKey('sold-stamp')), matching: find.byType(Transform)).first);
+      expect(rotate.transform.getRotation().entry(1, 0), closeTo(-0.2079, 0.001)); // sin(−12°)
+      expect(await _withSvc(tester, (s) => s.ownedPropIds()), contains(item.propId));
+
+      // 도장 칸을 눌러도 시트가 없다
+      await tester.pump(const Duration(seconds: 3));
+      await _tapCell(tester, _slot(0));
+      expect(find.text('구매하시겠습니까?'), findsNothing);
+      expect(await _withSvc(tester, (s) => s.coinBalance()), 1000 - item.price);
+      await end(tester, e);
+    });
+
+    testWidgets('걸어서(다른 길로) 얻어도 그 칸이 SOLD', (tester) async {
+      final day = _dayWith(tube: false);
+      final line = _firstLine(day);
+      final e = UiEnv();
+      e.now = _noon(day);
       await e.seed(tester);
       await _open(tester, e);
-      await _goTab(tester, ShopTab.boat);
-      await settle(tester, () => false, tries: 4);
-      expect(find.descendant(of: _item('boat_cruise'), matching: find.byType(Image)), findsNWidgets(2));
-      expect(tester.getSize(find.descendant(of: _item('boat_cruise'), matching: find.byType(BoatShelfArt))),
-          boatArtSize);
-      expect(find.descendant(of: _item('boat_speed'), matching: find.byType(Image)), findsNothing);
-      expect(find.descendant(of: _item('boat_speed'), matching: find.byType(ItemPlaceholder)), findsOneWidget);
+      final id = (shopCatalog.byId(line[1]) ?? colorShopItem(props, line[1])!).propId!;
+      await tester.runAsync(() => e.db.into(e.db.propsOwned).insert(
+          PropsOwnedCompanion.insert(propId: id, unlockedUtc: e.now.millisecondsSinceEpoch)));
+      ProviderScope.containerOf(tester.element(find.byType(ShopScreen))).invalidate(snapshotProvider);
+      await settle(tester, () => _inSlot(1, find.byType(SoldStamp)).evaluate().isNotEmpty);
+      expect(_inSlot(1, find.byType(SoldStamp)), findsOneWidget);
+      expect(_inSlot(0, find.byType(SoldStamp)), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('물감 통 칸: 그날 색 통 그림·색 이름, 사면 그 색 3통이 물감 보관에', (tester) async {
+      final day = _dayWith(tube: true);
+      final slot = _firstLine(day).indexOf('paint_tube');
+      final e = UiEnv();
+      e.now = _noon(day);
+      await e.seed(tester, () => _giveCoins(e, 30));
+      await _open(tester, e);
+      final cart = await _withSvc(tester, (s) => s.todayCart(e.now));
+      final color = cart.slots[slot].tubeColor!;
+      expect(_inSlot(slot, find.byType(PaintTubeArt)), findsOneWidget);
+      expect(_inSlot(slot, find.text(rules.paintColor.nameOf(color))), findsOneWidget);
+      expect(_inSlot(slot, find.text('30 럭')), findsOneWidget);
+
+      await _tapCell(tester, _slot(slot));
+      await _answer(tester, '구매');
+      expect(find.text('물감 통을 구매했어요'), findsOneWidget);
+      await settle(tester, () => _inSlot(slot, find.byType(SoldStamp)).evaluate().isNotEmpty);
+      final stock = await tester.runAsync(
+          () => (e.db.select(e.db.paintStock)..where((t) => t.colorId.equals(color))).getSingle());
+      expect(stock!.tubes, 3);
+      expect(await _withSvc(tester, (s) => s.coinBalance()), 0);
+      await end(tester, e);
+    });
+
+    testWidgets('럭이 모자라면 시트 없이 까닭만', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester);
+      await _open(tester, e);
+      await _tapCell(tester, _slot(0));
+      expect(find.text(ShopBlock.notEnoughCoins.message), findsOneWidget);
+      expect(find.textContaining('구매하시겠습니까'), findsNothing);
+      expect(_inSlot(0, find.byType(SoldStamp)), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('새벽 5시가 지나면 열린 화면도 새 수레 (SOLD가 풀린다)', (tester) async {
+      final day = _dayWith(tube: false);
+      final e = UiEnv();
+      e.now = kstDayStartUtc(day).add(const Duration(hours: 23));
+      await e.seed(tester, () => _giveCoins(e, 1000));
+      await _open(tester, e);
+      await _tapCell(tester, _slot(0));
+      await _answer(tester, '구매');
+      await settle(tester, () => _inSlot(0, find.byType(SoldStamp)).evaluate().isNotEmpty);
+      // 다음 날 05:00 (분 시계가 새 시각을 낸다)
+      e.now = kstDayStartUtc(addDays(day, 1)).add(const Duration(hours: 5));
+      await tester.pump(const Duration(minutes: 1));
+      await settle(tester, () => find.byType(SoldStamp).evaluate().isEmpty);
+      expect(find.byType(SoldStamp), findsNothing);
+      expect(await _withSvc(tester, (s) async => (await s.todayCart(e.now)).day), addDays(day, 1));
       await end(tester, e);
     });
   });
@@ -273,68 +366,6 @@ void main() {
       expect(find.text('순풍을 구매했어요'), findsNothing);
       expect(await _withSvc(tester, (s) => s.coinBalance()), 100);
       expect(await _withSvc(tester, (s) => s.shopHeld()), isEmpty);
-      await end(tester, e);
-    });
-
-    testWidgets('소품: 받침에 맞는 조사, 사면 가짐으로 바뀌고 얻은 소품·새 표시에 들어간다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => _giveCoins(e, 700));
-      await _open(tester, e);
-      await _goTab(tester, ShopTab.prop);
-
-      await _press(tester, 'face_02');
-      expect(find.text('구매하시겠습니까?'), findsOneWidget);
-      await _answer(tester, '구매');
-      expect(find.text('귀마개를 구매했어요'), findsOneWidget);
-      await settle(tester, () => _state('face_02', '가짐').evaluate().isNotEmpty);
-      expect(_state('face_02', '가짐'), findsOneWidget);
-      expect(tester.getSemantics(_item('face_02')).label, '귀마개, 가짐');
-
-      expect(await _withSvc(tester, (s) => s.ownedPropIds()), contains('face_02'));
-      final row = await tester.runAsync(() => (e.db.select(e.db.propsOwned)
-            ..where((t) => t.propId.equals('face_02')))
-          .getSingle());
-      expect(row!.seen, isFalse);
-      expect(await tester.runAsync(() => _read(tester, ownedPropIdsProvider.future)), contains('face_02'));
-
-      // 가진 칸은 눌러도 시트가 없다
-      await _press(tester, 'face_02');
-      expect(find.textContaining('구매하시겠습니까'), findsNothing);
-      await end(tester, e);
-    });
-
-    testWidgets('꾸밈 효과도 소품처럼 산다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => _giveCoins(e, 200));
-      await _open(tester, e);
-      await _goTab(tester, ShopTab.effect);
-
-      await _press(tester, 'effect_01');
-      expect(find.text('구매하시겠습니까?'), findsOneWidget);
-      expect(find.text('남는 럭 0'), findsOneWidget);
-      await _answer(tester, '구매');
-      await settle(tester, () => _state('effect_01', '가짐').evaluate().isNotEmpty);
-      expect(_state('effect_01', '가짐'), findsOneWidget);
-      expect(await _withSvc(tester, (s) => s.ownedPropIds()), contains('effect_01'));
-      await end(tester, e);
-    });
-
-    testWidgets('배: 사면 가짐으로, 자동으로 갈아타지 않는다. 뗏목은 눌러도 시트가 없다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => _giveCoins(e, 5000));
-      await _open(tester, e);
-      await _goTab(tester, ShopTab.boat);
-
-      await _press(tester, 'boat_raft');
-      expect(find.textContaining('구매하시겠습니까'), findsNothing);
-
-      await _press(tester, 'boat_cruise');
-      expect(find.text('구매하시겠습니까?'), findsOneWidget);
-      await _answer(tester, '구매');
-      await settle(tester, () => _state('boat_cruise', '가짐').evaluate().isNotEmpty);
-      expect(_state('boat_cruise', '가짐'), findsOneWidget);
-      expect(await _withSvc(tester, (s) => s.ownedBoatIds()), contains('boat_cruise'));
-      expect((await _withSvc(tester, (s) => s.selectedBoat()))!.id, 'boat_raft');
       await end(tester, e);
     });
   });
@@ -432,142 +463,6 @@ void main() {
     });
   });
 
-  group('색 소품 (shop.json colorVariantItems)', () {
-    /// 칸 순서: 위에서 아래, 왼쪽에서 오른쪽
-    List<String> order(WidgetTester tester, Iterable<String> ids) {
-      final pos = {for (final id in ids) id: tester.getTopLeft(_item(id))};
-      return [...ids]..sort((a, b) {
-          final dy = pos[a]!.dy.compareTo(pos[b]!.dy);
-          return dy != 0 ? dy : pos[a]!.dx.compareTo(pos[b]!.dx);
-        });
-    }
-
-    testWidgets('소품 탭 아래 색 소품 묶음: 처음에는 기본 색 9개를 기본 소품 순서로, 색 상자와 값', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester);
-      await _open(tester, e);
-      expect(_key('shop-color-title'), findsNothing);
-      await _goTab(tester, ShopTab.prop);
-
-      final ids = [for (final i in _firstColorItems) i.id];
-      expect(ids, [
-        for (final base in ['hat_01', 'cloth_02', 'shoe_01'])
-          for (var n = 1; n <= 3; n++) '${base}_c$n',
-      ]);
-      await tester.ensureVisible(_key('shop-color-title'));
-      await tester.pump();
-      expect(find.text('색 소품'), findsOneWidget);
-      // 소품 상품 아래, 색 소품 위
-      final titleY = tester.getTopLeft(_key('shop-color-title')).dy;
-      final lastProp = shopCatalog.inTab(ShopTab.prop).last.id;
-      expect(titleY, greaterThan(tester.getTopLeft(_item(lastProp)).dy));
-      for (final id in ids) {
-        expect(tester.getTopLeft(_item(id)).dy, greaterThan(titleY), reason: id);
-      }
-      expect(order(tester, ids), ids);
-
-      for (final item in _firstColorItems) {
-        await tester.ensureVisible(_item(item.id));
-        await tester.pump();
-        final p = props.firstWhere((p) => p.id == item.id);
-        expect(_state(item.id, '${p.price} 럭'), findsOneWidget, reason: item.id);
-        expect(find.descendant(of: _item(item.id), matching: find.text(p.name)), findsOneWidget);
-        final box = find.descendant(of: _item(item.id), matching: _key('item-swatch'));
-        expect((tester.widget<DecoratedBox>(box).decoration as BoxDecoration).color,
-            Color(p.materialArgb!), reason: item.id);
-        expect(tester.getSemantics(_item(item.id)).label, '${p.name}, ${p.price} 럭');
-      }
-      // 기본 소품을 아직 못 얻은 색은 없다
-      for (final id in ['hat_02_c1', 'hat_04_c1', 'hat_05_c1', 'cloth_01_c1']) {
-        expect(_item(id), findsNothing, reason: id);
-      }
-      // 기본 소품 자체는 상품이 아니다
-      expect(_item('hat_01'), findsNothing);
-      await end(tester, e);
-    });
-
-    testWidgets('기본 소품을 얻으면 그 색이 기본 소품 순서 자리(베레모 색 뒤, 여행복 색 앞)에 뜬다', (tester) async {
-      final e = UiEnv();
-      await e.seed(
-          tester,
-          () => e.db
-              .into(e.db.propsOwned)
-              .insert(PropsOwnedCompanion.insert(propId: 'hat_04', unlockedUtc: 1)));
-      await _open(tester, e);
-      await _goTab(tester, ShopTab.prop);
-
-      const ids = [
-        'hat_01_c1', 'hat_01_c2', 'hat_01_c3', //
-        'hat_04_c1', 'hat_04_c2', 'hat_04_c3',
-        'cloth_02_c1', 'cloth_02_c2', 'cloth_02_c3',
-        'shoe_01_c1', 'shoe_01_c2', 'shoe_01_c3',
-      ];
-      await tester.ensureVisible(_item(ids.last));
-      await tester.pump();
-      expect(order(tester, ids), ids);
-      expect(_item('hat_02_c1'), findsNothing);
-      await end(tester, e);
-    });
-
-    testWidgets('사면 잔액·가짐·토스트, 얻은 소품(새 표시)에 들어가고 다시 눌러도 시트가 없다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => _giveCoins(e, 150));
-      await _open(tester, e);
-      await _goTab(tester, ShopTab.prop);
-
-      await _press(tester, 'hat_01_c1');
-      expect(find.text('구매하시겠습니까?'), findsOneWidget);
-      expect(find.text('남는 럭 50'), findsOneWidget);
-      await _answer(tester, '구매');
-      expect(find.text('봄하늘 베레모를 구매했어요'), findsOneWidget);
-      await settle(tester, () => _state('hat_01_c1', '가짐').evaluate().isNotEmpty);
-      expect(_state('hat_01_c1', '가짐'), findsOneWidget);
-      expect(_balance(tester), '50');
-      expect(await _withSvc(tester, (s) => s.ownedPropIds()), contains('hat_01_c1'));
-      final row = await tester.runAsync(() => (e.db.select(e.db.propsOwned)
-            ..where((t) => t.propId.equals('hat_01_c1')))
-          .getSingle());
-      expect(row!.seen, isFalse);
-
-      await _press(tester, 'hat_01_c1');
-      expect(find.textContaining('구매하시겠습니까'), findsNothing);
-      // 다른 색은 그대로 값
-      expect(_state('hat_01_c2', '100 럭'), findsOneWidget);
-      await end(tester, e);
-    });
-
-    testWidgets('잔액 부족: 시트 없이 까닭만, 아무것도 안 바뀐다', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => _giveCoins(e, 99));
-      await _open(tester, e);
-      await _goTab(tester, ShopTab.prop);
-
-      await _press(tester, 'shoe_01_c2');
-      expect(find.text(ShopBlock.notEnoughCoins.message), findsOneWidget);
-      expect(find.textContaining('구매하시겠습니까'), findsNothing);
-      expect(await _withSvc(tester, (s) => s.coinBalance()), 99);
-      expect(await _withSvc(tester, (s) => s.ownedPropIds()), isNot(contains('shoe_01_c2')));
-      await end(tester, e);
-    });
-
-    testWidgets('기본 소품이 없으면 사는 길도 막혀 있다 (화면에 없는 칸)', (tester) async {
-      final e = UiEnv();
-      await e.seed(tester, () => _giveCoins(e, 1000));
-      await _open(tester, e);
-      final blocked = await _withSvc(tester, (s) async {
-        try {
-          await s.buyItem('hat_02_c1', e.now);
-        } on ShopBlocked catch (b) {
-          return b.block;
-        }
-        return null;
-      });
-      expect(blocked, ShopBlock.needsBase);
-      expect(await _withSvc(tester, (s) => s.coinBalance()), 1000);
-      await end(tester, e);
-    });
-  });
-
   group('쉼터에서', () {
     Future<void> openRest(WidgetTester tester, UiEnv e, {List<Override> extra = const []}) async {
       phone(tester);
@@ -654,6 +549,31 @@ void main() {
       // 한국 시간 낮 12시, 밤 11시
       expect(await imagesAt(DateTime.utc(2026, 11, 18, 3)), 1);
       expect(await imagesAt(DateTime.utc(2026, 11, 18, 14)), 2);
+    });
+
+    testWidgets('쉼터 수레 위에 그날 수레 물건이 얹힌다 (팔린 칸은 빠짐, 그림 없으면 짐 상자)', (tester) async {
+      final day = _dayWith(tube: false);
+      final e = UiEnv();
+      e.now = _noon(day);
+      await e.seed(tester, () => _giveCoins(e, 1000));
+      await openRest(tester, e);
+      await settle(tester, () => find.byKey(const ValueKey('cart-top-parcel')).evaluate().length == 3);
+      expect(find.byKey(const ValueKey('cart-top-parcel')), findsNWidgets(3));
+      // 아이콘(28pt)은 수레 그림 상자(440, 530, 120×109) 위쪽에
+      final icon = tester.getRect(_key('cart-top-0'));
+      expect(icon.width, 28);
+      expect(icon.top, greaterThanOrEqualTo(530 - 28));
+      expect(icon.bottom, lessThan(530 + 109 / 2));
+      await tester.runAsync(() async {
+        final svc = await ProviderScope.containerOf(tester.element(find.byType(RestScreen)))
+            .read(syncServiceProvider.future);
+        await svc.buyCartSlot(day, 0, e.now);
+      });
+      ProviderScope.containerOf(tester.element(find.byType(RestScreen))).invalidate(snapshotProvider);
+      await settle(tester, () => find.byKey(const ValueKey('cart-top-parcel')).evaluate().length == 2);
+      expect(find.byKey(const ValueKey('cart-top-parcel')), findsNWidgets(2));
+      expect(_key('cart-top-0'), findsNothing);
+      await end(tester, e);
     });
 
     testWidgets('상품이 없으면 입구를 숨긴다 (스키마 13장)', (tester) async {

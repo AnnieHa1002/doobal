@@ -147,7 +147,8 @@ class ItemArt extends ConsumerWidget {
 }
 
 /// 선반 위 칸 하나: 그림([art]), 선반, 꼬리표(이름 + [desc] + [state]). [selected]면 점선 고리.
-/// [state]가 비면 상태 줄이 없고, [onTap]이 없으면 눌리지 않는다
+/// [state]가 비면 상태 줄이 없고, [onTap]이 없으면 눌리지 않는다.
+/// [stamp]가 있으면 그림·꼬리표를 지우고 선반 위 그림 상자에 도장만 둔다 (오늘의 수레 산 칸, 16장 11/20)
 class ItemCell extends StatelessWidget {
   const ItemCell({
     super.key,
@@ -159,7 +160,11 @@ class ItemCell extends StatelessWidget {
     this.stateColor = Palette.moss,
     this.selected = false,
     this.onTap,
+    this.stamp,
   });
+
+  /// 그림 상자(84×84) 왼쪽 위 14pt에 놓는 도장. 있으면 [art]·꼬리표는 안 그린다
+  final Widget? stamp;
 
   final String name;
   final Widget art;
@@ -210,7 +215,10 @@ class ItemCell extends StatelessWidget {
                     ),
                     if (selected)
                       const Positioned.fill(child: CustomPaint(painter: _DashedRingPainter())),
-                    Positioned(bottom: 5, child: art),
+                    if (stamp case final s?)
+                      Positioned(left: 14, top: 14, child: s)
+                    else
+                      Positioned(bottom: 5, child: art),
                   ],
                 ),
               ),
@@ -229,6 +237,7 @@ class ItemCell extends StatelessWidget {
                 border: Border(bottom: BorderSide(color: Palette.ink, width: InkLine.panel)),
               ),
             ),
+            if (stamp == null) ...[
             Center(child: Container(width: 1, height: 10, color: Palette.subInk)),
             Center(
               child: FractionallySizedBox(
@@ -273,6 +282,7 @@ class ItemCell extends StatelessWidget {
                 ),
               ),
             ),
+            ],
           ],
         ),
       ),
