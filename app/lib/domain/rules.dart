@@ -1,3 +1,4 @@
+import 'day_card_rules.dart';
 import 'decor_rules.dart';
 import 'geo.dart';
 import 'map_album_rules.dart';
@@ -54,6 +55,7 @@ class ReportRules {
     required this.defaultDetailDays,
     required this.shareImageWidthPx,
     required this.shareImageHeightPx,
+    required this.card,
   });
 
   /// 하루 카드가 어제를 넣기 시작하는 한국 시각(시). 이 시각 전에 열면 어제는 아직 카드에 안 들어간다
@@ -72,6 +74,9 @@ class ReportRules {
   /// 공유 이미지 크기(px, 4:5)
   final int shareImageWidthPx;
   final int shareImageHeightPx;
+
+  /// 하루 카드 엽서형 (report.card, 16장 11/19)
+  final DayCardRules card;
 
   factory ReportRules.fromJson(Map<String, dynamic> j) {
     final merge = j['maxMergeDays'] as Map<String, dynamic>;
@@ -98,6 +103,7 @@ class ReportRules {
       defaultDetailDays: first,
       shareImageWidthPx: size[0],
       shareImageHeightPx: size[1],
+      card: DayCardRules.fromJson(j['card'] as Map<String, dynamic>),
     );
   }
 }

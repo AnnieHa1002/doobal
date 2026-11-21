@@ -12,6 +12,7 @@ import '../domain/bucket.dart';
 import '../domain/color_props.dart';
 import '../domain/companion.dart';
 import '../domain/companion_engine.dart';
+import '../domain/day_card.dart' show CardJourney, CardStory, DayRange, mergeStrokes;
 import '../domain/decor.dart';
 import '../domain/decor_place.dart' show DecorRatio, decorToUnlock;
 import '../domain/decor_rules.dart' show FirstSketchGift;
@@ -40,8 +41,10 @@ import '../domain/time_kst.dart';
 import '../domain/walk_record.dart';
 import 'notification_service.dart';
 
+part 'sync_boat.dart';
 part 'sync_companion.dart';
 part 'sync_decor.dart';
+part 'sync_report.dart';
 part 'sync_shop.dart';
 
 /// 한 번 가져온 결과. 출처별 걸음은 허용 목록을 정하는 실기기 확인용

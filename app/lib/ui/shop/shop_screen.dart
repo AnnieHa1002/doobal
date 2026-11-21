@@ -18,6 +18,7 @@ import '../common/paint_art.dart';
 import '../common/palette.dart';
 import '../common/screen_header.dart';
 import '../common/toast.dart';
+import 'boat_color_sheet.dart';
 import 'cart_widgets.dart';
 import 'shop_art.dart';
 
@@ -33,7 +34,7 @@ const ownedBoatsTitle = '가진 배 · 색 바꾸기';
 
 /// 오늘의 수레 (캔버스 8-1, 16장 11/19·11/20): 가진 럭, 여행 효과 고정 칸 2열, 그날 수레 칸(선반 3열, 산 칸은
 /// SOLD 도장), 아직 안 열린 칸·다음 종류 한 줄, 가진 상점 배 줄. 칸을 누르면 구매 시트.
-/// 광고 카드는 T7, 배 색 시트는 T4c (가진 배 줄의 알약은 아직 눌리지 않는다)
+/// 광고 카드는 T7. 가진 배 줄의 알약은 배 색 시트 (T4c)
 class ShopScreen extends ConsumerStatefulWidget {
   const ShopScreen({super.key});
 
@@ -246,7 +247,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     ];
   }
 
-  /// 가진 상점 배 (수레에는 안 나온다, 16장 11/20). 색 시트는 T4c라 알약은 아직 눌리지 않는다
+  /// 가진 상점 배 (수레에는 안 나온다, 16장 11/20). 알약을 누르면 색 시트 (T4c)
   List<Widget> _ownedBoats(ShopCatalog? shop, BoatCatalog boats, Set<String>? owned) {
     if (shop == null || owned == null) return const [];
     final mine = [
@@ -315,7 +316,7 @@ class _Grid extends StatelessWidget {
       );
 }
 
-/// 가진 배 알약 (캔버스 8-1: 44 높이, 둥근 끝, 14pt)
+/// 가진 배 알약 (캔버스 8-1: 44 높이, 둥근 끝, 14pt). 누르면 그 배의 색 시트 (T4c)
 class _BoatPill extends StatelessWidget {
   const _BoatPill({super.key, required this.boat});
 
@@ -324,10 +325,13 @@ class _BoatPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        enabled: false,
-        label: boat.name,
+        label: '${boat.name} 색 바꾸기',
         excludeSemantics: true,
-        child: Container(
+        child: GestureDetector(
+          key: ValueKey('owned-boat-tap-${boat.id}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: boat.recolor == null ? null : () => showBoatColorSheet(context, boat),
+          child: Container(
           constraints: const BoxConstraints(minHeight: 44),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
@@ -340,6 +344,7 @@ class _BoatPill extends StatelessWidget {
             widthFactor: 1,
             heightFactor: 1,
             child: Text(boat.name, style: context.display(14, weight: FontWeight.w600)),
+          ),
           ),
         ),
       );

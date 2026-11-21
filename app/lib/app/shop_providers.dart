@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/boat.dart';
 import '../domain/shop_cart.dart';
+import 'boat_providers.dart';
 import 'providers.dart';
 import 'sync_service.dart';
 
@@ -36,11 +37,15 @@ final selectedBoatProvider = FutureProvider<Boat?>((ref) async {
   return svc.selectedBoat();
 });
 
-/// 배 구간 장면이 읽을 그림 경로와 자리
+/// 배 구간 장면이 읽을 그림 경로와 자리. 상점 배는 고른 색을 싣는다 (T4c, BoatsOwned.colors → 몸 색 견본으로 색)
 final sceneBoatProvider = FutureProvider<BoatArt?>((ref) async {
   final boat = await ref.watch(selectedBoatProvider.future);
   if (boat == null) return null;
-  return (await ref.watch(boatCatalogProvider.future)).artOf(boat);
+  final catalog = await ref.watch(boatCatalogProvider.future);
+  if (boat.recolor == null) return catalog.artOf(boat);
+  final colors = await ref.watch(boatColorsProvider(boat.id).future);
+  final palette = (await ref.watch(spiritPaletteProvider.future)).body;
+  return catalog.artOf(boat, colors: colors, argb: boatZoneArgb(colors, palette.argbOf));
 });
 
 /// 지금 수레 날 키 (config shop.cart.refreshHour, 한국 시간 새벽 5시에 바뀐다). 분마다 시계를 보지만 값은 날이

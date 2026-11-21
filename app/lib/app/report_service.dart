@@ -11,10 +11,13 @@ import '../domain/time_kst.dart';
 /// (서버로 보내지 않는다), 쓰는 것은 하루 카드를 닫은 날(ReportState) 하나뿐이다.
 /// 계산은 domain/day_card.dart의 순수 함수가 한다
 class ReportService {
-  ReportService(this.db, this.rules);
+  ReportService(this.db, this.rules, {this.story});
 
   final AppDb db;
   final Rules rules;
+
+  /// 엽서 이야기 (카드 끝날의 여정·칠한 물감 구간, 동기화가 계산한다). 없으면 빈 이야기
+  final Future<CardStory> Function(DayRange range)? story;
 
   /// 첫 기록일(설치한 날, 한국 날짜 키). 아직 동기화한 적이 없으면 null
   Future<String?> firstRecordDay() async =>
@@ -55,10 +58,12 @@ class ReportService {
               t.arrivedUtc.isBiggerOrEqualValue(from) &
               t.arrivedUtc.isSmallerThanValue(to)))
         .get();
+    final story = this.story;
     return buildDayCard(
       range,
       days,
       rules: rules,
+      story: story == null ? CardStory.empty : await story(range),
       arrivals: [
         for (final j in arrived)
           (
@@ -111,7 +116,8 @@ class ReportService {
     final rows = await (db.select(db.daySummaries)..where((t) => t.day.isIn(days))).get();
     return {
       for (final r in rows)
-        r.day: DayTotals(day: r.day, steps: r.steps, actualM: r.distanceM, trailM: r.trailM),
+        r.day: DayTotals(
+            day: r.day, steps: r.steps, actualM: r.distanceM, trailM: r.trailM, coins: r.coins),
     };
   }
 }

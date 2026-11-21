@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:doobal/domain/day_card.dart';
 import 'package:doobal/domain/gait.dart';
 import 'package:doobal/domain/bucket.dart';
+import 'package:doobal/domain/journey.dart' show Frame;
 import 'package:doobal/domain/rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -187,6 +188,148 @@ void main() {
         '2026-11-14', '2026-11-15', '2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19',
         '2026-11-20', '2026-11-21', '2026-11-22',
       });
+    });
+  });
+
+  group('엽서형 (config report.card, 16장 11/19)', () {
+    final card = report.card;
+
+    DayCard cardOf(DayRange range, {int steps = 7912, double trailM = 3750, int coins = 37,
+        CardJourney? journey}) {
+      final days = {
+        for (final d in range.dayKeys)
+          d: DayTotals(day: d, steps: steps, actualM: steps * 0.7, trailM: trailM, coins: coins),
+      };
+      return buildDayCard(range, days, rules: rules, story: CardStory(journey: journey));
+    }
+
+    const toward = CardJourney(
+        destId: 'kr001', destName: '경복궁', totalKm: 24, beforeKm: 6, endKm: 11.6);
+    const arrivedAt = CardJourney(
+        destId: 'kr001',
+        destName: '경복궁',
+        totalKm: 24,
+        beforeKm: 20,
+        endKm: 24,
+        arrived: true,
+        frame: Frame.silver,
+        visitNo: 1);
+    const day18 = DayRange.single('2026-11-18');
+    const three = DayRange('2026-11-16', '2026-11-18');
+
+    test('값을 읽는다: 소인 M.d, 칩, 문장 소수 1자리, 쉬어 간 날 공유 없음, 정령 자세는 config 자세 이름', () {
+      expect((card.postmark, card.postmarkMulti), ('M.d', 'M.d–M.d'));
+      expect(card.chipsDay, [CardChip.steps, CardChip.paintTrailKm, CardChip.coinsGained]);
+      expect(card.chipsMulti, [CardChip.stepsTotal, CardChip.stepsDailyAvg, CardChip.coinsGained]);
+      expect(card.chipsRest, isEmpty);
+      expect(card.sentences.kmDigits, 1);
+      expect(card.shareExclude, {CardKind.rest, CardKind.multiRest});
+      expect(card.hideJourneyBarWithoutJourney, isTrue);
+      expect(card.restDayHollow, isTrue);
+      expect(card.restTimePhase, 'night');
+      final poses = rules.screen.spirit.poses;
+      expect(poses.containsKey(card.walkedPose), isTrue, reason: card.walkedPose);
+      expect(poses.containsKey(card.restPose), isTrue, reason: card.restPose);
+    });
+
+    test('틀린 값은 FormatException', () {
+      Map<String, dynamic> c(Map<String, dynamic> r) => r['card'] as Map<String, dynamic>;
+      expect(() => reportWith((r) => (c(r)['chips'] as Map)['day'] = ['distance']), throwsFormatException);
+      expect(() => reportWith((r) => c(r)['style'] = 'paper'), throwsFormatException);
+      expect(() => reportWith((r) => (c(r)['postmark'] as Map)['multiDay'] = 'M.d'), throwsFormatException);
+      expect(() => reportWith((r) => (c(r)['sentence'] as Map)['kmFormat'] = '#.#'), throwsFormatException);
+      expect(
+          () => reportWith((r) =>
+              ((c(r)['sentence'] as Map)['templates'] as Map)['rest'] = '{dest}에서 쉬었어요'),
+          throwsFormatException);
+      expect(() => reportWith((r) => (c(r)['share'] as Map)['excludeOn'] = ['rainy']),
+          throwsFormatException);
+    });
+
+    test('종류: 도착 > 걸은 날, 0보면 쉬어 감 (하루·여러 날)', () {
+      expect(cardOf(day18, journey: toward).kind, CardKind.day);
+      expect(cardOf(day18, journey: arrivedAt).kind, CardKind.arrived);
+      expect(cardOf(three, journey: arrivedAt).kind, CardKind.arrived);
+      expect(cardOf(day18, steps: 0).kind, CardKind.rest);
+      expect(cardOf(three).kind, CardKind.multi);
+      expect(cardOf(three, steps: 0).kind, CardKind.multiRest);
+      // 걸음 없이 지름길로 도착한 날도 도착 카드
+      expect(cardOf(day18, steps: 0, journey: arrivedAt).kind, CardKind.arrived);
+    });
+
+    test('문장: 템플릿 5 + 여정 없을 때 2, {km}은 여정이 다가간 거리 소수 1자리', () {
+      String line(DayCard c, {bool yesterday = true}) =>
+          dayCardSentence(c, card.sentences, yesterday: yesterday);
+      expect(line(cardOf(day18, journey: toward)), '어제는 경복궁 쪽으로 5.6 km 다가갔어요');
+      expect(line(cardOf(day18, journey: arrivedAt)), '어제 경복궁에 닿았어요');
+      expect(line(cardOf(day18, steps: 0)), '어제는 푹 쉬었어요');
+      // 3일 × 7,912보 × 0.7m = 16.6152km. 여정이 없으면 걸은 실제 거리
+      expect(line(cardOf(three)), '지난 3일 동안 16.6 km 걸었어요');
+      expect(line(cardOf(three, journey: toward)), '지난 3일 동안 경복궁 쪽으로 5.6 km 다가갔어요');
+      expect(line(cardOf(three, steps: 0)), '지난 3일 동안 쉬어 갔어요');
+      expect(line(cardOf(day18)), '어제는 5.5 km 걸었어요');
+    });
+
+    test('문장: 지난 날을 다시 볼 때는 ‘어제’ 대신 ‘이날’, 여러 날 도착은 ‘어제’를 뺀다, 다가가지 않았으면 여정 없는 글', () {
+      String line(DayCard c, {bool yesterday = true}) =>
+          dayCardSentence(c, card.sentences, yesterday: yesterday);
+      expect(line(cardOf(day18, journey: toward), yesterday: false), '이날은 경복궁 쪽으로 5.6 km 다가갔어요');
+      expect(line(cardOf(day18, steps: 0), yesterday: false), '이날은 푹 쉬었어요');
+      expect(line(cardOf(day18, journey: arrivedAt), yesterday: false), '이날 경복궁에 닿았어요');
+      expect(line(cardOf(three, journey: arrivedAt)), '경복궁에 닿았어요');
+      const stuck = CardJourney(destId: 'kr001', destName: '경복궁', totalKm: 24, beforeKm: 6, endKm: 6.02);
+      expect(line(cardOf(day18, journey: stuck)), '어제는 5.5 km 걸었어요');
+    });
+
+    test('칩: 하루 걸음·물감 길·+럭, 여러 날 합계·하루 평균·+럭, 쉬어 간 날은 없음', () {
+      expect(dayCardChips(cardOf(day18), card), [
+        (value: '7,912', label: '보'),
+        (value: '3.8km', label: '물감 길'),
+        (value: '+37', label: '럭'),
+      ]);
+      expect(dayCardChips(cardOf(three, steps: 7000), card), [
+        (value: '21,000', label: '보'),
+        (value: '7,000', label: '보 · 하루 평균'),
+        (value: '+111', label: '럭'),
+      ]);
+      expect(dayCardChips(cardOf(day18, steps: 0), card), isEmpty);
+      expect(dayCardChips(cardOf(three, steps: 0), card), isEmpty);
+    });
+
+    test('럭 = 카드 날 하루 요약 coins 합', () {
+      expect(cardOf(three, coins: 40).coins, 120);
+    });
+
+    test('소인: 하루 11.18, 여러 날 11.16–11.18 (달이 달라도 M.d 그대로)', () {
+      expect(dayCardPostmark(cardOf(day18), card), '11.18');
+      expect(dayCardPostmark(cardOf(three), card), '11.16–11.18');
+      expect(dayCardPostmark(cardOf(const DayRange('2026-10-30', '2026-11-02')), card), '10.30–11.2');
+    });
+
+    test('공유: 쉬어 간 날만 뺀다', () {
+      expect(dayCardShareable(cardOf(day18), card), isTrue);
+      expect(dayCardShareable(cardOf(day18, journey: arrivedAt), card), isTrue);
+      expect(dayCardShareable(cardOf(day18, steps: 0), card), isFalse);
+      expect(dayCardShareable(cardOf(three, steps: 0), card), isFalse);
+    });
+
+    test('여정 막대: 남은 거리·다가간 거리·비율 (도착이면 끝까지)', () {
+      expect(toward.remainingKm, closeTo(12.4, 1e-9));
+      expect(toward.deltaKm, closeTo(5.6, 1e-9));
+      expect(toward.beforeRatio, closeTo(0.25, 1e-9));
+      expect(toward.deltaRatio, closeTo(5.6 / 24, 1e-9));
+      expect(arrivedAt.remainingKm, 0);
+      expect(arrivedAt.deltaRatio, closeTo(1 - 20 / 24, 1e-9));
+      // 넘쳐 걸어도 전체에서 자른다
+      const over = CardJourney(destId: 'x', destName: 'x', totalKm: 10, beforeKm: 8, endKm: 13);
+      expect((over.remainingKm, over.deltaKm), (0, 2.0));
+    });
+
+    test('물감 구간: 같은 색이 이어지면 합치고 거리 0인 분은 건너뛴다', () {
+      expect(
+          mergeStrokes([('a', 70), ('a', 70), ('b', 0), ('b', 35), ('a', 10)]),
+          [const PaintStroke('a', 140), const PaintStroke('b', 35), const PaintStroke('a', 10)]);
+      expect(mergeStrokes(const []), isEmpty);
     });
   });
 

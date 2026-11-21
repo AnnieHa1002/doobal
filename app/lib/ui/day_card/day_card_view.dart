@@ -8,41 +8,58 @@ import 'package:rive/rive.dart' as rive;
 import '../../app/providers.dart';
 import '../../app/report_providers.dart';
 import '../../domain/day_card.dart';
+import '../../domain/geo.dart';
 import '../../domain/landmark.dart';
+import '../../domain/rules.dart';
+import '../../domain/scene.dart' show SceneLook, sceneLook;
 import '../../domain/sketch.dart';
 import '../../domain/spirit_look.dart';
 import '../../domain/time_kst.dart';
 import '../album/painting_share.dart' show capturePng;
-import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/framed_painting.dart';
-import '../common/note_paper.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
+import '../scene/scene_art.dart' show SceneArtHost;
+import '../scene/scene_art_painter.dart' show SceneArtPainter;
+import '../scene/scene_painter.dart' show SceneMode, ScenePass;
 import '../scene/spirit_character.dart';
-import '../scene/spirit_controller.dart' show SpiritMotion;
 import 'walk_report_screen.dart';
 
-// 하루 카드 (캔버스 2-3)와 공유 이미지 (2-4). 카드 종이·테이프는 화집 메모지·테이프 재질을 다시 쓴다
-// (16장 11/13: 새 그림 없음).
+// 하루 카드 엽서 (캔버스 2-3 DayCardV D안)와 공유 엽서 (2-4). 16장 11/19 하루 카드 개편: 종이·테이프 대신
+// 디자인 시스템 카드, 위 장면(걸은 날 = 걷는 중 층 그림 + 칠한 물감 색 길 + 옆면 정령 / 쉬어 간 날 = 밤 장면에
+// 잠든 정령 / 도착한 날 = 받은 그림 + 정면 정령)에 날짜 소인, 아래 문장 한 줄·여정 막대·칩 3·주간 점.
+// 값은 config report.card (domain/day_card_rules.dart). 무늬는 T17b 뒤에 더한다 (지금은 색만)
 
-/// 줄 없는 메모지 (600×600, 가장자리 60px은 늘리지 않는다). 1/3 크기로 그려 모서리가 20pt (화집 일기와 같다)
-const _tape = 'assets/ui/ui_tape_01_v01_clean.png';
-
-/// 막대의 다른 날 (캔버스 2-3·6-4 연두)
+/// 걷기 리포트 막대의 다른 날 (캔버스 2-3·6-4 연두, 걷기 리포트가 쓴다)
 const dayBarOther = Color(0xFFB7BE86);
 
 /// 카드 뒤를 어둡게 (캔버스 2-3)
 const _scrim = Color(0x8C1E1611);
 
-/// 그림을 붙이는 폴라로이드 바탕 (캔버스 2-3)
-const _polaroid = Color(0xFFFFFDF7);
-
 /// 공유 이미지 바탕 (캔버스 2-4)
 const _shareBackground = Color(0xFFEADFC8);
 
+/// 여정 막대 바탕·지난 진행 (캔버스 --card-deep·--wood)
+const _cardDeep = Color(0xFFE4D6BC);
+const _wood = Color(0xFF8C6F4E);
+
+/// 주간 점의 다른 날 (캔버스 rgba(86,101,58,.55))
+const _dotOther = Color(0x8C56653A);
+
+/// 소인 테두리·바탕 (캔버스 rgba(62,44,34,.75)·rgba(251,246,236,.6))
+const _postmarkLine = Color(0xBF3E2C22);
+const _postmarkFill = Color(0x99FBF6EC);
+
 /// 공유 이미지 틀의 크기 (캔버스 2-4 판 360×450 = 4:5). 내보낼 때는 config report.shareImagePx 폭에 맞춰 키운다
 const shareFrameWidth = 360.0;
+
+/// 엽서 장면 설계 크기 (캔버스 2-3 카드 폭 342 × 장면 188, 2-4 공유 324 × 200). 좁은 화면은 비율대로 줄인다
+const _cardScene = Size(342, 188);
+const _shareScene = Size(324, 200);
+
+/// 카드 폭 (캔버스 342 = 390 − 좌우 24)
+const _cardWidth = 342.0;
 
 const _weekdayShort = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -52,26 +69,22 @@ String weekdayShort(String day) => _weekdayShort[dayFromKey(day).weekday - 1];
 /// '수요일'
 String weekdayLong(String day) => '${weekdayShort(day)}요일';
 
-/// 하루 카드 제목: 하루 카드는 어제면 ‘어제’, 아니면 그 날짜(‘11월 18일’), 여러 날이면 ‘지난 n일’
+/// 카드 날이 달력 어제인가 (05:00 전에 연 그저께 카드·노트 다시 보기는 아니다)
+bool isYesterdayCard(DayCard c, DateTime now) =>
+    c.range.single && c.range.to == addDays(kstDayKey(now), -1);
+
+/// 하루 카드 제목: 어제면 ‘어제’, 아니면 그 날짜(‘11월 18일’), 여러 날이면 ‘지난 n일’
 String dayCardTitle(DayCard c, DateTime now) {
   if (!c.range.single) return '지난 ${c.range.days}일';
-  return c.range.to == addDays(kstDayKey(now), -1) ? '어제' : formatMonthDay(dayFromKey(c.range.to));
+  return isYesterdayCard(c, now) ? '어제' : formatMonthDay(dayFromKey(c.range.to));
 }
 
-/// 제목 위 작은 줄: ‘어제’면 ‘11월 18일 수요일’, 날짜 제목이면 ‘수요일’, 여러 날이면 ‘11월 12일 ~ 14일’
-String dayCardSub(DayCard c, DateTime now) {
-  if (!c.range.single) return dayRangeLabel(c.range);
-  final day = c.range.to;
-  return dayCardTitle(c, now) == '어제'
-      ? '${formatMonthDay(dayFromKey(day))} ${weekdayLong(day)}'
-      : weekdayLong(day);
-}
-
-/// 걸음이 0인 카드(‘쉬어 간 날’, 16장 11/15)의 글 한 줄. 문구는 가안(기획이 다듬음):
-/// 여러 날이면 ‘지난 n일 동안 쉬어 갔어요’, 어제면 ‘어제는 푹 쉬었어요’, 날짜 카드면 ‘이날은 푹 쉬었어요’
-String restedLine(DayCard c, DateTime now) {
-  if (!c.range.single) return '지난 ${c.range.days}일 동안 쉬어 갔어요';
-  return dayCardTitle(c, now) == '어제' ? '어제는 푹 쉬었어요' : '이날은 푹 쉬었어요';
+/// 문장 위 날짜 줄 (캔버스 dTitle): ‘어제 · 11월 18일 수요일’, 날짜 카드면 ‘11월 18일 수요일’,
+/// 여러 날이면 ‘지난 3일 · 11월 12일 ~ 14일’
+String dayCardDateLine(DayCard c, DateTime now) {
+  if (!c.range.single) return '${dayCardTitle(c, now)} · ${dayRangeLabel(c.range)}';
+  final date = '${formatMonthDay(dayFromKey(c.range.to))} ${weekdayLong(c.range.to)}';
+  return isYesterdayCard(c, now) ? '어제 · $date' : date;
 }
 
 /// ‘11월 12일 ~ 14일’, 달이 다르면 ‘10월 30일 ~ 11월 2일’
@@ -83,33 +96,25 @@ String dayRangeLabel(DayRange r) {
       : '${formatMonthDay(a)} ~ ${formatMonthDay(b)}';
 }
 
-/// 가장 많이 걸은 날: 7일 안이면 요일(‘월 8,350보’), 더 길면 날짜(‘11월 12일 8,350보’)
-String bestDayLabel(DayCard c, {bool unit = true}) {
-  final best = c.best;
-  if (best == null) return '-';
-  final when = c.range.days <= 7 ? weekdayShort(best.day) : formatMonthDay(dayFromKey(best.day));
-  return '$when ${formatInt(best.steps)}${unit ? '보' : ''}';
-}
+/// 소인 아래 작은 글: 하루면 요일(‘수요일’), 여러 날이면 날 수(‘3일’)
+String postmarkSub(DayCard c) => c.range.single ? weekdayLong(c.range.to) : '${c.range.days}일';
 
-/// 카드의 숫자 칸 (이름표, 값). 하루면 걸음·거리·물감 길·물감 방울, 여러 날이면 걸음·거리·하루 평균·가장 많이 걸은 날.
-/// [share]면 공유 이미지 글 (걸음에 ‘보’ 없이, ‘물감 방울’ 대신 ‘방울’, 캔버스 2-4)
-List<(String, String)> dayCardStats(DayCard c, {bool share = false}) {
-  final steps = share ? formatInt(c.steps) : '${formatInt(c.steps)}보';
-  final km = formatKmShort(c.actualM);
-  if (c.range.single) {
-    return [
-      ('걸음', steps),
-      ('거리', km),
-      ('물감 길', formatKmShort(c.trailM)),
-      (share ? '방울' : '물감 방울', '${formatInt(c.drops)}개'),
-    ];
+/// 여정 막대 위 글 (캔버스 jName·jLeft): 도착이면 ‘경복궁 · 은 액자’·‘첫 방문’,
+/// 아니면 ‘경복궁까지’·‘12.4km 남음’(다가가지 않았으면 ‘12.4km 그대로’). 여정이 없으면 null
+(String, String)? journeyLabels(DayCard c, CardSentences t) {
+  final j = c.story.journey;
+  if (j == null) return null;
+  if (j.arrived) {
+    final frame = j.frame;
+    final visit = j.visitNo;
+    return (
+      frame == null ? j.destName : '${j.destName} · ${frameName(frame)} 액자',
+      visit == null ? '' : (visit <= 1 ? '첫 방문' : '$visit번째 방문'),
+    );
   }
-  return [
-    ('걸음', steps),
-    ('거리', km),
-    ('하루 평균', share ? formatInt(c.avgSteps) : '${formatInt(c.avgSteps)}보'),
-    (share ? '가장 많은 날' : '가장 많이 걸은 날', bestDayLabel(c, unit: !share)),
-  ];
+  String km(double v) => v.toStringAsFixed(t.kmDigits);
+  final still = km(j.deltaKm) == km(0);
+  return ('${j.destName}까지', '${km(j.remainingKm)}km ${still ? '그대로' : '남음'}');
 }
 
 /// 카드에 붙일 그림: 카드 날들에 얻은 그림 중 마지막 (첫 그림이면 [firstPackLandmark])
@@ -131,8 +136,8 @@ String dayCardShareText(DayCard c, DateTime now) => c.range.single
     ? '두발 · ${formatMonthDay(dayFromKey(c.range.to))} ${formatInt(c.steps)}보'
     : '두발 · ${dayCardTitle(c, now)} ${formatInt(c.steps)}보';
 
-/// 화면 가득 하루 카드: 어둡게 한 뒤 위 오른쪽 닫기 ×, 가운데 카드 (캔버스 2-3).
-/// 공유 아이콘을 누르면 화면 밖에 공유 이미지 틀(2-4)을 그려 config report.shareImagePx PNG로 떠서
+/// 화면 가득 하루 카드: 어둡게 한 뒤 위 오른쪽 닫기 ×, 가운데 엽서 (캔버스 2-3).
+/// 장면 왼쪽 위 공유 버튼을 누르면 화면 밖에 공유 엽서(2-4)를 그려 config report.shareImagePx PNG로 떠서
 /// 휴대폰 공유 창에 올린다. ‘자세히 보기 ›’는 걷기 리포트 (6-4)
 class DayCardOverlay extends ConsumerStatefulWidget {
   const DayCardOverlay({super.key, required this.card, required this.onClose});
@@ -149,8 +154,9 @@ class _DayCardOverlayState extends ConsumerState<DayCardOverlay> {
   final _shareButtonKey = GlobalKey();
   var _sharing = false;
 
-  /// 공유 틀의 정령이 그려질 준비가 됐는가
+  /// 공유 엽서의 정령·장면이 그려질 준비가 됐는가
   var _spiritReady = false;
+  var _sceneReady = false;
 
   Future<void> _share() async {
     if (_sharing) return;
@@ -161,14 +167,15 @@ class _DayCardOverlayState extends ConsumerState<DayCardOverlay> {
     setState(() {
       _sharing = true;
       _spiritReady = false;
+      _sceneReady = false;
     });
     try {
-      // 정령(Rive 한 프레임)과 그림이 다 그려진 뒤에 뜬다. 정령을 못 읽으면 2초 뒤 정령 없이.
+      // 정령(Rive 한 프레임)·장면 그림이 다 그려진 뒤에 뜬다. 못 읽으면 2초 뒤 그것 없이.
       // 기다림은 화면 그리기(프레임)마다 본다 (시계 타이머를 쓰지 않는다)
       final waited = Stopwatch()..start();
       var after = 0;
       while (mounted && after < 3) {
-        if (_spiritReady || waited.elapsedMilliseconds > 2000) after++;
+        if ((_spiritReady && _sceneReady) || waited.elapsedMilliseconds > 2000) after++;
         SchedulerBinding.instance.scheduleFrame();
         await SchedulerBinding.instance.endOfFrame;
       }
@@ -199,15 +206,16 @@ class _DayCardOverlayState extends ConsumerState<DayCardOverlay> {
     final spirit = ref.watch(spiritLookProvider);
     final now = ref.watch(clockProvider)();
     final painting = cardPainting(widget.card, {for (final l in landmarks) l.id: l});
+    final shareable = rules != null && dayCardShareable(widget.card, rules.report.card);
     final shareHeight = rules == null
         ? shareFrameWidth * 5 / 4
         : shareFrameWidth * rules.report.shareImageHeightPx / rules.report.shareImageWidthPx;
     return LayoutBuilder(builder: (context, box) {
-      final cardW = math.min(330.0, box.maxWidth - 60);
+      final cardW = math.min(_cardWidth, box.maxWidth - 48);
       return Stack(
         children: [
-          // 공유 이미지 틀은 화면 밖에 그린다 (공유할 때만)
-          if (_sharing && !widget.card.rested)
+          // 공유 엽서는 화면 밖에 그린다 (공유할 때만)
+          if (_sharing && shareable)
             Positioned(
               left: -box.maxWidth - shareFrameWidth,
               top: 0,
@@ -221,6 +229,7 @@ class _DayCardOverlayState extends ConsumerState<DayCardOverlay> {
                   painting: painting,
                   spirit: spirit,
                   onSpiritReady: () => _spiritReady = true,
+                  onSceneReady: () => _sceneReady = true,
                 ),
               ),
             ),
@@ -233,19 +242,23 @@ class _DayCardOverlayState extends ConsumerState<DayCardOverlay> {
                   child: _PopIn(
                     child: SizedBox(
                       width: cardW,
-                      child: DayCardPanel(
-                        key: ValueKey('day-card-${widget.card.range.from}-${widget.card.range.to}'),
-                        card: widget.card,
-                        now: now,
-                        painting: painting,
-                        spirit: spirit,
-                        shareButtonKey: _shareButtonKey,
-                        sharing: _sharing,
-                        onShare: _share,
-                        onDetail: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(builder: (_) => const WalkReportScreen()),
-                        ),
-                      ),
+                      child: rules == null
+                          ? const SizedBox.shrink()
+                          : DayCardPanel(
+                              key: ValueKey(
+                                  'day-card-${widget.card.range.from}-${widget.card.range.to}'),
+                              card: widget.card,
+                              now: now,
+                              rules: rules,
+                              painting: painting,
+                              spirit: spirit,
+                              shareButtonKey: _shareButtonKey,
+                              sharing: _sharing,
+                              onShare: _share,
+                              onDetail: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(builder: (_) => const WalkReportScreen()),
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -276,7 +289,7 @@ class _DayCardOverlayState extends ConsumerState<DayCardOverlay> {
   }
 }
 
-/// 나타날 때 아래 16pt에서 올라오며 보인다 (0.45초, 동작 줄이기면 바로)
+/// 나타날 때 아래 14pt에서 올라오며 보인다 (0.4초, 동작 줄이기면 바로, 캔버스 .up)
 class _PopIn extends StatelessWidget {
   const _PopIn({required this.child});
 
@@ -287,175 +300,51 @@ class _PopIn extends StatelessWidget {
     if (MediaQuery.disableAnimationsOf(context)) return child;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 450),
+      duration: const Duration(milliseconds: 400),
       curve: Curves.easeOut,
       builder: (context, t, child) => Opacity(
         opacity: t,
-        child: Transform.translate(offset: Offset(0, 16 * (1 - t)), child: child),
+        child: Transform.translate(offset: Offset(0, 14 * (1 - t)), child: child),
       ),
       child: child,
     );
   }
 }
 
-/// 메모지 종이 + 위 가운데 테이프, 살짝 기운 카드 (하루 카드·공유 이미지)
-class _Paper extends StatelessWidget {
-  const _Paper({required this.padding, required this.child});
+/// 디자인 시스템 카드 (캔버스: 바탕 --card, 잉크 1.8 테두리, 둥근 [radius], 아래 옅은 그림자 + [lift]면 뜬 그림자)
+class _PostcardFrame extends StatelessWidget {
+  const _PostcardFrame({required this.radius, required this.child, this.lift = true});
 
-  final EdgeInsets padding;
+  final double radius;
+  final bool lift;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: -1 * math.pi / 180,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: padding,
-            decoration: const BoxDecoration(image: notePaperImage),
-            child: child,
-          ),
-          Positioned(
-            top: -11,
-            left: 0,
-            right: 0,
-            child: Center(child: _TapeStrip(width: 74, turnDeg: -3)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TapeStrip extends StatelessWidget {
-  const _TapeStrip({required this.width, required this.turnDeg});
-
-  final double width;
-  final double turnDeg;
-
-  @override
-  Widget build(BuildContext context) => Transform.rotate(
-        angle: turnDeg * math.pi / 180,
-        child: Image.asset(
-          _tape,
-          width: width,
-          height: 22,
-          fit: BoxFit.fill,
-          cacheWidth: 256,
-          excludeFromSemantics: true,
-          errorBuilder: (context, error, stack) => SizedBox(width: width, height: 22),
-        ),
-      );
-}
-
-/// 그림 하나 (첫 그림이면 짐 꾸러미)
-Widget _paintingFace(Landmark l) =>
-    l.id == sketchId ? const FirstPackFace() : PaintingFace(landmark: l);
-
-/// 폴라로이드에 붙인 그림 + 오른쪽 아래 밖에 정령 (그림 받은 날)
-class _PolaroidWithSpirit extends StatelessWidget {
-  const _PolaroidWithSpirit({
-    required this.painting,
-    required this.spirit,
-    required this.width,
-    required this.pad,
-    required this.spiritSize,
-    required this.spiritOffset,
-    this.shadow = true,
-    this.onSpiritReady,
-    this.renderer,
-  });
-
-  final Landmark painting;
-  final SpiritLook spirit;
-  final double width;
-  final EdgeInsets pad;
-  final Size spiritSize;
-
-  /// 정령이 폴라로이드 오른쪽·아래 밖으로 나간 만큼
-  final Offset spiritOffset;
-  final bool shadow;
-  final VoidCallback? onSpiritReady;
-  final rive.Factory? renderer;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(right: spiritOffset.dx, bottom: spiritOffset.dy),
-      child: Transform.rotate(
-        angle: 1.5 * math.pi / 180,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              padding: pad,
-              decoration: BoxDecoration(
-                color: _polaroid,
-                border: Border.all(color: Palette.line),
-                boxShadow: shadow
-                    ? const [BoxShadow(color: Palette.shadow, offset: Offset(0, 2), blurRadius: 4)]
-                    : null,
-              ),
-              child: SizedBox(
-                key: ValueKey('day-card-painting-${painting.id}'),
-                width: width,
-                height: width * 3 / 4,
-                child: Semantics(
-                  label: '그날 얻은 그림: ${painting.name}',
-                  child: _paintingFace(painting),
-                ),
-              ),
-            ),
-            const Positioned(left: -18, top: -6, child: _TapeStrip(width: 52, turnDeg: -38)),
-            Positioned(
-              right: -spiritOffset.dx,
-              bottom: -spiritOffset.dy,
-              width: spiritSize.width,
-              height: spiritSize.height,
-              child: _Spirit(spirit, onReady: onSpiritReady, renderer: renderer),
-            ),
+  Widget build(BuildContext context) => Container(
+        decoration: BoxDecoration(
+          color: Palette.card,
+          border: Border.all(color: Palette.ink, width: InkLine.panel),
+          borderRadius: BorderRadius.circular(radius),
+          boxShadow: [
+            const BoxShadow(color: Palette.shadow, offset: Offset(0, InkLine.shadow)),
+            if (lift) const BoxShadow(color: Color(0x38000000), offset: Offset(0, 14), blurRadius: 28),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// 꾸민 정령 (쉼터와 같은 정령, 서 있기). [sleeping]이면 잠든 자세(쉬어 간 날 카드, 쉼터 밤과 같은 자세 4)
-class _Spirit extends StatelessWidget {
-  const _Spirit(this.look, {this.onReady, this.renderer, this.sleeping = false});
-
-  final SpiritLook look;
-  final VoidCallback? onReady;
-  final rive.Factory? renderer;
-  final bool sleeping;
-
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-        child: SpiritStanding(
-          look: look,
-          share: 0.92,
-          footAt: 0.97,
-          riveFactory: renderer,
-          onReady: onReady == null && !sleeping
-              ? null
-              : (c) {
-                  if (sleeping) c.play(SpiritMotion.sleep);
-                  onReady?.call();
-                },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(radius - InkLine.panel),
+          child: child,
         ),
       );
 }
 
-/// 하루 카드 종이 (캔버스 2-3): 날짜·제목·공유 아이콘, 그림(있으면)과 정령, 숫자 2×2, 이번 주 막대, 자세히 보기.
-/// 걸음이 0이면 ‘쉬어 간 날’ 카드(16장 11/15): 공유 아이콘·숫자 대신 잠든 정령과 글 한 줄, 막대·자세히 보기는 그대로
+/// 하루 엽서 (캔버스 2-3 D안): 장면(소인·공유 버튼) · 날짜 줄 · 문장 한 줄 · 여정 막대 · 칩 · 주간 점 · 자세히 보기.
+/// 쉬어 간 날(0보)은 밤 장면에 잠든 정령, 칩·공유 없음 (config report.card.chips.rest·share.excludeOn)
 class DayCardPanel extends StatelessWidget {
   const DayCardPanel({
     super.key,
     required this.card,
     required this.now,
+    required this.rules,
     required this.painting,
     required this.spirit,
     required this.onShare,
@@ -466,6 +355,7 @@ class DayCardPanel extends StatelessWidget {
 
   final DayCard card;
   final DateTime now;
+  final Rules rules;
   final Landmark? painting;
   final SpiritLook spirit;
   final VoidCallback onShare;
@@ -475,233 +365,283 @@ class DayCardPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = dayCardTitle(card, now);
-    final stats = dayCardStats(card);
-    final painting = this.painting;
-    final rested = card.rested;
+    final r = rules.report.card;
+    final line = dayCardSentence(card, r.sentences, yesterday: isYesterdayCard(card, now));
+    final chips = dayCardChips(card, r);
+    final journey = journeyLabels(card, r.sentences);
+    final shareable = dayCardShareable(card, r);
     return Semantics(
       container: true,
-      label: '$title 하루 카드',
-      child: _Paper(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-        child: LayoutBuilder(builder: (context, box) {
-          final pw = (box.maxWidth * 0.78).floorToDouble();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      label: '${dayCardTitle(card, now)} 하루 카드',
+      child: _PostcardFrame(
+        radius: 22,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Palette.ink, width: InkLine.panel)),
+              ),
+              child: AspectRatio(
+                aspectRatio: _cardScene.width / _cardScene.height,
+                child: PostcardScene(
+                  card: card,
+                  rules: rules,
+                  painting: painting,
+                  spirit: spirit,
+                  design: _cardScene,
+                  share: shareable
+                      ? _ShareButton(key: shareButtonKey, sharing: sharing, onTap: onShare)
+                      : null,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(dayCardSub(card, now),
-                            style: const TextStyle(fontSize: 13, color: Palette.subInk)),
-                        const SizedBox(height: 2),
-                        Text(title, style: context.display(22).copyWith(height: 1.25)),
-                      ],
+                  Text(dayCardDateLine(card, now),
+                      style: const TextStyle(fontSize: 12, height: 16 / 12, color: Palette.subInk)),
+                  const SizedBox(height: 2),
+                  Text(
+                    line,
+                    key: const ValueKey('day-card-line'),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      height: 26 / 18,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.3,
+                      color: Palette.ink,
                     ),
                   ),
-                  if (!rested) Transform.translate(
-                    offset: const Offset(6, -6),
-                    child: Semantics(
-                      button: true,
-                      label: '이미지로 공유',
-                      child: GestureDetector(
-                        key: const ValueKey('day-card-share'),
-                        behavior: HitTestBehavior.opaque,
-                        onTap: sharing ? null : onShare,
-                        child: SizedBox(
-                          // 공유 창이 iPad에서 뜰 자리를 이 상자로 잰다
-                          key: shareButtonKey,
-                          width: 44,
-                          height: 44,
-                          child: sharing
-                              ? const Padding(
-                                  padding: EdgeInsets.all(12),
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Palette.ink),
-                                )
-                              : const Icon(Icons.ios_share, size: 22, color: Palette.ink),
-                        ),
-                      ),
-                    ),
-                  ),
+                  if (journey != null || !r.hideJourneyBarWithoutJourney) ...[
+                    const SizedBox(height: 10),
+                    _JourneyBar(card: card, labels: journey),
+                  ],
+                  if (chips.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    _Chips(chips),
+                  ],
+                  const SizedBox(height: 10),
+                  WeekDots(week: card.week, hollowRest: r.restDayHollow),
                 ],
               ),
-              const SizedBox(height: 12),
-              Center(
-                child: painting != null
-                    ? _PolaroidWithSpirit(
-                        painting: painting,
-                        spirit: spirit,
-                        width: pw - 16,
-                        pad: const EdgeInsets.fromLTRB(8, 8, 8, 22),
-                        spiritSize: const Size(76, 91),
-                        spiritOffset: const Offset(26, 30),
-                      )
-                    : SizedBox(width: 110, height: 131, child: _Spirit(spirit, sleeping: rested)),
-              ),
-              const SizedBox(height: 12),
-              if (rested)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Text(
-                    restedLine(card, now),
-                    key: const ValueKey('day-card-rested'),
-                    textAlign: TextAlign.center,
-                    style: context.display(17).copyWith(height: 1.35),
-                  ),
-                )
-              else
-                _StatGrid(stats),
-              const SizedBox(height: 12),
-              const Text('이번 주', style: AppText.label),
-              const SizedBox(height: 6),
-              WeekBars(week: card.week, height: 84, barMaxHeight: 64, barMaxWidth: 26, minBar: 6),
-              const SizedBox(height: 4),
-              Center(
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0, 10, 4),
                 child: TextButton(
                   key: const ValueKey('day-card-detail'),
                   onPressed: onDetail,
                   style: TextButton.styleFrom(
                     minimumSize: const Size(44, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     foregroundColor: Palette.terracottaDeep,
                   ),
                   child: const Text('자세히 보기 ›',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
               ),
-            ],
-          );
-        }),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// 숫자 2×2 칸 (바탕 종이색, 이름표 12·값 18)
-class _StatGrid extends StatelessWidget {
-  const _StatGrid(this.stats);
+/// 장면 왼쪽 위 공유 버튼 (캔버스: 44 동그라미, 잉크 1.4, 바탕 rgba(251,246,236,.9))
+class _ShareButton extends StatelessWidget {
+  const _ShareButton({super.key, required this.sharing, required this.onTap});
 
-  final List<(String, String)> stats;
+  final bool sharing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: '이미지로 공유',
+        child: GestureDetector(
+          key: const ValueKey('day-card-share'),
+          behavior: HitTestBehavior.opaque,
+          onTap: sharing ? null : onTap,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xE6FBF6EC),
+              shape: BoxShape.circle,
+              border: Border.all(color: Palette.ink, width: InkLine.pill),
+            ),
+            child: sharing
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Palette.ink),
+                  )
+                : const Icon(Icons.ios_share, size: 18, color: Palette.ink),
+          ),
+        ),
+      );
+}
+
+/// 여정 막대 (캔버스: 위 이름·남은 거리 12, 아래 6pt 막대 = 지난 진행 나무색 + 카드 날 진행 테라코타)
+class _JourneyBar extends StatelessWidget {
+  const _JourneyBar({required this.card, required this.labels});
+
+  final DayCard card;
+  final (String, String)? labels;
 
   @override
   Widget build(BuildContext context) {
-    Widget cell((String, String) s) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: Palette.paper,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(s.$1, style: AppText.label),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  s.$2,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Palette.ink,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
+    final j = card.story.journey;
+    final (name, left) = labels ?? ('', '');
+    const style = TextStyle(fontSize: 12, height: 16 / 12, color: Palette.subInk);
+    return Semantics(
+      label: '$name $left',
+      child: ExcludeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(child: Text(name, style: style, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                const SizedBox(width: 8),
+                Text(left,
+                    style: style.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+              ],
+            ),
+            const SizedBox(height: 5),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: SizedBox(
+                key: const ValueKey('day-card-journey-bar'),
+                height: 6,
+                child: LayoutBuilder(builder: (context, box) {
+                  final before = (j?.beforeRatio ?? 0) * box.maxWidth;
+                  final delta = (j?.deltaRatio ?? 0) * box.maxWidth;
+                  return Stack(
+                    children: [
+                      const Positioned.fill(child: ColoredBox(color: _cardDeep)),
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: before,
+                        child: const ColoredBox(
+                            key: ValueKey('journey-before'), color: _wood),
+                      ),
+                      Positioned(
+                        left: before,
+                        top: 0,
+                        bottom: 0,
+                        width: delta,
+                        child: const ColoredBox(
+                            key: ValueKey('journey-delta'), color: Palette.terracotta),
+                      ),
+                    ],
+                  );
+                }),
               ),
-            ],
-          ),
-        );
-    return Column(
-      children: [
-        for (var row = 0; row < stats.length; row += 2) ...[
-          if (row > 0) const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(child: cell(stats[row])),
-              const SizedBox(width: 6),
-              Expanded(child: row + 1 < stats.length ? cell(stats[row + 1]) : const SizedBox()),
-            ],
-          ),
-        ],
-      ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-/// 이번 주 7일 막대 (월~일): 카드 날은 테라코타, 다른 날은 연두, 걸음이 없거나 아직 안 온 날은 점선 바닥.
-/// 막대 높이 = max([minBar], 걸음 ÷ 그 주 최댓값 × [barMaxHeight])
-class WeekBars extends StatelessWidget {
-  const WeekBars({
-    super.key,
-    required this.week,
-    required this.height,
-    required this.barMaxHeight,
-    required this.barMaxWidth,
-    required this.minBar,
-    this.gap = 6,
-    this.labelSize = 11,
-    this.highlightLabels = true,
-  });
+/// 칩 3 (캔버스: 13pt, 알약, 바탕 종이·옅은 선, 값 굵게 + 이름 옅게)
+class _Chips extends StatelessWidget {
+  const _Chips(this.chips, {this.fontSize = 13, this.pad = const EdgeInsets.symmetric(horizontal: 10, vertical: 5)});
+
+  final List<CardChipText> chips;
+  final double fontSize;
+  final EdgeInsets pad;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final c in chips)
+            Container(
+              padding: pad,
+              decoration: BoxDecoration(
+                color: Palette.paper,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Palette.line),
+              ),
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(text: c.value, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  TextSpan(text: ' ${c.label}', style: const TextStyle(color: Palette.subInk)),
+                ]),
+                style: TextStyle(
+                  fontSize: fontSize,
+                  height: 1.35,
+                  color: Palette.ink,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+        ],
+      );
+}
+
+/// 이번 주 점 7개 (캔버스 D안 dots, config report.card.weekDots): 걸은 날은 걸음만큼 큰 점
+/// (지름 = 8 + 걸음 ÷ 그 주 최댓값 × 12, 반올림), 카드 날은 테라코타 + 잉크 고리, 다른 날은 옅은 이끼,
+/// 쉰 날(0보)·아직 안 온 날은 빈 점선 동그라미 8pt
+class WeekDots extends StatelessWidget {
+  const WeekDots({super.key, required this.week, this.hollowRest = true});
 
   final List<WeekBar> week;
-  final double height;
-  final double barMaxHeight;
-  final double barMaxWidth;
-  final double minBar;
-  final double gap;
-  final double labelSize;
-
-  /// 카드 날의 요일 글자를 진하게 (공유 이미지는 모두 옅게)
-  final bool highlightLabels;
+  final bool hollowRest;
 
   @override
   Widget build(BuildContext context) {
     final most = week.fold(0, (m, b) => (b.steps ?? 0) > m ? b.steps! : m);
     final aria = week
-        .map((b) =>
-            '${weekdayShort(b.day)} ${b.steps == null ? '아직' : '${formatInt(b.steps!)}보'}')
+        .map((b) => '${weekdayShort(b.day)} ${switch (b.steps) {
+              null => '아직',
+              0 => '쉼',
+              final s => '${formatInt(s)}보',
+            }}')
         .join(', ');
     return Semantics(
-      label: '이번 주 걸음 막대: $aria',
+      label: '이번 주 걸음: $aria',
       child: ExcludeSemantics(
-        child: SizedBox(
-          height: height,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (final (i, b) in week.indexed) ...[
-                if (i > 0) SizedBox(width: gap),
-                Expanded(
+              for (final b in week)
+                SizedBox(
+                  width: 30,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // 글자가 커져도 넘치지 않게 요일 글자를 뺀 높이 안에서 막대를 줄인다
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, box) => Align(
-                            alignment: Alignment.bottomCenter,
-                            child: _bar(b, most, math.min(barMaxHeight, box.maxHeight)),
-                          ),
-                        ),
+                      SizedBox(
+                        height: 22,
+                        child: Center(child: _dot(b, most)),
                       ),
-                      SizedBox(height: gap * 2 / 3),
+                      const SizedBox(height: 3),
                       Text(
                         weekdayShort(b.day),
                         style: TextStyle(
-                          fontSize: labelSize,
-                          color: highlightLabels && b.inCard ? Palette.ink : Palette.subInk,
-                          fontWeight:
-                              highlightLabels && b.inCard ? FontWeight.w700 : FontWeight.w400,
+                          fontSize: 11,
+                          height: 13 / 11,
+                          color: b.inCard ? Palette.ink : Palette.subInk,
+                          fontWeight: b.inCard ? FontWeight.w700 : FontWeight.w400,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
             ],
           ),
         ),
@@ -709,51 +649,486 @@ class WeekBars extends StatelessWidget {
     );
   }
 
-  Widget _bar(WeekBar b, int most, double maxHeight) {
+  Widget _dot(WeekBar b, int most) {
     final steps = b.steps ?? 0;
-    if (steps <= 0 || most <= 0) {
-      return SizedBox(
-        key: ValueKey('week-bar-${b.day}'),
-        width: barMaxWidth,
-        height: 1.5,
-        child: const CustomPaint(painter: _DashPainter()),
-      );
-    }
-    return Container(
-      key: ValueKey('week-bar-${b.day}'),
-      width: barMaxWidth,
-      height: math.min(maxHeight, math.max(minBar, (steps / most * maxHeight).roundToDouble())),
-      decoration: BoxDecoration(
-        color: b.inCard ? Palette.terracotta : dayBarOther,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(4), bottom: Radius.circular(2)),
+    final walked = steps > 0 && most > 0;
+    final d = walked ? (8 + steps / most * 12).roundToDouble() : 8.0;
+    return SizedBox(
+      key: ValueKey('week-dot-${b.day}'),
+      width: d,
+      height: d,
+      child: CustomPaint(
+        painter: _DotPainter(
+          fill: walked ? (b.inCard ? Palette.terracotta : _dotOther) : null,
+          ring: walked && b.inCard,
+          hollow: !walked && hollowRest,
+        ),
       ),
     );
   }
 }
 
-/// 점선 바닥 (걸음이 없거나 아직 안 온 날)
-class _DashPainter extends CustomPainter {
-  const _DashPainter();
+class _DotPainter extends CustomPainter {
+  const _DotPainter({required this.fill, required this.ring, required this.hollow});
+
+  final Color? fill;
+  final bool ring;
+  final bool hollow;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Palette.lineDashed
-      ..strokeWidth = size.height;
-    const dash = 3.0;
-    for (var x = 0.0; x < size.width; x += dash * 2) {
-      canvas.drawLine(Offset(x, size.height / 2),
-          Offset(math.min(x + dash, size.width), size.height / 2), paint);
+    final c = size.center(Offset.zero);
+    final r = size.shortestSide / 2;
+    if (fill case final f?) canvas.drawCircle(c, r, Paint()..color = f);
+    if (ring) {
+      // outline 1.5 잉크, 2pt 띄움 (캔버스 outline-offset 2px)
+      canvas.drawCircle(
+          c,
+          r + 2 + 0.75,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5
+            ..color = Palette.ink);
+    }
+    if (hollow) {
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = Palette.lineDashed;
+      const dashes = 8;
+      final rr = r - 0.75;
+      for (var i = 0; i < dashes; i++) {
+        final a = i * 2 * math.pi / dashes;
+        canvas.drawArc(Rect.fromCircle(center: c, radius: rr), a, math.pi / dashes, false, paint);
+      }
     }
   }
 
   @override
-  bool shouldRepaint(_DashPainter oldDelegate) => false;
+  bool shouldRepaint(_DotPainter old) => old.fill != fill || old.ring != ring || old.hollow != hollow;
 }
 
-/// 공유 이미지 틀 (캔버스 2-4, 360×450 = 4:5): 바탕 위 카드(제목·작은 줄, 그림 + 정령 또는 정령,
-/// 숫자 4칸 한 줄, 7일 막대) + 아래 발자국 ‘DOOBAL’. 버튼 없음. 정령은 Flutter 그리기로 (이미지에 담기게)
-class DayCardShareImage extends StatelessWidget {
+/// 엽서 위 장면 ([design] 크기로 짜고 상자에 맞춰 줄인다): 걸은 날은 걷는 중 층 그림(낮)에 카드 날 칠한 물감 색
+/// 구간을 걸은 차례로 길에 깔고 옆면 정령, 쉬어 간 날은 같은 그림의 밤 장면에 잠든 정령, 그림 받은 날은 받은 그림에
+/// 정면 정령. 오른쪽 위 소인, 왼쪽 위 [share] 버튼(있으면). 정령은 첫 장면에 멈춘다 (config report.card.scene)
+class PostcardScene extends ConsumerWidget {
+  const PostcardScene({
+    super.key,
+    required this.card,
+    required this.rules,
+    required this.painting,
+    required this.spirit,
+    required this.design,
+    this.share,
+    this.postmarkSize = 58,
+    this.renderer,
+    this.onSpiritReady,
+    this.onSceneReady,
+  });
+
+  final DayCard card;
+  final Rules rules;
+  final Landmark? painting;
+  final SpiritLook spirit;
+  final Size design;
+  final Widget? share;
+  final double postmarkSize;
+
+  /// 정령 그리기 (공유 엽서는 Flutter 그리기, [SpiritCharacter.riveFactory])
+  final rive.Factory? renderer;
+  final VoidCallback? onSpiritReady;
+  final VoidCallback? onSceneReady;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final landmarks = ref.watch(landmarksProvider).value ?? const <Landmark>[];
+    final here = card.story.position ??
+        ref.watch(snapshotProvider.select((s) => s.value?.position)) ??
+        (landmarks.isEmpty ? null : landmarks.first.latLng);
+    final painting = this.painting;
+    final r = rules.report.card;
+    final W = design.width;
+    final H = design.height;
+    // 장면 자리 (캔버스 2-3 D안 342×188 비율): 길 y 0.846, 걸은 정령 발 x 0.637·키 0.49,
+    // 잠든 정령 발 x 0.5, 그림 받은 날 정령 발 오른쪽 아래·키 0.425
+    final pathY = H * 159 / 188;
+    final stage = rules.screen.spirit;
+    late final Widget scene;
+    late final Widget figure;
+    if (painting != null) {
+      // 받은 그림을 장면 크기에 꽉 채운다 (4:3을 가운데로 잘라, 캔버스 342×256 top −34)
+      scene = Semantics(
+        label: '그날 얻은 그림: ${painting.name}',
+        child: ClipRect(
+          child: OverflowBox(
+            maxWidth: W,
+            maxHeight: W * 3 / 4,
+            child: SizedBox(
+              key: ValueKey('day-card-painting-${painting.id}'),
+              width: W,
+              height: W * 3 / 4,
+              child: painting.id == sketchId ? const FirstPackFace() : PaintingFace(landmark: painting),
+            ),
+          ),
+        ),
+      );
+      figure = _CardSpirit(
+        look: spirit,
+        foot: Offset(W - 51, H - 1),
+        figureHeight: H * 80 / 188,
+        pose: stage.poseOf('arrival'),
+        expression: 1,
+        renderer: renderer,
+        onReady: onSpiritReady,
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) => onSceneReady?.call());
+    } else {
+      final rested = card.rested;
+      final look = here == null ? null : _sceneLook(here, landmarks, rested);
+      scene = look == null
+          ? const ColoredBox(color: Palette.paper)
+          : _SceneBand(
+              look: look,
+              rules: rules,
+              design: design,
+              pathY: pathY,
+              figureHeight: H * 92 / 188,
+              distanceM: card.actualM,
+              onReady: onSceneReady,
+            );
+      figure = Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _TrailPainter(
+                strokes: rested ? const [] : card.story.strokes,
+                colorOf: (id) => Color(rules.paintColor.hexOf(id) | 0xFF000000),
+                pathY: pathY,
+                endX: W * 196 / 342,
+                k: H / 188,
+              ),
+            ),
+          ),
+          // 잠든 자세(옆으로 눕기)는 몸이 발 디딤점보다 위에 떠 있어 길에 눕게 내려 둔다 (캔버스 잠든 정령 +12)
+          _CardSpirit(
+            look: spirit,
+            foot: Offset(rested ? W * 0.5 : W * 217 / 342, rested ? pathY + H * 22 / 188 : pathY),
+            figureHeight: H * 92 / 188,
+            pose: _poseNamed(stage.poses, rested ? r.restPose : r.walkedPose),
+            speed: rested ? 0 : 1,
+            mirrored: !rested && stage.flips('walking'),
+            expression: rested ? 4 : 1,
+            renderer: renderer,
+            onReady: onSpiritReady,
+          ),
+        ],
+      );
+    }
+    return FittedBox(
+      fit: BoxFit.cover,
+      clipBehavior: Clip.hardEdge,
+      child: SizedBox.fromSize(
+        size: design,
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            Positioned.fill(child: scene),
+            Positioned.fill(child: ExcludeSemantics(child: figure)),
+            Positioned(
+              right: 12,
+              top: 12,
+              child: _Postmark(
+                day: dayCardPostmark(card, r),
+                sub: postmarkSub(card),
+                size: postmarkSize,
+              ),
+            ),
+            if (share case final s?) Positioned(left: 8, top: 8, child: s),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 장면 시각: 걸은 날은 카드 끝날 한낮, 쉬어 간 날은 그날 밤 (config report.card.scene.rest.timePhase).
+  /// 해 뜨고 지는 시각은 자리마다 다르니 그 시간대가 되는 시각을 찾는다 (없으면 23:30)
+  SceneLook _sceneLook(LatLng at, List<Landmark> landmarks, bool rested) {
+    final start = kstDayStartUtc(card.range.to);
+    SceneLook lookAt(double hour) => sceneLook(
+        start.add(Duration(minutes: (hour * 60).round())), at, false, landmarks, rules);
+    if (!rested) return lookAt(12);
+    final want = rules.report.card.restTimePhase;
+    for (final h in const [23.5, 22.0, 21.0, 2.0, 12.0, 19.0, 6.0]) {
+      final l = lookAt(h);
+      if (l.phase.name == want) return l;
+    }
+    return lookAt(23.5);
+  }
+}
+
+/// config 자세 이름 → poseChoice (틀린 이름이면 멈춘다)
+int _poseNamed(Map<String, int> poses, String name) =>
+    poses[name] ?? (throw FormatException('report.card.scene: 모르는 정령 자세 $name'));
+
+/// 걷는 중 층 그림 한 장면 (멈춘 채): 후경·뒤 줄·들판·길을 세로 화면 배치 그대로, 길이 [pathY]에 오고
+/// 장면 크기가 정령 키 [figureHeight]에 맞게 (걷는 중 화면과 같은 정령:장면 비율) 줄여 그린다.
+/// 그림은 화면 폭보다 넓게 이어 그린다. 그림을 다 읽으면 [onReady]
+class _SceneBand extends StatelessWidget {
+  const _SceneBand({
+    required this.look,
+    required this.rules,
+    required this.design,
+    required this.pathY,
+    required this.figureHeight,
+    required this.distanceM,
+    this.onReady,
+  });
+
+  final SceneLook look;
+  final Rules rules;
+  final Size design;
+  final double pathY;
+  final double figureHeight;
+  final double distanceM;
+  final VoidCallback? onReady;
+
+  @override
+  Widget build(BuildContext context) {
+    return SceneArtHost(
+      look: look,
+      mode: SceneMode.walking,
+      size: design,
+      builder: (context, art, _) {
+        if (art == null) return ColoredBox(color: Color(look.sky.horizon));
+        WidgetsBinding.instance.addPostFrameCallback((_) => onReady?.call());
+        final portrait = art.data['portrait'] as Map<String, dynamic>;
+        double n(String k) => (portrait[k] as num).toDouble();
+        // 세로 배치의 배율 = 정령 키 ÷ figureHeight, 아래 기준이라 높이로 길 자리를 맞춘다
+        final s = figureHeight / n('figureHeight');
+        final layout = Size(n('width') * s, pathY + (n('height') - n('pathY')) * s);
+        return CustomPaint(
+          size: design,
+          painter: SceneArtPainter(
+            art: art,
+            look: look,
+            mode: SceneMode.walking,
+            distanceM: distanceM,
+            rules: rules,
+            onSea: false,
+            pass: ScenePass.background,
+            elapsed: 0,
+            seed: 'daycard',
+            layoutSize: layout,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 길 위 물감 색 구간 (캔버스 strokesB): 왼쪽 끝에서 [endX](정령 뒷발)까지 걸은 차례로, 거리만큼 나눠
+/// 굵기 12 진하게 + 18 옅게 두 번 칠한 붓 선. 그 아래 연필 점선 길 (캔버스 #8c6f4e 1.6, 3·6 점선, 70%)
+class _TrailPainter extends CustomPainter {
+  const _TrailPainter({
+    required this.strokes,
+    required this.colorOf,
+    required this.pathY,
+    required this.endX,
+    required this.k,
+  });
+
+  final List<PaintStroke> strokes;
+  final Color Function(String colorId) colorOf;
+  final double pathY;
+  final double endX;
+
+  /// 설계 188pt에 대한 배율 (선 굵기·물결)
+  final double k;
+
+  Path _wave(double x0, double x1) {
+    final y = pathY;
+    return Path()
+      ..moveTo(x0, y)
+      ..cubicTo(x0 + (x1 - x0) * .33, y - 4 * k, x0 + (x1 - x0) * .66, y + 5 * k, x1, y);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 연필 점선 길
+    final pencil = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6 * k
+      ..color = _wood.withValues(alpha: .7);
+    final line = Path()
+      ..moveTo(-4, pathY)
+      ..cubicTo(size.width * .18, pathY - 8 * k, size.width * .35, pathY + 6 * k, size.width * .53, pathY)
+      ..cubicTo(size.width * .7, pathY - 6 * k, size.width * .88, pathY - 6 * k, size.width + 4, pathY);
+    for (final m in line.computeMetrics()) {
+      for (var d = 0.0; d < m.length; d += 9 * k) {
+        canvas.drawPath(m.extractPath(d, math.min(d + 3 * k, m.length)), pencil);
+      }
+    }
+    final total = strokes.fold(0.0, (s, p) => s + p.meters);
+    if (total <= 0) return;
+    const start = -6.0;
+    var x = start;
+    for (final p in strokes) {
+      final x1 = x + (endX - start) * p.meters / total;
+      final path = _wave(x, x1);
+      final color = colorOf(p.colorId);
+      canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = 18 * k
+            ..color = color.withValues(alpha: .22));
+      canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = 12 * k
+            ..color = color.withValues(alpha: .88));
+      x = x1;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TrailPainter old) =>
+      old.strokes != strokes || old.pathY != pathY || old.endX != endX || old.k != k;
+}
+
+/// 엽서 정령: 발 [foot]·키 [figureHeight] (600 캔버스의 머리 위 y150~발바닥 y440 잣대, 걷는 중과 같은 놓기).
+/// 걸은 날은 [speed] 1로 걷는다 (캔버스 D안도 걷는 정령이 통통 움직인다). config ‘옆면 걷기 첫 장면’은 공유 이미지가
+/// 뜨는 한 장면으로 읽었다: v11 워터마크 판은 만든 뒤 처음 몇 초 첫 모습에 머물러 그 자리에서 멈추면 그 모습에 갇힐 수 있어
+/// (docs/트랙/정령v11_T17a.md) 카드에서는 멈추지 않는다
+class _CardSpirit extends StatelessWidget {
+  const _CardSpirit({
+    required this.look,
+    required this.foot,
+    required this.figureHeight,
+    required this.pose,
+    this.speed = 0,
+    this.mirrored = false,
+    this.expression = 0,
+    this.renderer,
+    this.onReady,
+  });
+
+  final SpiritLook look;
+  final Offset foot;
+  final double figureHeight;
+  final int pose;
+  final double speed;
+  final bool mirrored;
+  final int expression;
+  final rive.Factory? renderer;
+  final VoidCallback? onReady;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = figureHeight / (440 - 150);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          left: foot.dx - 300 * k,
+          top: foot.dy - 440 * k,
+          width: 600 * k,
+          height: 600 * k,
+          child: IgnorePointer(
+            child: SpiritCharacter(
+              key: const ValueKey('day-card-spirit'),
+              look: look,
+              speed: speed,
+              pose: pose,
+              mirrored: mirrored,
+              expression: expression,
+              riveFactory: renderer,
+              onReady: onReady == null ? null : (_) => onReady!(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 날짜 소인 (캔버스: 지름 58 점선 동그라미 1.6, −8°, 반투명 바탕, 날짜 14 굵게 + 아래 11 옅게).
+/// 여러 날은 글이 길어 옆으로 늘어난 알약
+class _Postmark extends StatelessWidget {
+  const _Postmark({required this.day, required this.sub, this.size = 58});
+
+  final String day;
+  final String sub;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '소인 $day $sub',
+      child: ExcludeSemantics(
+        child: Transform.rotate(
+          angle: -8 * math.pi / 180,
+          child: MediaQuery.withNoTextScaling(
+            child: CustomPaint(
+              painter: const _DashedStadiumPainter(),
+              child: Container(
+                key: const ValueKey('day-card-postmark'),
+                constraints: BoxConstraints(minWidth: size, minHeight: size, maxHeight: size),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(day,
+                        style: TextStyle(
+                          fontSize: size * 14 / 58,
+                          height: 17 / 14,
+                          fontWeight: FontWeight.w700,
+                          color: Palette.ink,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        )),
+                    Text(sub,
+                        style: TextStyle(fontSize: size * 11 / 58, height: 13 / 11, color: Palette.subInk)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedStadiumPainter extends CustomPainter {
+  const _DashedStadiumPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect.deflate(.8), Radius.circular(size.height / 2));
+    canvas.drawRRect(rrect, Paint()..color = _postmarkFill);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..color = _postmarkLine;
+    for (final m in (Path()..addRRect(rrect)).computeMetrics()) {
+      for (var d = 0.0; d < m.length; d += 7) {
+        canvas.drawPath(m.extractPath(d, math.min(d + 4, m.length)), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedStadiumPainter old) => false;
+}
+
+/// 공유 엽서 (캔버스 2-4, 360×450 = 4:5): 바탕 위 엽서(장면 + 소인, 문장 한 줄, 칩 3) + 아래 발자국 ‘DOOBAL’.
+/// 버튼 없음. 정령은 Flutter 그리기로 (이미지에 담기게)
+class DayCardShareImage extends ConsumerWidget {
   const DayCardShareImage({
     super.key,
     required this.card,
@@ -761,6 +1136,7 @@ class DayCardShareImage extends StatelessWidget {
     required this.painting,
     required this.spirit,
     this.onSpiritReady,
+    this.onSceneReady,
   });
 
   final DayCard card;
@@ -768,23 +1144,15 @@ class DayCardShareImage extends StatelessWidget {
   final Landmark? painting;
   final SpiritLook spirit;
   final VoidCallback? onSpiritReady;
+  final VoidCallback? onSceneReady;
 
   @override
-  Widget build(BuildContext context) {
-    final painting = this.painting;
-    final single = card.range.single;
-    // 그림 받은 날은 명소 이름이 제목, 아니면 날짜 (여러 날이면 ‘지난 n일’)
-    final title = painting != null
-        ? painting.name
-        : single
-            ? formatMonthDay(dayFromKey(card.range.to))
-            : dayCardTitle(card, now);
-    final sub = single
-        ? (painting != null
-            ? '${formatMonthDay(dayFromKey(card.range.to))} ${weekdayLong(card.range.to)}'
-            : weekdayLong(card.range.to))
-        : dayRangeLabel(card.range);
-    final stats = dayCardStats(card, share: true);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rules = ref.watch(rulesProvider).value;
+    if (rules == null) return const ColoredBox(color: _shareBackground);
+    final r = rules.report.card;
+    final line = dayCardSentence(card, r.sentences, yesterday: isYesterdayCard(card, now));
+    final chips = dayCardChips(card, r);
     return MediaQuery(
       // 공유 이미지는 늘 같은 모양으로 (기기 글자 크기와 상관없이)
       data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
@@ -794,92 +1162,61 @@ class DayCardShareImage extends StatelessWidget {
         child: ColoredBox(
           color: _shareBackground,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 26, 22, 0),
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
             child: Column(
               children: [
                 SizedBox(
-                  width: 316,
-                  child: _Paper(
-                    padding: const EdgeInsets.fromLTRB(14, 18, 14, 12),
+                  width: _shareScene.width,
+                  child: _PostcardFrame(
+                    radius: 20,
+                    lift: false,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Expanded(
-                              child: Text(title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: context.display(19)),
+                        DecoratedBox(
+                          position: DecorationPosition.foreground,
+                          decoration: const BoxDecoration(
+                            border:
+                                Border(bottom: BorderSide(color: Palette.ink, width: InkLine.panel)),
+                          ),
+                          child: SizedBox(
+                            height: _shareScene.height,
+                            child: PostcardScene(
+                              card: card,
+                              rules: rules,
+                              painting: painting,
+                              spirit: spirit,
+                              design: Size(_shareScene.width - 2 * InkLine.panel, _shareScene.height),
+                              postmarkSize: 56,
+                              renderer: rive.Factory.flutter,
+                              onSpiritReady: onSpiritReady,
+                              onSceneReady: onSceneReady,
                             ),
-                            const SizedBox(width: 8),
-                            Text(sub, style: AppText.label),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 10),
-                        Center(
-                          child: painting != null
-                              ? _PolaroidWithSpirit(
-                                  painting: painting,
-                                  spirit: spirit,
-                                  width: 184,
-                                  pad: const EdgeInsets.fromLTRB(6, 6, 6, 16),
-                                  spiritSize: const Size(62, 74),
-                                  spiritOffset: const Offset(30, 22),
-                                  shadow: false,
-                                  onSpiritReady: onSpiritReady,
-                                  renderer: rive.Factory.flutter,
-                                )
-                              : SizedBox(
-                                  width: 120,
-                                  height: 143,
-                                  child: _Spirit(spirit,
-                                      onReady: onSpiritReady, renderer: rive.Factory.flutter),
-                                ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            for (final (i, s) in stats.indexed) ...[
-                              if (i > 0) const SizedBox(width: 4),
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(s.$1,
-                                          style: const TextStyle(
-                                              fontSize: 11, color: Palette.subInk)),
-                                    ),
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        s.$2,
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Palette.ink,
-                                          fontFeatures: [FontFeature.tabularFigures()],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                line,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  height: 24 / 17,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: -0.3,
+                                  color: Palette.ink,
                                 ),
                               ),
+                              if (chips.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                _Chips(chips,
+                                    fontSize: 12,
+                                    pad: const EdgeInsets.symmetric(horizontal: 9, vertical: 4)),
+                              ],
                             ],
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        WeekBars(
-                          week: card.week,
-                          height: 52,
-                          barMaxHeight: 36,
-                          barMaxWidth: 22,
-                          minBar: 5,
-                          gap: 5,
-                          highlightLabels: false,
+                          ),
                         ),
                       ],
                     ),
