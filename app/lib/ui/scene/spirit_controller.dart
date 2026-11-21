@@ -35,15 +35,26 @@ const _pressSec = 1.2;
 const _triggerSec = {'greet': 2.4, 'joy': 1.8, 'tapHead': _pressSec, 'tapBelly': _pressSec, 'angry': .6};
 
 final class SpiritController extends rive.RiveWidgetController {
-  SpiritController(super.file)
+  /// 아트보드 `Spirit`·상태 머신 `WardrobeController`·뷰 모델 `WardrobeColors`를 이름으로 묶는다 (config character.rive,
+  /// 정령 계약 v0.11). rive 0.15는 만들 때 묶으므로 기본 인스턴스를 먼저 만들어 넘긴다
+  factory SpiritController(rive.File file) {
+    final model = file.viewModelByName('WardrobeColors')!;
+    try {
+      return SpiritController._(file, model.createDefaultInstance()!);
+    } finally {
+      model.dispose();
+    }
+  }
+  SpiritController._(super.file, this.instance)
     : super(
+        artboardSelector: rive.ArtboardNamed('Spirit'),
         stateMachineSelector: rive.StateMachineNamed('WardrobeController'),
+        main: rive.DataBind.byInstance(instance),
       ) {
-    instance = dataBind(rive.DataBind.auto());
     _pose = instance.number('poseChoice')!;
     _expr = instance.number('expr');
   }
-  late final rive.ViewModelInstance instance;
+  final rive.BindableViewModelInstance instance;
   late final rive.ViewModelInstanceNumber _pose;
 
   /// 표정 입력 expr (0 기본·1 행복·2 놀람·3 울먹임·4 졸림·5 화남, 정령 계약 2·4장). riv에 없으면 null
@@ -52,6 +63,41 @@ final class SpiritController extends rive.RiveWidgetController {
   int _direction = 0, _baselineDirection = 0;
   bool _head = false, _belly = false;
   double _actionLeft = 0;
+
+  // rive 0.15 재생기는 뷰 모델 입력으로 도는 자세·반응 전이가 0.14 때와 달라 (Codex 앱 패치 11/20, 개발인계_20261120 2장),
+  // riv 안의 같은 원본 클립(자세 `Pose_<n>_stable`, 반응 클립)을 상태 머신 다음에 직접 얹는다. riv는 바꾸지 않는다.
+  // 트리거도 그대로 울려 친구 스크립트(누름 반응 등)는 riv가 받는다
+  rive.Animation? _reactionClip, _poseClip;
+  int _appliedPose = -1;
+
+  /// 지금 자세(poseChoice)의 고정 클립을 얹는다. 자세가 바뀔 때만 클립을 새로 찾는다
+  void _applyPoseClip() {
+    final pose = poseChoice;
+    if (_appliedPose != pose) {
+      _poseClip?.dispose();
+      _poseClip = artboard.animationNamed('Pose_${pose}_stable');
+      _appliedPose = pose;
+    }
+    _poseClip?.apply();
+  }
+
+  /// 트리거 → riv 원본 반응 클립 이름
+  static const _reactionNames = {
+    'greet': 'GreetOneShot',
+    'joy': 'JoyOneShot',
+    'tapHead': 'ImportedHeadPress',
+    'tapBelly': 'ImportedBellyPress',
+    'angry': 'ImportedAngryOneShot',
+  };
+
+  /// 반응 클립을 놓고 기본 떠 있기(`MotionIdle`) 첫 장면으로 되돌린다
+  void _clearReaction() {
+    _reactionClip?.dispose();
+    _reactionClip = null;
+    final idle = artboard.animationNamed('MotionIdle');
+    idle?.apply();
+    idle?.dispose();
+  }
 
   /// 화면이 정한 자세 (config character.rive.screens·restSwap). null이면 장면(속도·앉기)이 정한다
   int? _fixedPose;
@@ -107,9 +153,9 @@ final class SpiritController extends rive.RiveWidgetController {
     }
     instance.color('bodyColor')!.value = Color(look.bodyArgb ?? 0xfff2dfc6);
     for (final p in unifiedProps) {
-      instance.color(p.colorField)!.value = Color(
-        look.colors[p.colorField] ?? p.argb,
-      );
+      if (p.colorField case final field?) {
+        instance.color(field)!.value = Color(look.colors[field] ?? p.argb);
+      }
     }
     scheduleRepaint();
   }
@@ -192,6 +238,13 @@ final class SpiritController extends rive.RiveWidgetController {
     stateMachine.advanceAndApply(0);
     instance.trigger(trigger)!.trigger();
     stateMachine.advanceAndApply(0);
+    // 트리거 전이와 따로 같은 원본 반응 클립을 처음부터 얹는다 (위 주석). 그림·타이밍은 riv 원본
+    _clearReaction();
+    // 표에 없는 트리거면 클립 없이 트리거만 (지금 부르는 것은 greet·joy·tapHead·tapBelly·angry)
+    final clip = _reactionNames[trigger];
+    _reactionClip = clip == null ? null : artboard.animationNamed(clip);
+    _reactionClip?.time = 0;
+    _reactionClip?.apply();
     _actionLeft = seconds;
     scheduleRepaint();
   }
@@ -200,6 +253,7 @@ final class SpiritController extends rive.RiveWidgetController {
     _head = false;
     _belly = false;
     _actionLeft = 0;
+    _clearReaction();
     _fixedPose = null;
     _direction =
         direction ??
@@ -296,9 +350,14 @@ final class SpiritController extends rive.RiveWidgetController {
       dt = 0;
     }
     final active = super.advance(dt * playbackRate);
+    _applyPoseClip();
+    _reactionClip?.advanceAndApply(dt);
+    // 얹은 클립이 바꾼 표시·변환을 같은 프레임에 반영한다
+    artboard.advance(0);
     if (_actionLeft > 0) {
       _actionLeft = math.max(0, _actionLeft - dt);
       if (_actionLeft == 0) {
+        _clearReaction();
         release();
         _restore();
       }
@@ -315,6 +374,8 @@ final class SpiritController extends rive.RiveWidgetController {
 
   @override
   void dispose() {
+    _reactionClip?.dispose();
+    _poseClip?.dispose();
     super.dispose();
     instance.dispose();
   }

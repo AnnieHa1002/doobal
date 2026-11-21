@@ -75,25 +75,19 @@ void main() {
       for (var x = 220; x <= 380; x += 20) Offset(x.toDouble(), y.toDouble()),
   ];
 
-  /// 필터 없는 그림에서 몸통 평면색(#F2DFC6)인 점의 수: 같은 점들이 견본색이 되어야 한다
-  const bodyFlat = 0xF2DFC6;
-
-  testWidgets('몸 색을 주면 몸통 픽셀이 견본색이 된다 (필터 없는 그림은 평면색 #F2DFC6)', (tester) async {
+  testWidgets('수채 몸 색 입력이 그림에 반영되고 배경은 유지된다', (tester) async {
     final plain = await _paint(tester, SpiritLook.base, grid);
-    final flatAt = [for (var i = 0; i < grid.length; i++) if (plain[i] == bodyFlat) i];
-    // 훑는 점의 상당수가 몸통이다 (그림이 바뀌어 이 가정이 깨지면 먼저 알린다)
-    expect(flatAt.length, greaterThan(40), reason: '몸통 평면색 점 ${flatAt.length}개');
-    expect(_diff((await _paint(tester, SpiritLook.base, [_belly])).single, bodyFlat), 0);
-
-    for (final swatch in [0xFFC9775A, 0xFF7F8DB3, 0xFFCDE0AC, 0xFFF3E4C4, 0xFF9FAE7E]) {
-      final tinted = await _paint(tester, SpiritLook.base.copyWith(bodyArgb: swatch), grid);
-      for (final i in flatAt) {
-        expect(_diff(tinted[i], swatch & 0xFFFFFF), lessThanOrEqualTo(2),
-            reason: '견본 ${swatch.toRadixString(16)}, 점 ${grid[i]}: ${tinted[i].toRadixString(16)}');
-      }
-      // 몸통이 아닌 점(바탕 흰색)은 그대로다: 필터가 알파·배경을 건드리지 않는다
-      for (var i = 0; i < grid.length; i++) {
-        if (plain[i] == 0xFFFFFF) expect(tinted[i], 0xFFFFFF, reason: '바탕 ${grid[i]}');
+    final a = await _paint(tester, SpiritLook.base.copyWith(bodyArgb: 0xFFC9775A), grid);
+    final b = await _paint(tester, SpiritLook.base.copyWith(bodyArgb: 0xFF7F8DB3), grid);
+    final changed = [for (var i = 0; i < grid.length; i++) if (_diff(a[i], b[i]) > 30) i];
+    expect(changed.length, greaterThan(40));
+    for (final i in changed) {
+      expect(_r(a[i]), greaterThan(_b(a[i])), reason: '테라코타 ${grid[i]}');
+      expect(_b(b[i]), greaterThan(_r(b[i])), reason: '남청 ${grid[i]}');
+    }
+    for (var i = 0; i < grid.length; i++) {
+      if (plain[i] == 0xFFFFFF) {
+        expect(a[i], 0xFFFFFF); expect(b[i], 0xFFFFFF);
       }
     }
   });

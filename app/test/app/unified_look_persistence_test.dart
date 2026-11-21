@@ -10,7 +10,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('37 소품 착용과 몸 색을 실제 파일 DB에 저장하고 닫았다 다시 연다; 다른 프로필 값 유지', () async {
+  // 11/21 T17a: 정령 v11로 46소품(상점 친구 8·물빛 구슬 더함). 칸마다 표의 마지막 소품이 남는다(친구 pet_13 = 13, 구슬 float_04 = 6)
+  test('46 소품 착용과 몸 색을 실제 파일 DB에 저장하고 닫았다 다시 연다; 다른 프로필 값 유지', () async {
     final dir = Directory.systemTemp.createTempSync('doobal_look_');
     addTearDown(() => dir.deleteSync(recursive: true));
     final file = File('${dir.path}/game.sqlite');
@@ -41,8 +42,9 @@ void main() {
     // 칸마다 마지막에 끼운 소품, 색은 Rive에 넣는 기본색 (소품 색은 직접 고르지 않음, 16장 11/4)
     final mapped = spiritLookOf(restored, bodyArgb: 0xff8cbbd0);
     expect(mapped.choices,
-        {'hat': 4, 'face': 3, 'cloth': 5, 'shoe': 5, 'hand': 5, 'bag': 5, 'pet': 5, 'float': 5});
-    expect(mapped.colors, {for (final p in unifiedProps) p.colorField: p.argb});
+        {'hat': 4, 'face': 3, 'cloth': 5, 'shoe': 5, 'hand': 5, 'bag': 5, 'pet': 13, 'float': 6});
+    // 물빛 구슬은 색 입력이 없어 빠진다 (색 45)
+    expect(mapped.colors, {for (final p in unifiedProps) ?p.colorField: p.argb});
     await db.close();
   });
 

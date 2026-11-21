@@ -5,7 +5,7 @@ import '../../domain/spirit_look.dart';
 import '../scene/spirit_character.dart';
 import '../scene/spirit_controller.dart';
 
-/// 개발 화면: 앱이 쓰는 정령 Rive(v36)의 자세 7·반응·표정 6·뒤집기와 몇 가지 소품을 폰에서 바로 본다.
+/// 개발 화면: 앱이 쓰는 정령 Rive(옷 최종 v11)의 자세 7·반응·표정 6·뒤집기와 몇 가지 소품을 폰에서 바로 본다.
 /// 번호는 정령 계약 2·4장 (poseChoice·expr·트리거). 머리·배는 손가락으로 눌러 볼 수 있다
 class SpiritPreviewScreen extends StatefulWidget {
   const SpiritPreviewScreen({super.key});
@@ -27,6 +27,17 @@ const _looks = <(String, SpiritLook)>[
   ('봇짐 지팡이', SpiritLook(choices: {'cloth': 4, 'bag': 5})),
   ('연두 망토', SpiritLook(choices: {'cloth': 1})),
   ('괭이갈매기', SpiritLook(choices: {'cloth': 4, 'pet': 5})),
+  ('별빛 망토', SpiritLook(choices: {'cloth': 2, 'float': 6})),
+  ('앞치마', SpiritLook(choices: {'cloth': 3, 'float': 6})),
+  ('금빛 코트', SpiritLook(choices: {'cloth': 5, 'float': 6})),
+  ('파랑새', SpiritLook(choices: {'cloth': 1, 'float': 6, 'pet': 6})),
+  ('카나리아', SpiritLook(choices: {'cloth': 1, 'float': 6, 'pet': 7})),
+  ('잠자리', SpiritLook(choices: {'cloth': 1, 'float': 6, 'pet': 8})),
+  ('도깨비불', SpiritLook(choices: {'cloth': 1, 'float': 6, 'pet': 9})),
+  ('꼬마 인삼', SpiritLook(choices: {'cloth': 1, 'float': 6, 'pet': 10})),
+  ('두더지', SpiritLook(choices: {'cloth': 1, 'float': 6, 'pet': 11})),
+  ('고슴도치', SpiritLook(choices: {'cloth': 1, 'float': 6, 'pet': 12})),
+  ('너구리', SpiritLook(choices: {'cloth': 1, 'float': 6, 'pet': 13})),
 ];
 
 class _SpiritPreviewScreenState extends State<SpiritPreviewScreen> {
@@ -57,7 +68,7 @@ class _SpiritPreviewScreenState extends State<SpiritPreviewScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('정령 움직임 (v36)')),
+        appBar: AppBar(title: const Text('정령 움직임 (v11)')),
         body: SafeArea(
           child: Column(
             children: [

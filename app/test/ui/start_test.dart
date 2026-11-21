@@ -538,7 +538,7 @@ void main() {
           mouth: 'm7',
           body: SwatchBodyColor(7),
           clothColor: 2,
-        ),
+        ).withSlot('float', 'float_04'),
       );
       // 앞 단계 기록은 그대로
       expect((r.ageConfirmedAt, r.installId), (t0.millisecondsSinceEpoch, '1' * 32));
@@ -589,7 +589,7 @@ void main() {
       await _arrive(tester, HomePickScreen);
 
       final r = await _profile(tester, e);
-      expect(Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>), Look.initial);
+      expect(Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>), Look.initial.withSlot('float', 'float_04'));
       await end(tester, e);
     });
 
@@ -1281,7 +1281,7 @@ void main() {
       expect(r.installId, matches(RegExp(r'^[0-9a-f]{32}$')));
       expect(r.nickname, '나그네');
       expect(Look.fromJson(jsonDecode(r.look!) as Map<String, dynamic>),
-          const Look(eyes: 'e2', body: SwatchBodyColor(5)));
+          const Look(eyes: 'e2', body: SwatchBodyColor(5)).withSlot('float', 'float_04'));
       expect((r.homeId, r.homeName, r.homeLat, r.homeLng),
           (suwon.id, '경기 수원시', suwon.lat, suwon.lng));
       expect(r.onboardedAt, e.now.millisecondsSinceEpoch);

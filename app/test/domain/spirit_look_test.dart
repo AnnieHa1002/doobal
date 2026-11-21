@@ -15,7 +15,7 @@ void main() {
       final initial=spiritLookOf(Look.initial);
       expect((initial.bag,initial.outfit),(1,1));
       expect(initial.choices,{'hat':1,'face':0,'cloth':4,'shoe':4,'hand':0,'bag':1,'pet':1,'float':0});
-      expect(initial.colors.length,37);
+      expect(initial.colors.length,45);
       expect(
           (SpiritLook.base.eye, SpiritLook.base.brow, SpiritLook.base.nose, SpiritLook.base.mouth),
           (0, 1, 6, 6));

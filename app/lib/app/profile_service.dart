@@ -6,6 +6,7 @@ import '../data/db/app_db.dart';
 import '../domain/look.dart';
 import '../domain/onboarding.dart';
 import '../domain/profile.dart';
+import '../domain/prop.dart';
 import '../domain/sigungu.dart';
 
 /// 나의 정보에 보이는 닉네임과 모습
@@ -78,6 +79,22 @@ class ProfileService {
         nickname: Value(nickname),
         look: Value(jsonEncode(look.toJson())),
       ));
+
+  /// 정령 만들기를 마칠 때: 시작 선물(gift, unlock.on spiritMakerDone — 물빛 구슬)을 주고, equipOnStart면 입힌 모습으로
+  /// 닉네임·모습을 저장한다. 셋을 한 거래로 (중간에 꺼져도 반만 남지 않게). 꾸미기 저장([saveLook])·[saveMe]는
+  /// 선물을 다시 입히지 않는다. 받은 선물은 새 소품(seen false)이라 화집 소품 탭에 점이 뜬다
+  Future<void> saveMaker(String nickname, Look look, List<Prop> props, DateTime now) =>
+      db.transaction(() async {
+        var dressed = look;
+        for (final p in props.where((p) => p.kind == PropUnlockKind.gift &&
+            p.unlockOn == 'spiritMakerDone')) {
+          await db.into(db.propsOwned).insertOnConflictUpdate(PropsOwnedCompanion.insert(
+            propId: p.id, unlockedUtc: now.toUtc().millisecondsSinceEpoch,
+          ));
+          if (p.equipOnStart) dressed = dressed.withSlot(p.slot, p.id);
+        }
+        await saveMe(nickname, dressed);
+      });
 
   /// 꾸미기 저장: 모습만 바꾸고 닉네임 같은 다른 열은 그대로 둔다. 칸에는 가진 소품
   /// (기본 소품은 처음부터 가진 것)만 끼울 수 있고, 아니면 아무것도 적지 않고 StateError.
