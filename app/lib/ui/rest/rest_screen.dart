@@ -20,6 +20,7 @@ import '../../domain/scene.dart' show sceneLook;
 import '../../domain/screen_rules.dart';
 import '../../domain/sketch.dart';
 import '../album/album_screen.dart';
+import '../album/painting_viewer.dart';
 import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/notice_dot.dart';
@@ -34,6 +35,7 @@ import '../tabs/home_tabs.dart';
 import 'decor_drawer.dart';
 import 'decor_edit.dart';
 import 'decor_layer.dart';
+import 'painting_pick_sheet.dart';
 import 'prop_wiggle.dart';
 import 'rest_gestures.dart';
 import 'rest_slots.dart';
@@ -178,12 +180,34 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
     await ref.read(decorProvider.notifier).remove(id);
   }
 
-  /// 놓인 물품을 짧게 눌렀다: 꾸미기 중이면 고르기(다시 누르면 놓기)
+  /// 놓인 물품을 짧게 눌렀다. 꾸미기 중이면 고르기(다시 누르면 놓기, 고른 물품 위에 뒤집기·그림 걸기 버튼).
+  /// 아니면 그림 거는 물품만: 걸린 그림이 있으면 크게 보기(누른 칸부터, 넘기기는 그 물품에 걸린 그림 안에서만,
+  /// config rest.decor.hungPaintingTap), 걸린 그림이 없으면 그림 고르기 시트. 그 밖의 물품은 그대로(흔들림은 T19)
   void _onDecorTap(DecorView v, ScenePoint at) {
     if (_edit.editing) {
       _edit.select(_edit.selected == v.id ? null : v.id);
       return;
     }
+    if (v.item.paintingSlots == 0) return;
+    final hung = [
+      for (final (i, p) in v.hung.indexed)
+        if (p != null) (slot: i, painting: p),
+    ];
+    final bigView = ref.read(rulesProvider).value?.decor.place.hungTapOpensBigView ?? false;
+    if (hung.isEmpty || !bigView) {
+      unawaited(showPaintingPickSheet(context, v.item));
+      return;
+    }
+    final tapped = [
+      for (final (i, slot) in v.layout.slots.indexed)
+        if (slot.contains(at)) i,
+    ];
+    final start = tapped.isEmpty ? 0 : hung.indexWhere((h) => h.slot == tapped.first);
+    unawaited(openPaintingViewer(
+      context,
+      [for (final h in hung) BigPainting.owned(h.painting)],
+      start < 0 ? 0 : start,
+    ));
   }
 
   Rect? _drawerRect() {
@@ -430,6 +454,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
                   geometry: geometry,
                   tint: decorTint,
                   flipButton: rules.decor.place.flipButton,
+                  onPaint: (v) => showPaintingPickSheet(context, v.item),
                   placed: {for (final v in views) v.id: v},
                   viewOf: (id, foot, flipped) {
                     final item = decorCatalog.byId(id);
