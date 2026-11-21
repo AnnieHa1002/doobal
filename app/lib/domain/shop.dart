@@ -4,24 +4,11 @@ import 'notification_policy.dart' show josa;
 import 'rules.dart';
 
 // 럭 상점 상품 (shop.json v9, M4.5): 여행 효과(소모품)·소품·꾸밈 효과·배, v7부터 쉼터 꾸밈 물품, v9 미니 친구·무늬·물감 통.
+// 상점 화면은 탭 없이 여행 효과 고정 칸 + 오늘의 수레 칸 (shop_cart.dart, 16장 11/19)
 // 값은 베타 뒤 조정
 
 /// 상품 분류 (shop.json v7 category, 분류 아이콘). prop에는 꾸미기 소품·색 소품·꾸밈 효과·물감 길 무늬·물감 통이 든다
 enum ShopCategory { travel, prop, decor, boat }
-
-/// 지금 상점 화면의 탭 4개 (shop v6 tabs·tabLabels). shop v7부터 데이터에는 탭이 없고 분류([ShopCategory])만 있다.
-/// 오늘의 수레(T16)가 화면을 바꾸기 전까지 이름을 여기 둔다. travel은 소모품, effect는 꾸미기 효과 칸의 영구 소품이다
-enum ShopTab {
-  travel('여행 효과'),
-  prop('소품'),
-  effect('꾸밈 효과'),
-  boat('배');
-
-  const ShopTab(this.label);
-
-  /// 탭 화면 이름 (옛 tabLabels)
-  final String label;
-}
 
 /// 여행 효과의 종류 (shop.json effect.kind)
 enum ShopEffectKind { travelKmInstant, travelRatioUntilWalkEnd }
@@ -70,6 +57,9 @@ class ShopItem {
     this.requiresJourney = false,
     this.requires,
     this.desc,
+    this.cartChancePerDay,
+    this.cartMaxPerDay,
+    this.paintTubes,
   });
 
   final String id;
@@ -98,23 +88,23 @@ class ShopItem {
   /// 상점 칸 이름 아래 설명 한 줄. 여행 효과만 있다 (shop v6 desc, 16장 11/13 화면 글 ②)
   final String? desc;
 
-  /// 지금 상점 화면에서 이 상품이 뜨는 탭. 옛 탭(shop v6)에 있던 상품만 뜬다: 쉼터 꾸밈 물품·물감 길 무늬·물감 통·
-  /// 상점 미니 친구(Rive petChoice 6~13 아직 없음)는 null이라 안 보이고 살 수도 없다(무늬·물감 통·꾸밈 물품은 [buyBlock]이
-  /// 막는다). 오늘의 수레(T16)·쉼터 꾸미기(T15)·무늬(T17)에서 보인다
-  ShopTab? get tab => switch (category) {
-        ShopCategory.travel => ShopTab.travel,
-        ShopCategory.boat => ShopTab.boat,
-        ShopCategory.decor => null,
-        ShopCategory.prop => switch (slot) {
-            _ when propId == null => null,
-            'effect' => ShopTab.effect,
-            'pet' => null,
-            _ => ShopTab.prop,
-          },
-      };
+  /// 소모품이 그날 수레에 나올 확률과 하루 최대 칸 수 (shop v9 cart.chancePerDay·maxPerDay, 물감 통)
+  final double? cartChancePerDay;
+  final int? cartMaxPerDay;
+
+  /// 물감 통 상품: 사면 그날 색 통 몇 개 (shop v9 paint.tubes). 물감 통이 아니면 null
+  final int? paintTubes;
 
   factory ShopItem.fromJson(Map<String, dynamic> j) {
     final effect = j['effect'] as Map<String, dynamic>?;
+    final cart = j['cart'] as Map<String, dynamic>?;
+    final paint = j['paint'] as Map<String, dynamic>?;
+    if (paint != null) {
+      // 물감 통 (16장 11/19 밤): 그날 계절 색 하나, 지역 색 없음. 다른 값은 모른다
+      if (paint['color'] != 'todaySeasonRandom' || paint['excludeRegion'] != true) {
+        throw FormatException('물감 통 paint 값을 모른다: ${j['id']}');
+      }
+    }
     return ShopItem(
       id: j['id'] as String,
       category: _categoryOf(j['category'] as String),
@@ -132,6 +122,9 @@ class ShopItem {
       maxHold: j['maxHold'] as int?,
       requiresJourney: j['requiresJourney'] as bool? ?? false,
       desc: j['desc'] as String?,
+      cartChancePerDay: (cart?['chancePerDay'] as num?)?.toDouble(),
+      cartMaxPerDay: cart?['maxPerDay'] as int?,
+      paintTubes: paint?['tubes'] as int?,
     );
   }
 }
@@ -160,10 +153,6 @@ class ShopCatalog {
   late final Map<String, ShopItem> _byId = {for (final i in items) i.id: i};
 
   ShopItem? byId(String id) => _byId[id];
-
-  /// 지금 상점 화면의 [tab]에 뜨는 상품을 order 순서로 ([ShopItem.tab])
-  List<ShopItem> inTab(ShopTab tab) =>
-      [for (final i in items) if (i.tab == tab) i]..sort((a, b) => a.order.compareTo(b.order));
 }
 
 ShopCatalog parseShop(Map<String, dynamic> json) {
@@ -203,7 +192,10 @@ enum ShopBlock {
   noJourney('여정 중에만 쓸 수 있어요'),
   noWalk('걷는 중에만 쓸 수 있어요'),
   dailyLimit('오늘은 더 쓸 수 없어요'),
-  dailyCap('오늘은 더 쓸 수 없어요');
+  dailyCap('오늘은 더 쓸 수 없어요'),
+
+  /// 오늘의 수레 칸이 이미 팔렸거나 새벽에 수레가 바뀌었다 (가안, 시트를 연 사이에만 나온다)
+  soldOut('이제 살 수 없어요');
 
   const ShopBlock(this.message);
 
@@ -236,8 +228,17 @@ String coinsLeftText(int left) => '남는 럭 ${formatInt(left)}';
 int coinBalanceOf({required int credited, required int spent}) =>
     credited > spent ? credited - spent : 0;
 
-/// 살 수 없는 까닭. 살 수 있으면 null. 여행 효과는 [held]가 [maxHold]보다 적어야 하고,
-/// 소품·배는 한 번만 산다. 색 소품은 기본 소품([ShopItem.requires])을 가져야 산다([hasRequired])
+/// 사면 무엇이 생기는지 아는 상품인가: 여행 효과·소품(꾸밈 효과·색 소품·미니 친구)·배·쉼터 물품·무늬·물감 통
+bool isSellable(ShopItem item) =>
+    item.effect != null ||
+    item.propId != null ||
+    item.boatId != null ||
+    item.decorId != null ||
+    item.trailId != null ||
+    (item.consumable && item.paintTubes != null);
+
+/// 살 수 없는 까닭. 살 수 있으면 null. 여행 효과·물감 통(소모품)은 [held]가 [maxHold]보다 적어야 하고,
+/// 소품·배·쉼터 물품·무늬는 한 번만 산다. 색 소품은 기본 소품([ShopItem.requires])을 가져야 산다([hasRequired])
 ShopBlock? buyBlock(
   ShopItem item, {
   required int balance,
@@ -246,11 +247,9 @@ ShopBlock? buyBlock(
   required bool owned,
   bool hasRequired = true,
 }) {
-  if (item.effect == null && item.propId == null && item.boatId == null) {
-    return ShopBlock.unknownItem;
-  }
+  if (!isSellable(item)) return ShopBlock.unknownItem;
   if (item.requires != null && !hasRequired) return ShopBlock.needsBase;
-  if (item.effect != null) {
+  if (item.effect != null || item.consumable) {
     if (held >= maxHold) return ShopBlock.holdFull;
   } else if (owned) {
     return ShopBlock.owned;

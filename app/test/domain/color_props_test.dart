@@ -97,13 +97,14 @@ void main() {
   });
 
   group('상점 상품', () {
-    test('색 소품 21개를 소품 탭 상품으로: 값은 props unlock.price, requires는 기본 소품', () {
+    test('색 소품 21개를 소품 상품으로: 값은 props unlock.price, requires는 기본 소품, 수레 종류는 기본 소품 칸', () {
       final items = colorShopItems(props);
       expect(items, hasLength(21));
       expect(_ids(items), _ids(variantsAfterBase(props).where((p) => p.isColorVariant)));
       for (final (i, item) in items.indexed) {
         final p = props.firstWhere((p) => p.id == item.id);
-        expect(item.tab, ShopTab.prop);
+        expect(item.category, ShopCategory.prop);
+        expect(item.slot, p.slot);
         expect(item.propId, p.id);
         expect(item.name, p.name);
         expect(item.price, p.price);

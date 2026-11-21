@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:doobal/data/db/app_db.dart';
-import 'package:doobal/domain/shop.dart';
 import 'package:doobal/ui/common/app_text.dart';
 import 'package:doobal/ui/shop/shop_screen.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -34,12 +33,12 @@ void main() {
     addTearDown(tester.view.reset);
     final key = GlobalKey();
     final e = UiEnv();
-    await e.seed(
-      tester,
-      () => e.db
+    await e.seed(tester, () async {
+      await e.db
           .into(e.db.coinLedger)
-          .insert(CoinLedgerCompanion.insert(day: '2026-11-18', kind: CoinKind.gift, amount: 1240)),
-    );
+          .insert(CoinLedgerCompanion.insert(day: '2026-11-18', kind: CoinKind.gift, amount: 1240));
+      await e.db.into(e.db.boatsOwned).insert(BoatsOwnedCompanion.insert(boatId: 'boat_cruise', atUtc: 1));
+    });
 
     Future<void> wait([int n = 12]) async {
       for (var i = 0; i < n; i++) {
@@ -59,7 +58,7 @@ void main() {
       });
     }
 
-    for (final (name, size) in [('390', const Size(390, 844)), ('375', const Size(375, 667))]) {
+    for (final (n, (name, size)) in [('390', const Size(390, 844)), ('375', const Size(375, 667))].indexed) {
       tester.view.physicalSize = size * 2;
       await tester.pumpWidget(RepaintBoundary(
         key: key,
@@ -75,20 +74,20 @@ void main() {
         ),
       ));
       await wait(40);
-      for (final t in ShopTab.values) {
-        await tester.tap(find.byKey(ValueKey('shop-tab-${t.name}')));
-        await wait();
-        await shot('shop_${name}_${t.name}');
-      }
-      await tester.tap(find.byKey(const ValueKey('shop-tab-travel')));
-      await wait();
-      await tester.tap(find.byKey(const ValueKey('shop-item-fx_shortcut')));
+      await shot('shop_${name}_top');
+      // 앞 크기에서 산 칸은 SOLD라 다음 칸을 산다
+      await tester.tap(find.byKey(ValueKey('cart-slot-$n')));
       await wait();
       await tester.pump(const Duration(milliseconds: 400));
       await shot('shop_${name}_sheet');
-      await tester.tap(find.text('취소'));
+      await tester.tap(find.text('구매'));
+      await wait(20);
+      await tester.pump(const Duration(seconds: 3));
       await wait();
-      await tester.pump(const Duration(milliseconds: 400));
+      await shot('shop_${name}_sold');
+      await tester.drag(find.byKey(const ValueKey('shop-scroll')), const Offset(0, -600));
+      await wait();
+      await shot('shop_${name}_bottom');
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
     }

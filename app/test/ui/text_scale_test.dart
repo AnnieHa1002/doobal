@@ -11,7 +11,6 @@ import 'package:doobal/domain/journey.dart';
 import 'package:doobal/domain/look.dart';
 import 'package:doobal/domain/onboarding.dart';
 import 'package:doobal/domain/rules.dart';
-import 'package:doobal/domain/shop.dart';
 import 'package:doobal/domain/sketch.dart';
 import 'package:doobal/main.dart';
 import 'package:doobal/ui/album/album_screen.dart';
@@ -922,31 +921,35 @@ void main() {
   });
 
   group('상점', () {
-    _scaleCases('탭 4와 구매 시트', (tester, fit) async {
+    _scaleCases('여행 효과·수레·잠긴 칸·가진 배, SOLD 도장과 구매 시트', (tester, fit) async {
       final e = UiEnv();
-      await e.seed(
-        tester,
-        () => e.db
+      await e.seed(tester, () async {
+        await e.db
             .into(e.db.coinLedger)
-            .insert(CoinLedgerCompanion.insert(day: '2026-11-18', kind: CoinKind.gift, amount: 123456)),
-      );
+            .insert(CoinLedgerCompanion.insert(day: '2026-11-18', kind: CoinKind.gift, amount: 123456));
+        await e.db.into(e.db.boatsOwned).insert(BoatsOwnedCompanion.insert(boatId: 'boat_starlight', atUtc: 1));
+      });
       await openOnTop(tester, e, const ShopScreen(),
           width: fit.width,
           height: fit.height,
-          ready: () => _key('shop-item-fx_shortcut').evaluate().isNotEmpty);
+          ready: () => _key('cart-slot-0').evaluate().isNotEmpty);
       await settle(tester, () => false, tries: 6);
-      for (final t in ShopTab.values) {
-        await _tap(tester, _key('shop-tab-${t.name}'));
-        fit.check('탭 ${t.name}');
-      }
-      await _tap(tester, _key('shop-tab-boat'));
-      await tester.ensureVisible(_key('shop-item-boat_cruise'));
+      fit.check('처음 화면');
+      await tester.ensureVisible(_key('owned-boat-boat_starlight'));
       await tester.pump();
-      await tester.tap(_key('shop-item-boat_cruise'));
+      fit.check('잠긴 칸·가진 배');
+      // 수레 칸 하나를 사면 SOLD 도장
+      await tester.ensureVisible(_key('cart-slot-0'));
+      await tester.pump();
+      await tester.tap(_key('cart-slot-0'));
       await settle(tester, () => false, tries: 6);
       await transition(tester);
       expect(find.text('구매'), findsOneWidget);
       fit.check('구매 시트');
+      await tester.tap(find.text('구매'));
+      await settle(tester, () => find.text('SOLD').evaluate().isNotEmpty);
+      await tester.pump(const Duration(seconds: 3));
+      fit.check('SOLD 도장');
       await end(tester, e);
     });
   });

@@ -174,8 +174,8 @@ void main() {
     test('소품·꾸밈 효과: 얻은 소품으로, 두 번째는 막는다', () async {
       final e = await _env();
       await e.give(2000);
-      for (final tab in [ShopTab.prop, ShopTab.effect]) {
-        final item = shopCatalog.inTab(tab).first;
+      for (final id in ['face_01', 'effect_01']) {
+        final item = shopCatalog.byId(id)!;
         await e.svc.buyItem(item.id, _t1);
         expect(await e.svc.ownedPropIds(), contains(item.propId), reason: item.id);
         final balance = await e.svc.coinBalance();

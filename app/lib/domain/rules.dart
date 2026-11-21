@@ -1,6 +1,7 @@
 import 'geo.dart';
 import 'paint_color.dart';
 import 'screen_rules.dart';
+import 'shop_cart.dart';
 
 /// 시간대 색 입히기 한 단계 (config scene.tint: bg·char). 곱하기로 입힌다
 class TimeTint {
@@ -376,6 +377,7 @@ class Rules {
     required this.companionLateArrivalMaxSec,
     required this.shopDailyEffectCapKm,
     required this.shopMaxHoldPerItem,
+    this.shopCart = CartRules.none,
     required this.adsRewardedPerDay,
     required this.adsMaxRewardCoins,
     required this.report,
@@ -420,6 +422,9 @@ class Rules {
 
   /// 여행 효과를 종류마다 몇 개까지 보관하는지 (config shop.maxHoldPerItem)
   final int shopMaxHoldPerItem;
+
+  /// 오늘의 수레 (config shop.cart, 16장 11/19·11/20)
+  final CartRules shopCart;
 
   /// 보상형 광고 하루 횟수와 한 번에 받는 럭 상한 (config ads)
   final int adsRewardedPerDay;
@@ -960,6 +965,7 @@ class Rules {
       companionLateArrivalMaxSec: _d(companionPace['lateArrivalMaxSec']),
       shopDailyEffectCapKm: _d(shop['dailyEffectCapKm']),
       shopMaxHoldPerItem: shop['maxHoldPerItem'] as int,
+      shopCart: CartRules.fromJson(shop['cart'] as Map<String, dynamic>?),
       adsRewardedPerDay: ads['rewardedPerDay'] as int,
       adsMaxRewardCoins: ads['maxRewardCoins'] as int,
       report: ReportRules.fromJson(j['report'] as Map<String, dynamic>),

@@ -45,6 +45,8 @@ class CampObject {
     this.art,
     this.artSourceFile,
     this.artSourceNight,
+    this.itemsOnMax = 0,
+    this.itemsOnIconPt = 0,
   });
 
   final String id;
@@ -66,6 +68,10 @@ class CampObject {
   /// 밤에 얹는 층 파일 이름 (artSource.nightLantern)
   final String? artSourceNight;
 
+  /// 그 위에 얹는 그날 물건 아이콘 최대 수와 크기(pt) (v5 수레 itemsOn, 오늘의 수레). 없으면 0
+  final int itemsOnMax;
+  final double itemsOnIconPt;
+
   factory CampObject.fromJson(Map<String, dynamic> j, {String? id}) => CampObject(
         id: id ?? j['id'] as String,
         label: j['label'] as String,
@@ -78,6 +84,8 @@ class CampObject {
         art: j['art'] == null ? null : CampArt.fromJson(j['art'] as Map<String, dynamic>),
         artSourceFile: (j['artSource'] as Map?)?['file'] as String?,
         artSourceNight: (j['artSource'] as Map?)?['nightLantern'] as String?,
+        itemsOnMax: ((j['itemsOn'] as Map?)?['max'] as int?) ?? 0,
+        itemsOnIconPt: (((j['itemsOn'] as Map?)?['iconPt'] as num?) ?? 0).toDouble(),
       );
 }
 

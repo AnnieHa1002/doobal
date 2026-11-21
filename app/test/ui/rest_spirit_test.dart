@@ -2,7 +2,9 @@ import 'dart:math';
 
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/screen_providers.dart';
+import 'package:doobal/app/shop_providers.dart';
 import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/domain/time_kst.dart';
 import 'package:doobal/ui/rest/prop_wiggle.dart';
 import 'package:doobal/ui/rest/rest_screen.dart';
 import 'package:doobal/ui/scene/doobal_character.dart';
@@ -96,22 +98,22 @@ void main() {
     // 상점 새 상품 점은 쉼터 옆 상점 버튼에 (16장 11/18, 수레 그림에는 점이 없다)
     Finder cartDot() => find.byKey(const ValueKey('rest-side-shop-dot'));
 
-    testWidgets('수레 점은 처음에는 없고, 기본 소품을 얻어 색 소품이 새로 들어오면 켜지고, 앱을 껐다 켜도 남고, 상점을 열면 꺼진다',
+    testWidgets('상점 점: 설치한 날은 없고, 다음 날 새벽 5시 뒤 수레에 처음 나온 상품이 있으면 켜지고, 앱을 껐다 켜도 남고, 상점을 열면 꺼진다',
         (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await _open(tester, e);
-      // 첫날: 지금 보이는 상품은 다 본 것
+      // 설치한 날: 그날 수레는 다 처음 나온 상품이지만 점이 없다 (첫날 점 없음, DB 19)
+      await settle(tester, () => _container(tester).read(todayCartProvider).hasValue);
+      expect(_container(tester).read(todayCartProvider).value!.slots.any((s) => s.fresh), isTrue);
       expect(cartDot(), findsNothing);
 
-      // 여행 모자를 얻으면(동기화가 알아챈 시각) 색 소품 3개가 상점에 새로 들어온다
-      await tester.runAsync(() => e.db.into(e.db.propsOwned).insert(
-            PropsOwnedCompanion.insert(propId: 'hat_02', unlockedUtc: e.now.millisecondsSinceEpoch),
-          ));
-      _container(tester).invalidate(snapshotProvider);
+      // 다음 날 새벽 5시: 새 수레에 처음 나온 상품
+      e.now = kstDayStartUtc('2026-11-19').add(const Duration(hours: 5, minutes: 1));
+      await tester.pump(const Duration(minutes: 1));
       await settle(tester, () => cartDot().evaluate().isNotEmpty);
       expect(cartDot(), findsOneWidget);
-      expect(_container(tester).read(shopNewsProvider).value, hasLength(3));
+      expect(_container(tester).read(todayCartProvider).value!.news, isTrue);
 
       // 앱을 껐다 켜도 점이 남는다 (DB 19 sync_state.shop_seen_utc)
       await tester.pumpWidget(const SizedBox());
@@ -124,7 +126,7 @@ void main() {
       Navigator.of(tester.element(find.byType(RestScreen))).push(
           MaterialPageRoute<void>(builder: (_) => const ShopScreen()));
       await settle(tester, () => find.byType(ShopScreen).evaluate().isNotEmpty);
-      await settle(tester, () => _container(tester).read(shopNewsProvider).value?.isEmpty ?? false);
+      await settle(tester, () => _container(tester).read(todayCartProvider).value?.news == false);
       Navigator.of(tester.element(find.byType(ShopScreen))).pop();
       await settle(tester, () => find.byType(ShopScreen).evaluate().isEmpty);
       await tester.pump(const Duration(milliseconds: 400));
@@ -132,7 +134,7 @@ void main() {
       final seen = (await tester.runAsync(() => e.db.select(e.db.syncState).getSingle()))!.shopSeenUtc;
       expect(seen, e.now.millisecondsSinceEpoch);
 
-      // 다시 껐다 켜도 꺼진 채
+      // 다시 껐다 켜도 그날은 꺼진 채
       await tester.pumpWidget(const SizedBox());
       await _open(tester, e);
       await tester.pump(const Duration(milliseconds: 400));
