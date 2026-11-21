@@ -236,7 +236,11 @@ class DecorStage {
   /// [item]을 [foot]에 두면 못 놓는 자리에 걸리는가 (그 자리 id, 아니면 null). 띠 밖도 못 놓는다 ('band')
   String? blockedAt(DecorItem item, ScenePoint foot) {
     if (!inBand(foot)) return 'band';
-    final box = boxAt(item, foot);
+    return blockedBy(boxAt(item, foot));
+  }
+
+  /// [box]가 겹치는 못 놓는 자리 id. 없으면 null
+  String? blockedBy(SceneRect box) {
     for (final b in blocked) {
       if (box.overlaps(b.box)) return b.id;
     }

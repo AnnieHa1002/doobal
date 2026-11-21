@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/companion_providers.dart';
 import '../../app/decor_providers.dart';
 import '../../app/decor_service.dart' show DecorRefused;
 import '../../app/paint_providers.dart';
@@ -17,10 +18,13 @@ import '../../domain/decor_place.dart';
 import '../../domain/rest_camera.dart';
 import '../../domain/rules.dart';
 import '../../domain/scene.dart' show sceneLook;
+import '../../domain/time_tint.dart' show tintFactorAt;
 import '../../domain/screen_rules.dart';
 import '../../domain/sketch.dart';
 import '../album/album_screen.dart';
 import '../album/painting_viewer.dart';
+import '../companion/companion_art.dart' show companionFigureAspect, companionToSpirit;
+import '../companion/companion_screen.dart';
 import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/notice_dot.dart';
@@ -35,6 +39,7 @@ import '../tabs/home_tabs.dart';
 import 'decor_drawer.dart';
 import 'decor_edit.dart';
 import 'decor_layer.dart';
+import 'finale_roam_layer.dart';
 import 'painting_pick_sheet.dart';
 import 'prop_wiggle.dart';
 import 'rest_gestures.dart';
@@ -91,6 +96,9 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
   /// 서랍이 열렸을 때 장면을 올리는 만큼 (pt, build에서 센다)
   double _liftAmount = 0;
 
+  /// 이야기를 끝까지 읽은 동행이 쉼터를 돌아다닌다 (config companions.finaleRoam)
+  late final FinaleRoamController _roam;
+
   /// 쉼터 정령 자세 바꾸기 (config restSwap). 규칙을 읽은 첫 화면에서 시작한다
   Timer? _swapTimer;
   int? _restPose;
@@ -137,6 +145,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
       onScrolled: _settle.fire,
     );
     _edit.addListener(_onEdit);
+    _roam = FinaleRoamController(vsync: this, random: ref.read(finaleRoamRandomProvider));
   }
 
   @override
@@ -148,6 +157,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
     _edit.dispose();
     _lift.dispose();
     _settle.dispose();
+    _roam.dispose();
     _camera.dispose();
     super.dispose();
   }
@@ -210,6 +220,11 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
     ));
   }
 
+  /// 완결 동행을 눌렀다: 말풍선 한 줄, 말풍선이 떠 있을 때 한 번 더 누르면 동행 화면
+  void _onCompanionTap(String id) {
+    if (_roam.tap(id)) _push(context, const CompanionScreen());
+  }
+
   Rect? _drawerRect() {
     final box = _drawerKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize || !box.attached) return null;
@@ -258,6 +273,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
     final decorState = ref.watch(decorProvider).value;
     final assets = ref.watch(assetIndexProvider).value;
     final paintings = ref.watch(paintingsProvider).value;
+    final met = ref.watch(companionsViewProvider).value?.met;
     // 데이터가 올 때까지는 종이색 빈 화면
     if (rules == null || landmarks == null || camp == null || snap == null) {
       return const Scaffold(body: SizedBox.expand());
@@ -292,6 +308,20 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
             paintings: paintingById,
           );
     final heldId = _edit.held?.id;
+    // 완결 동행 (이야기 마지막 장까지 읽음)
+    final finale = [
+      for (final m in met ?? const <MetCompanion>[])
+        if (m.readChapter >= rules.companionChapters) m.companion,
+    ];
+    final roamH = camp.character.heightPt * companionToSpirit;
+    _roam.configure(
+      rules: rules.decor.finaleRoam,
+      stage: decorStage,
+      w: roamH * companionFigureAspect,
+      h: roamH,
+      finale: finale,
+    );
+    final companionTint = tintFactorAt(look.mix, rules, character: true);
     final behind = [for (final v in views) if (!decorStage!.frontOfSpirit(v.spot.foot)) v];
     final front = [for (final v in views) if (decorStage!.frontOfSpirit(v.spot.foot)) v];
     final size = MediaQuery.sizeOf(context);
@@ -366,10 +396,34 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
                   sceneBehind: [
                     if (firstSketch != null) _firstSign(stage, camp.firstSign),
                     if (cart) _slotArt(stage, camp.objectOrNull(campCartId)!, slots.cart!),
-                    ...decorArtWidgets(stage, behind, tint: decorTint, selected: _edit.selected, hidden: heldId),
+                    Positioned.fill(
+                      child: RestGroundLayer(
+                        geometry: stage,
+                        stage: decorStage,
+                        front: false,
+                        decor: behind,
+                        roam: _roam,
+                        companionTint: companionTint,
+                        decorTint: decorTint,
+                        selected: _edit.selected,
+                        hidden: heldId,
+                      ),
+                    ),
                   ],
                   sceneBeside: [
-                    ...decorArtWidgets(stage, front, tint: decorTint, selected: _edit.selected, hidden: heldId),
+                    Positioned.fill(
+                      child: RestGroundLayer(
+                        geometry: stage,
+                        stage: decorStage,
+                        front: true,
+                        decor: front,
+                        roam: _roam,
+                        companionTint: companionTint,
+                        decorTint: decorTint,
+                        selected: _edit.selected,
+                        hidden: heldId,
+                      ),
+                    ),
                   ],
                   sceneAbove: [
                     if (cart) _hitBox(context, stage, camp.objectOrNull(campCartId)!, slots.cart!),
@@ -381,6 +435,9 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
                         on: rules.decor.place.nightLight.onAt(look.phase),
                       ),
                     ...decorHitWidgets(stage, views, dragger: _dragger, onTap: _onDecorTap),
+                    Positioned.fill(
+                      child: FinaleRoamHits(geometry: stage, roam: _roam, onTap: _onCompanionTap),
+                    ),
                   ],
                 ),
               );

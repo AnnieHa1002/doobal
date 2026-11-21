@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/decor_place.dart';
@@ -109,3 +111,6 @@ final decorEnabledProvider = Provider<bool>((ref) {
   final catalog = ref.watch(decorCatalogProvider).value;
   return stage != null && catalog != null && catalog.items.isNotEmpty;
 });
+
+/// 완결 동행 돌아다니기(가는 곳·멈춤·앉기)와 말풍선 한마디를 고르는 난수. 시험은 씨앗을 준다
+final finaleRoamRandomProvider = Provider<math.Random>((ref) => math.Random());

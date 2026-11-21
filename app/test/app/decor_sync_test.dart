@@ -5,7 +5,6 @@ import 'package:doobal/data/step_source.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/decor_place.dart';
 import 'package:doobal/domain/journey.dart' show Frame;
-import 'package:doobal/domain/shop.dart' show CoinKind;
 import 'package:doobal/domain/sketch.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
