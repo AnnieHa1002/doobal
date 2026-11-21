@@ -66,6 +66,10 @@ const _poleTop = Offset(3, -25);
 const _flagLine = 1.2;
 const _flagColor = Color(0xFFFBF6EC);
 
+/// 떨어지는 핀 (연출 ① 도착, config ui.motion.arrivalPin): 그 명소 핀만 [liftPt]pt 위에 바늘 끝 기준 [scale]배로.
+/// 그림자는 땅에 그대로
+typedef PinLift = ({String id, double liftPt, double scale});
+
 /// 고른 명소: 테라코타 25% 번짐 + 잉크 점 + 종이 속 (캔버스 4-1 selDot)
 const _selectHalo = 13.0;
 const _selectDot = 6.0;
@@ -102,6 +106,7 @@ class MapPainter extends CustomPainter {
     this.nextRoute = const [],
     this.seaRoutes = const [],
     this.faceColor,
+    this.lift,
   });
 
   final MapGeometry geometry;
@@ -133,6 +138,9 @@ class MapPainter extends CustomPainter {
 
   /// 내 정령 몸 색. 없으면 기본 살색
   final Color? faceColor;
+
+  /// 도착 연출 중 떨어지는 핀 (없으면 null)
+  final PinLift? lift;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -264,7 +272,7 @@ class MapPainter extends CustomPainter {
   }
 
   void _markers(Canvas canvas, double k) {
-    final pins = <(Offset, Frame)>[];
+    final pins = <(String, Offset, Frame)>[];
     if (style.unvisitedCircle) {
       final fill = Paint()..color = _circleFill;
       final ring = _stroke(_circleColor, _circleLine, k);
@@ -284,33 +292,38 @@ class MapPainter extends CustomPainter {
     for (final e in geometry.landmarkPoints.entries) {
       final frame = data.visited[e.key];
       if (e.key == data.destId || frame == null) continue;
-      pins.add((e.value, frame));
+      pins.add((e.key, e.value, frame));
     }
     final dest = _dest;
     // 아래(y가 큰) 핀이 앞에 오게 위에서부터 그린다
-    final marks = <(Offset, Frame?)>[
-      for (final p in pins) (p.$1, p.$2),
-      if (dest != null) (dest, null),
-    ]..sort((a, b) => a.$1.dy.compareTo(b.$1.dy));
-    for (final (at, frame) in marks) {
+    final marks = <(String?, Offset, Frame?)>[
+      for (final p in pins) p,
+      if (dest != null) (null, dest, null),
+    ]..sort((a, b) => a.$2.dy.compareTo(b.$2.dy));
+    final lifted = lift;
+    for (final (id, at, frame) in marks) {
       if (frame == null) {
         _flag(canvas, at, k);
+      } else if (lifted != null && id == lifted.id) {
+        _liftedPin(canvas, at, frame, k, lifted);
       } else {
         _pin(canvas, at, frame, k);
       }
     }
   }
 
-  void _pinNeedle(Canvas canvas, Offset at, double k) {
-    canvas.drawOval(
-      Rect.fromCenter(center: at, width: 10 * k, height: 3.6 * k),
-      Paint()..color = _pinShadow,
-    );
+  void _pinShadowAt(Canvas canvas, Offset at, double k) => canvas.drawOval(
+        Rect.fromCenter(center: at, width: 10 * k, height: 3.6 * k),
+        Paint()..color = _pinShadow,
+      );
+
+  void _pinNeedle(Canvas canvas, Offset at, double k, {bool shadow = true}) {
+    if (shadow) _pinShadowAt(canvas, at, k);
     canvas.drawLine(at, at + _needleTop * k, _stroke(_needleColor, _needleWidth, k));
   }
 
   /// 다녀온 명소: 압정 핀, 머리 색 = 그 그림 액자 (map.style.visited headColor). 점으로 둘 때는 액자 색 점
-  void _pin(Canvas canvas, Offset at, Frame frame, double k) {
+  void _pin(Canvas canvas, Offset at, Frame frame, double k, {bool shadow = true}) {
     final color = pinHeadColors[frame]!;
     if (!style.visitedPin) {
       canvas
@@ -318,12 +331,24 @@ class MapPainter extends CustomPainter {
         ..drawCircle(at, _dotR * k, _stroke(Palette.ink, 1.5, k));
       return;
     }
-    _pinNeedle(canvas, at, k);
+    _pinNeedle(canvas, at, k, shadow: shadow);
     final head = at + _headAt * k;
     canvas
       ..drawCircle(head, _headR * k, Paint()..color = color)
       ..drawCircle(head, _headR * k, _stroke(Palette.ink, _headLine, k))
       ..drawCircle(at + _shineAt * k, _shineR * k, Paint()..color = Colors.white.withValues(alpha: 0.7));
+  }
+
+  /// 떨어지는 핀: 그림자는 땅에, 핀은 [lift]만큼 위에서 바늘 끝을 기준으로 키워 그린다
+  void _liftedPin(Canvas canvas, Offset at, Frame frame, double k, PinLift lift) {
+    if (style.visitedPin) _pinShadowAt(canvas, at, k);
+    canvas
+      ..save()
+      ..translate(at.dx, at.dy - lift.liftPt * k)
+      ..scale(lift.scale)
+      ..translate(-at.dx, -at.dy);
+    _pin(canvas, at, frame, k, shadow: false);
+    canvas.restore();
   }
 
   /// 목적지: 종이 깃발 핀 (map.style.destination). 아니면 테라코타 점
@@ -377,6 +402,7 @@ class MapPainter extends CustomPainter {
       old.zoom != zoom ||
       old.selectedId != selectedId ||
       old.faceColor != faceColor ||
+      old.lift != lift ||
       old.night != night ||
       !identical(old.patternArt, patternArt) ||
       !identical(old.patterns, patterns) ||

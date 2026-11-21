@@ -60,6 +60,8 @@ Future<void> _openAlbum(WidgetTester tester, UiEnv e,
   await settle(tester, () => false, tries: 6);
   if (all) {
     await tester.tap(find.byKey(const ValueKey('view-all')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400)); // 일기·전체 종이 넘김 0.35초 (연출 ⑤)
     await settle(tester, () => false, tries: 3);
   }
 }
@@ -208,12 +210,16 @@ void main() {
       await _openAlbum(tester, e, height: 3000, all: false);
 
       await tester.tap(find.byKey(const ValueKey('view-all')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400)); // 일기·전체 종이 넘김 0.35초 (연출 ⑤)
       await settle(tester, () => false, tries: 3);
       expect(find.byType(DiaryItem), findsNothing);
       expect(_cellIds(tester), [sketchId, 'kr001', 'kr002', 'kr022']);
       expect(_chipKeys(tester), contains('all'));
 
       await tester.tap(find.byKey(const ValueKey('view-diary')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400)); // 일기·전체 종이 넘김 0.35초 (연출 ⑤)
       await settle(tester, () => false, tries: 3);
       expect(find.byType(DiaryItem), findsNWidgets(5));
       expect(_cellIds(tester), isEmpty);
@@ -704,6 +710,8 @@ void main() {
       // 새로 연 화집은 일기부터라 `전체`로 바꾼다
       await settle(tester, () => find.byKey(const ValueKey('view-all')).evaluate().isNotEmpty);
       await tester.tap(find.byKey(const ValueKey('view-all')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400)); // 일기·전체 종이 넘김 0.35초 (연출 ⑤)
       await settle(tester, () => _cell('kr002').evaluate().isNotEmpty);
       await settle(tester, () => false, tries: 6);
       expect(_cell('kr002'), findsOneWidget);

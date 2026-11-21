@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 // 연출 5개 (T19, 16장 11/20 Q008·창구 Q015, config ui.motion, 디자인기획/연출5_개발인계.md 가안).
 // 새 그림 없이 코드 움직임만이다. 시간은 초, 거리는 pt. 아는 문자열 값만 받고 모르는 값이면 FormatException.
-// 이 판은 ② 쉼터 정령 쓰다듬기·꾸밈 물품 흔들림, ③ 수레 새 칸·산 물건 빠짐 + SOLD, ④ 물감 방울 줍기 럭 숫자를 읽는다.
-// ① 도착 핀(arrivalPin)·⑤ 화집 넘김(albumFlip)은 그 연출을 넣을 때 읽는다 (지금은 읽지 않음)
+// ① 도착 핀·카드 그림 칸 찍힘, ② 쉼터 정령 쓰다듬기·꾸밈 물품 흔들림, ③ 수레 새 칸·산 물건 빠짐 + SOLD,
+// ④ 물감 방울 줍기 럭 숫자, ⑤ 화집 종이 넘김
 
 /// 움직임 줄이기(기기 설정)가 켜지면: 끝 상태만 보인다 (config ui.motion.reducedMotion)
 const motionReducedEndStateOnly = 'endStateOnly';
@@ -13,6 +13,8 @@ const motionRepeatSkipToEnd = 'skipToEndThenRestart';
 
 class MotionRules {
   const MotionRules({
+    this.arrivalPin,
+    this.albumFlip,
     required this.restPet,
     required this.decorWiggle,
     required this.cartSlot,
@@ -45,12 +47,20 @@ class MotionRules {
     }
 
     return MotionRules(
+      arrivalPin: switch (part('arrivalPin', 'map')) { final p? => ArrivalPinMotion.fromJson(p), _ => null },
+      albumFlip: switch (part('albumFlip', 'album')) { final p? => AlbumFlipMotion.fromJson(p), _ => null },
       restPet: switch (part('restPet', 'rest')) { final p? => RestPetMotion.fromJson(p), _ => null },
       decorWiggle: switch (part('decorWiggle', 'rest')) { final p? => DecorWiggleMotion.fromJson(p), _ => null },
       cartSlot: switch (part('cartSlot', 'shop')) { final p? => CartSlotMotion.fromJson(p), _ => null },
       dropPickup: switch (part('dropPickup', 'walking')) { final p? => DropPickupMotion.fromJson(p), _ => null },
     );
   }
+
+  /// ① 도착 뒤 지도: 핀 떨어짐 + 카드 그림 칸 찍힘. null이면 끝 상태만
+  final ArrivalPinMotion? arrivalPin;
+
+  /// ⑤ 화집 종이 넘김. null이면 넘김 없이 바로 바뀜
+  final AlbumFlipMotion? albumFlip;
 
   /// ② 쉼터 정령 쓰다듬기. null이면 문질러도 반응 없음
   final RestPetMotion? restPet;
@@ -349,6 +359,143 @@ class DropPickupMotion {
   double scaleAt(double t) {
     if (t <= 0 || t >= luxCountSec) return 1;
     return 1 + (luxBounceScale - 1) * math.sin(math.pi * t / luxCountSec);
+  }
+}
+
+/// ① 도착 핀 (config ui.motion.arrivalPin, 캔버스 4-1 메모): 도착한 명소의 압정 핀이 [dropPt]pt 위에서
+/// [dropSec]초 동안 떨어져(easeIn, 떨어질수록 빠르게) 꽂히고 [bounceSec]초 동안 1 → [bounceScale] → 1배로 튄다.
+/// [stampDelaySec]초 뒤 지도 카드의 그림 칸이 [stampScaleFrom]배에서 [stampSec]초에 1배로 찍힌다 (칸 색 = 액자 등급,
+/// stampColor frameTier)
+class ArrivalPinMotion {
+  const ArrivalPinMotion({
+    required this.dropPt,
+    required this.dropSec,
+    required this.bounceScale,
+    required this.bounceSec,
+    required this.stampDelaySec,
+    required this.stampScaleFrom,
+    required this.stampSec,
+  });
+
+  factory ArrivalPinMotion.fromJson(Map<String, dynamic> j) {
+    _known(j, 'ease', {'easeIn'});
+    _known(j, 'stampColor', {'frameTier'});
+    return ArrivalPinMotion(
+      dropPt: _d(j['dropPt']),
+      dropSec: _pos(j, 'dropSec'),
+      bounceScale: _pos(j, 'bounceScale'),
+      bounceSec: _pos(j, 'bounceSec'),
+      stampDelaySec: _d(j['stampDelaySec']),
+      stampScaleFrom: _pos(j, 'stampScaleFrom'),
+      stampSec: _pos(j, 'stampSec'),
+    );
+  }
+
+  final double dropPt;
+  final double dropSec;
+  final double bounceScale;
+  final double bounceSec;
+  final double stampDelaySec;
+  final double stampScaleFrom;
+  final double stampSec;
+
+  /// 핀이 떨어져 튀기까지(초)
+  double get pinSec => dropSec + bounceSec;
+
+  /// 그림 칸이 찍히기 시작하는 때(초)
+  double get stampStartSec => pinSec + stampDelaySec;
+
+  /// 전체 길이(초)
+  double get totalSec => stampStartSec + stampSec;
+
+  /// 시작한 뒤 [t]초의 모습
+  ArrivalPinFrame at(double t) {
+    if (t >= totalSec) return ArrivalPinFrame.end;
+    var lift = 0.0;
+    var scale = 1.0;
+    if (t < dropSec) {
+      final u = math.max(0.0, t) / dropSec;
+      lift = dropPt * (1 - u * u);
+    } else if (t < pinSec) {
+      scale = 1 + (bounceScale - 1) * math.sin(math.pi * (t - dropSec) / bounceSec);
+    }
+    final shown = t >= stampStartSec;
+    final w = shown ? ((t - stampStartSec) / stampSec).clamp(0.0, 1.0) : 0.0;
+    return ArrivalPinFrame(
+      pinLiftPt: lift,
+      pinScale: scale,
+      stampShown: shown,
+      stampScale: stampScaleFrom + (1 - stampScaleFrom) * w,
+    );
+  }
+}
+
+/// 도착 핀의 한 순간: 핀이 뜬 높이(pt, 위로)·크기(바늘 끝 기준), 그림 칸이 찍혔는지·크기
+class ArrivalPinFrame {
+  const ArrivalPinFrame({required this.pinLiftPt, required this.pinScale, required this.stampShown, required this.stampScale});
+
+  static const end = ArrivalPinFrame(pinLiftPt: 0, pinScale: 1, stampShown: true, stampScale: 1);
+
+  final double pinLiftPt;
+  final double pinScale;
+  final bool stampShown;
+  final double stampScale;
+}
+
+/// ⑤ 화집 종이 넘김이 도는 때 (config ui.motion.albumFlip.on)
+enum AlbumFlipOn {
+  /// 그림 탭의 일기·전체 바꾸기
+  diaryAllToggle,
+
+  /// 일기에서 달 머리줄이 화면에 들어올 때 (달을 넘길 때)
+  monthHeader,
+}
+
+/// ⑤ 화집 종이 넘김 (config ui.motion.albumFlip, 캔버스 6-1 메모): 오른쪽 끝을 축으로 가로 크기 1 → 0 → 1을
+/// [sec]초(3D 말림 없음), 가운데 [shadowSec]초 동안 잉크 그림자 [shadowInk]. 그림 크게 보기에는 쓰지 않는다
+class AlbumFlipMotion {
+  const AlbumFlipMotion({required this.on, required this.sec, required this.shadowInk, required this.shadowSec});
+
+  factory AlbumFlipMotion.fromJson(Map<String, dynamic> j) {
+    _known(j, 'axis', {'rightEdge'});
+    final scaleX = [for (final v in j['scaleX'] as List) _d(v)];
+    if (scaleX.length != 3 || scaleX[0] != 1 || scaleX[1] != 0 || scaleX[2] != 1) {
+      throw FormatException('ui.motion.albumFlip.scaleX는 [1, 0, 1]만 안다: $scaleX');
+    }
+    if (j['curl3d'] != false) throw const FormatException('ui.motion.albumFlip.curl3d는 false만 안다');
+    if (j['notInBigView'] != true) throw const FormatException('ui.motion.albumFlip.notInBigView는 true만 안다');
+    final on = {
+      for (final v in j['on'] as List)
+        AlbumFlipOn.values.firstWhere((o) => o.name == v, orElse: () => throw FormatException('ui.motion.albumFlip.on: 모르는 값 $v')),
+    };
+    final shadowInk = _d(j['shadowInk']);
+    if (shadowInk < 0 || shadowInk > 1) throw FormatException('ui.motion.albumFlip.shadowInk는 0~1: $shadowInk');
+    final sec = _pos(j, 'sec');
+    final shadowSec = _d(j['shadowSec']);
+    if (shadowSec < 0 || shadowSec > sec) throw FormatException('ui.motion.albumFlip.shadowSec는 0~sec: $shadowSec');
+    return AlbumFlipMotion(on: on, sec: sec, shadowInk: shadowInk, shadowSec: shadowSec);
+  }
+
+  final Set<AlbumFlipOn> on;
+  final double sec;
+  final double shadowInk;
+  final double shadowSec;
+
+  /// 앞 종이가 접혀 뒷 종이로 바뀌는 때(초): 가로 크기가 0인 가운데
+  double get swapSec => sec / 2;
+
+  /// 시작한 뒤 [t]초의 가로 크기: 1 → 0 → 1. 종이가 축을 따라 고르게 돌 때 보이는 폭(|cos|)이다
+  double scaleXAt(double t) {
+    if (t <= 0 || t >= sec) return 1;
+    return math.cos(math.pi * t / sec).abs();
+  }
+
+  /// 시작한 뒤 [t]초의 잉크 그림자 진하기: 가운데 [shadowSec]초 동안 0 → [shadowInk] → 0
+  double shadowAt(double t) {
+    if (shadowSec <= 0) return 0;
+    final d = (t - swapSec).abs();
+    if (d >= shadowSec / 2) return 0;
+    return shadowInk * (1 - 2 * d / shadowSec);
   }
 }
 

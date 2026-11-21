@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
 
-// 연출 5개 중 ②③④ (T19, 16장 11/20 Q008, config ui.motion, 디자인 기획 가안)
+// 연출 5개 ①~⑤ (T19, 16장 11/20 Q008, config ui.motion, 디자인 기획 가안)
 
 Map<String, dynamic> _config() =>
     jsonDecode(File('assets/data/config.json').readAsStringSync()) as Map<String, dynamic>;
@@ -30,13 +30,19 @@ void main() {
       expect((c.boughtRisePt, c.boughtFadeSec, c.soldStampScaleFrom, c.soldStampSec), (16.0, 0.25, 1.3, 0.2));
       final d = m.dropPickup!;
       expect((d.luxCountSec, d.luxStep, d.luxBounceScale, d.tubeDelaySec), (0.3, 1, 1.15, 0.1));
+      final a = m.arrivalPin!;
+      expect((a.dropPt, a.dropSec, a.bounceScale, a.bounceSec), (24.0, 0.25, 1.15, 0.12));
+      expect((a.stampDelaySec, a.stampScaleFrom, a.stampSec), (0.1, 1.3, 0.2));
+      final f = m.albumFlip!;
+      expect(f.on, {AlbumFlipOn.diaryAllToggle, AlbumFlipOn.monthHeader});
+      expect((f.sec, f.shadowInk, f.shadowSec), (0.35, 0.18, 0.15));
     });
 
     test('ui.motion이 없으면 연출 없음', () {
       final j = _config();
       (j['ui'] as Map<String, dynamic>).remove('motion');
       final m = MotionRules.fromJson(j);
-      expect([m.restPet, m.decorWiggle, m.cartSlot, m.dropPickup], everyElement(isNull));
+      expect([m.arrivalPin, m.albumFlip, m.restPet, m.decorWiggle, m.cartSlot, m.dropPickup], everyElement(isNull));
     });
 
     test('모르는 값은 읽지 않는다', () {
@@ -60,6 +66,22 @@ void main() {
       bad((m) => p(m, 'cartSlot')['oncePerUnlock'] = false);
       bad((m) => p(m, 'dropPickup')['plusOne'] = 'counted');
       bad((m) => p(m, 'dropPickup')['luxStep'] = 0);
+      bad((m) => p(m, 'arrivalPin')['screen'] = 'album');
+      bad((m) => p(m, 'arrivalPin')['ease'] = 'linear');
+      bad((m) => p(m, 'arrivalPin')['stampColor'] = 'terracotta');
+      bad((m) => p(m, 'arrivalPin')['bounceSec'] = 0);
+      bad((m) => p(m, 'albumFlip')['axis'] = 'leftEdge');
+      bad((m) => p(m, 'albumFlip')['scaleX'] = <num>[1, 0.5, 1]);
+      bad((m) => p(m, 'albumFlip')['curl3d'] = true);
+      bad((m) => p(m, 'albumFlip')['notInBigView'] = false);
+      bad((m) => p(m, 'albumFlip')['on'] = <String>['tabSwitch']);
+      bad((m) => p(m, 'albumFlip')['shadowSec'] = 0.5);
+    });
+
+    test('albumFlip.on에서 뺀 때는 돌지 않는다', () {
+      final j = _config();
+      (_motion(j)['albumFlip'] as Map<String, dynamic>)['on'] = <String>['monthHeader'];
+      expect(MotionRules.fromJson(j).albumFlip!.on, {AlbumFlipOn.monthHeader});
     });
 
     test('쓰다듬기 표정 happy = Rive expr 1 (palette customPartsV33)', () {
@@ -193,6 +215,61 @@ void main() {
       expect(d.scaleAt(0), 1);
       expect(d.scaleAt(0.15), closeTo(1.15, 1e-9));
       expect(d.scaleAt(0.3), 1);
+    });
+  });
+
+  group('① 도착 핀·그림 칸', () {
+    final a = rules.motion.arrivalPin!;
+
+    test('핀: 24pt 위에서 0.25초 동안 떨어질수록 빠르게(easeIn) 꽂힌다', () {
+      expect(a.at(0).pinLiftPt, 24);
+      expect(a.at(0.125).pinLiftPt, closeTo(24 * 0.75, 1e-9));
+      // 반 시간에 남은 높이가 3/4 = 처음엔 느리고 끝에서 빠르다
+      expect(a.at(0.2).pinLiftPt, closeTo(24 * (1 - 0.64), 1e-9));
+      expect(a.at(0.25).pinLiftPt, 0);
+      expect(a.at(0.1).pinScale, 1);
+    });
+
+    test('꽂힌 뒤 0.12초 동안 1 → 1.15 → 1배로 튄다 (가운데가 가장 큼)', () {
+      expect(a.pinSec, closeTo(0.37, 1e-9));
+      expect(a.at(0.25).pinScale, closeTo(1, 1e-9));
+      expect(a.at(0.31).pinScale, closeTo(1.15, 1e-9));
+      expect(a.at(0.37).pinScale, 1);
+      expect(a.at(0.31).pinLiftPt, 0);
+    });
+
+    test('그림 칸: 핀이 튄 뒤 0.1초에 1.3배로 나타나 0.2초에 1배 (전체 0.67초)', () {
+      expect(a.stampStartSec, closeTo(0.47, 1e-9));
+      expect(a.totalSec, closeTo(0.67, 1e-9));
+      expect(a.at(0.46).stampShown, isFalse);
+      final start = a.at(a.stampStartSec);
+      expect(start.stampShown, isTrue);
+      expect(start.stampScale, closeTo(1.3, 1e-9));
+      expect(a.at(0.57).stampScale, closeTo(1.15, 1e-9));
+      final end = a.at(0.67);
+      expect((end.pinLiftPt, end.pinScale, end.stampShown, end.stampScale), (0.0, 1.0, true, 1.0));
+    });
+  });
+
+  group('⑤ 화집 종이 넘김', () {
+    final f = rules.motion.albumFlip!;
+
+    test('가로 크기 1 → 0 → 1을 0.35초, 가운데(0.175초)가 0이고 그때 새 보기로 바뀐다', () {
+      expect(f.scaleXAt(0), 1);
+      expect(f.swapSec, closeTo(0.175, 1e-9));
+      expect(f.scaleXAt(0.175), closeTo(0, 1e-9));
+      expect(f.scaleXAt(0.0875), closeTo(0.7071, 1e-4));
+      expect(f.scaleXAt(0.2625), closeTo(0.7071, 1e-4));
+      expect(f.scaleXAt(0.35), 1);
+    });
+
+    test('잉크 그림자는 가운데 0.15초 동안 0 → 18% → 0', () {
+      expect(f.shadowAt(0.09), 0);
+      expect(f.shadowAt(0.1), closeTo(0, 1e-9));
+      expect(f.shadowAt(0.1375), closeTo(0.09, 1e-9));
+      expect(f.shadowAt(0.175), closeTo(0.18, 1e-9));
+      expect(f.shadowAt(0.25), closeTo(0, 1e-9));
+      expect(f.shadowAt(0.3), 0);
     });
   });
 }

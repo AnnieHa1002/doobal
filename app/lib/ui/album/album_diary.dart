@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/sync_service.dart';
 import '../../domain/diary.dart';
+import '../../domain/motion_rules.dart';
 import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
 import '../common/app_text.dart';
@@ -11,6 +12,7 @@ import '../common/format.dart';
 import '../common/framed_painting.dart';
 import '../common/note_paper.dart';
 import '../common/palette.dart';
+import 'album_flip.dart';
 
 /// 일기가 비었을 때(아직 아무 그림도 받지 않았을 때)의 한 줄. 가안
 const diaryEmptyLine = '첫 그림을 받으면 여기에 붙어요';
@@ -30,11 +32,13 @@ const _photoShare = 0.55;
 
 /// 화집 그림 탭의 일기 (UI 명세 10장, 16장 11/2): 얻은 그림을 최신순으로 붙인 여행 일기장.
 /// 달이 바뀌면 머리줄, 항목 하나 = 사진 + 메모, 사진과 메모는 항목마다 좌우를 번갈아 둔다.
-/// 재방문도 그날 새 항목이다. 항목을 누르면 [onOpen](그림 크게 보기, 명소 id)
+/// 재방문도 그날 새 항목이다. 항목을 누르면 [onOpen](그림 크게 보기, 명소 id).
+/// [monthFlip]이 있으면 달 머리줄이 스크롤로 화면에 들어올 때 종이처럼 넘긴다 (연출 ⑤)
 List<Widget> diarySlivers(
   BuildContext context,
   List<DiaryEntry> entries, {
   required ValueChanged<String> onOpen,
+  AlbumFlipMotion? monthFlip,
 }) {
   if (entries.isEmpty) {
     return const [
@@ -58,7 +62,10 @@ List<Widget> diarySlivers(
     final m = diaryMonthLabel(e.arrivedAt);
     if (m != month) {
       month = m;
-      children.add(_MonthHeader(m, key: ValueKey('diary-month-$m')));
+      final header = _MonthHeader(m, key: ValueKey('diary-month-$m'));
+      children.add(monthFlip == null
+          ? header
+          : MonthFlip(key: ValueKey('diary-month-flip-$m'), motion: monthFlip, child: header));
     }
     children.add(DiaryItem(
       key: ValueKey('diary-${e.journeyId}'),
