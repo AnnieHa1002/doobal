@@ -114,13 +114,13 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     super.dispose();
   }
 
-  /// 아직 안 본 소품·그림·도장·새 물감 색이 있는가 (배낭의 알림 점, 물감은 처음 모은 색만 M2~M6 v0.20 Y).
+  /// 아직 안 본 소품·그림·새 물감 색이 있는가 (배낭의 알림 점, 물감은 처음 모은 색만 M2~M6 v0.20 Y).
+  /// 도장은 나 탭으로 옮겨서(T18, 16장 11/19) 배낭 점에 넣지 않는다 (나 탭을 봐야 본 것이 된다).
   /// config ui.newDot.on에 배낭이 없으면 점도 없다
   bool _hasNew(Snapshot snap) =>
       (ref.read(rulesProvider).value?.screen.dotOn('backpack') ?? true) &&
       (snap.unseenProps > 0 ||
       snap.unseenPaintings > 0 ||
-      snap.unseenBadges > 0 ||
       (ref.read(unseenPaintsProvider).value ?? 0) > 0);
 
   /// 흔들 수 있는 물건 (화면에 서 있는 것만: 수레). 알림 점은 옆 버튼에 붙어 흔들림을 고르지 않는다

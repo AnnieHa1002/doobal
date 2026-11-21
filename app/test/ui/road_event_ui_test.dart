@@ -16,7 +16,7 @@ import '../app/helpers.dart';
 import '../domain/helpers.dart';
 import 'ui_env.dart';
 
-// 길 위 이벤트(2km 이정표 카드)·도장(걸음 알약 아래 줄, 토스트, 배낭 점)의 화면 쪽. 도장 목록은 나 탭(profile_screen_test).
+// 길 위 이벤트(2km 이정표 카드)·도장(걸음 알약 아래 줄, 토스트)의 화면 쪽. 도장 알림은 배낭 점이 아니라 나 탭에서 본다(T18). 도장 목록은 나 탭(profile_screen_test).
 // 계산·판정은 test/app/road_event_sync_test.dart가 본다
 
 Landmark _farDest() => landmarks.firstWhere((l) {
@@ -185,7 +185,7 @@ void main() {
       await end(tester, e);
     });
 
-    testWidgets('쉼터에서 도장을 받으면 한 줄 토스트가 뜨고 배낭 알림 점이 켜진다', (tester) async {
+    testWidgets('쉼터에서 도장을 받으면 한 줄 토스트가 뜨고 안 본 도장이 하나 생긴다 (나 탭에서 봄)', (tester) async {
       final e = UiEnv();
       await e.seed(tester);
       await pumpDoobal(tester, e, const DoobalApp());
