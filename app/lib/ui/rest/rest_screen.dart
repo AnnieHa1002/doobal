@@ -5,14 +5,18 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/decor_providers.dart';
+import '../../app/decor_service.dart' show DecorRefused;
 import '../../app/paint_providers.dart';
 import '../../app/providers.dart';
 import '../../app/screen_providers.dart';
 import '../../app/shop_providers.dart';
 import '../../app/sync_service.dart';
 import '../../domain/camp_theme.dart';
+import '../../domain/decor_place.dart';
 import '../../domain/rest_camera.dart';
 import '../../domain/rules.dart';
+import '../../domain/scene.dart' show sceneLook;
 import '../../domain/screen_rules.dart';
 import '../../domain/sketch.dart';
 import '../album/album_screen.dart';
@@ -27,6 +31,9 @@ import '../scene/scene_view.dart';
 import '../shop/shop_art.dart';
 import '../shop/shop_slots.dart';
 import '../tabs/home_tabs.dart';
+import 'decor_drawer.dart';
+import 'decor_edit.dart';
+import 'decor_layer.dart';
 import 'prop_wiggle.dart';
 import 'rest_gestures.dart';
 import 'rest_slots.dart';
@@ -35,7 +42,9 @@ import 'rest_slots.dart';
 /// 캠프 앞 → 불꽃)은 화면 폭의 1.5배이고 좌우로 민다. 장면 아래는 탭 바 위로 30pt 겹친다.
 /// 위에는 럭 보석(왼쪽)과 ‘쉬는 중 · 목적지까지 n km’ 알약(가운데)만 고정이다 (나의 정보·설정은 ‘나’ 탭으로).
 /// 오른쪽에 게임식 세로 버튼 지도·배낭(화집)·상점·쉼터 꾸미기 (config rest.sideButtons, 56pt).
-/// 쉼터 꾸미기 버튼은 쉼터 꾸미기(T15)가 서랍과 함께 켠다 (그 전에는 그리지 않는다).
+/// 쉼터 꾸미기(T15, 16장 11/18 ③·11/19): 꾸밈 물품을 땅 띠에 자유 배치한다. 편집 모드는 없고, 물품을 길게 누르면
+/// 집혀서 끌고 놓으면 저장된다(decor_edit.dart). 옆 ‘꾸미기’ 버튼은 아래 서랍(가진 물품 중 안 놓은 것)을 열고 닫는다.
+/// 서랍이 열리면 장면이 땅 띠가 보이게 들어 올려진다. 등불·석등은 밤·노을·새벽에 둘레가 밝아진다.
 /// 땅 위 누르는 물건(배낭·노트·지도)·불 옆 동행·방명록 표지판은 없다 (camp_wide v5, 동행·표지판은 걷기 탭).
 /// 수레는 테마에 자리가 있으면 서고 누르면 상점이다 (M2~M6 AC 가안).
 /// 출발하기 버튼은 없다 (16장 11/13 물감 길). 걸어도 화면은 그대로이고, 걷는 중이면 아래 걷기 탭 아이콘의
@@ -65,9 +74,20 @@ double _hudTop(EdgeInsets padding) => math.max(padding.top + 6, 24);
 const _hintBottom = 40.0;
 const _hintAboveBar = 16.0;
 
-class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProviderStateMixin {
+class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStateMixin {
   late final PropWiggler _wiggler;
   final _camera = ValueNotifier(const RestCamera());
+
+  /// 쉼터 꾸미기: 서랍·고른 물품·집은 물품, 끌기, 서랍이 열리면 장면 들어 올리기
+  final _edit = DecorEdit();
+  late final DecorDragger _dragger;
+  late final AnimationController _lift;
+  final _sceneKey = GlobalKey();
+  final _drawerKey = GlobalKey();
+  final _settle = _Signal();
+
+  /// 서랍이 열렸을 때 장면을 올리는 만큼 (pt, build에서 센다)
+  double _liftAmount = 0;
 
   /// 쉼터 정령 자세 바꾸기 (config restSwap). 규칙을 읽은 첫 화면에서 시작한다
   Timer? _swapTimer;
@@ -104,14 +124,72 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
   void initState() {
     super.initState();
     _wiggler = PropWiggler(vsync: this, spec: ref.read(restWiggleProvider), pool: _wigglePool);
+    _lift = AnimationController(vsync: this, duration: _liftDuration);
+    _dragger = DecorDragger(
+      edit: _edit,
+      camera: _camera,
+      vsync: this,
+      onPlace: _placeDecor,
+      onRemove: _removeDecor,
+      onFlip: (id) => ref.read(decorProvider.notifier).flip(id),
+      onScrolled: _settle.fire,
+    );
+    _edit.addListener(_onEdit);
   }
 
   @override
   void dispose() {
     _swapTimer?.cancel();
     _wiggler.dispose();
+    _edit.removeListener(_onEdit);
+    _dragger.dispose();
+    _edit.dispose();
+    _lift.dispose();
+    _settle.dispose();
     _camera.dispose();
     super.dispose();
+  }
+
+  /// 서랍이 열리고 닫히면 장면을 올리고 내린다. 고른·집은 물품이 바뀌면 다시 그린다
+  void _onEdit() {
+    if (!mounted) return;
+    if (_edit.drawerOpen) {
+      _lift.forward();
+    } else {
+      _lift.reverse();
+    }
+    setState(() {});
+  }
+
+  Future<void> _placeDecor(String id, ScenePoint foot, bool flipped) async {
+    final stage = ref.read(decorStageProvider).value;
+    if (stage == null) return;
+    try {
+      await ref
+          .read(decorProvider.notifier)
+          .place(id, stage.toRatio(foot), flipped: flipped, maxPlaced: stage.rules.maxPlaced);
+    } on DecorRefused {
+      // 이미 최대로 놓였다 (서랍에 그대로)
+    }
+  }
+
+  Future<void> _removeDecor(String id) async {
+    if (_edit.selected == id) _edit.select(null);
+    await ref.read(decorProvider.notifier).remove(id);
+  }
+
+  /// 놓인 물품을 짧게 눌렀다: 꾸미기 중이면 고르기(다시 누르면 놓기)
+  void _onDecorTap(DecorView v, ScenePoint at) {
+    if (_edit.editing) {
+      _edit.select(_edit.selected == v.id ? null : v.id);
+      return;
+    }
+  }
+
+  Rect? _drawerRect() {
+    final box = _drawerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize || !box.attached) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
   }
 
   /// 아직 안 본 소품·그림·새 물감 색이 있는가 (배낭의 알림 점, 물감은 처음 모은 색만 M2~M6 v0.20 Y).
@@ -151,6 +229,11 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     final scale = kDebugMode ? ref.watch(debugDistanceScaleProvider) : 1.0;
     ref.listen(snapshotProvider, _onSnapshot);
     final cues = ref.watch(spiritPaletteProvider).value?.cues;
+    final decorStage = ref.watch(decorStageProvider).value;
+    final decorCatalog = ref.watch(decorCatalogProvider).value;
+    final decorState = ref.watch(decorProvider).value;
+    final assets = ref.watch(assetIndexProvider).value;
+    final paintings = ref.watch(paintingsProvider).value;
     // 데이터가 올 때까지는 종이색 빈 화면
     if (rules == null || landmarks == null || camp == null || snap == null) {
       return const Scaffold(body: SizedBox.expand());
@@ -167,20 +250,76 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
     final small = MediaQuery.sizeOf(context).height < 700;
     final cart = slots.cart != null && camp.objectOrNull(campCartId) != null;
     final shopDot = slots.cart?.notice ?? false;
+    final decorOn = decorStage != null && decorCatalog != null && decorCatalog.items.isNotEmpty;
     final buttons = <_SideButtonSpec>[
-      for (final id in rules.screen.tabs.sideButtons) ?_sideButton(context, id, snap, shopDot),
+      for (final id in rules.screen.tabs.sideButtons) ?_sideButton(context, id, snap, shopDot, decorOn),
     ];
+    // 꾸밈 물품 (정령 뒤·앞 그림, 빛, 누름 상자). 계절·시간대 보정과 밤 빛은 장면과 같은 하늘로
+    final look = sceneLook(now, position, snap.onSea, landmarks, rules);
+    final decorTint = decorTintMatrix(look, rules);
+    final paintingById = {for (final p in paintings ?? const <OwnedPaintingView>[]) p.landmark.id: p};
+    final views = !decorOn || decorState == null
+        ? const <DecorView>[]
+        : decorViews(
+            state: decorState,
+            catalog: decorCatalog,
+            stage: decorStage,
+            assets: assets,
+            paintings: paintingById,
+          );
+    final heldId = _edit.held?.id;
+    final behind = [for (final v in views) if (!decorStage!.frontOfSpirit(v.spot.foot)) v];
+    final front = [for (final v in views) if (decorStage!.frontOfSpirit(v.spot.foot)) v];
+    final size = MediaQuery.sizeOf(context);
+    final drawerOpen = decorOn && _edit.drawerOpen;
+    // 서랍이 열리면 땅 띠 아래 끝이 서랍 위 8pt에 오게 장면을 올린다
+    final drawerTop = size.height - barSpace - DecorDrawer.height;
+    final liftAmount = !decorOn
+        ? 0.0
+        : math.max(
+            0.0,
+            RestGeometry(camp, rules.rest, size.width, size.height - sceneBottom).sy(decorStage.band.footYMax) +
+                _drawerGap -
+                drawerTop,
+          );
+    _liftAmount = liftAmount;
+    final lift = Tween<double>(begin: 0, end: liftAmount)
+        .animate(CurvedAnimation(parent: _lift, curve: Curves.easeOut));
 
-    return Scaffold(
+    return PopScope(
+      canPop: !drawerOpen,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _edit.closeDrawer();
+      },
+      child: Scaffold(
       body: Stack(
         children: [
           Positioned.fill(
             bottom: sceneBottom,
-            child: LayoutBuilder(builder: (context, box) {
+            child: AnimatedBuilder(
+              animation: lift,
+              builder: (context, child) =>
+                  Transform.translate(offset: Offset(0, -lift.value), child: child),
+              child: LayoutBuilder(builder: (context, box) {
               final stage = RestGeometry(camp, rules.rest, box.maxWidth, box.maxHeight);
+              if (decorOn) {
+                _dragger.frame = DecorFrame(
+                  geometry: stage,
+                  stage: decorStage,
+                  item: decorCatalog.byId,
+                  sceneBox: () => _sceneKey.currentContext?.findRenderObject() as RenderBox?,
+                  drawerRect: _drawerRect,
+                  placedCount: () => ref.read(decorProvider).value?.placed.length ?? 0,
+                  liftCorrection: () =>
+                      (_edit.drawerOpen ? _liftAmount : 0) - _liftAmount * Curves.easeOut.transform(_lift.value),
+                );
+              }
               return RestGestures(
+                key: _sceneKey,
                 stage: stage,
                 camera: _camera,
+                onTap: drawerOpen ? () => _edit.select(null) : null,
+                settle: _settle,
                 child: SceneView(
                   mode: SceneMode.rest,
                   distanceM: 0,
@@ -203,13 +342,26 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                   sceneBehind: [
                     if (firstSketch != null) _firstSign(stage, camp.firstSign),
                     if (cart) _slotArt(stage, camp.objectOrNull(campCartId)!, slots.cart!),
+                    ...decorArtWidgets(stage, behind, tint: decorTint, selected: _edit.selected, hidden: heldId),
+                  ],
+                  sceneBeside: [
+                    ...decorArtWidgets(stage, front, tint: decorTint, selected: _edit.selected, hidden: heldId),
                   ],
                   sceneAbove: [
                     if (cart) _hitBox(context, stage, camp.objectOrNull(campCartId)!, slots.cart!),
+                    if (decorOn)
+                      ...decorLightWidgets(
+                        stage,
+                        [for (final v in views) if (v.id != heldId) v],
+                        rules.decor.place.nightLight,
+                        on: rules.decor.place.nightLight.onAt(look.phase),
+                      ),
+                    ...decorHitWidgets(stage, views, dragger: _dragger, onTap: _onDecorTap),
                   ],
                 ),
               );
             }),
+            ),
           ),
           // 위 고정 줄: 럭 보석(왼쪽) + 쉬는 중 알약(가운데, 오른쪽 56pt를 비워 가운데처럼 보이게)
           Positioned(
@@ -241,7 +393,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
             top: hudTop + _hudRow + (small ? 16 : 30),
             child: _SideButtons(buttons),
           ),
-          if (firstSketch != null)
+          if (firstSketch != null && !drawerOpen)
             Positioned(
               left: _hudSide,
               right: _hudSide,
@@ -252,13 +404,56 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
                 ),
               ),
             ),
+          // 쉼터 꾸미기 서랍 (탭 바 위)
+          if (drawerOpen)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: barSpace,
+              height: DecorDrawer.height + (barSpace > 0 ? 0 : padding.bottom),
+              child: Padding(
+                key: _drawerKey,
+                padding: EdgeInsets.zero,
+                child: DecorDrawer(edit: _edit, dragger: _dragger, onDone: _edit.closeDrawer),
+              ),
+            ),
+          // 집은 물품·뒤집기 버튼 (맨 위, 손가락을 따라감)
+          if (decorOn)
+            Positioned.fill(
+              child: LayoutBuilder(builder: (context, box) {
+                final geometry = RestGeometry(camp, rules.rest, box.maxWidth, box.maxHeight - sceneBottom);
+                return DecorHeldOverlay(
+                  edit: _edit,
+                  dragger: _dragger,
+                  camera: _camera,
+                  lift: lift,
+                  geometry: geometry,
+                  tint: decorTint,
+                  flipButton: rules.decor.place.flipButton,
+                  placed: {for (final v in views) v.id: v},
+                  viewOf: (id, foot, flipped) {
+                    final item = decorCatalog.byId(id);
+                    if (item == null || decorState == null) return null;
+                    return decorViewOf(
+                      item,
+                      DecorSpot(decorId: id, foot: foot, flipped: flipped),
+                      stage: decorStage,
+                      state: decorState,
+                      assets: assets,
+                      paintings: paintingById,
+                    );
+                  },
+                );
+              }),
+            ),
         ],
+      ),
       ),
     );
   }
 
-  /// 옆 버튼 [id] (config rest.sideButtons.items). 아직 열 화면이 없으면(쉼터 꾸미기, T15) null
-  _SideButtonSpec? _sideButton(BuildContext context, String id, Snapshot snap, bool shopDot) =>
+  /// 옆 버튼 [id] (config rest.sideButtons.items). 열 것이 없으면 null (쉼터 꾸미기는 물품 목록·테마 꾸미기 자리가 있을 때)
+  _SideButtonSpec? _sideButton(BuildContext context, String id, Snapshot snap, bool shopDot, bool decorOn) =>
       switch (id) {
         'map' => _SideButtonSpec(
             id: id,
@@ -283,6 +478,14 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
             dot: shopDot,
             icon: const ShopCartArt(),
             onTap: () => openShop(context),
+          ),
+        // 쉼터 꾸미기: 서랍(가진 물품 중 안 놓은 것)을 열고 닫는다 (config rest.sideButtons.exits rest.decorDrawer)
+        'decorate' when decorOn => _SideButtonSpec(
+            id: id,
+            label: '꾸미기',
+            semantics: '쉼터 꾸미기',
+            icon: const _DecorateIcon(),
+            onTap: _edit.toggleDrawer,
           ),
         _ => null,
       };
@@ -366,6 +569,30 @@ class _RestScreenState extends ConsumerState<RestScreen> with SingleTickerProvid
 /// 옆 버튼 오른쪽 여백 (캔버스 2-2 right 12)
 const _sideRight = 12.0;
 
+/// 서랍이 열릴 때 장면을 올리는 시간과, 땅 띠 아래 끝과 서랍 위 사이
+const _liftDuration = Duration(milliseconds: 220);
+const _drawerGap = 8.0;
+
+/// 한 번 울리는 신호 (끌어서 장면을 민 뒤 끝으로 붙이기)
+class _Signal extends ChangeNotifier {
+  void fire() => notifyListeners();
+}
+
+/// 옆 버튼 ‘꾸미기’ 아이콘: 납품 아이콘(기본안 망치 + 화분, 16장 11/20 Q014)이 assets/ui/에 있으면 그것, 없으면 자리표시
+class _DecorateIcon extends ConsumerWidget {
+  const _DecorateIcon();
+
+  /// config rest.sideButtons.icons의 꾸미기 이름 (codex_camp_deco_v01 T04)
+  static const _name = 'icon_rest_side_decorate_v01';
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final path = ref.watch(assetIndexProvider).value?.sprite(_name);
+    if (path == null) return const Icon(Icons.handyman_outlined, color: Palette.ink, size: 28);
+    return _SideImage(path, Icons.handyman_outlined);
+  }
+}
+
 /// 옆 버튼 하나의 값
 class _SideButtonSpec {
   const _SideButtonSpec({
@@ -374,10 +601,14 @@ class _SideButtonSpec {
     required this.icon,
     required this.onTap,
     this.dot = false,
+    this.semantics,
   });
 
   final String id;
   final String label;
+
+  /// 읽어 주는 이름 (없으면 [label])
+  final String? semantics;
   final Widget icon;
   final VoidCallback onTap;
   final bool dot;
@@ -404,7 +635,7 @@ class _SideButtons extends StatelessWidget {
             if (i > 0) const SizedBox(height: _gap),
             Semantics(
               button: true,
-              label: b.dot ? '${b.label} (새 소식 있음)' : b.label,
+              label: b.dot ? '${b.semantics ?? b.label} (새 소식 있음)' : b.semantics ?? b.label,
               excludeSemantics: true,
               child: GestureDetector(
                 key: ValueKey('rest-side-${b.id}'),

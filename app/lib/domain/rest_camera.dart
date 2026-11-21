@@ -85,6 +85,14 @@ class RestGeometry {
   /// 장면 pt → 지금 화면 위 기기 pt. 시험과 다른 트랙(겹쳐 띄울 때)이 쓴다
   ({double x, double y}) toScreen(RestCamera c, double x, double y) =>
       (x: c.x + c.zoom * sx(x), y: liftY(c) + c.zoom * sy(y));
+
+  /// 지금 화면 위 기기 pt → 장면 pt ([toScreen]을 거꾸로). 꾸밈 물품을 끌 때 손가락 자리를 장면 자리로
+  ({double x, double y}) fromScreen(RestCamera c, double screenX, double screenY) {
+    final zoom = c.zoom == 0 ? 1.0 : c.zoom;
+    final devX = (screenX - c.x) / zoom;
+    final devY = (screenY - liftY(c)) / zoom;
+    return (x: devX / k, y: theme.refH - (height - devY) / k);
+  }
 }
 
 /// 이보다 작게 확대된 것은 확대가 아니다 (손을 뗄 때 처음 배율로 돌아간다)

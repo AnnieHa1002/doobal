@@ -1,6 +1,7 @@
 // 쉼터 테마 themes/camp_wide.json v5. 좌표는 장면 왼쪽 위 기준 pt (기준 화면 390×844, 장면 폭 585).
 // v5(16장 11/18): 땅 위 물건은 수레만 남고 배낭·노트·지도·방명록 표지판·동행 자리·hitOrder가 빠졌다.
-// 빠진 것은 없으면 안 그린다 (쉼터 옆 버튼은 T14, 꾸밈 물품 자리 decor는 T15)
+// 빠진 것은 없으면 안 그린다 (쉼터 옆 버튼은 T14). 꾸밈 물품 자리 decor(땅 띠·못 놓는 자리·이젤 첫 자리)는
+// [CampDecor] (T15, 없으면 쉼터 꾸미기를 열지 않는다)
 
 /// 장면 위의 사각형 (pt)
 class CampBox {
@@ -120,6 +121,44 @@ class CampSign {
   final String label;
 }
 
+/// 꾸밈 물품 땅 띠 (camp_wide decor.groundBand): 물품 발 디딤점이 들어갈 수 있는 범위 (장면 pt)
+class CampGroundBand {
+  const CampGroundBand({required this.xMin, required this.xMax, required this.footYMin, required this.footYMax});
+
+  final double xMin;
+  final double xMax;
+  final double footYMin;
+  final double footYMax;
+}
+
+/// 꾸밈 물품을 못 놓는 자리 하나 (camp_wide decor.blocked). 정령은 둥둥 정령 상자(characterFloat) + 둘레 [padPt]
+class CampBlocked {
+  const CampBlocked({required this.id, required this.box});
+
+  /// character·campfire·cart (config rest.decor.blocked가 이 id로 고른다)
+  final String id;
+  final CampBox box;
+}
+
+/// 쉼터 꾸미기 자리 (camp_wide v5 decor, 개발 기획 가안)
+class CampDecor {
+  const CampDecor({required this.band, required this.blocked, this.easelFootX, this.easelFootY});
+
+  final CampGroundBand band;
+  final List<CampBlocked> blocked;
+
+  /// 첫 그림 선물 이젤이 처음 놓이는 발 자리 (decor.easelStart). 없으면 땅 띠 가운데
+  final double? easelFootX;
+  final double? easelFootY;
+
+  CampBlocked? blockedOf(String id) {
+    for (final b in blocked) {
+      if (b.id == id) return b;
+    }
+    return null;
+  }
+}
+
 /// 쉼터 동행·정령은 물건처럼 누르지만 [CampTheme.objects]에는 없다
 const campCharacterId = 'character';
 const campCompanionId = 'companion';
@@ -140,6 +179,7 @@ class CampTheme {
     required this.campfire,
     required this.firstSign,
     required this.hitOrder,
+    this.decor,
   });
 
   final String id;
@@ -160,6 +200,9 @@ class CampTheme {
 
   /// 겹치면 먼저 눌리는 순서. 파일에 없으면(v5) 물건 순서, 동행, 정령
   final List<String> hitOrder;
+
+  /// 꾸밈 물품 자리 (v4부터). 없으면 null
+  final CampDecor? decor;
 
   CampObject object(String id) => objects.firstWhere((o) => o.id == id);
 
@@ -219,8 +262,46 @@ class CampTheme {
       ),
       hitOrder: (j['hitOrder'] as List?)?.cast<String>() ??
           [for (final o in objects) o.id, campCompanionId, campCharacterId],
+      decor: _decorOf(j),
     );
   }
+}
+
+/// camp_wide decor. 정령 못 놓는 자리는 둥둥 정령(characterFloat: 가운데 x·폭·키·그림자 발 y·뜬 높이)의 몸 상자에
+/// 둘레를 더한다. characterFloat가 없으면 정령 상자(character)
+CampDecor? _decorOf(Map<String, dynamic> j) {
+  final d = j['decor'] as Map<String, dynamic>?;
+  if (d == null) return null;
+  final band = d['groundBand'] as Map<String, dynamic>;
+  final blocked = <CampBlocked>[];
+  for (final b in (d['blocked'] as List?) ?? const []) {
+    final m = b as Map<String, dynamic>;
+    final id = m['id'] as String;
+    final pad = _d(m['padPt'] ?? 0);
+    final CampBox box;
+    if (m['from'] case final String from) {
+      final f = j[from] as Map<String, dynamic>? ??
+          (throw FormatException('camp_wide decor.blocked $id: $from이 없다'));
+      final footY = _d(f['footY'] ?? _d(f['y']) + _d(f['heightPt']));
+      final top = footY - _d(f['liftPt'] ?? 0) - _d(f['heightPt']);
+      box = CampBox(_d(f['x']) - pad, top - pad, _d(f['w']) + pad * 2, footY - top + pad * 2);
+    } else {
+      box = CampBox(_d(m['x']) - pad, _d(m['y']) - pad, _d(m['w']) + pad * 2, _d(m['h']) + pad * 2);
+    }
+    blocked.add(CampBlocked(id: id, box: box));
+  }
+  final easel = d['easelStart'] as Map<String, dynamic>?;
+  return CampDecor(
+    band: CampGroundBand(
+      xMin: _d(band['xMin']),
+      xMax: _d(band['xMax']),
+      footYMin: _d(band['footYMin']),
+      footYMax: _d(band['footYMax']),
+    ),
+    blocked: blocked,
+    easelFootX: easel == null ? null : _d(easel['footX']),
+    easelFootY: easel == null ? null : _d(easel['footY']),
+  );
 }
 
 double _d(dynamic v) => (v as num).toDouble();

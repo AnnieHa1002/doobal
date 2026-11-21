@@ -93,5 +93,17 @@ void main() {
       expect(g.gesture(start, fromX: 300, toX: -700).x, g.minX(1.5));
       expect(g.gesture(start, fromX: 300, toX: -700).zoom, 1.5);
     });
+
+    test('화면 → 장면 (꾸밈 물품 끌기): toScreen을 거꾸로, 밀고 확대해도 (T15)', () {
+      final small = RestGeometry(campTheme, rules.rest, 375, 667 - 30);
+      for (final geo in [g, small]) {
+        for (final c in const [RestCamera(), RestCamera(x: -120), RestCamera(x: -60, zoom: 1.4)]) {
+          final s = geo.toScreen(c, 300, 700);
+          final back = geo.fromScreen(c, s.x, s.y);
+          expect(back.x, closeTo(300, 1e-9));
+          expect(back.y, closeTo(700, 1e-9));
+        }
+      }
+    });
   });
 }
