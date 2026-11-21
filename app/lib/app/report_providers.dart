@@ -4,11 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/day_card.dart';
 import 'providers.dart';
 import 'report_service.dart';
+import 'sync_service.dart' show ReportSync;
 
 /// 하루 카드·걷기 리포트 (기기 안 자료만)
-final reportServiceProvider = FutureProvider<ReportService>(
-  (ref) async => ReportService(ref.watch(dbProvider), await ref.watch(rulesProvider.future)),
-);
+final reportServiceProvider = FutureProvider<ReportService>((ref) async {
+  final sync = await ref.watch(syncServiceProvider.future);
+  return ReportService(
+    ref.watch(dbProvider),
+    await ref.watch(rulesProvider.future),
+    // 엽서의 여정·물감 구간 (16장 11/19)
+    story: (range) => sync.cardStory(range, ref.read(clockProvider)()),
+  );
+});
 
 /// 앱을 열 때 쉼터 위에 겹쳐 뜨는 하루 카드 (M2~M6 v0.17 U ①). 없으면 null.
 /// AutoSync가 앱을 켜고·다시 앞으로 올 때 동기화한 뒤 [check]하고, 카드를 닫으면 [dismiss]가 그 끝날까지

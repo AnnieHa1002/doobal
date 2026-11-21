@@ -1,8 +1,16 @@
+import 'dart:math' as math;
+
 import 'bucket.dart';
+import 'day_card_rules.dart';
+import 'format_int.dart';
 import 'gait.dart';
+import 'geo.dart';
+import 'journey.dart' show Frame;
 import 'paint_trail.dart' show paintDrops;
 import 'rules.dart';
 import 'time_kst.dart';
+
+export 'day_card_rules.dart';
 
 // 하루 카드·걷기 리포트 (16장 11/13, M1 명세 v0.5 ⑥, M2~M6 v0.17 U). 화면·DB 없이 순수하게.
 // 자료는 기기 안 하루 요약(걸음·실제 거리·물감 길 거리)과 분 걸음뿐이다 (서버로 보내지 않는다).
@@ -10,12 +18,19 @@ import 'time_kst.dart';
 
 /// 하루 하나의 기록 (하루 요약 한 줄). 기록이 없는 날은 [DayTotals.empty]
 class DayTotals {
-  const DayTotals({required this.day, this.steps = 0, this.actualM = 0, this.trailM = 0});
+  const DayTotals({
+    required this.day,
+    this.steps = 0,
+    this.actualM = 0,
+    this.trailM = 0,
+    this.coins = 0,
+  });
 
   const DayTotals.empty(this.day)
       : steps = 0,
         actualM = 0,
-        trailM = 0;
+        trailM = 0,
+        coins = 0;
 
   final String day;
   final int steps;
@@ -25,6 +40,9 @@ class DayTotals {
 
   /// 물감 길 안에서 걸은 실제 거리(m)
   final double trailM;
+
+  /// 그날 걸어서 번 럭 (하루 요약 coins, 물감 방울 럭 포함, 하루 상한 안)
+  final int coins;
 }
 
 /// 카드가 덮는 날 [from]~[to] (둘 다 포함)
@@ -111,6 +129,96 @@ class BestDay {
   final int steps;
 }
 
+/// 카드 날에 칠한 물감 한 구간: 물감 색 id와 그 색으로 걸은 실제 거리(m). 걸은 차례대로 (엽서 장면의 길 색)
+class PaintStroke {
+  const PaintStroke(this.colorId, this.meters);
+
+  final String colorId;
+  final double meters;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PaintStroke && other.colorId == colorId && (other.meters - meters).abs() < 1e-6;
+
+  @override
+  int get hashCode => Object.hash(colorId, meters.toStringAsFixed(3));
+
+  @override
+  String toString() => 'PaintStroke($colorId ${meters.toStringAsFixed(1)}m)';
+}
+
+/// 걸은 차례의 분마다 (물감 색 id, 실제 거리 m)을 같은 색끼리 이어 붙인다. 거리가 0인 분은 건너뛴다
+List<PaintStroke> mergeStrokes(Iterable<(String, double)> minutes) {
+  final out = <PaintStroke>[];
+  for (final (color, m) in minutes) {
+    if (!(m > 0)) continue;
+    if (out.isNotEmpty && out.last.colorId == color) {
+      out[out.length - 1] = PaintStroke(color, out.last.meters + m);
+    } else {
+      out.add(PaintStroke(color, m));
+    }
+  }
+  return out;
+}
+
+/// 카드 끝날의 여정 (엽서 문장 {dest}·{km}과 여정 막대). 진행 km는 여정 진행 거리(경비 + 걸은 여행 거리 + 상점 효과)
+class CardJourney {
+  const CardJourney({
+    required this.destId,
+    required this.destName,
+    required this.totalKm,
+    required this.beforeKm,
+    required this.endKm,
+    this.arrived = false,
+    this.frame,
+    this.visitNo,
+  });
+
+  final String destId;
+
+  /// 명소 이름 (첫 여정이면 ‘내 동네 스케치’)
+  final String destName;
+
+  /// 여정 전체 환산 거리
+  final double totalKm;
+
+  /// 카드 첫날 0시(또는 그 뒤 여정을 시작한 때)와 카드 끝날 24시(또는 그 전 도착)의 진행 거리
+  final double beforeKm;
+  final double endKm;
+
+  /// 카드 날 안에 이 명소에 닿았다. 받은 액자 [frame]과 몇 번째 방문 [visitNo]
+  final bool arrived;
+  final Frame? frame;
+  final int? visitNo;
+
+  /// 카드 끝에 남은 거리 (0 아래로 안 내려간다)
+  double get remainingKm => endKm >= totalKm ? 0 : totalKm - endKm;
+
+  /// 카드 날 동안 다가간 거리 (도착하면 전체에서 잘린다)
+  double get deltaKm => (math.min(endKm, totalKm) - math.min(beforeKm, totalKm)).clamp(0.0, totalKm);
+
+  /// 막대: 카드 전 진행(나무색)과 카드 날 진행(테라코타)의 비율 0~1
+  double get beforeRatio => totalKm <= 0 ? 1 : (beforeKm / totalKm).clamp(0.0, 1.0);
+  double get deltaRatio =>
+      arrived ? 1 - beforeRatio : (totalKm <= 0 ? 0 : (deltaKm / totalKm).clamp(0.0, 1 - beforeRatio));
+}
+
+/// 엽서에 넣을 그날 이야기 (하루 요약 밖의 값): 카드 끝날의 여정, 칠한 물감 구간, 장면 자리
+class CardStory {
+  const CardStory({this.journey, this.strokes = const [], this.position});
+
+  static const empty = CardStory();
+
+  /// 카드 끝날의 여정 (카드 날 안에 도착했으면 그 여정). 여정 없이 걸었으면 null (여행 경비로 모임)
+  final CardJourney? journey;
+
+  /// 카드 날에 칠한 물감 구간 (걸은 차례대로)
+  final List<PaintStroke> strokes;
+
+  /// 카드 끝날의 정령 자리 (장면 후경을 고른다). 모르면 null
+  final LatLng? position;
+}
+
 /// 하루 카드 한 장의 값 (M1 v0.5 ⑥ dayCard)
 class DayCard {
   const DayCard({
@@ -122,6 +230,8 @@ class DayCard {
     required this.best,
     required this.week,
     required this.paintings,
+    this.coins = 0,
+    this.story = CardStory.empty,
   });
 
   final DayRange range;
@@ -143,8 +253,34 @@ class DayCard {
   /// 카드 날들에 얻은 그림 (도착한 명소 id, 첫 그림은 'sketch'), 도착 순서대로. 다시 간 명소도 든다
   final List<String> paintings;
 
+  /// 카드 날들에 걸어서 번 럭 (하루 요약 coins 합, 칩 ‘+n 럭’)
+  final int coins;
+
+  /// 여정·물감 구간 (엽서 문장·막대·장면)
+  final CardStory story;
+
   /// 카드 날들이 모두 0보 = ‘쉬어 간 날’ 카드 (16장 11/15: 숫자·공유 없이 잠든 정령과 글 한 줄)
   bool get rested => steps <= 0;
+
+  /// 엽서 종류 (config report.card.sentence.pick: 도착 > 걸은 날, 모두 0보면 쉬어 감)
+  CardKind get kind {
+    if (story.journey?.arrived ?? false) return CardKind.arrived;
+    if (rested) return range.single ? CardKind.rest : CardKind.multiRest;
+    return range.single ? CardKind.day : CardKind.multi;
+  }
+
+  DayCard withStory(CardStory s) => DayCard(
+        range: range,
+        steps: steps,
+        actualM: actualM,
+        trailM: trailM,
+        drops: drops,
+        best: best,
+        week: week,
+        paintings: paintings,
+        coins: coins,
+        story: s,
+      );
 
   /// 하루 평균 걸음·거리 (‘지난 n일’ 카드, 반올림)
   int get avgSteps => (steps / range.days).round();
@@ -161,6 +297,7 @@ DayCard buildDayCard(
   Map<String, DayTotals> days, {
   required Rules rules,
   List<CardArrival> arrivals = const [],
+  CardStory story = CardStory.empty,
 }) {
   DayTotals of(String day) => days[day] ?? DayTotals.empty(day);
   final inCard = [for (final d in range.dayKeys) of(d)];
@@ -178,6 +315,8 @@ DayCard buildDayCard(
     actualM: inCard.fold(0.0, (s, d) => s + d.actualM),
     trailM: inCard.fold(0.0, (s, d) => s + d.trailM),
     drops: inCard.fold(0, (s, d) => s + paintDrops(d.trailM, rules)),
+    coins: inCard.fold(0, (s, d) => s + d.coins),
+    story: story,
     best: best,
     week: [
       for (final d in weekOf(range.to, rules.report))
@@ -206,6 +345,80 @@ DayCard? dayCard({
 /// 하루 카드에 쓸 하루 기록의 날들: 카드 날과 이번 주 날
 Set<String> dayCardDays(DayRange range, ReportRules rules) =>
     {...range.dayKeys, ...weekOf(range.to, rules)};
+
+/// 엽서 문장 한 줄 (config report.card.sentence). [yesterday]는 카드 날이 달력 어제인가:
+/// 템플릿은 ‘어제’로 쓰여 있어 지난 날을 다시 볼 때(노트·05시 전 그저께 카드)는 ‘어제’를 ‘이날’로 바꾸고,
+/// 여러 날 카드의 도착 문장은 ‘어제 ’를 뺀다 (가안). {km}은 여정이 다가간 거리(여정이 없으면 걸은 실제 거리)
+String dayCardSentence(DayCard c, CardSentences t, {required bool yesterday}) {
+  String km(double v) => v.toStringAsFixed(t.kmDigits);
+  String fill(String template, {String? dest, double? kmValue}) {
+    var out = template.replaceAll('{n}', '${c.range.days}');
+    if (dest != null) out = out.replaceAll('{dest}', dest);
+    if (kmValue != null) out = out.replaceAll('{km}', km(kmValue));
+    return out;
+  }
+
+  // ‘어제는’ → ‘이날은’ (받침이 있어 조사도 바뀐다), ‘어제’ → ‘이날’
+  String day(String s) =>
+      yesterday ? s : s.replaceFirst('어제는', '이날은').replaceFirst('어제', '이날');
+  final journey = c.story.journey;
+  // 여정이 있어도 다가간 거리가 표시 자리에서 0이면(여정을 걷고 난 뒤 시작한 날 등) 여정 없는 문장
+  final moved = journey != null && km(journey.deltaKm) != km(0);
+  switch (c.kind) {
+    case CardKind.arrived:
+      final s = fill(t.arrived, dest: journey!.destName);
+      return c.range.single ? day(s) : s.replaceFirst('어제 ', '');
+    case CardKind.rest:
+      return day(t.rest);
+    case CardKind.multiRest:
+      return fill(t.multiRest);
+    case CardKind.day:
+      return day(moved
+          ? fill(t.day, dest: journey.destName, kmValue: journey.deltaKm)
+          : fill(t.noJourneyDay, kmValue: c.actualM / 1000));
+    case CardKind.multi:
+      return moved
+          ? fill(t.multi, dest: journey.destName, kmValue: journey.deltaKm)
+          : fill(t.noJourneyMulti, kmValue: c.actualM / 1000);
+  }
+}
+
+/// 엽서 칩 하나: 굵은 값과 옅은 이름 (‘3,000’ ‘보’)
+typedef CardChipText = ({String value, String label});
+
+/// 엽서 칩 (config report.card.chips): 하루면 걸음·물감 길·+럭, 여러 날이면 합계·하루 평균·+럭,
+/// 쉬어 간 날(0보)은 rest 목록 (지금 비어 있다). 도착한 날은 걸었으면 하루·여러 날 칩
+List<CardChipText> dayCardChips(DayCard c, DayCardRules r) {
+  final ids = c.rested
+      ? r.chipsRest
+      : c.range.single
+          ? r.chipsDay
+          : r.chipsMulti;
+  return [
+    for (final id in ids)
+      switch (id) {
+        CardChip.steps || CardChip.stepsTotal => (value: formatInt(c.steps), label: '보'),
+        CardChip.stepsDailyAvg => (value: formatInt(c.avgSteps), label: '보 · 하루 평균'),
+        CardChip.paintTrailKm => (value: '${(c.trailM / 1000).toStringAsFixed(1)}km', label: '물감 길'),
+        CardChip.coinsGained => (value: '+${formatInt(c.coins)}', label: '럭'),
+      },
+  ];
+}
+
+/// 소인의 날짜 (config report.card.postmark): 하루 ‘11.18’, 여러 날 ‘11.18–11.21’
+String dayCardPostmark(DayCard c, DayCardRules r) {
+  String one(String format, String key) {
+    final d = dayFromKey(key);
+    return formatPostmarkDate(format, d.month, d.day);
+  }
+
+  if (c.range.single) return one(r.postmark, c.range.to);
+  final parts = r.postmarkMulti.split('–');
+  return '${one(parts[0], c.range.from)}–${one(parts[1], c.range.to)}';
+}
+
+/// 공유할 수 있는 카드인가 (config report.card.share.excludeOn: 쉬어 간 날은 공유 없음)
+bool dayCardShareable(DayCard c, DayCardRules r) => !r.shareExclude.contains(c.kind);
 
 /// 걷기 리포트가 보는 기간: 카드 어제([cardToday] 전날)까지 최근 [days]일 (하루 카드처럼 다 지난 날만).
 /// 첫 기록일(설치한 날) [firstRecordDay]보다 앞은 자른다. 아직 다 지난 날이 없으면 null
