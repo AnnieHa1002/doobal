@@ -12,6 +12,7 @@ import '../common/framed_painting.dart';
 import '../common/item_cell.dart' show DashedBoxPainter;
 import '../common/palette.dart';
 import 'decor_edit.dart';
+import 'decor_wiggle.dart';
 
 // 쉼터 장면 위의 꾸밈 물품 (16장 11/18 ③·11/19, M2~M6 AB). 그림 층(정령 뒤·앞)과 빛·누름 상자(맨 위)를 따로 둔다:
 // 누르기 순서는 집은 물품 > 앞쪽 물품 > 정령 > 장면 밀기라서 누름 상자는 정령 위에 쌓는다.
@@ -227,13 +228,15 @@ class _SelectRing extends CustomPainter {
   bool shouldRepaint(_SelectRing old) => false;
 }
 
-/// 장면 층에 물품 그림을 놓는다 ([hidden]은 지금 집어서 화면 맨 위에 따로 그리는 물품)
+/// 장면 층에 물품 그림을 놓는다 ([hidden]은 지금 집어서 화면 맨 위에 따로 그리는 물품).
+/// [wiggle]이 있으면 누른 물품을 발(spot.foot)을 축으로 흔든다 (연출 ②)
 List<Widget> decorArtWidgets(
   RestGeometry g,
   Iterable<DecorView> views, {
   List<double>? tint,
   String? selected,
   String? hidden,
+  DecorWiggler? wiggle,
 }) => [
       for (final v in views)
         Positioned(
@@ -248,11 +251,26 @@ List<Widget> decorArtWidgets(
               maintainState: true,
               maintainAnimation: true,
               maintainSize: true,
-              child: DecorPiece(view: v, k: g.k, tint: tint, selected: v.id == selected),
+              child: _wiggled(
+                wiggle,
+                v,
+                g.k,
+                DecorPiece(view: v, k: g.k, tint: tint, selected: v.id == selected),
+              ),
             ),
           ),
         ),
     ];
+
+Widget _wiggled(DecorWiggler? wiggle, DecorView v, double k, Widget piece) => wiggle == null
+    ? piece
+    : DecorWiggle(
+        key: ValueKey('decor-wiggle-${v.id}'),
+        wiggler: wiggle,
+        id: v.id,
+        pivot: Offset((v.spot.foot.x - v.layout.art.left) * k, (v.spot.foot.y - v.layout.art.top) * k),
+        child: piece,
+      );
 
 /// 등불·석등 밤 빛 (반딧불 빛 RadialGradient 더하기를 물품 자리에서, 깜빡이지 않음). 낮이면 빈 목록
 List<Widget> decorLightWidgets(RestGeometry g, Iterable<DecorView> views, DecorNightLight light, {required bool on}) => [

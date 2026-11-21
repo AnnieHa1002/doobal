@@ -27,6 +27,7 @@ import '../companion/companion_art.dart' show companionFigureAspect, companionTo
 import '../companion/companion_screen.dart';
 import '../common/app_text.dart';
 import '../common/format.dart';
+import '../common/motion.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
 import '../debug/debug_screen.dart';
@@ -39,10 +40,12 @@ import '../tabs/home_tabs.dart';
 import 'decor_drawer.dart';
 import 'decor_edit.dart';
 import 'decor_layer.dart';
+import 'decor_wiggle.dart';
 import 'finale_roam_layer.dart';
 import 'painting_pick_sheet.dart';
 import 'prop_wiggle.dart';
 import 'rest_gestures.dart';
+import 'rest_pet.dart';
 import 'rest_slots.dart';
 
 /// 쉼터 (아래 탭 ‘쉼터’의 처음 화면, 16장 11/18·11/19, 캔버스 2-2). 장면(하늘 → 후경 → 캠프 뒤 → 물건 → 정령 →
@@ -62,6 +65,8 @@ import 'rest_slots.dart';
 /// 정령은 떠 있기 정면·앉기 정면을 20~40초마다 바꾸고(같은 자세 연속 없음), 밤에는 잠든다
 /// (config character.rive.restSwap, 16장 11/19 쉼터는 정면). 새 소품이 생기면 잠깐 놀란다 (palette newProp).
 /// 정령을 길게 누르면 정령 꾸미기 (config character.tapReaction.longPress, 16장 11/19 ③).
+/// 연출 ②(T19, config ui.motion): 정령 몸 위를 좌우로 문지르면 행복 표정 + 몸 기울기(rest_pet.dart),
+/// 그림 안 거는 꾸밈 물품을 누르면 발을 축으로 흔들림(decor_wiggle.dart, 꾸미기 중에는 안 흔들림).
 /// 새 소식 점은 config ui.newDot에 있는 자리만 (배낭·상점, 16장 11/13·11/18)
 class RestScreen extends ConsumerStatefulWidget {
   const RestScreen({super.key});
@@ -104,8 +109,20 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
   Timer? _swapTimer;
   int? _restPose;
 
-  /// 정령에 잠깐 보일 표정 (새 소품)
+  /// 정령에 잠깐 보일 표정 (새 소품·쓰다듬기)
   SpiritCue? _cue;
+
+  /// 누른 꾸밈 물품 흔들기 (연출 ②, config ui.motion.decorWiggle)
+  late final DecorWiggler _decorWiggle;
+
+  /// 정령을 쓰다듬었다 (연출 ②): 행복 표정을 config restPet.exprSec초 (Rive 입력 없음, expr만)
+  void _onPet(int side) {
+    final pet = ref.read(rulesProvider).value?.motion.restPet;
+    final cues = ref.read(spiritPaletteProvider).value?.cues;
+    final expr = pet == null ? null : cues?.exprOf(pet.expr);
+    if (expr == null) return;
+    setState(() => _cue = SpiritCue(expr, holdSec: pet!.exprSec));
+  }
 
   void _startSwap(RestSwapRules r) {
     if (_swapTimer != null) return;
@@ -135,6 +152,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
   void initState() {
     super.initState();
     _wiggler = PropWiggler(vsync: this, spec: ref.read(restWiggleProvider), pool: _wigglePool);
+    _decorWiggle = DecorWiggler(vsync: this, rules: ref.read(rulesProvider).value?.motion.decorWiggle);
     _lift = AnimationController(vsync: this, duration: _liftDuration);
     _liftCurve = CurvedAnimation(parent: _lift, curve: Curves.easeOut);
     _dragger = DecorDragger(
@@ -154,6 +172,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
   void dispose() {
     _swapTimer?.cancel();
     _wiggler.dispose();
+    _decorWiggle.dispose();
     _edit.removeListener(_onEdit);
     _dragger.dispose();
     _edit.dispose();
@@ -168,6 +187,8 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
   /// 서랍이 열리고 닫히면 장면을 올리고 내린다. 고른·집은 물품이 바뀌면 다시 그린다
   void _onEdit() {
     if (!mounted) return;
+    // 꾸미기 중에는 흔들지 않는다 (config ui.motion.decorWiggle.offInEditMode)
+    if (_edit.editing && (_decorWiggle.rules?.offInEditMode ?? true)) _decorWiggle.stop();
     if (_edit.drawerOpen) {
       _lift.forward();
     } else {
@@ -194,14 +215,19 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
   }
 
   /// 놓인 물품을 짧게 눌렀다. 꾸미기 중이면 고르기(다시 누르면 놓기, 고른 물품 위에 뒤집기·그림 걸기 버튼).
-  /// 아니면 그림 거는 물품만: 걸린 그림이 있으면 크게 보기(누른 칸부터, 넘기기는 그 물품에 걸린 그림 안에서만,
-  /// config rest.decor.hungPaintingTap), 걸린 그림이 없으면 그림 고르기 시트. 그 밖의 물품은 그대로(흔들림은 T19)
+  /// 아니면 그림 거는 물품: 걸린 그림이 있으면 크게 보기(누른 칸부터, 넘기기는 그 물품에 걸린 그림 안에서만,
+  /// config rest.decor.hungPaintingTap), 걸린 그림이 없으면 그림 고르기 시트. 그 밖의 물품은 발을 축으로 흔들림
+  /// (연출 ②, config ui.motion.decorWiggle, 움직임 줄이기면 그대로)
   void _onDecorTap(DecorView v, ScenePoint at) {
     if (_edit.editing) {
       _edit.select(_edit.selected == v.id ? null : v.id);
+      if (_decorWiggle.rules?.offInEditMode == false) _decorWiggle.start(v.id, still: motionReduced(context));
       return;
     }
-    if (v.item.paintingSlots == 0) return;
+    if (v.item.paintingSlots == 0) {
+      _decorWiggle.start(v.id, still: motionReduced(context));
+      return;
+    }
     final hung = [
       for (final (i, p) in v.hung.indexed)
         if (p != null) (slot: i, painting: p),
@@ -282,6 +308,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
       return const Scaffold(body: SizedBox.expand());
     }
     _startSwap(rules.screen.spirit.restSwap);
+    _decorWiggle.rules = rules.motion.decorWiggle;
     // 시작 관문이 출발 동네를 먼저 고르게 하므로 위치는 늘 있다 (없으면 빈 화면)
     final position = snap.position;
     if (position == null) return const Scaffold(body: SizedBox.expand());
@@ -395,6 +422,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
                   onSpiritLongPress: rules.screen.tabs.spiritLongPressCustomize
                       ? () => _push(context, const DecorateScreen())
                       : null,
+                  spiritWrap: (spirit) => RestPet(rules: rules.motion.restPet, onPet: _onPet, child: spirit),
                   sceneBehind: [
                     if (firstSketch != null) _firstSign(stage, camp.firstSign),
                     if (cart) _slotArt(stage, camp.objectOrNull(campCartId)!, slots.cart!),
@@ -409,6 +437,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
                         decorTint: decorTint,
                         selected: _edit.selected,
                         hidden: heldId,
+                        wiggle: _decorWiggle,
                       ),
                     ),
                   ],
@@ -424,6 +453,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
                         decorTint: decorTint,
                         selected: _edit.selected,
                         hidden: heldId,
+                        wiggle: _decorWiggle,
                       ),
                     ),
                   ],

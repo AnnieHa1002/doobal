@@ -19,6 +19,7 @@ import '../common/palette.dart';
 import '../common/screen_header.dart';
 import '../common/toast.dart';
 import 'boat_color_sheet.dart';
+import 'cart_motion.dart';
 import 'cart_widgets.dart';
 import 'shop_art.dart';
 
@@ -34,7 +35,9 @@ const ownedBoatsTitle = '가진 배 · 색 바꾸기';
 
 /// 오늘의 수레 (캔버스 8-1, 16장 11/19·11/20): 가진 럭, 여행 효과 고정 칸 2열, 그날 수레 칸(선반 3열, 산 칸은
 /// SOLD 도장), 아직 안 열린 칸·다음 종류 한 줄, 가진 상점 배 줄. 칸을 누르면 구매 시트.
-/// 광고 카드는 T7. 가진 배 줄의 알약은 배 색 시트 (T4c)
+/// 광고 카드는 T7. 가진 배 줄의 알약은 배 색 시트 (T4c).
+/// 연출 ③(T19, config ui.motion.cartSlot): 지난번 상점을 본 뒤 새로 열린 칸은 자물쇠가 풀리며 물건이 톡,
+/// 그 뒤 팔린 칸(여기서 샀거나 걸어서 얻음)은 물건이 떠올라 사라지고 SOLD 도장이 찍힌다. 칸마다 한 번
 class ShopScreen extends ConsumerStatefulWidget {
   const ShopScreen({super.key});
 
@@ -43,18 +46,43 @@ class ShopScreen extends ConsumerStatefulWidget {
 }
 
 class _ShopScreenState extends ConsumerState<ShopScreen> {
+  /// 이번에 상점을 연 순간의 지난 방문 (연출 ③: 이 뒤에 팔린 칸·이 칸 수부터 열린 칸만 움직인다).
+  /// 본 시각을 모르면 연 시각
+  ({int seenUtc, int seenSlots})? _visit;
+  late final int _openedUtc;
+
+  /// 이미 돌린 연출 (같은 칸을 다시 돌리지 않게)
+  final _played = <String>{};
+  var _marked = false;
+
+  void _keepVisit(TodayCart? cart) {
+    if (cart == null || _visit != null) return;
+    _visit = (seenUtc: cart.seenUtc ?? _openedUtc, seenSlots: cart.seenSlots);
+  }
+
   @override
   void initState() {
     super.initState();
-    // 상점을 열면 그날 새 상품을 본 것으로 (옆 상점 버튼 점이 꺼진다, DB 19). 연 동안 새벽에 수레가 바뀌어도
+    _openedUtc = ref.read(clockProvider)().toUtc().millisecondsSinceEpoch;
+    // 상점을 열면 본 것으로 (옆 상점 버튼 점이 꺼진다, DB 19). 연 동안 새벽에 수레가 바뀌어 새 상품이 있어도.
+    // 연출 ③이 다음 방문에 같은 칸을 다시 돌리지 않게, 새 상품이 없어도 열 때와 본 시각 뒤에 팔린 칸이 보일 때
+    // (여기서 샀거나 연 동안 걸어서 얻음) 다시 적는다. 적은 뒤 다시 읽은 수레는 본 시각이 팔린 시각보다 늦어 멈춘다
     ref.listenManual(todayCartProvider, (_, cart) {
-      if (cart.value?.news ?? false) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) markShopSeen(ref);
-        });
-      }
+      final c = cart.value;
+      if (c == null) return;
+      _keepVisit(c);
+      final seen = c.seenUtc;
+      final behind = seen != null && c.slots.any((s) => (s.soldUtc ?? 0) > seen);
+      if (_marked && !c.news && !behind) return;
+      _marked = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) markShopSeen(ref);
+      });
     }, fireImmediately: true);
   }
+
+  /// 연출 [key]를 이번에 처음 돌리는가 (돌린 것으로 적는다)
+  bool _once(String key) => _played.add(key);
 
   /// 시트를 열거나 사는 중이면 다른 칸을 받지 않는다
   bool _busy = false;
@@ -127,6 +155,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     final props = ref.watch(propsProvider).value;
     final balance = ref.watch(coinBalanceProvider).value;
     final cart = ref.watch(todayCartProvider).value;
+    _keepVisit(cart);
     final ownedBoats = ref.watch(ownedBoatIdsProvider).value;
     final shop = ref.watch(shopCatalogProvider).value;
     return Scaffold(
@@ -186,12 +215,19 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     );
   }
 
-  /// 수레 칸 하나: 산 칸은 도장만(누를 수 없음), 아니면 그림 + 꼬리표(이름·값)
+  /// 수레 칸 하나: 산 칸은 도장만(누를 수 없음, 연출 중에도), 아니면 그림 + 꼬리표(이름·값).
+  /// 연출 ③: 지난 방문 뒤 팔린 칸은 빠짐 + 도장, 지난 방문 뒤 열린 칸은 자물쇠 풀림 + 톡 (칸마다 한 번)
   Widget _cell(TodayCart cart, CartSlot slot, int tilt, Rules rules, BoatCatalog boats, List<Prop> props) {
     final item = slot.item;
     final key = ValueKey('cart-slot-${slot.slot}');
     final mark = rules.shopCart.soldMark;
+    final motion = rules.motion.cartSlot;
+    final visit = _visit;
     if (slot.sold) {
+      final play = motion != null &&
+          visit != null &&
+          slot.soldUtc! > visit.seenUtc &&
+          _once('sold ${cart.day} ${slot.slot}');
       return ItemCell(
         key: key,
         name: item.name,
@@ -199,16 +235,32 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
         tilt: tilt,
         // 꼬리표는 안 그리고 읽어 주는 글에만 (캔버스 8-1 aria '이름, SOLD')
         state: mark?.text ?? '',
-        stamp: mark == null ? const SizedBox(width: 56, height: 56) : SoldStamp(mark),
+        stamp: CartSoldStamp(
+          key: ValueKey('cart-sold-${slot.slot}'),
+          motion: motion,
+          play: play,
+          size: mark?.diameterPt ?? 56,
+          stamp: mark == null ? const SizedBox.shrink() : SoldStamp(mark),
+          art: _art(slot, boats, props, rules),
+        ),
       );
     }
     final pc = rules.paintColor;
+    final unlock = motion != null &&
+        visit != null &&
+        slot.slot >= visit.seenSlots &&
+        _once('unlock ${cart.day} ${slot.slot}');
     return ItemCell(
       key: key,
       name: item.name,
       // 물감 통 칸만 그날 색 이름 (가안)
       desc: slot.tubeColor == null ? null : pc.nameOf(slot.tubeColor!),
-      art: _art(slot, boats, props, rules),
+      art: CartUnlockArt(
+        key: ValueKey('cart-unlock-${slot.slot}'),
+        motion: motion,
+        play: unlock,
+        child: _art(slot, boats, props, rules),
+      ),
       tilt: tilt,
       state: coinAmountText(item.price, rules),
       stateColor: Palette.terracottaDeep,

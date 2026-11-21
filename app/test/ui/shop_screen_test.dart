@@ -262,7 +262,10 @@ void main() {
       await tester.runAsync(() => e.db.into(e.db.propsOwned).insert(
           PropsOwnedCompanion.insert(propId: id, unlockedUtc: e.now.millisecondsSinceEpoch)));
       ProviderScope.containerOf(tester.element(find.byType(ShopScreen))).invalidate(snapshotProvider);
-      await settle(tester, () => _inSlot(1, find.byType(SoldStamp)).evaluate().isNotEmpty);
+      // 연 동안 팔린 칸은 물건이 떠오른 뒤 도장이 찍힌다 (T19 연출 ③, 0.25초 + 0.2초)
+      await settle(tester, () => _key('cart-sold-1').evaluate().isNotEmpty);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
       expect(_inSlot(1, find.byType(SoldStamp)), findsOneWidget);
       expect(_inSlot(0, find.byType(SoldStamp)), findsNothing);
       await end(tester, e);

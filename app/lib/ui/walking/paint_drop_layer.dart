@@ -7,10 +7,10 @@ import '../../app/catalog_providers.dart';
 import '../../domain/paint_color.dart';
 import '../../domain/paint_trail.dart';
 import '../../domain/rules.dart';
-import '../common/app_text.dart';
 import '../common/paint_art.dart';
 import '../common/palette.dart';
 import '../scene/scene_view.dart' show SceneCompanionSpot, SceneTinted;
+import 'drop_gain_label.dart';
 
 /// 주운 럭이 머리 위로 떠오르는 높이 (정령 키 비율, 화면 구성값)
 const _gainRise = 0.2;
@@ -31,6 +31,8 @@ const _tubeIconPt = 24.0;
 /// 주울 때 `+n 럭` 옆에 통 아이콘이 함께 떠오른다 ([tubeAllowed]가 false면, 그 색 통이 상한이라 안 나온다).
 /// 지역 색으로 나오는 통(M1 v0.8)은 지금 권역의 지역 색 [regionColor]다 ([regionAllowed]가 false면 안 나온다).
 /// 밤에는 정령과 같은 시간대 보정을 받는다 (night sameAsSpirit). 글자는 보정하지 않는다.
+/// 연출 ④(T19, config ui.motion.dropPickup): `+n 럭`의 숫자가 0.3초 동안 1씩 오르며 1.15배로 튀고 통 아이콘은 0.1초 뒤
+/// (drop_gain_label.dart, 떠오름·흐려짐은 그대로). 한꺼번에 여러 방울을 주우면 n = 주운 방울 수 × coinsPerDrop.
 /// 연출만이고 저장하지 않는다 (럭은 물감 길 거리로 따로 센다, M1 v0.5 ③).
 /// 그림(assets/ui/의 ui_paint_pickup_a·b·c, fx_paint_splash)이 오기 전에는 코드로 그린 임시다 (파일만 넣으면 읽는다)
 class PaintDropLayer extends ConsumerStatefulWidget {
@@ -80,6 +82,9 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
   /// 줍는 연출 중인 방울의 물감 통 색 (`+n 럭` 옆 통 아이콘, 통이 없으면 null)
   Color? _pickedTube;
 
+  /// 이번에 한꺼번에 주운 방울 수 (보통 1, 화면이 꺼졌다 켜지면 여럿)
+  var _pickedCount = 1;
+
   /// [k]번째 방울의 물감 통 색 (통이 없거나 그 색 통이 상한이면 null)
   Color? _tubeAt(int k) {
     final id = widget.trailId;
@@ -119,6 +124,7 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
     // 처음 보거나(화면을 다시 열었다) 줄었으면 줍는 연출 없이 맞춘다
     if (last != null && picked > last) {
       _picking = true;
+      _pickedCount = picked - last;
       _pickedTube = [for (var k = last + 1; k <= picked; k++) _tubeAt(k)].nonNulls.lastOrNull;
       _pick
         ..duration = Duration(microseconds: (_totalSec * Duration.microsecondsPerSecond).round())
@@ -241,24 +247,21 @@ class _PaintDropLayerState extends ConsumerState<PaintDropLayer>
                 child: Opacity(
                   opacity: 1 - g,
                   child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '+${rules.paintDropCoinsPerDrop} 럭',
-                          key: const ValueKey('paint-drop-gain'),
-                          style: context.display(16, color: Palette.ink),
-                        ),
-                        if (_pickedTube case final tube?) ...[
-                          const SizedBox(width: 4),
-                          SizedBox(
+                    child: DropGainLabel(
+                      motion: rules.motion.dropPickup,
+                      sec: _pick.value * _totalSec,
+                      from: rules.paintDropCoinsPerDrop,
+                      to: _pickedCount * rules.paintDropCoinsPerDrop,
+                      still: still,
+                      tube: switch (_pickedTube) {
+                        final tube? => SizedBox(
                             key: const ValueKey('paint-drop-gain-tube'),
                             width: _tubeIconPt,
                             height: _tubeIconPt,
                             child: PaintTubeArt(color: tube),
                           ),
-                        ],
-                      ],
+                        _ => null,
+                      },
                     ),
                   ),
                 ),

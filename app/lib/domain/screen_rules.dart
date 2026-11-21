@@ -298,7 +298,7 @@ class SpiritCue {
 /// 표정 호출 표 (palette.json customPartsV33 expressions·expressionTriggers·holdSec, 16장 11/3·11/4,
 /// 정령 계약 4장): 일(arrival·paintingGet·tap·companionMeet·newProp·nightRest·rapidTap …) → 표정
 class SpiritCues {
-  const SpiritCues(this._byEvent);
+  const SpiritCues(this._byEvent, [this._exprIds = const {}]);
 
   /// [parts]는 palette.json customPartsV33
   factory SpiritCues.fromJson(Map<String, dynamic> parts) {
@@ -316,13 +316,19 @@ class SpiritCues {
         byEvent[event as String] = SpiritCue(expr, holdSec: sec is num ? sec.toDouble() : null);
       }
     }
-    return SpiritCues(byEvent);
+    return SpiritCues(byEvent, rive);
   }
 
   final Map<String, SpiritCue> _byEvent;
 
+  /// 표정 id(happy·surprised …) → Rive expr 번호
+  final Map<String, int> _exprIds;
+
   /// [event]의 표정. 표에 없으면 null
   SpiritCue? of(String event) => _byEvent[event];
+
+  /// 표정 id [id]의 Rive expr 번호 (config ui.motion.restPet.expr처럼 표정을 이름으로 부를 때). 없으면 null
+  int? exprOf(String id) => _exprIds[id];
 }
 
 /// 걷는 중 정령 걷기·뛰기 동작의 재생 빠르기 (config character.rive.walkPlayback, 16장 11/19 가안):
