@@ -236,6 +236,21 @@ class PaintTrailController extends Notifier<PaintTrailState> {
     return ok;
   }
 
+  /// 칠할 무늬를 고른다 (배낭 물감 탭 맨 위 무늬 줄, 16장 11/19: 걷는 중에도 바로). 물감 길이 열려 있으면 앞 구간에
+  /// 칠한 만큼을 먼저 넘기고, 그 순간부터 고른 무늬로 칠한다 (새 구간, 색은 그대로). 걷는 중 화면에는 무늬를 그리지
+  /// 않아 상태는 바꾸지 않는다 (config paintPattern.walkingScreen false). 고르지 못했으면(안 가진 무늬) false
+  Future<bool> choosePattern(String patternId) async {
+    final rules = _rules;
+    final id = state.id;
+    final paint = await ref.read(paintServiceProvider.future);
+    if (rules != null && id != null && _opening == null) {
+      await _flushPaint(rules, _now(), force: true);
+    }
+    final ok = await paint.choosePattern(patternId, openTrailId: state.id, now: _now());
+    if (!_disposed) ref.invalidate(paintShelfProvider);
+    return ok;
+  }
+
   /// 보여 준 카드를 치운다 (화면이 카드를 띄웠으면 부른다)
   void takeCards() {
     if (state.cards.isNotEmpty) state = state.copyWith(cards: const []);

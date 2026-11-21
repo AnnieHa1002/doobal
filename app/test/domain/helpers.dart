@@ -18,6 +18,7 @@ import 'package:doobal/domain/road_event.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/domain/sigungu.dart';
 import 'package:doobal/domain/spirit_palette.dart';
+import 'package:doobal/domain/trail_pattern.dart';
 import 'package:doobal/domain/companion.dart';
 import 'package:doobal/domain/shop.dart';
 
@@ -71,6 +72,11 @@ final ShopCatalog shopCatalog = parseShop(
 /// 실제 decor.json (쉼터 꾸밈 물품 12, T15)
 final DecorCatalog decorCatalog = parseDecor(
   jsonDecode(File('assets/data/decor.json').readAsStringSync()) as Map<String, dynamic>,
+);
+
+/// 실제 trails.json (물감 길 무늬, T17b)
+final TrailCatalog trailCatalog = parseTrails(
+  jsonDecode(File('assets/data/trails.json').readAsStringSync()) as Map<String, dynamic>,
 );
 
 final BoatCatalog boatCatalog = parseBoats(

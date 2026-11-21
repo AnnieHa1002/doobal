@@ -9,6 +9,7 @@ import '../domain/boat.dart';
 import '../domain/companion_engine.dart' show parseStoryNoticeKey;
 import '../domain/notification_policy.dart' show NoticeKind, parseNoticePayload;
 import '../domain/prop.dart';
+import '../domain/trail_pattern.dart';
 import '../ui/arrival/arrival_screen.dart';
 import '../ui/common/toast.dart';
 import '../ui/companion/companion_screen.dart';
@@ -18,6 +19,7 @@ import 'background_sync.dart';
 import 'backup_runner.dart';
 import 'companion_providers.dart';
 import 'notification_service.dart';
+import 'paint_providers.dart';
 import 'providers.dart';
 import 'report_providers.dart';
 import 'shop_providers.dart';
@@ -72,6 +74,9 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
   /// 새로 얻은 보상 배 듣기 (동기화 서비스가 새로 만들어지면 다시 듣는다)
   StreamSubscription<List<Boat>>? _boatSub;
 
+  /// 무늬 거리 보상 듣기 (동기화 서비스가 새로 만들어지면 다시 듣는다)
+  StreamSubscription<List<PatternReward>>? _patternSub;
+
   /// 누른 알림 듣기
   StreamSubscription<String>? _tapSub;
 
@@ -95,6 +100,8 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
       _badgeSub = svc.newBadges.listen(_showNewBadges);
       _boatSub?.cancel();
       _boatSub = svc.newBoats.listen(_showNewBoats);
+      _patternSub?.cancel();
+      _patternSub = svc.newPatternRewards.listen((r) => _showPatternRewards(svc.trailCatalog, r));
     }, fireImmediately: true);
     final notices = ref.read(localNotificationsProvider);
     _tapSub = notices.taps.listen(_openNotice);
@@ -112,6 +119,7 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     _propSub?.cancel();
     _badgeSub?.cancel();
     _boatSub?.cancel();
+    _patternSub?.cancel();
     _tapSub?.cancel();
     _lifecycle.dispose();
     super.dispose();
@@ -187,6 +195,19 @@ class _AutoSyncState extends ConsumerState<AutoSync> {
     if (!mounted || messenger == null) return;
     ref.invalidate(ownedBoatIdsProvider);
     queueToastOn(messenger, newBoatToast(boats));
+  }
+
+  /// 무늬 거리 보상 한 줄 토스트 (소품과 같은 방식, config paintPattern.reward): 새 무늬면 ‘새 무늬를 얻었어요 · 이름’,
+  /// 무늬를 다 가져서 럭이면 럭 줄. 저절로 고르지 않는다. 배낭 무늬 줄·물감 탭 점·가진 럭을 새로 읽는다
+  void _showPatternRewards(TrailCatalog? catalog, List<PatternReward> rewards) {
+    if (!mounted) return;
+    ref.invalidate(paintShelfProvider);
+    ref.invalidate(unseenPaintsProvider);
+    ref.invalidate(coinBalanceProvider);
+    final messenger = scaffoldMessengerKey.currentState;
+    final rules = ref.read(rulesProvider).value;
+    if (messenger == null || catalog == null || rules == null || rewards.isEmpty) return;
+    queueToastOn(messenger, patternRewardToast(catalog, rewards, rules.coinAmountFormat));
   }
 
   /// 앱이 살아 있는 동안 rules.aliveSaveSec마다 살아 있다고 적는다

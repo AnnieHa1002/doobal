@@ -5,8 +5,11 @@ import '../../domain/geo.dart';
 import '../../domain/journey.dart' show Frame;
 import '../../domain/map_album_rules.dart';
 import '../../domain/paint_color.dart';
+import '../../domain/paint_pattern_rules.dart';
 import '../../domain/rules.dart';
+import '../../domain/trail_layout.dart' show TrailPiece, layoutTrailRun;
 import '../common/palette.dart';
+import '../common/trail_pattern_paint.dart';
 import 'map_geometry.dart';
 
 // 아래 크기는 모두 화면 pt (캔버스 4-1, 16장 11/19 지도 연필 선·압정 핀). 확대해도 같게 보이도록 그릴 때 배율로 나눈다.
@@ -76,15 +79,14 @@ const _eyeDx = 2.8;
 const _eyeDy = 0.6;
 const _eyeR = 1.1;
 
-/// 물감 길 방울 타일 임시 그림: 방울 지름 = 타일 높이, 방울 사이 = 지름 × 이 값 (그림 납품 전 화면 구성값)
-const _dropGap = 0.9;
-
 /// 지도 그리기 (캔버스 4-1): 시도 색 → 연필 경계 → 뱃길 → 지나온 길(연필 선, 그 위 물감 길) → 다음 길(연필 점선)
 /// → 명소(안 가 봄 연필 동그라미 · 다녀옴 압정 핀 · 목적지 종이 깃발) → 지금 자리(내 얼굴) → 고른 명소 표시.
 /// [zoom]은 뷰어의 확대 배율이다 (캔버스는 화면 너비에 맞춰 그리고, 그 위에 zoom을 곱해 본다). 선 두께·핀 크기는
 /// 화면 pt라 확대해도 그대로다(map.style.pinsNonScaling). 연필 선은 [style].jitterPt만큼 살짝 떨린다.
-/// 물감 길(config mapTrail): 방울을 구간 방향으로 늘어놓고(heightPt) 끝에 끝 방울(capPt), 색은 그 구간에 칠한 물감 색
-/// ([MapData.paintLineColors]를 [palette]로), 그 아래 잉크 25% 1pt 테두리. 타일 그림이 오기 전에는 코드로 그린 점이다
+/// 물감 길(config mapTrail, T17b 무늬): 이어진 구간을 한 줄로 놓고([layoutTrailRun]) 구간 무늬의 반복 무늬(heightPt)와
+/// 끝 모양(capPt)을 그린다. 색은 그 구간에 칠한 물감 색([MapData.paintLineColors]를 [palette]로), 무늬는
+/// [MapData.paintLinePatterns](그림이 없는 무늬는 기본 방울, [patternArt]). 그 아래 낮에는 잉크 25% 1pt, [night]면
+/// #D9E4EF 1.2pt 테두리(config mapTrail.patterns.night). 무늬 그림이 오기 전에는 코드로 그린 방울이다
 class MapPainter extends CustomPainter {
   MapPainter({
     required this.geometry,
@@ -94,6 +96,9 @@ class MapPainter extends CustomPainter {
     required this.trail,
     required this.palette,
     required this.style,
+    required this.patterns,
+    this.patternArt,
+    this.night = false,
     this.nextRoute = const [],
     this.seaRoutes = const [],
     this.faceColor,
@@ -110,6 +115,15 @@ class MapPainter extends CustomPainter {
 
   /// 연필 선·핀 (config map.style)
   final MapStyleRules style;
+
+  /// 무늬 숫자 규칙 (config mapTrail.patterns·paintPattern)
+  final PaintPatternRules patterns;
+
+  /// 읽어 둔 무늬 그림. 없으면 모든 구간을 코드 방울로
+  final TrailArt? patternArt;
+
+  /// 밤 지도 (config mapTrail.patterns.night.when mapNight): 무늬 아래 밝은 윤곽. 지금 지도에는 밤 모습이 없어 늘 false
+  final bool night;
 
   /// 진행 중인 여정의 남은 길 (지금 자리 → 목적지, [remainingRoute]). 없으면 빈 목록
   final List<LatLng> nextRoute;
@@ -213,55 +227,33 @@ class MapPainter extends CustomPainter {
     for (final path in data.paths) {
       _pencil(canvas, _points(path), pencil, amp);
     }
-    Path line(List<LatLng> path) {
-      final points = _points(path);
-      final out = Path();
-      if (points.isEmpty) return out;
-      out.moveTo(points.first.dx, points.first.dy);
-      for (final o in points.skip(1)) {
-        out.lineTo(o.dx, o.dy);
-      }
-      return out;
+    final art = patternArt ?? TrailArt.none(patterns.defaultId);
+    final rules = trailLayoutRules(trail, patterns);
+    // 연한 색이 종이에 묻히지 않게 잉크 25%를 1pt 크게 먼저 깐다 (config mapTrail.paint.border, 11/15),
+    // 밤 지도는 그 대신 밝은 윤곽 (mapTrail.patterns.night, 16장 11/20 Q010 ①)
+    final paintStyle = trailPaintStyle(trail, patterns, k: k, night: night);
+    for (final run in paintRuns(data, art)) {
+      paintTrailRun(canvas, layoutTrailRun(run, rules, k: k), art, paintStyle, (id) => Color(palette.hexOf(id)));
     }
+  }
 
-    // 물감 길: 지름 heightPt 방울을 길을 따라 늘어놓고 끝에 capPt 끝 방울 (임시, 옅은 번짐 + 진한 속).
-    // 구간마다 칠한 물감 색, 모든 구간 아래에 잉크 테두리를 먼저 깐다
-    final r = trail.paintHeightPt / 2 * k;
-    final step = trail.paintHeightPt * _dropGap * k;
-    // 연한 색이 종이에 묻히지 않게 잉크 25%를 방울보다 1pt 크게 먼저 깐다 (config mapTrail.paint.border, 11/15)
-    final outline = Paint()..color = Color(trail.borderColor).withValues(alpha: trail.borderAlpha);
-    final drops = [
-      for (final path in data.paintLines) <(Offset, double)>[
-        for (final metric in line(path).computeMetrics()) ...[
-          for (var d = 0.0; d <= metric.length; d += step)
-            (metric.getTangentForOffset(d)!.position, r),
-        ],
-      ],
-    ];
+  /// 물감 길 줄을 이어진 것끼리 묶는다 ([MapData.paintLineJoined]): 한 묶음 = 한 줄로 놓는 구간들 (캔버스 px)
+  List<List<TrailPiece>> paintRuns(MapData data, TrailArt art) {
+    final runs = <List<TrailPiece>>[];
     for (final (i, path) in data.paintLines.indexed) {
-      Offset? end;
-      for (final metric in line(path).computeMetrics()) {
-        end = metric.getTangentForOffset(metric.length)?.position;
-      }
-      if (end != null) drops[i].add((end, trail.paintCapPt / 2 * k));
-    }
-    for (final line in drops) {
-      for (final (at, radius) in line) {
-        canvas.drawCircle(at, radius + trail.borderExtraPt * k, outline);
-      }
-    }
-    for (final (i, line) in drops.indexed) {
-      final color = Color(i < data.paintLineColors.length
-          ? palette.hexOf(data.paintLineColors[i])
-          : palette.defaultHex);
-      final wash = Paint()..color = color.withValues(alpha: 0.35);
-      final core = Paint()..color = color.withValues(alpha: 0.85);
-      for (final (at, radius) in line) {
-        canvas
-          ..drawCircle(at, radius, wash)
-          ..drawCircle(at, radius * 0.62, core);
+      final piece = TrailPiece(
+        [for (final o in _points(path)) (o.dx, o.dy)],
+        colorId: i < data.paintLineColors.length ? data.paintLineColors[i] : palette.defaultId,
+        patternId: art.drawn(i < data.paintLinePatterns.length ? data.paintLinePatterns[i] : null),
+      );
+      final joined = i < data.paintLineJoined.length && data.paintLineJoined[i];
+      if (joined && runs.isNotEmpty) {
+        runs.last.add(piece);
+      } else {
+        runs.add([piece]);
       }
     }
+    return runs;
   }
 
   /// 목적지 자리: 명소면 그 자리, 내 동네 스케치처럼 명소가 아닌 가상 지점이면 그 좌표
@@ -385,6 +377,9 @@ class MapPainter extends CustomPainter {
       old.zoom != zoom ||
       old.selectedId != selectedId ||
       old.faceColor != faceColor ||
+      old.night != night ||
+      !identical(old.patternArt, patternArt) ||
+      !identical(old.patterns, patterns) ||
       !identical(old.data, data) ||
       !identical(old.geometry, geometry) ||
       !identical(old.trail, trail) ||

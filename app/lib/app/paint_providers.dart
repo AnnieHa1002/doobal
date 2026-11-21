@@ -9,17 +9,23 @@ import '../domain/time_kst.dart';
 import 'paint_service.dart';
 import 'providers.dart';
 
-/// 물감 보관·고르기·칠하기 (스키마 18)
-final paintServiceProvider = FutureProvider<PaintService>((ref) async =>
-    PaintService(ref.watch(dbProvider), await ref.watch(rulesProvider.future)));
+/// 물감 보관·고르기·칠하기 (스키마 18), 무늬 고르기·구간 무늬 (스키마 21, trails.json)
+final paintServiceProvider = FutureProvider<PaintService>((ref) async => PaintService(
+      ref.watch(dbProvider),
+      await ref.watch(rulesProvider.future),
+      trails: await ref.watch(trailCatalogProvider.future),
+    ));
 
-/// 배낭 물감 탭: 가진 색과 지금 칠할 물감. 고르거나 통을 받으면 invalidate 한다
+/// 배낭 물감 탭: 가진 색과 지금 칠할 물감, 맨 위 무늬 줄. 고르거나 통·무늬를 받으면 invalidate 한다
 final paintShelfProvider = FutureProvider<PaintShelfData>(
     (ref) async => (await ref.watch(paintServiceProvider.future)).shelf());
 
-/// 처음 모은 뒤 배낭에서 안 본 색 수 (배낭 새 소식 점, M2~M6 v0.20 Y ‘새 색을 처음 모았을 때만’)
-final unseenPaintsProvider = FutureProvider<int>(
-    (ref) async => (await ref.watch(paintServiceProvider.future)).unseenColors());
+/// 처음 모은 뒤 배낭에서 안 본 색 수 + 얻은 뒤 안 본 무늬 수 (배낭 새 소식 점, M2~M6 v0.20 Y ‘새 색을 처음 모았을
+/// 때만’, 무늬는 T17b 가안: 새 색과 같이 물감 탭 점)
+final unseenPaintsProvider = FutureProvider<int>((ref) async {
+  final paint = await ref.watch(paintServiceProvider.future);
+  return await paint.unseenColors() + await paint.unseenPatterns();
+});
 
 /// [colorId] 통을 한 번 더 주울 수 있는가 (가진 통이 상한 아래). 걷는 중 화면이 방울 뒤 물감 통을 보일지 본다.
 /// 통을 받으면 invalidate 한다

@@ -429,14 +429,16 @@ double frameBasisKm(double fundKm, double actualWalkedKm, double totalEffectiveK
 enum TrailKind { paint, pencil }
 
 /// 여정 길 위 한 구간 (여정 진행 km, [fromKm] 이상 [toKm] 이하). 물감 구간이면 [colorId]는 칠한 물감 색 id
-/// (M1 v0.7, 고른 색이나 기본 물감), 연필 구간이면 null
+/// (M1 v0.7, 고른 색이나 기본 물감)이고 [patternId]는 그 구간의 무늬 (16장 11/19, null = 기본 방울).
+/// 연필 구간이면 둘 다 null
 class TrailSegment {
-  const TrailSegment(this.fromKm, this.toKm, this.kind, [this.colorId]);
+  const TrailSegment(this.fromKm, this.toKm, this.kind, [this.colorId, this.patternId]);
 
   final double fromKm;
   final double toKm;
   final TrailKind kind;
   final String? colorId;
+  final String? patternId;
 
   @override
   bool operator ==(Object other) =>
@@ -444,14 +446,16 @@ class TrailSegment {
       (other.fromKm - fromKm).abs() < 1e-9 &&
       (other.toKm - toKm).abs() < 1e-9 &&
       other.kind == kind &&
-      other.colorId == colorId;
+      other.colorId == colorId &&
+      other.patternId == patternId;
 
   @override
   int get hashCode =>
-      Object.hash(fromKm.toStringAsFixed(6), toKm.toStringAsFixed(6), kind, colorId);
+      Object.hash(fromKm.toStringAsFixed(6), toKm.toStringAsFixed(6), kind, colorId, patternId);
 
   @override
-  String toString() => 'TrailSegment($fromKm~$toKm ${kind.name}${colorId == null ? '' : ' $colorId'})';
+  String toString() => 'TrailSegment($fromKm~$toKm ${kind.name}'
+      '${colorId == null ? '' : ' $colorId'}${patternId == null ? '' : ' $patternId'})';
 }
 
 /// 여정 길을 물감·연필 구간으로 나눈다 (M1 명세 v0.5 ⑤). 여정 진행 km 순서로:
@@ -460,7 +464,7 @@ class TrailSegment {
 /// 물감 길 분이면 물감·아니면 연필로 잇는다. 같은 종류가 이어지면 한 구간으로 합치고, 길이 0인 분은 건너뛴다.
 /// [totalKm]가 있으면 그 거리에서 자른다 (도착 뒤 넘친 걸음은 그리지 않는다).
 /// [paintAt]은 물감 분(UTC epoch 분)의 칠한 물감 색 id다 (M1 v0.7 구간 색): 색이 바뀌면 물감 구간도 나뉜다.
-/// 없으면 물감 구간의 색은 null
+/// 없으면 물감 구간의 색은 null. [patternAt]은 그 분의 무늬 id(null = 기본)이고 무늬가 바뀌어도 나뉜다
 List<TrailSegment> trailSegments({
   required double fundKm,
   required List<MinuteTravel> minutes,
@@ -468,19 +472,21 @@ List<TrailSegment> trailSegments({
   double scale = 1,
   double? totalKm,
   String Function(int minute)? paintAt,
+  String? Function(int minute)? patternAt,
 }) {
   final out = <TrailSegment>[];
   var at = 0.0;
-  void add(double km, TrailKind kind, [String? color]) {
+  void add(double km, TrailKind kind, [String? color, String? pattern]) {
     if (!(km > 0)) return;
     final cap = totalKm;
     if (cap != null && at >= cap) return;
     var to = at + km;
     if (cap != null && to > cap) to = cap;
-    if (out.isNotEmpty && out.last.kind == kind && out.last.colorId == color) {
-      out[out.length - 1] = TrailSegment(out.last.fromKm, to, kind, color);
+    final last = out.lastOrNull;
+    if (last != null && last.kind == kind && last.colorId == color && last.patternId == pattern) {
+      out[out.length - 1] = TrailSegment(last.fromKm, to, kind, color, pattern);
     } else {
-      out.add(TrailSegment(at, to, kind, color));
+      out.add(TrailSegment(at, to, kind, color, pattern));
     }
     at = to;
   }
@@ -488,7 +494,7 @@ List<TrailSegment> trailSegments({
   add(fundKm + shopKm, TrailKind.pencil);
   for (final m in minutes) {
     if (m.inTrail) {
-      add(m.actualM / 1000 * scale, TrailKind.paint, paintAt?.call(m.minute));
+      add(m.actualM / 1000 * scale, TrailKind.paint, paintAt?.call(m.minute), patternAt?.call(m.minute));
     } else {
       add(m.actualM / 1000 * scale, TrailKind.pencil);
     }

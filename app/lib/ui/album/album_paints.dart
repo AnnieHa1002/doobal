@@ -1,21 +1,28 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/paint_service.dart';
+import '../../app/providers.dart';
 import '../../domain/paint_color.dart';
 import '../../domain/rules.dart';
 import '../../domain/scene.dart' show Season, seasonOf;
 import '../../domain/time_kst.dart';
+import '../../domain/trail_pattern.dart';
 import '../common/app_text.dart';
 import '../common/format.dart';
 import '../common/item_cell.dart';
+import '../common/notice_dot.dart';
 import '../common/paint_art.dart';
 import '../common/palette.dart';
 
 /// 물감 탭 글 (가안: 캔버스에 없는 흐름). 걷는 중에 못 고르는 안내는 config choose.whileWalking이 false일 때만
 const paintChooseWhileWalkingLine = '걷는 중에는 물감을 고르지 않아요';
 const paintUsingLabel = '쓰는 중';
+
+/// 맨 위 무늬 줄 제목 (가안: 캔버스 6-1에 무늬 줄이 아직 없다)
+const patternRowTitle = '무늬';
 
 /// 묶음 이름 (캔버스 6-1, 11/16)
 const paintGroupTitles = {
@@ -82,6 +89,10 @@ List<PaintShelfGroup> paintShelfGroups(PaintShelfData data, Rules rules, DateTim
 /// 남은 거리(config backpack.remainStep 단위 내림, ‘1.2 km’). 묶음([paintShelfGroups])은 제목을 누르면 접힌다.
 /// 걷는 중(물감 길이 열린 동안)에도 고르고 그 순간부터 그 색으로 칠한다 (16장 11/16, config choose.whileWalking).
 /// [canChoose]가 false면(config가 걷는 중 고르기를 끄면) 칸이 안 눌리고 안내 한 줄
+///
+/// 맨 위 무늬 줄 (T17b, config paintPattern.choose, 16장 11/19·11/20): 기본 방울 + 가진 무늬만(trails.json 차례, 0개면
+/// 기본 방울 1칸). 칸 상태는 누름·쓰는 중 둘 (안 가진 칸·예시·잠긴 칸 없음). 누르면 바로 그 무늬가 ‘쓰는 중’이고
+/// 걷는 중이면 그 순간부터 그 무늬로 칠한다. 새로 얻어도 저절로 고르지 않고, 안 본 무늬 칸에 새 표시 점
 class PaintShelves extends StatefulWidget {
   const PaintShelves({
     super.key,
@@ -90,6 +101,8 @@ class PaintShelves extends StatefulWidget {
     required this.now,
     required this.canChoose,
     required this.onChoose,
+    this.canChoosePattern = true,
+    this.onChoosePattern,
   });
 
   final PaintShelfData data;
@@ -101,6 +114,10 @@ class PaintShelves extends StatefulWidget {
   /// 지금 고를 수 있는가
   final bool canChoose;
   final ValueChanged<String> onChoose;
+
+  /// 지금 무늬를 고를 수 있는가 (config paintPattern.choose.whileWalking)
+  final bool canChoosePattern;
+  final ValueChanged<String>? onChoosePattern;
 
   @override
   State<PaintShelves> createState() => _PaintShelvesState();
@@ -132,11 +149,51 @@ class _PaintShelvesState extends State<PaintShelves> {
               style: TextStyle(fontSize: 14, color: Palette.subInk),
             ),
           ),
+        if (widget.data.patterns.isNotEmpty) ...[
+          _patternRow(),
+          const SizedBox(height: 10),
+        ],
         for (final (i, g) in groups.indexed) ...[
           if (i > 0) const SizedBox(height: 10),
           _group(g, foldable: foldable),
         ],
       ],
+    );
+  }
+
+  /// 맨 위 무늬 줄 (접지 않는다)
+  Widget _patternRow() {
+    final cells = widget.data.patterns;
+    final onChoose = widget.onChoosePattern;
+    return Container(
+      key: const ValueKey('pattern-row'),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(color: Palette.card, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(patternRowTitle, style: context.display(14))),
+              Text('${cells.length}', style: AppText.label),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ItemShelf(
+            rowGap: 16,
+            cells: [
+              for (final (i, c) in cells.indexed)
+                _PatternCell(
+                  key: ValueKey('pattern-${c.id}'),
+                  cell: c,
+                  tilt: i,
+                  using: c.id == widget.data.currentPattern,
+                  onTap: widget.canChoosePattern && onChoose != null ? () => onChoose(c.id) : null,
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -204,4 +261,110 @@ class _PaintShelvesState extends State<PaintShelves> {
       onTap: widget.canChoose && !using ? () => widget.onChoose(c.colorId) : null,
     );
   }
+}
+
+/// 무늬 줄 칸 하나: 누르는 동안 그림이 조금 작아지고(누름), 쓰는 중이면 점선 고리 + ‘쓰는 중’ (config states pressed·inUse).
+/// 쓰는 중인 칸은 다시 눌러도 아무 일이 없다
+class _PatternCell extends StatefulWidget {
+  const _PatternCell({
+    super.key,
+    required this.cell,
+    required this.tilt,
+    required this.using,
+    required this.onTap,
+  });
+
+  final PatternCellView cell;
+  final int tilt;
+  final bool using;
+  final VoidCallback? onTap;
+
+  @override
+  State<_PatternCell> createState() => _PatternCellState();
+}
+
+class _PatternCellState extends State<_PatternCell> {
+  var _pressed = false;
+
+  void _press(bool v) {
+    if (_pressed != v) setState(() => _pressed = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tap = widget.using ? null : widget.onTap;
+    return Listener(
+      onPointerDown: tap == null ? null : (_) => _press(true),
+      onPointerUp: (_) => _press(false),
+      onPointerCancel: (_) => _press(false),
+      child: ItemCell(
+        name: widget.cell.pattern.name,
+        art: AnimatedScale(
+          key: const ValueKey('pattern-art'),
+          scale: _pressed ? 0.92 : 1,
+          duration: const Duration(milliseconds: 80),
+          child: SizedBox(
+            width: 56,
+            height: 56,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(child: PatternArt(pattern: widget.cell.pattern)),
+                if (!widget.cell.seen)
+                  const Positioned(key: ValueKey('pattern-new'), right: -2, top: -2, child: NoticeDot()),
+              ],
+            ),
+          ),
+        ),
+        tilt: widget.tilt,
+        selected: widget.using,
+        state: widget.using ? paintUsingLabel : '',
+        stateColor: Palette.terracotta,
+        onTap: tap,
+      ),
+    );
+  }
+}
+
+/// 무늬 칸 그림: 아이콘 그림(trails.json icon, 없으면 이름에 무늬 id가 든 칸 그림)이 있으면 그 그림, 기본 방울은 코드로
+/// 그린 방울 줄 (trails.json ‘아이콘은 앱이 방울 타일로 만듦’), 그 밖은 점선 칸 + 이름 (16장 11/6 그림 없는 소품 규칙)
+class PatternArt extends ConsumerWidget {
+  const PatternArt({super.key, required this.pattern});
+
+  final TrailPattern pattern;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final assets = ref.watch(assetIndexProvider).value;
+    final icon = pattern.icon;
+    final path = (icon == null ? null : assets?.sprite(icon)) ?? assets?.itemIcon(pattern.id);
+    final Widget none = pattern.kind == TrailUnlockKind.initial
+        ? const CustomPaint(key: ValueKey('pattern-drops-art'), painter: _DropsIconPainter())
+        : Center(child: ItemPlaceholder(name: pattern.name));
+    return path == null ? none : ItemImage(path, size: const Size(56, 56), fallback: none);
+  }
+}
+
+/// 기본 방울 칸 그림: 테라코타 방울 넷을 비스듬히 (지도 방울처럼 옅은 번짐 + 진한 속, 잉크 25% 테두리)
+class _DropsIconPainter extends CustomPainter {
+  const _DropsIconPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.shortestSide * 0.11;
+    final outline = Paint()..color = Palette.ink.withValues(alpha: 0.25);
+    final wash = Paint()..color = Palette.terracotta.withValues(alpha: 0.35);
+    final core = Paint()..color = Palette.terracotta.withValues(alpha: 0.85);
+    for (var i = 0; i < 4; i++) {
+      final t = (i + 0.5) / 4;
+      final at = Offset(size.width * (0.14 + 0.72 * t), size.height * (0.66 - 0.32 * t));
+      canvas
+        ..drawCircle(at, r + 1, outline)
+        ..drawCircle(at, r, wash)
+        ..drawCircle(at, r * 0.62, core);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DropsIconPainter old) => false;
 }

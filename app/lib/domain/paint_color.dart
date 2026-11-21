@@ -593,12 +593,14 @@ int _hex(Object? v, String where) {
 
 double _d(dynamic v) => (v as num).toDouble();
 
-/// 물감 길 하나의 색 구간 하나: [fromMs](epoch ms)부터 [colorId]로 칠했다 (DB PaintTrailColors, 스키마 20)
+/// 물감 길 하나의 색 구간 하나: [fromMs](epoch ms)부터 [colorId]로 칠했다 (DB PaintTrailColors, 스키마 20).
+/// [patternId]는 그 구간의 무늬 (스키마 21, trails.json id). null이면 기본 무늬(방울)
 class PaintSegment {
-  const PaintSegment(this.fromMs, this.colorId);
+  const PaintSegment(this.fromMs, this.colorId, [this.patternId]);
 
   final int fromMs;
   final String colorId;
+  final String? patternId;
 }
 
 /// 물감 길 하나에 칠한 색 (시각은 epoch ms). [endMs]가 null이면 열려 있다. [segments]는 fromMs 순 색 구간이고
@@ -611,20 +613,32 @@ class TrailPaint {
   final List<PaintSegment> segments;
 
   /// [ms]에 칠한 색. 첫 구간 앞이거나 구간이 없으면 null (기본 물감)
-  String? colorAt(int ms) {
-    String? color;
+  String? colorAt(int ms) => _segmentAt(ms)?.colorId;
+
+  /// [ms]가 든 구간. 첫 구간 앞이거나 구간이 없으면 null
+  PaintSegment? _segmentAt(int ms) {
+    PaintSegment? at;
     for (final seg in segments) {
       if (seg.fromMs > ms) break;
-      color = seg.colorId;
+      at = seg;
     }
-    return color;
+    return at;
   }
 }
 
 /// [ms](분 시작 시각)에 칠한 물감 색 id (M1 v0.7 구간 색). 그 시각이 든 물감 길의 그 시각 구간 색,
 /// 물감 길 밖이면 기본 물감 [defaultId]. [trails]는 시작 순이고 겹치지 않는다 (물감 길은 하나씩 열린다):
 /// [ms] 이하에서 시작한 마지막 물감 길을 이분 탐색으로 본다
-String paintedColorAt(List<TrailPaint> trails, int ms, String defaultId) {
+String paintedColorAt(List<TrailPaint> trails, int ms, String defaultId) =>
+    paintedSegmentAt(trails, ms)?.colorId ?? defaultId;
+
+/// [ms](분 시작 시각)에 칠한 무늬 id (16장 11/19 구간마다 무늬). 물감 길 밖이거나 기본 무늬면 null.
+/// 찾는 법은 [paintedColorAt]과 같다
+String? paintedPatternAt(List<TrailPaint> trails, int ms) => paintedSegmentAt(trails, ms)?.patternId;
+
+/// [ms](분 시작 시각)가 든 물감 길의 그 시각 구간. 물감 길 밖이거나 구간이 없는 물감 길(스키마 18 전, 기본 물감)이면
+/// null. 열 때 첫 구간을 적기 전(첫 분이 시작 시각보다 앞인 때)은 첫 구간
+PaintSegment? paintedSegmentAt(List<TrailPaint> trails, int ms) {
   var lo = 0;
   var hi = trails.length - 1;
   var at = -1;
@@ -637,10 +651,10 @@ String paintedColorAt(List<TrailPaint> trails, int ms, String defaultId) {
       hi = mid - 1;
     }
   }
-  if (at < 0) return defaultId;
+  if (at < 0) return null;
   final t = trails[at];
   final end = t.endMs;
-  if (end != null && ms >= end) return defaultId;
-  // 열 때 첫 구간을 적기 전(첫 분이 시작 시각보다 앞인 때)은 첫 구간 색
-  return t.colorAt(ms) ?? (t.segments.isEmpty ? defaultId : t.segments.first.colorId);
+  if (end != null && ms >= end) return null;
+  // 열 때 첫 구간을 적기 전(첫 분이 시작 시각보다 앞인 때)은 첫 구간
+  return t._segmentAt(ms) ?? t.segments.firstOrNull;
 }

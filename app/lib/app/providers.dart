@@ -423,6 +423,7 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
   final shopCatalog = await ref.watch(shopCatalogProvider.future);
   final boatCatalog = await ref.watch(boatCatalogProvider.future);
   final decorSeed = await ref.watch(decorSeedProvider.future);
+  final trailCatalog = await ref.watch(trailCatalogProvider.future);
   // 첫 여정 '내 동네 스케치'의 목적지가 바다에 떨어지지 않게 지도 경계로 땅을 판정한다
   final projection = await ref.watch(mapProjectionProvider.future);
   final regions = await ref.watch(mapRegionsProvider.future);
@@ -442,6 +443,7 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
     shopCatalog: shopCatalog,
     boatCatalog: boatCatalog,
     decorSeed: decorSeed,
+    trailCatalog: trailCatalog,
     onLand: (p, island) => onIsland(p, island, projection, regions),
     distanceScale: distanceScale,
     notificationService: await ref.watch(notificationServiceProvider.future),

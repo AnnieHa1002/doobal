@@ -74,6 +74,7 @@ class _Env {
         shopCatalogProvider.overrideWith((ref) => shopCatalog),
         boatCatalogProvider.overrideWith((ref) => boatCatalog),
         decorCatalogProvider.overrideWith((ref) => decorCatalog),
+        trailCatalogProvider.overrideWith((ref) => trailCatalog),
         companionCatalogProvider.overrideWith((ref) => companionCatalog),
         noticeCatalogProvider.overrideWith((ref) => noticeCatalog),
         campThemeProvider.overrideWith((ref) => campTheme),
