@@ -1,4 +1,5 @@
 import 'geo.dart';
+import 'map_album_rules.dart';
 import 'paint_color.dart';
 import 'screen_rules.dart';
 import 'shop_cart.dart';
@@ -383,6 +384,7 @@ class Rules {
     required this.report,
     required this.paintColor,
     required this.screen,
+    required this.mapAlbum,
   });
 
   /// 하루 카드·걷기 리포트 (config report)
@@ -393,6 +395,9 @@ class Rules {
 
   /// 화면 세부(새 소식 점·화면 방향·꾸미기 미리보기)와 정령 화면별 자세 (config ui·character.rive, 16장 11/11·11/13)
   final ScreenRules screen;
+
+  /// 지도 연필 선·핀·그림 칸, 화집 탭·소품 바로 입기·가진 것만·크게 보기 가로 (config map.style·map.card·album, T18)
+  final MapAlbumRules mapAlbum;
 
   /// 설치 뒤 며칠까지 둘째·셋째 동행을 꼭 만나는지 (config companions.guaranteeByDay)
   final List<int> companionGuaranteeDays;
@@ -971,6 +976,7 @@ class Rules {
       report: ReportRules.fromJson(j['report'] as Map<String, dynamic>),
       paintColor: PaintColorRules.fromJson(paintColor, paintDrop: paintDrop),
       screen: ScreenRules.fromJson(j),
+      mapAlbum: MapAlbumRules.fromJson(j),
     );
   }
 }

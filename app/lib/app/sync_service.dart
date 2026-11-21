@@ -160,12 +160,15 @@ class PaintTrailView {
 }
 
 class JourneyView {
-  const JourneyView(this.dest, this.totalKm, this.progress, this.eta);
+  const JourneyView(this.dest, this.totalKm, this.progress, this.eta, {this.route});
 
   final Landmark dest;
   final double totalKm;
   final JourneyProgress progress;
   final DateTime eta;
+
+  /// 이 여정의 경로 (출발지 → 목적지, 배 구간은 항구를 거침). 지도의 다음 길(연필 점선)을 그린다
+  final TravelRoute? route;
 }
 
 /// 도착했는데 도착 화면을 아직 보여 주지 않은 여정 (앱 밖에서 도착했으면 다음 실행 때 먼저 보여 준다)
@@ -1875,7 +1878,13 @@ class SyncService {
     if (active != null) {
       final p = here.progress!;
       final eta = _etaOf(p.remainingKm, days, today, state);
-      view = JourneyView(_destOf(active), here.journey!.route.totalEffectiveKm, p, eta);
+      view = JourneyView(
+        _destOf(active),
+        here.journey!.route.totalEffectiveKm,
+        p,
+        eta,
+        route: here.journey!.route,
+      );
     }
 
     return Snapshot(

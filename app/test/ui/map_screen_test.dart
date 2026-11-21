@@ -12,7 +12,9 @@ import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/common/game_button.dart';
 import 'package:doobal/ui/common/palette.dart';
 import 'package:doobal/ui/map/landmark_card.dart';
+import 'package:doobal/ui/album/painting_viewer.dart';
 import 'package:doobal/ui/map/map_geometry.dart';
+import 'package:doobal/ui/map/map_painter.dart' show pinHeadColors, MapPainter;
 import 'package:doobal/ui/map/map_screen.dart';
 import 'package:doobal/ui/map/map_sheets.dart' show NoEventIcon;
 import 'package:doobal/ui/walking/walking_screen.dart';
@@ -405,15 +407,63 @@ void main() {
     });
   });
 
+  group('연필 선 지도 (16장 11/19)', () {
+    MapPainter painterOf(WidgetTester tester) => tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((c) => c.painter)
+        .whereType<MapPainter>()
+        .single;
+
+    testWidgets('여정 중이면 다음 길 = 지금 자리 → 목적지 연필 점선, 뱃길 둘, 핀·깃발은 config map.style, 얼굴은 내 몸 색',
+        (tester) async {
+      final e = _Env();
+      await e.seed(tester, () async => e.svc.startJourney('kr003', _t1));
+      await _openMap(tester, e);
+
+      final p = painterOf(tester);
+      expect(identical(p.style, rules.mapAlbum.map), isTrue);
+      final snap = (await tester.runAsync(() => e.svc.snapshot(e.now)))!;
+      expect(p.nextRoute.first, snap.position);
+      expect(p.nextRoute.last, _byId['kr003']!.latLng);
+      expect(p.seaRoutes, [
+        (rules.ports['wando']!, rules.ports['jeju']!),
+        (rules.ports['pohang']!, rules.ports['dodong']!),
+      ]);
+      // 얼굴 속은 내 정령 몸 색 (못 읽었으면 null = 기본 살색). 모자는 그리지 않는다 (11/17 폰: 베레모 얼굴이 지금 모습과 달랐음)
+      final body = ProviderScope.containerOf(tester.element(find.byType(MapScreen)))
+          .read(spiritLookProvider)
+          .bodyArgb;
+      expect(p.faceColor, body == null ? null : Color(body));
+
+      // 지도를 옮기거나 확대해도 같은 다음 길 목록 (다시 그리기를 줄인다)
+      final before = p.nextRoute;
+      _viewer(tester).value = _viewer(tester).value.clone()..scaleByDouble(1.5, 1.5, 1, 1);
+      await tester.pump();
+      expect(identical(painterOf(tester).nextRoute, before), isTrue);
+      await _end(tester, e);
+    });
+
+    testWidgets('여정이 없으면 다음 길이 없다', (tester) async {
+      final e = _Env();
+      await e.seed(tester);
+      await _openMap(tester, e);
+      expect(painterOf(tester).nextRoute, isEmpty);
+      await _end(tester, e);
+    });
+  });
+
   group('카드', () {
-    testWidgets('안 가 본 곳: 이름·시도·지형, 그림 칸 3개가 모두 흐린 점(자물쇠 없음), 액자 글자 없음', (tester) async {
+    testWidgets('안 가 본 곳: 이름·시도·지형, 그림 칸 1개(config map.card.paintingSlot)가 연필 점선 빈 칸(자물쇠 없음), 액자 글자 없음',
+        (tester) async {
       final e = _Env();
       await e.seed(tester);
       await _openMap(tester, e);
       await _searchAndPick(tester, '경복궁', 'kr001');
 
-      expect(find.byType(PaintingSlot), findsNWidgets(3));
-      expect(find.byKey(const ValueKey('painting-slot-dot')), findsNWidgets(3));
+      expect(rules.mapAlbum.paintingSlot.count, 1);
+      expect(find.byType(PaintingSlot), findsOneWidget);
+      expect(find.byKey(const ValueKey('painting-slot-empty')), findsOneWidget);
+      expect(find.byKey(const ValueKey('painting-slot-filled')), findsNothing);
       expect(find.byIcon(Icons.lock_outline), findsNothing);
       expect(find.byIcon(Icons.landscape_outlined), findsNothing);
       expect(find.textContaining('액자'), findsNothing);
@@ -423,7 +473,7 @@ void main() {
       await _end(tester, e);
     });
 
-    testWidgets('다녀온 곳: 첫 칸이 액자 색, 나머지는 흐린 점, `금 액자`', (tester) async {
+    testWidgets('다녀온 곳: 그림 칸이 액자 색(지도 핀 머리와 같은 금색) + 썸네일, 글 없음. 누르면 그 그림 크게 보기', (tester) async {
       final e = _Env();
       await e.seed(tester, () async {
         await e.db.into(e.db.paintingsOwned).insert(PaintingsOwnedCompanion.insert(
@@ -438,9 +488,28 @@ void main() {
       await _openMap(tester, e);
       await _searchAndPick(tester, '경복궁', 'kr001');
 
-      expect(find.byIcon(Icons.landscape_outlined), findsOneWidget);
-      expect(find.byKey(const ValueKey('painting-slot-dot')), findsNWidgets(2));
-      expect(_card('금 액자'), findsOneWidget);
+      final filled = find.byKey(const ValueKey('painting-slot-filled'));
+      expect(filled, findsOneWidget);
+      expect(find.byKey(const ValueKey('painting-slot-empty')), findsNothing);
+      final box = tester.widget<Container>(filled).decoration! as BoxDecoration;
+      expect(box.color, pinHeadColors[Frame.gold]);
+      expect(box.shape, BoxShape.circle);
+      // 썸네일은 그 명소 그림
+      final thumb = tester.widget<Image>(find.descendant(of: filled, matching: find.byType(Image)));
+      expect((thumb.image as ResizeImage).imageProvider, isA<AssetImage>().having(
+          (a) => a.assetName, 'assetName', 'assets/paintings/${_byId['kr001']!.painting}.webp'));
+      // ‘그림 n / 3’·액자 안내 글 없음
+      expect(_card('금 액자'), findsNothing);
+      expect(find.textContaining('/ 3'), findsNothing);
+
+      await tester.tap(find.byType(PaintingSlot));
+      await _transition(tester);
+      expect(find.byType(PaintingViewer), findsOneWidget);
+      expect(find.byKey(const ValueKey('viewer-painting-kr001')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('viewer-close')));
+      await _transition(tester);
+      expect(find.byType(PaintingViewer), findsNothing);
+      expect(find.byType(LandmarkCard), findsOneWidget);
       await _end(tester, e);
     });
 

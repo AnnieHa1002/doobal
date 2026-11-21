@@ -5,7 +5,9 @@ import 'dart:ui';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/domain/geo.dart';
 import 'package:doobal/domain/journey.dart';
+import 'package:doobal/domain/map_album_rules.dart';
 import 'package:doobal/domain/paint_color.dart';
+import 'package:doobal/domain/route.dart';
 import 'package:doobal/domain/rules.dart';
 import 'package:doobal/ui/common/format.dart';
 import 'package:doobal/ui/map/map_geometry.dart';
@@ -140,12 +142,18 @@ void main() {
       fundKm: 0,
     );
 
+    final next = [const LatLng(37.0, 127.0), const LatLng(37.65, 127.3)];
+    final sea = [(rules.ports['wando']!, rules.ports['jeju']!)];
+
     MapPainter painter({
       String? selected = 'kr001',
       double zoom = 1,
       MapData? d,
       MapGeometry? g,
       PaintColorRules? palette,
+      MapStyleRules? style,
+      List<LatLng>? nextRoute,
+      Color? face,
     }) =>
         MapPainter(
           geometry: g ?? _geometry,
@@ -154,6 +162,10 @@ void main() {
           zoom: zoom,
           trail: rules.mapTrail,
           palette: palette ?? rules.paintColor,
+          style: style ?? rules.mapAlbum.map,
+          nextRoute: nextRoute ?? next,
+          seaRoutes: sea,
+          faceColor: face,
         );
 
     test('여러 확대 배율과 선택 상태로 그려도 오류가 없다', () {
@@ -168,8 +180,26 @@ void main() {
       final recorder = PictureRecorder();
       painter(
         d: const MapData(visited: {}, paths: [], destId: null, position: null, fundKm: 0),
+        nextRoute: const [],
       ).paint(Canvas(recorder), const Size(390, 487.5));
       recorder.endRecording().dispose();
+    });
+
+    test('연필 선·핀을 끈 config(옛 흐린 점·잉크 선)로도 그려진다', () {
+      final j = jsonDecode(File('assets/data/config.json').readAsStringSync()) as Map<String, dynamic>;
+      final style = ((j['map'] as Map)['style'] as Map<String, dynamic>)
+        ..['unvisited'] = 'faint'
+        ..['visited'] = {'kind': 'dot'}
+        ..['destination'] = 'dot'
+        ..['pinsNonScaling'] = false;
+      ((style['lines'] as Map)['pencil'] as List).clear();
+      final plain = MapAlbumRules.fromJson(j).map;
+      expect(plain.isPencil('regionBorders'), isFalse);
+      for (final zoom in [1.0, 6.0]) {
+        final recorder = PictureRecorder();
+        painter(style: plain, zoom: zoom).paint(Canvas(recorder), const Size(390, 487.5));
+        recorder.endRecording().dispose();
+      }
     });
 
     test('shouldRepaint: 확대·선택·데이터·물감 색이 바뀔 때만', () {
@@ -177,6 +207,9 @@ void main() {
       expect(base.shouldRepaint(painter()), isFalse);
       expect(base.shouldRepaint(painter(palette: _rulesOther.paintColor)), isTrue);
       expect(base.shouldRepaint(painter(zoom: 1.5)), isTrue);
+      // 다음 길·얼굴 색이 바뀌면 (같은 목록이면 그대로)
+      expect(base.shouldRepaint(painter(nextRoute: const [])), isTrue);
+      expect(base.shouldRepaint(painter(face: const Color(0xFFFFFFFF))), isTrue);
       expect(base.shouldRepaint(painter(selected: 'kr002')), isTrue);
       expect(base.shouldRepaint(painter(selected: null)), isTrue);
       expect(
@@ -191,6 +224,84 @@ void main() {
         )),
         isTrue,
       );
+    });
+  });
+
+  group('연필 선 (16장 11/19 지도 연필 선)', () {
+    const square = [Offset(0, 0), Offset(100, 0), Offset(100, 100), Offset(0, 100)];
+
+    test('긴 변을 step마다 나누고, 닫힌 선은 처음 자리로 돌아온다', () {
+      final l = PencilLine.of(square, closed: true, step: 10);
+      // 변 4개 × 10조각 + 시작점
+      expect(l.points, hasLength(41));
+      expect(l.points.first, square.first);
+      expect(l.points.last, square.first);
+      expect(l.push, hasLength(l.points.length));
+    });
+
+    test('떨림 폭 0이면 원래 자리, 폭 a면 점마다 x·y 각각 a 안에서 민다', () {
+      final l = PencilLine.of(square, step: 7);
+      expect(l.pointsAt(0), l.points);
+      final moved = l.pointsAt(3);
+      var anyMoved = false;
+      for (var i = 0; i < moved.length; i++) {
+        final d = moved[i] - l.points[i];
+        expect(d.dx.abs(), lessThanOrEqualTo(3.001));
+        expect(d.dy.abs(), lessThanOrEqualTo(3.001));
+        if (d.distance > 0.1) anyMoved = true;
+      }
+      expect(anyMoved, isTrue);
+    });
+
+    test('미는 방향은 자리로만 정해진다: 두 시도가 같이 쓰는 경계는 거꾸로 그어도 같은 자리를 같은 만큼 민다', () {
+      const a = Offset(10, 20);
+      const b = Offset(80, 55);
+      final fwd = PencilLine.of(const [a, b], step: 7);
+      final back = PencilLine.of(const [b, a], step: 7);
+      expect(fwd.push.first, back.push.last);
+      expect(fwd.push.last, back.push.first);
+      // 잡음은 -1~1이고 매끈하다 (가까운 자리는 비슷한 값)
+      for (var x = 0.0; x < 50; x += 0.37) {
+        final n = smoothNoise2(x, x * 0.5, 1);
+        expect(n, inInclusiveRange(-1.0, 1.001));
+        expect((smoothNoise2(x + 0.01, x * 0.5, 1) - n).abs(), lessThan(0.05));
+      }
+    });
+
+    test('시도 경계 연필 선은 고리마다 하나', () {
+      final rings = mapRegions.fold(0, (n, r) => n + r.rings.length);
+      expect(_geometry.borderLines, hasLength(rings));
+    });
+  });
+
+  group('다음 길·뱃길', () {
+    test('남은 길은 지금 자리에서 목적지까지, 섬이면 항구를 거친다', () {
+      const seoul = LatLng(37.5665, 126.978);
+      const jeju = LatLng(33.4996, 126.5312);
+      final route = buildRoute(seoul, jeju, rules);
+      expect(route.legs.any((l) => l.kind == LegKind.sea), isTrue);
+      // 출발 직후: 출발지 → 완도 → 제주항 → 목적지
+      final start = remainingRoute(route, 0);
+      expect(start.first, seoul);
+      expect(start.last, jeju);
+      expect(start, contains(rules.ports['wando']));
+      expect(start, contains(rules.ports['jeju']));
+      // 배 위(바다 구간 가운데): 지금 자리 → 제주항 → 목적지 (완도로 돌아가지 않는다)
+      final landKm = route.legs.first.effectiveKm;
+      final onSea = remainingRoute(route, landKm + route.legs[1].effectiveKm / 2);
+      expect(onSea, hasLength(3));
+      expect(onSea[1], rules.ports['jeju']);
+      expect(onSea.last, jeju);
+      // 다 왔으면 없음
+      expect(remainingRoute(route, route.totalEffectiveKm), isEmpty);
+      expect(remainingRoute(route, route.totalEffectiveKm + 5), isEmpty);
+    });
+
+    test('뱃길은 완도↔제주항, 포항↔도동항 (config route.ports에 모두 있다)', () {
+      for (final (a, b) in seaRoutePorts) {
+        expect(rules.ports[a], isNotNull, reason: a);
+        expect(rules.ports[b], isNotNull, reason: b);
+      }
     });
   });
 }

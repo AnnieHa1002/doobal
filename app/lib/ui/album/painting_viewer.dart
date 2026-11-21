@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/painting_saver_provider.dart';
@@ -13,6 +14,7 @@ import '../../domain/journey.dart';
 import '../../domain/landmark.dart';
 import '../common/framed_painting.dart';
 import '../common/palette.dart';
+import '../common/screen_orientation.dart';
 import 'painting_share.dart';
 
 /// 크게 보기 한 장: 명소(첫 그림이면 가짜 명소), 액자, 첫 그림인지
@@ -55,6 +57,8 @@ const _pageFlingVelocity = 500.0;
 enum _Gesture { undecided, zoom, pan, page, close }
 
 /// 그림 크게 보기 (캔버스 6-1 화집·3-2 도착): 검은 바탕에 액자째 화면 가득, 화면 글 없음.
+/// 이 화면만 폰을 돌리면 가로(센서, 버튼 없음), 닫으면 세로 (16장 11/19, config album.bigView·ui.orientation.landscape).
+/// 그림은 화면 안에 맞춤(가로에서는 높이 맞춤), 돌리면 확대는 1배로.
 /// 두 손가락으로 1~config 배(ui.bigView.maxZoom) 확대, 좌우로 다음·이전, 아래로 밀거나 뒤로 가면 닫힘.
 /// 위 왼쪽 저장(사진첩, ‘저장했어요’), 오른쪽 닫기. 확대한 동안 한 손가락은 그림을 옮긴다(넘기기·닫기 없음).
 /// 몸짓은 한 곳(확대 인식기)에서 나눠 받는다: 넘기기 인식기와 겨루면 두 손가락 확대가 넘기기에 먹힌다
@@ -96,10 +100,45 @@ class _PaintingViewerState extends ConsumerState<PaintingViewer> {
   String? _toast;
   Timer? _toastTimer;
 
+  /// 이 화면을 여는 동안 가로를 풀었는가 (닫을 때 세로로 되돌린다)
+  var _rotates = false;
+  var _portraitOnClose = true;
+
+  /// 지난번 화면 방향. 바뀌면(폰을 돌리면) 확대를 1배로
+  Orientation? _orientation;
+
   bool get _zoomed => _scale > 1.01;
 
   @override
+  void initState() {
+    super.initState();
+    final rules = ref.read(rulesProvider).value;
+    if (rules != null &&
+        rules.mapAlbum.bigView.landscape &&
+        rules.screen.landscapeScreens.contains('bigView')) {
+      _rotates = true;
+      _portraitOnClose = rules.mapAlbum.bigView.portraitOnClose;
+      unawaited(lockOrientation(rules.screen, 'bigView'));
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final o = MediaQuery.orientationOf(context);
+    if (_orientation != null && o != _orientation) {
+      _scale = 1;
+      _shift = Offset.zero;
+      _dragY = 0;
+      _gesture = _Gesture.undecided;
+    }
+    _orientation = o;
+  }
+
+  @override
   void dispose() {
+    // 다른 화면은 세로 고정 (ui.orientation.others)
+    if (_rotates && _portraitOnClose) unawaited(SystemChrome.setPreferredOrientations(portraitOnly));
     _toastTimer?.cancel();
     _pages.dispose();
     super.dispose();
@@ -196,8 +235,8 @@ class _PaintingViewerState extends ConsumerState<PaintingViewer> {
     var text = '저장하지 못했어요';
     try {
       final box = key.currentContext?.findRenderObject() as RenderBox?;
-      // 원본 그림(1536px)에 가까운 크기로 뜬다
-      final ratio = box == null ? sharePixelRatio : (1536 / box.size.width).clamp(sharePixelRatio, 5.0);
+      // 원본 그림(1536px) 폭으로 뜬다. 가로로 돌려 그림이 커져도 같은 크기
+      final ratio = box == null ? sharePixelRatio : (1536 / box.size.width).clamp(1.0, 5.0);
       final png = await capturePng(key, pixelRatio: ratio);
       if (png == null || png.isEmpty) throw StateError('그림을 이미지로 만들지 못했다');
       final name = paintingFileStem(isFirstPack: item.isFirstPack, landmarkName: item.landmark.name);
@@ -314,8 +353,9 @@ class _PaintingViewerState extends ConsumerState<PaintingViewer> {
     );
   }
 
-  /// 한 장: 화면 폭에 맞춘 4:3 액자 그림. 지금 장만 확대한다
+  /// 한 장: 화면 안에 맞춘 4:3 액자 그림(세로는 폭, 가로는 높이에 맞춤). 지금 장만 확대한다
   Widget _page(int i) {
+    final inset = MediaQuery.paddingOf(context);
     final item = widget.items[i];
     final framed = RepaintBoundary(
       key: _boundaries[i],
@@ -328,7 +368,8 @@ class _PaintingViewerState extends ConsumerState<PaintingViewer> {
     );
     final page = Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        // 가로에서 화면 옆 가림(노치) 안쪽으로
+        padding: EdgeInsets.only(left: 12 + inset.left, right: 12 + inset.right),
         child: KeyedSubtree(key: ValueKey('viewer-painting-${item.landmark.id}'), child: framed),
       ),
     );

@@ -36,69 +36,53 @@ SliverGridDelegate paintingGridDelegate(BuildContext context) {
   );
 }
 
-/// `그림` / `소품` / `도장 5` / `물감 7` 탭 넷 (캔버스 6-1, 11/15 물감 탭·도장 탭 이름 줄임). [propsDot]이면 `소품`,
-/// [stampsDot]이면 `도장`, [paintsDot]이면 `물감` 라벨 오른쪽 위에 알림 점이 붙는다. [stampsLabel]은 도장 탭 글(받은 수),
-/// [paintsLabel]은 물감 탭 글(가진 색 수, 기본 물감 포함)
+/// 화집 탭 하나: id(paintings·props·paints, config album.tabs), 글, 알림 점
+class AlbumTab {
+  const AlbumTab(this.id, this.label, {this.dot = false});
+
+  final String id;
+  final String label;
+  final bool dot;
+}
+
 /// 탭 사이 (캔버스 6-1 6px)
 const _tabGap = 6.0;
 
+/// 화집 탭 줄 (캔버스 6-1, 16장 11/19 ③: `그림` / `소품` / `물감 7`, 도장은 나 탭). 차례는 config album.tabs.
+/// 점이 있는 탭은 라벨 오른쪽 위에 알림 점이 붙는다. 탭 키는 `tab-<id>`, 점 키는 `<id>-tab-dot`
 class AlbumTabs extends StatelessWidget {
   const AlbumTabs({
     super.key,
+    required this.tabs,
     required this.selected,
     required this.onSelect,
-    this.propsDot = false,
-    this.stampsDot = false,
-    this.stampsLabel = '도장',
-    this.paintsDot = false,
-    this.paintsLabel = '물감',
   });
 
-  final int selected;
-  final ValueChanged<int> onSelect;
-  final bool propsDot;
-  final bool stampsDot;
-  final String stampsLabel;
-  final bool paintsDot;
-  final String paintsLabel;
+  final List<AlbumTab> tabs;
+  final String selected;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _tab(context, 0, '그림', const ValueKey('tab-paintings'))),
-        const SizedBox(width: _tabGap),
-        Expanded(child: _tab(context, 1, '소품', const ValueKey('tab-props'), dot: propsDot)),
-        const SizedBox(width: _tabGap),
-        Expanded(
-          child: _tab(context, 2, stampsLabel, const ValueKey('tab-stamps'),
-              dot: stampsDot, dotKey: const ValueKey('stamps-tab-dot')),
-        ),
-        const SizedBox(width: _tabGap),
-        Expanded(
-          child: _tab(context, 3, paintsLabel, const ValueKey('tab-paints'),
-              dot: paintsDot, dotKey: const ValueKey('paints-tab-dot')),
-        ),
+        for (final (i, t) in tabs.indexed) ...[
+          if (i > 0) const SizedBox(width: _tabGap),
+          Expanded(child: _tab(context, t)),
+        ],
       ],
     );
   }
 
-  Widget _tab(
-    BuildContext context,
-    int index,
-    String label,
-    Key key, {
-    bool dot = false,
-    Key dotKey = const ValueKey('props-tab-dot'),
-  }) {
-    final on = selected == index;
+  Widget _tab(BuildContext context, AlbumTab t) {
+    final on = selected == t.id;
     return Semantics(
       button: true,
       selected: on,
       child: GestureDetector(
-        key: key,
+        key: ValueKey('tab-${t.id}'),
         behavior: HitTestBehavior.opaque,
-        onTap: () => onSelect(index),
+        onTap: () => onSelect(t.id),
         child: Container(
           height: 44,
           alignment: Alignment.center,
@@ -111,19 +95,19 @@ class AlbumTabs extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // 글자를 키워도 네 칸 안에 들어오게 줄인다
+              // 글자를 키워도 칸 안에 들어오게 줄인다
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  label,
+                  t.label,
                   style: context.display(16, color: on ? Palette.paper : Palette.ink),
                 ),
               ),
-              if (dot)
+              if (t.dot)
                 Positioned(
                   top: -4,
                   right: -12,
-                  child: NoticeDot(key: dotKey),
+                  child: NoticeDot(key: ValueKey('${t.id}-tab-dot')),
                 ),
             ],
           ),
@@ -321,12 +305,15 @@ Widget ownedPaintingCell(
         ? FirstPackCell(key: key, onTap: onTap, isNew: isNew)
         : PaintingCell(key: key, owned: p, onTap: onTap, isNew: isNew);
 
-/// 소품 칸 하나의 얻은 소품 (캔버스 6-1): 칸 이름과 개수, 선반 3열. 얻은 소품만 나온다
+/// 소품 칸 하나의 가진 소품 (캔버스 6-1): 칸 이름과 개수, 선반 3열. 가진 소품만 나온다(album.ownedOnly).
+/// [worn]은 이 칸에 입은 소품 id: 그 칸은 점선 고리와 ‘입는 중’, 나머지는 ‘가짐’. [onTap]이 있으면 누르면 바로 입기
 class PropSlotCard extends StatelessWidget {
-  const PropSlotCard({super.key, required this.name, required this.props});
+  const PropSlotCard({super.key, required this.name, required this.props, this.worn, this.onTap});
 
   final String name;
   final List<Prop> props;
+  final String? worn;
+  final ValueChanged<Prop>? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -353,7 +340,10 @@ class PropSlotCard extends StatelessWidget {
                   name: p.name,
                   art: ItemArt.prop(p),
                   tilt: i,
-                  state: '가짐',
+                  state: worn == p.id ? '입는 중' : '가짐',
+                  stateColor: worn == p.id ? Palette.terracotta : Palette.moss,
+                  selected: worn == p.id,
+                  onTap: onTap == null ? null : () => onTap!(p),
                 ),
             ],
           ),
