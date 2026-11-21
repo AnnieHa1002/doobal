@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:doobal/app/decor_providers.dart';
+import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/screen_providers.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/decor_place.dart';
@@ -335,6 +336,25 @@ void main() {
     // 손가락 375 + 장면이 민 195 = 장면 x 570 근처 (화분 폭 37pt, 띠 오른쪽 끝 577)
     expect(foot.x, greaterThan(540));
     expect(foot.x, lessThanOrEqualTo(577));
+    await end(tester, e);
+  });
+
+  testWidgets('첫 그림에 도착하면(동기화 끝) 이젤이 첫 그림을 건 채 정해진 자리에 서 있다 (설명 글 없음)', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () => e.arriveAtSketch());
+    await _open(tester, e);
+    expect(find.byKey(const ValueKey('decor-decor_easel')), findsNothing);
+    // 앱의 동기화(꾸밈 물품을 아는 서비스)가 돌면
+    final c = _c(tester);
+    await tester.runAsync(() async => (await c.read(syncServiceProvider.future)).sync(e.now));
+    c.invalidate(snapshotProvider);
+    await settle(tester, () => find.byKey(const ValueKey('decor-decor_easel')).evaluate().isNotEmpty);
+    await tester.pump();
+    final easel = tester.getRect(find.byKey(const ValueKey('decor-decor_easel')));
+    expect(easel.bottom, closeTo(_stage.easelStart.y, 0.5));
+    expect(easel.center.dx, closeTo(_stage.easelStart.x, 0.5));
+    expect(find.byType(FramedPainting), findsOneWidget, reason: '첫 그림이 나무 액자째 걸려 있다');
+    expect(find.byType(SnackBar), findsNothing);
     await end(tester, e);
   });
 

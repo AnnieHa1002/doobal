@@ -2,8 +2,10 @@ import 'package:doobal/app/decor_service.dart';
 import 'package:doobal/app/sync_service.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/data/step_source.dart';
+import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/decor_place.dart';
 import 'package:doobal/domain/journey.dart' show Frame;
+import 'package:doobal/domain/shop.dart' show CoinKind;
 import 'package:doobal/domain/sketch.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -23,7 +25,7 @@ class _Env {
   _Env({bool seed = true}) : db = AppDb(NativeDatabase.memory()) {
     svc = SyncService(
       db: db,
-      source: FakeStepSource(),
+      source: source,
       rules: rules,
       allowedSources: const [],
       landmarks: {for (final l in landmarks) l.id: l},
@@ -38,6 +40,7 @@ class _Env {
   }
 
   final AppDb db;
+  final source = FakeStepSource();
   late final SyncService svc;
   late final DecorStore store;
 
@@ -78,6 +81,48 @@ void main() {
       expect(s.placed['decor_easel']!.flipped, isFalse);
       expect(s.paintings['decor_easel'], {0: 'sketch'});
       expect(s.drawer, isEmpty);
+    });
+
+    test('첫 그림(내 동네 스케치)에 걸어서 도착한 그 동기화에서 럭 100과 이젤 (config coins.firstSketchGift)', () async {
+      final e = _Env();
+      await e.install();
+      final start = _t0.add(const Duration(hours: 1));
+      expect(await e.svc.startSketch(start), isTrue);
+      final km = (await e.svc.snapshot(start)).journey!.totalKm;
+      final minutes = (km * 1000 / (rules.walkStrideM * 100)).ceil() + 1;
+      final walkFrom = start.add(const Duration(minutes: 5));
+      e.source.records.add(StepRecord(
+        start: walkFrom,
+        end: walkFrom.add(Duration(minutes: minutes)),
+        steps: minutes * 100,
+        sourceId: 'iphone',
+        method: RecordingMethod.automatic,
+      ));
+      final end = walkFrom.add(Duration(minutes: minutes + 30));
+      await e.svc.sync(end);
+      expect((await e.db.select(e.db.paintingsOwned).get()).map((r) => r.landmarkId), [sketchId]);
+      expect(await e.owned(), {'decor_easel'});
+      final s = await e.store.load();
+      expect(s.placed.keys, ['decor_easel']);
+      expect(s.paintings['decor_easel'], {0: 'sketch'});
+      final gifts = [
+        for (final r in await e.db.select(e.db.coinLedger).get())
+          if (r.kind == CoinKind.gift) r.amount,
+      ];
+      expect(gifts, [rules.coinsWelcomeGift]);
+      expect(rules.coinsWelcomeGift, 100);
+    });
+
+    test('상점에서 산 물품은 가진 것(decor_owned)이 되고 저절로 놓이지 않는다 (서랍으로, 가안)', () async {
+      final e = _Env();
+      await e.install();
+      await e.db.into(e.db.coinLedger).insert(
+          CoinLedgerCompanion.insert(day: '2026-11-18', kind: CoinKind.gift, amount: 1000));
+      await e.svc.buyItem('decor_lantern', _t0.add(const Duration(hours: 1)));
+      expect(await e.owned(), {'decor_lantern'});
+      final s = await e.store.load();
+      expect(s.placed, isEmpty);
+      expect(s.drawer, ['decor_lantern']);
     });
 
     test('한 번 받으면 다시 안 준다: 치워도 다음 동기화가 다시 놓지 않는다', () async {
