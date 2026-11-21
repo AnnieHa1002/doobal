@@ -105,12 +105,5 @@ class DecorController extends AsyncNotifier<DecorState> {
   }
 }
 
-/// 꾸밈 물품 목록이 있고 테마·규칙에 꾸미기 자리가 있는가 (쉼터 옆 버튼 ‘쉼터 꾸미기’를 그린다)
-final decorEnabledProvider = Provider<bool>((ref) {
-  final stage = ref.watch(decorStageProvider).value;
-  final catalog = ref.watch(decorCatalogProvider).value;
-  return stage != null && catalog != null && catalog.items.isNotEmpty;
-});
-
 /// 완결 동행 돌아다니기(가는 곳·멈춤·앉기)와 말풍선 한마디를 고르는 난수. 시험은 씨앗을 준다
 final finaleRoamRandomProvider = Provider<math.Random>((ref) => math.Random());

@@ -89,6 +89,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
   final _edit = DecorEdit();
   late final DecorDragger _dragger;
   late final AnimationController _lift;
+  late final CurvedAnimation _liftCurve;
   final _sceneKey = GlobalKey();
   final _drawerKey = GlobalKey();
   final _settle = _Signal();
@@ -135,6 +136,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
     super.initState();
     _wiggler = PropWiggler(vsync: this, spec: ref.read(restWiggleProvider), pool: _wigglePool);
     _lift = AnimationController(vsync: this, duration: _liftDuration);
+    _liftCurve = CurvedAnimation(parent: _lift, curve: Curves.easeOut);
     _dragger = DecorDragger(
       edit: _edit,
       camera: _camera,
@@ -155,6 +157,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
     _edit.removeListener(_onEdit);
     _dragger.dispose();
     _edit.dispose();
+    _liftCurve.dispose();
     _lift.dispose();
     _settle.dispose();
     _roam.dispose();
@@ -327,7 +330,8 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
     final size = MediaQuery.sizeOf(context);
     final drawerOpen = decorOn && _edit.drawerOpen;
     // 서랍이 열리면 땅 띠 아래 끝이 서랍 위 8pt에 오게 장면을 올린다
-    final drawerTop = size.height - barSpace - DecorDrawer.height;
+    final drawerHeight = DecorDrawer.heightOf(context);
+    final drawerTop = size.height - barSpace - drawerHeight;
     final liftAmount = !decorOn
         ? 0.0
         : math.max(
@@ -337,8 +341,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
                 drawerTop,
           );
     _liftAmount = liftAmount;
-    final lift = Tween<double>(begin: 0, end: liftAmount)
-        .animate(CurvedAnimation(parent: _lift, curve: Curves.easeOut));
+    final lift = Tween<double>(begin: 0, end: liftAmount).animate(_liftCurve);
 
     return PopScope(
       canPop: !drawerOpen,
@@ -364,8 +367,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
                   sceneBox: () => _sceneKey.currentContext?.findRenderObject() as RenderBox?,
                   drawerRect: _drawerRect,
                   placedCount: () => ref.read(decorProvider).value?.placed.length ?? 0,
-                  liftCorrection: () =>
-                      (_edit.drawerOpen ? _liftAmount : 0) - _liftAmount * Curves.easeOut.transform(_lift.value),
+                  liftCorrection: () => (_edit.drawerOpen ? _liftAmount : 0) - _liftAmount * _liftCurve.value,
                 );
               }
               return RestGestures(
@@ -491,7 +493,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
               left: 0,
               right: 0,
               bottom: barSpace,
-              height: DecorDrawer.height + (barSpace > 0 ? 0 : padding.bottom),
+              height: drawerHeight + (barSpace > 0 ? 0 : padding.bottom),
               child: Padding(
                 key: _drawerKey,
                 padding: EdgeInsets.zero,

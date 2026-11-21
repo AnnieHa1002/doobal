@@ -124,6 +124,36 @@ void main() {
     await end(tester, e);
   });
 
+  testWidgets('작은 폰(375×667)·글자 2배에서도 서랍이 넘치지 않고, 땅 띠 아래 끝이 서랍 위에 보인다', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () => _own(e, ['decor_easel', 'decor_flower_pot', 'decor_hammock']));
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    phone(tester, width: 375, height: 667);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        ...e.overrides,
+        restWiggleProvider.overrideWithValue(const WiggleSpec.off()),
+        restSwapRandomProvider.overrideWithValue(Random(5)),
+      ],
+      child: const MaterialApp(home: RestScreen()),
+    ));
+    await settle(tester, () => find.byKey(const ValueKey('rest-side-decorate')).evaluate().isNotEmpty);
+    await tester.tap(find.byKey(const ValueKey('rest-side-decorate')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(tester.takeException(), isNull);
+    final list = tester.getRect(find.byKey(const ValueKey('decor-drawer-list')));
+    expect(list.bottom, closeTo(667, 1));
+    // 장면 pt 800(땅 띠 아래 끝)이 서랍 위에 (k = 375/390)
+    final drawerTop = tester.getRect(find.byKey(const ValueKey('decor-drawer-done'))).top - 6;
+    expect(drawerTop, greaterThan(667 - 160));
+    final k = 375 / 390;
+    final bandBottom = 667 - (844 - 800) * k - _liftOf(tester);
+    expect(bandBottom, lessThan(drawerTop));
+    await end(tester, e);
+  });
+
   testWidgets('가진 물품이 없으면 서랍에 안내 한 줄, 다 놓았으면 다른 한 줄', (tester) async {
     final e = UiEnv();
     await e.seed(tester);

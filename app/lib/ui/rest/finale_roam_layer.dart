@@ -112,11 +112,19 @@ class FinaleRoamController extends ChangeNotifier {
     final roamer = _roamer;
     if (roamer == null || dt <= 0) return;
     time += dt;
+    // 보이는 것이 바뀔 때만 다시 그린다 (걷는 중·자세가 바뀜·말풍선이 사라짐). 서 있거나 앉아 있으면 그대로
+    var changed = false;
     for (final id in _states.keys.toList()) {
-      _states[id] = roamer.step(_states[id]!, dt);
+      final was = _states[id]!;
+      final now = roamer.step(was, dt);
+      _states[id] = now;
+      if (was.pose == RoamPose.walk || now.pose != was.pose) changed = true;
     }
-    if (_bubbleLeft > 0) _bubbleLeft -= dt;
-    notifyListeners();
+    if (_bubbleLeft > 0) {
+      _bubbleLeft -= dt;
+      if (_bubbleLeft <= 0) changed = true;
+    }
+    if (changed) notifyListeners();
   }
 
   /// [id]를 눌렀다. 말풍선이 떠 있는 동안 한 번 더 누르면 true (동행 화면을 연다), 아니면 한마디를 띄운다

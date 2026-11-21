@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,8 +23,15 @@ class DecorDrawer extends ConsumerWidget {
   /// ‘완료’ (서랍 닫기)
   final VoidCallback onDone;
 
-  /// 서랍 높이 (탭 바 위, 머리 줄 + 칸 한 줄)
+  /// 서랍 높이 (탭 바 위, 머리 줄 + 칸 한 줄). 글자를 키우면 그만큼 높아진다
   static const height = 112.0;
+
+  static double heightOf(BuildContext context) {
+    final t = MediaQuery.textScalerOf(context);
+    // 머리 줄(위 6 + ‘완료’ 32pt 이상) + 칸 줄(위아래 8 + 그림 44 + 2 + 이름 한 줄) + 여유 4
+    final need = 6 + math.max(32.0, t.scale(14) * 1.45) + 8 + 46 + t.scale(11) * 1.3 + 4;
+    return math.max(height, need);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
