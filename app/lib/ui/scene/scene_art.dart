@@ -11,6 +11,7 @@ import '../../domain/boat.dart';
 import '../../domain/camp_theme.dart';
 import '../../domain/scene.dart';
 import '../../domain/scene_plan.dart';
+import '../boat/boat_art_loader.dart';
 import 'scene_painter.dart';
 
 export '../../domain/scene_plan.dart' show sceneArtHash;
@@ -365,10 +366,6 @@ class SceneArt {
     double pixelsPerArtPx,
     Map<String, dynamic> data,
   ) async {
-    final rear = await _assetOrNull(bundle, art.rear);
-    final front = rear == null ? null : await _assetOrNull(bundle, art.front);
-    if (rear == null || front == null) return null;
-    final night = art.nightOverlay == null ? null : await _assetOrNull(bundle, art.nightOverlay!);
     final width = math
         .min(
           art.canvasWidth,
@@ -379,26 +376,9 @@ class SceneArt {
         )
         .round()
         .clamp(1, 4096);
-    final decoded = <ui.Image>[];
-    try {
-      for (final bytes in [rear, front, ?night]) {
-        final codec = await ui.instantiateImageCodec(
-          bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
-          targetWidth: width,
-        );
-        try {
-          decoded.add((await codec.getNextFrame()).image);
-        } finally {
-          codec.dispose();
-        }
-      }
-    } catch (_) {
-      for (final image in decoded) {
-        image.dispose();
-      }
-      rethrow;
-    }
-    return BoatImages(art, decoded[0], decoded[1], night == null ? null : decoded[2]);
+    // 원래 그림·고른 색을 입힌 그림 모두 배 그림 읽기로 (T4c, 색 시트 미리보기와 같은 계산)
+    final layers = await loadBoatLayers(bundle, art, width);
+    return layers == null ? null : BoatImages(art, layers.rear, layers.front, layers.night);
   }
 
   static Future<ByteData?> _assetOrNull(AssetBundle bundle, String path) async {
@@ -663,7 +643,7 @@ class _SceneArtHostState extends State<SceneArtHost> {
       widget.onSea,
       (scale * ratio * 100).round(),
       // 땅 위에서는 배가 바뀌어도 그림을 다시 읽지 않는다
-      widget.onSea ? widget.boat?.id : null,
+      widget.onSea ? widget.boat?.key : null,
     );
     if (_key == key) {
       if (_loadedKey == key) _activeBuilder = widget.builder;

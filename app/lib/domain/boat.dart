@@ -1,4 +1,7 @@
+import 'boat_color.dart';
 import 'sky.dart';
+
+export 'boat_color.dart';
 
 // 배 9척 (boats.json v2, M4.5): 보상 배 3 + 상점 배 6. 배 구간 그림만 바뀌고 진행·거리와는 무관하다
 
@@ -45,6 +48,8 @@ class Boat {
     this.allIslands = false,
     this.price,
     this.nightOverlay,
+    this.codexId,
+    this.recolor,
   });
 
   final String id;
@@ -63,8 +68,16 @@ class Boat {
   /// 밤·새벽에만 얹는 창 불빛 그림
   final String? nightOverlay;
 
+  /// 그림 묶음 이름 (theme_01 …)
+  final String? codexId;
+
+  /// 색 고르기 자료 (상점 배 6척만, boats.json recolor). 없으면 색을 못 바꾼다
+  final BoatRecolor? recolor;
+
   factory Boat.fromJson(Map<String, dynamic> j) {
     final u = j['unlock'] as Map<String, dynamic>;
+    final codex = j['codexId'] as String?;
+    final recolor = j['recolor'] as Map<String, dynamic>?;
     return Boat(
       id: j['id'] as String,
       name: j['name'] as String,
@@ -80,6 +93,10 @@ class Boat {
       allIslands: u['all'] as bool? ?? false,
       price: u['price'] as int?,
       nightOverlay: j['nightOverlay'] as String?,
+      codexId: codex,
+      recolor: recolor == null || recolor['pending'] == true
+          ? null
+          : BoatRecolor.fromJson(recolor, codexId: codex ?? j['id'] as String),
     );
   }
 }
@@ -92,6 +109,7 @@ class BoatCatalog {
     required this.deckY,
     required this.assetDir,
     required this.boats,
+    this.recolorRule,
   });
 
   final double canvasWidth;
@@ -106,6 +124,9 @@ class BoatCatalog {
   /// order 순서
   final List<Boat> boats;
 
+  /// 배 색 규칙 (구역 이름·값). 없으면 색을 못 바꾼다
+  final BoatRecolorRule? recolorRule;
+
   late final Map<String, Boat> _byId = {for (final b in boats) b.id: b};
 
   Boat? byId(String id) => _byId[id];
@@ -113,17 +134,24 @@ class BoatCatalog {
   /// 그림 파일의 에셋 경로
   String assetPath(String file) => 'assets/$assetDir/$file';
 
-  /// 장면이 읽을 [boat]의 그림 경로와 자리
-  BoatArt artOf(Boat boat) => BoatArt(
-        id: boat.id,
-        rear: assetPath(boat.layers.rear),
-        front: assetPath(boat.layers.front),
-        nightOverlay: boat.nightOverlay == null ? null : assetPath(boat.nightOverlay!),
-        mainFoot: boat.layers.mainFoot,
-        companionFoot: boat.layers.companionFoot,
-        canvasWidth: canvasWidth,
-        canvasHeight: canvasHeight,
-      );
+  /// 장면이 읽을 [boat]의 그림 경로와 자리. [colors]는 고른 배 색 (색 고르기 자료가 없는 배면 버린다)
+  BoatArt artOf(Boat boat, {BoatColors colors = BoatColors.none, Map<BoatZone, int> argb = const {}}) {
+    final recolor = boat.recolor;
+    final painted = recolor != null && !colors.isEmpty;
+    return BoatArt(
+      id: boat.id,
+      rear: assetPath(boat.layers.rear),
+      front: assetPath(boat.layers.front),
+      nightOverlay: boat.nightOverlay == null ? null : assetPath(boat.nightOverlay!),
+      mainFoot: boat.layers.mainFoot,
+      companionFoot: boat.layers.companionFoot,
+      canvasWidth: canvasWidth,
+      canvasHeight: canvasHeight,
+      recolor: painted ? recolor : null,
+      recolorDir: painted ? assetPath(recolor.dir) : null,
+      colors: painted ? {for (final z in recolor.zones) z: ?argb[z]} : const {},
+    );
+  }
 }
 
 /// 장면이 읽는 배 하나 (full 판은 쓰지 않는다)
@@ -137,6 +165,9 @@ class BoatArt {
     required this.companionFoot,
     required this.canvasWidth,
     required this.canvasHeight,
+    this.recolor,
+    this.recolorDir,
+    this.colors = const {},
   });
 
   final String id;
@@ -147,6 +178,18 @@ class BoatArt {
   final BoatPoint companionFoot;
   final double canvasWidth;
   final double canvasHeight;
+
+  /// 색 입히기 자료와 그 그림 폴더(에셋 경로, 끝에 /). 고른 색이 없으면 null (원래 그림)
+  final BoatRecolor? recolor;
+  final String? recolorDir;
+
+  /// 고른 구역 색 (불투명 ARGB). 빈 표면 원래 그림
+  final Map<BoatZone, int> colors;
+
+  /// 그림이 같은가를 가리는 열쇠 (배 + 고른 색). 장면·미리보기가 이 값이 바뀔 때만 다시 읽는다
+  String get key => colors.isEmpty
+      ? id
+      : '$id|${[for (final z in BoatZone.values) colors[z]?.toRadixString(16) ?? '-'].join(',')}';
 }
 
 /// 화면에 놓인 배. 뒤판·창 불빛·앞판은 모두 이 한 자리에 그린다 (같은 원점·같은 변환)
@@ -199,6 +242,9 @@ BoatCatalog parseBoats(Map<String, dynamic> json) {
     canvasHeight: (canvas[1] as num).toDouble(),
     deckY: (json['deckY'] as num).toDouble(),
     assetDir: json['assetDir'] as String,
+    recolorRule: json['recolorRule'] == null
+        ? null
+        : BoatRecolorRule.fromJson(json['recolorRule'] as Map<String, dynamic>),
     boats: [for (final b in json['boats'] as List) Boat.fromJson(b as Map<String, dynamic>)]
       ..sort((a, b) => a.order.compareTo(b.order)),
   );
