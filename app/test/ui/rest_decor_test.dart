@@ -5,6 +5,8 @@ import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/screen_providers.dart';
 import 'package:doobal/data/db/app_db.dart';
 import 'package:doobal/domain/decor_place.dart';
+import 'package:doobal/domain/scene.dart' show sceneLook;
+import 'package:doobal/domain/sky.dart';
 import 'package:doobal/ui/rest/decor_drawer.dart';
 import 'package:doobal/domain/journey.dart' show Frame;
 import 'package:doobal/ui/album/painting_viewer.dart';
@@ -356,6 +358,82 @@ void main() {
     expect(find.byType(FramedPainting), findsOneWidget, reason: '첫 그림이 나무 액자째 걸려 있다');
     expect(find.byType(SnackBar), findsNothing);
     await end(tester, e);
+  });
+
+  group('등불·석등 밤 빛 (4단계, config rest.decor.nightLight)', () {
+    /// 한국 2026-11-18에서 출발 동네 하늘이 [phase]인 첫 시각 (분 단위로 찾는다)
+    DateTime at(SkyPhase phase) {
+      final start = DateTime.utc(2026, 11, 17, 15);
+      for (var m = 0; m < 24 * 60; m++) {
+        final t = start.add(Duration(minutes: m));
+        if (sceneLook(t, testHome, false, landmarks, rules).phase == phase) return t.add(const Duration(minutes: 5));
+      }
+      throw StateError('$phase 없음');
+    }
+
+    Future<UiEnv> lit(WidgetTester tester, DateTime now) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _own(e, ['decor_lantern', 'decor_stone_lantern', 'decor_bench']);
+        await _place(e, 'decor_lantern', const ScenePoint(300, 700));
+        await _place(e, 'decor_stone_lantern', const ScenePoint(360, 790), flipped: true);
+        await _place(e, 'decor_bench', const ScenePoint(260, 790));
+      });
+      e.now = now;
+      await _open(tester, e);
+      return e;
+    }
+
+    testWidgets('밤에는 물품 자리(납품 lightAt)에서 반지름 lightRadiusPx ÷ 3으로 빛, 벤치는 빛이 없다', (tester) async {
+      final e = await lit(tester, at(SkyPhase.night));
+      final light = find.byKey(const ValueKey('decor-light-decor_lantern'));
+      expect(light, findsOneWidget);
+      final l = _stage.layout(decorCatalog.byId('decor_lantern')!, const ScenePoint(300, 700));
+      final r = tester.getRect(light);
+      expect(r.center.dx, closeTo(l.lightAt!.x, 0.5));
+      expect(r.center.dy, closeTo(l.lightAt!.y, 0.5));
+      expect(r.width / 2, closeTo(220 / 3, 0.5));
+      // 뒤집힌 석등은 빛 자리도 뒤집힌다
+      final stone = _stage.layout(decorCatalog.byId('decor_stone_lantern')!, const ScenePoint(360, 790), flipped: true);
+      final sr = tester.getRect(find.byKey(const ValueKey('decor-light-decor_stone_lantern')));
+      expect(sr.center.dx, closeTo(stone.lightAt!.x, 0.5));
+      expect(sr.width / 2, closeTo(260 / 3, 0.5));
+      expect(find.byKey(const ValueKey('decor-light-decor_bench')), findsNothing);
+      // 반딧불 빛: 더하기, 가운데 0.35
+      final glow = tester.widget<CustomPaint>(find.descendant(of: light, matching: find.byType(CustomPaint)));
+      final painter = glow.painter! as DecorGlowPainter;
+      expect((painter.light.centerAlpha, painter.light.additive), (0.35, true));
+      await end(tester, e);
+    });
+
+    testWidgets('노을·새벽에도 켜지고 낮에는 꺼진다', (tester) async {
+      for (final (phase, on) in [(SkyPhase.sunset, true), (SkyPhase.dawn, true), (SkyPhase.day, false)]) {
+        final e = await lit(tester, at(phase));
+        expect(find.byKey(const ValueKey('decor-light-decor_lantern')), on ? findsOneWidget : findsNothing,
+            reason: '$phase');
+        await end(tester, e);
+      }
+    });
+
+    testWidgets('물품에도 계절·시간대 보정: 밤과 낮의 색 행렬이 다르다', (tester) async {
+      List<double>? matrixOf(WidgetTester tester) {
+        final piece = find.byWidgetPredicate((w) => w is DecorPiece && w.view.id == 'decor_bench');
+        return tester.widget<DecorPiece>(piece).tint;
+      }
+
+      var e = await lit(tester, at(SkyPhase.day));
+      final day = matrixOf(tester);
+      await end(tester, e);
+      e = await lit(tester, at(SkyPhase.night));
+      final night = matrixOf(tester);
+      expect(night, isNotNull);
+      expect(night, isNot(equals(day)));
+      expect(find.descendant(
+        of: find.byWidgetPredicate((w) => w is DecorPiece && w.view.id == 'decor_bench'),
+        matching: find.byType(ColorFiltered),
+      ), findsOneWidget);
+      await end(tester, e);
+    });
   });
 
   group('그림 걸기 (2단계, config rest.decor.hungPaintingTap)', () {
