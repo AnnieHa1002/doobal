@@ -48,6 +48,7 @@ import '../domain/walk_history.dart';
 import 'backup_runner.dart';
 import 'backup_service.dart';
 import 'catalog_providers.dart';
+import 'decor_providers.dart';
 import 'notification_service.dart';
 import 'profile_service.dart';
 import 'server_providers.dart';
@@ -421,6 +422,7 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
   final companionCatalog = await ref.watch(companionCatalogProvider.future);
   final shopCatalog = await ref.watch(shopCatalogProvider.future);
   final boatCatalog = await ref.watch(boatCatalogProvider.future);
+  final decorSeed = await ref.watch(decorSeedProvider.future);
   // 첫 여정 '내 동네 스케치'의 목적지가 바다에 떨어지지 않게 지도 경계로 땅을 판정한다
   final projection = await ref.watch(mapProjectionProvider.future);
   final regions = await ref.watch(mapRegionsProvider.future);
@@ -439,6 +441,7 @@ final syncServiceProvider = FutureProvider<SyncService>((ref) async {
     companionCatalog: companionCatalog,
     shopCatalog: shopCatalog,
     boatCatalog: boatCatalog,
+    decorSeed: decorSeed,
     onLand: (p, island) => onIsland(p, island, projection, regions),
     distanceScale: distanceScale,
     notificationService: await ref.watch(notificationServiceProvider.future),

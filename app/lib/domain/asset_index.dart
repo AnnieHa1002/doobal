@@ -17,6 +17,9 @@ class AssetIndex {
   /// (디자인기획/물감길_개발인계 2장, config paintDrop.pickup.sprites)
   static const paintDir = 'assets/ui/';
 
+  /// 쉼터 꾸밈 물품 그림 폴더 (decor.json art, Drive camp_deco_v01). 그림을 넣을 때 pubspec에 이 폴더를 더한다
+  static const decorDir = 'assets/backgrounds/camp_deco/';
+
   final List<String> _paths;
   final _icons = <String, String?>{};
   final _sprites = <String, String?>{};
@@ -39,6 +42,13 @@ class AssetIndex {
   String? sprite(String name) => _sprites.putIfAbsent(name, () {
         final stem = RegExp.escape(name.replaceFirst(RegExp(r'_v\d+$'), ''));
         return _best(paintDir, RegExp('^$stem(_v\\d+)?(_clean)?\\.(webp|png)\$'));
+      });
+
+  /// 쉼터 꾸밈 물품 그림 [name] (decor.json art, 예 `obj_camp_deco_easel_v01_clean`, 확장자 없이). 버전·`_clean`이
+  /// 달라도 찾는다 (새 버전·WebP 먼저). 아직 없으면 null (그동안은 점선 자리표시 + 이름, 16장 11/6)
+  String? decorArt(String name) => _sprites.putIfAbsent('decor:$name', () {
+        final stem = RegExp.escape(name.replaceFirst(RegExp(r'(_v\d+)?(_clean)?$'), ''));
+        return _best(decorDir, RegExp('^$stem(_v\\d+)?(_clean)?\\.(webp|png)\$'));
       });
 
   /// 럭 보석 그림. 버전이 올라도 그대로 찾는다

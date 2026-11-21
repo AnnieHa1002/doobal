@@ -1,0 +1,606 @@
+import 'dart:math';
+
+import 'package:doobal/app/decor_providers.dart';
+import 'package:doobal/app/providers.dart';
+import 'package:doobal/app/screen_providers.dart';
+import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/domain/decor_place.dart';
+import 'package:doobal/domain/scene.dart' show sceneLook;
+import 'package:doobal/domain/sky.dart';
+import 'package:doobal/ui/rest/decor_drawer.dart';
+import 'package:doobal/domain/journey.dart' show Frame;
+import 'package:doobal/ui/album/painting_viewer.dart';
+import 'package:doobal/ui/common/framed_painting.dart';
+import 'package:doobal/ui/rest/decor_layer.dart';
+import 'package:doobal/ui/rest/prop_wiggle.dart';
+import 'package:doobal/ui/rest/rest_screen.dart';
+import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
+import 'package:flutter/gestures.dart' show kLongPressTimeout;
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../domain/helpers.dart';
+import 'ui_env.dart';
+
+// 쉼터 꾸미기 자유 배치 (T15, 16장 11/18 ③·11/19, M2~M6 AB, config rest.decor, camp_wide decor).
+// 탭 바 없이 쉼터만 띄워서 390×844 폰이면 장면 pt = 화면 pt (k 1, 장면 아래 = 화면 아래)
+
+final _stage = DecorStage.of(campTheme, rules.decor.place, screenHeightPx: rules.screenHeightPx)!;
+
+Future<void> _own(UiEnv e, List<String> ids) => e.db.batch((b) => b.insertAll(e.db.decorOwned, [
+      for (final (i, id) in ids.indexed) DecorOwnedCompanion.insert(decorId: id, gotUtc: 1000 + i),
+    ]));
+
+Future<void> _place(UiEnv e, String id, ScenePoint foot, {bool flipped = false}) {
+  final r = _stage.toRatio(foot);
+  return e.db.into(e.db.decorPlaced).insert(DecorPlacedCompanion.insert(
+        decorId: id,
+        xRatio: r.x,
+        yRatio: r.y,
+        flipped: Value(flipped),
+        placedUtc: 1,
+      ));
+}
+
+Future<void> _open(WidgetTester tester, UiEnv e) async {
+  phone(tester);
+  await tester.pumpWidget(ProviderScope(
+    overrides: [
+      ...e.overrides,
+      restWiggleProvider.overrideWithValue(const WiggleSpec.off()),
+      restSwapRandomProvider.overrideWithValue(Random(5)),
+    ],
+    child: const MaterialApp(home: RestScreen()),
+  ));
+  await settle(tester, () => find.textContaining('쉬는 중').evaluate().isNotEmpty);
+  await settle(tester, () => find.byKey(const ValueKey('rest-side-decorate')).evaluate().isNotEmpty);
+  await tester.pump();
+}
+
+Future<DecorPlacedRow?> _row(WidgetTester tester, UiEnv e, String id) => tester.runAsync<DecorPlacedRow?>(
+    () => (e.db.select(e.db.decorPlaced)..where((t) => t.decorId.equals(id))).getSingleOrNull());
+
+/// 저장(비동기 DB)이 끝나도록
+Future<void> _saved(WidgetTester tester) async {
+  for (var i = 0; i < 6; i++) {
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    await tester.pump();
+  }
+}
+
+/// [from]을 길게 눌러 집고 [to]로 끌어 놓는다 (서랍이 열리며 장면이 올라가는 시간도 준다)
+Future<void> _drag(WidgetTester tester, Offset from, Offset to, {int steps = 6}) async {
+  final g = await tester.startGesture(from);
+  await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+  await tester.pump(const Duration(milliseconds: 300));
+  for (var i = 1; i <= steps; i++) {
+    await g.moveTo(Offset.lerp(from, to, i / steps)!);
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+  await g.up();
+  await tester.pump();
+  await _saved(tester);
+  await tester.pump(const Duration(milliseconds: 300));
+}
+
+ProviderContainer _c(WidgetTester tester) => ProviderScope.containerOf(tester.element(find.byType(RestScreen)));
+
+void main() {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+  testWidgets('옆 버튼 ‘꾸미기’가 서랍을 열고 닫는다: 가진 물품 중 안 놓은 것만, 비면 안내 한 줄', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () async {
+      await _own(e, ['decor_easel', 'decor_lantern', 'decor_bench']);
+      await _place(e, 'decor_easel', _stage.easelStart);
+    });
+    await _open(tester, e);
+    final side = find.byKey(const ValueKey('rest-side-decorate'));
+    expect(side, findsOneWidget);
+    final semantics = tester.ensureSemantics();
+    expect(find.bySemanticsLabel('쉼터 꾸미기'), findsOneWidget);
+    semantics.dispose();
+    expect(find.byKey(const ValueKey('decor-drawer-list')), findsNothing);
+
+    await tester.tap(side);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const ValueKey('decor-drawer-decor_lantern')), findsOneWidget);
+    expect(find.byKey(const ValueKey('decor-drawer-decor_bench')), findsOneWidget);
+    expect(find.byKey(const ValueKey('decor-drawer-decor_easel')), findsNothing, reason: '놓은 것은 서랍에 없다');
+    // 서랍은 화면 아래 (탭 바가 없으면 화면 맨 아래)
+    final drawer = tester.getRect(find.byKey(const ValueKey('decor-drawer-list')));
+    expect(drawer.bottom, closeTo(844, 1));
+
+    await tester.tap(find.byKey(const ValueKey('decor-drawer-done')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const ValueKey('decor-drawer-list')), findsNothing);
+
+    await tester.tap(side);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(side);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const ValueKey('decor-drawer-list')), findsNothing, reason: '한 번 더 누르면 닫힌다');
+    await end(tester, e);
+  });
+
+  testWidgets('작은 폰(375×667)·글자 2배에서도 서랍이 넘치지 않고, 땅 띠 아래 끝이 서랍 위에 보인다', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () => _own(e, ['decor_easel', 'decor_flower_pot', 'decor_hammock']));
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    phone(tester, width: 375, height: 667);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        ...e.overrides,
+        restWiggleProvider.overrideWithValue(const WiggleSpec.off()),
+        restSwapRandomProvider.overrideWithValue(Random(5)),
+      ],
+      child: const MaterialApp(home: RestScreen()),
+    ));
+    await settle(tester, () => find.byKey(const ValueKey('rest-side-decorate')).evaluate().isNotEmpty);
+    await tester.tap(find.byKey(const ValueKey('rest-side-decorate')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(tester.takeException(), isNull);
+    final list = tester.getRect(find.byKey(const ValueKey('decor-drawer-list')));
+    expect(list.bottom, closeTo(667, 1));
+    // 장면 pt 800(땅 띠 아래 끝)이 서랍 위에 (k = 375/390)
+    final drawerTop = tester.getRect(find.byKey(const ValueKey('decor-drawer-done'))).top - 6;
+    expect(drawerTop, greaterThan(667 - 160));
+    final k = 375 / 390;
+    final bandBottom = 667 - (844 - 800) * k - _liftOf(tester);
+    expect(bandBottom, lessThan(drawerTop));
+    await end(tester, e);
+  });
+
+  testWidgets('가진 물품이 없으면 서랍에 안내 한 줄, 다 놓았으면 다른 한 줄', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester);
+    await _open(tester, e);
+    await tester.tap(find.byKey(const ValueKey('rest-side-decorate')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('아직 가진 쉼터 물품이 없어요'), findsOneWidget);
+    await tester.runAsync(() async {
+      await _own(e, ['decor_easel']);
+      await _place(e, 'decor_easel', _stage.easelStart);
+    });
+    _c(tester).invalidate(decorProvider);
+    await _saved(tester);
+    expect(find.text('가진 물품을 모두 놓았어요'), findsOneWidget);
+    await end(tester, e);
+  });
+
+  testWidgets('놓인 물품은 저장한 비율 자리에 그림 없는 자리표시(점선 + 이름)로, 발이 아래 가운데', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () async {
+      await _own(e, ['decor_easel', 'decor_pond']);
+      await _place(e, 'decor_easel', const ScenePoint(300, 700));
+      await _place(e, 'decor_pond', const ScenePoint(400, 790), flipped: true);
+    });
+    await _open(tester, e);
+    final easel = tester.getRect(find.byKey(const ValueKey('decor-decor_easel')));
+    // 216×330 화면 px ÷ 3 = 72×110pt, 발 (300, 700)
+    expect(easel.left, closeTo(264, 0.5));
+    expect(easel.top, closeTo(590, 0.5));
+    expect(easel.width, closeTo(72, 0.5));
+    expect(easel.bottom, closeTo(700, 0.5));
+    expect(find.text('이젤'), findsOneWidget);
+    expect(find.text('작은 연못'), findsOneWidget);
+    expect(find.byKey(const ValueKey('decor-placeholder')), findsNWidgets(2));
+    // 발 y가 정령 발(725)보다 아래인 연못은 정령 앞 층, 이젤은 뒤 층
+    final views = tester.widgetList<DecorPiece>(find.byType(DecorPiece)).map((p) => p.view.id).toList();
+    expect(views, ['decor_easel', 'decor_pond']);
+    expect(_stage.frontOfSpirit(const ScenePoint(400, 790)), isTrue);
+    await end(tester, e);
+  });
+
+  testWidgets('서랍 칸을 누르면 보이는 장면 가운데(막혔으면 옆)에 놓이고 저장된다', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () => _own(e, ['decor_bench']));
+    await _open(tester, e);
+    await tester.tap(find.byKey(const ValueKey('rest-side-decorate')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const ValueKey('decor-drawer-decor_bench')));
+    await _saved(tester);
+    final row = await _row(tester, e, 'decor_bench');
+    expect(row, isNotNull);
+    final foot = _stage.fromRatio(row!.xRatio, row.yRatio);
+    expect(_stage.blockedAt(decorCatalog.byId('decor_bench')!, foot), isNull);
+    expect(foot.y, closeTo(725, 0.5), reason: '땅 띠 가운데 높이');
+    expect(find.byKey(const ValueKey('decor-drawer-decor_bench')), findsNothing);
+    expect(find.byKey(const ValueKey('decor-decor_bench')), findsOneWidget);
+    // 고른 물품 위에 뒤집기 버튼
+    expect(find.byKey(const ValueKey('decor-flip-button')), findsOneWidget);
+    await end(tester, e);
+  });
+
+  testWidgets('길게 눌러 집고 끌어 놓으면 그 자리로 저장 (편집 모드 없음, 서랍이 저절로 열림)', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () async {
+      await _own(e, ['decor_easel']);
+      await _place(e, 'decor_easel', const ScenePoint(300, 700));
+    });
+    await _open(tester, e);
+    final start = tester.getCenter(find.byKey(const ValueKey('decor-decor_easel')));
+    final g = await tester.startGesture(start);
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 300));
+    // 집은 물품은 맨 위에 따로 그리고, 서랍이 열린다
+    expect(find.byKey(const ValueKey('decor-held')), findsOneWidget);
+    expect(find.byKey(const ValueKey('decor-drawer-list')), findsNothing, reason: '서랍에 남은 물품이 없다');
+    expect(find.text('가진 물품을 모두 놓았어요'), findsOneWidget);
+    // 장면이 올라가도 그대로 놓으면 제자리
+    await g.up();
+    await _saved(tester);
+    var row = await _row(tester, e, 'decor_easel');
+    expect(_stage.fromRatio(row!.xRatio, row.yRatio).x, closeTo(300, 0.01));
+    expect(_stage.fromRatio(row.xRatio, row.yRatio).y, closeTo(700, 0.01));
+
+    // 오른쪽으로 40pt, 아래로 40pt (화면 끝 40pt 안으로는 안 들어감)
+    final now = tester.getCenter(find.byKey(const ValueKey('decor-decor_easel')));
+    await _drag(tester, now, now + const Offset(40, 40));
+    row = await _row(tester, e, 'decor_easel');
+    final foot = _stage.fromRatio(row!.xRatio, row.yRatio);
+    expect(foot.x, closeTo(340, 1));
+    expect(foot.y, closeTo(740, 1));
+    expect(find.byKey(const ValueKey('decor-held')), findsNothing);
+    await end(tester, e);
+  });
+
+  testWidgets('땅 띠 밖으로 끌면 띠 끝에 맞춰지고, 정령·모닥불·수레 상자에 놓으면 튕겨 원래 자리로 (글 없음)', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () async {
+      await _own(e, ['decor_flower_pot']);
+      await _place(e, 'decor_flower_pot', const ScenePoint(300, 700));
+    });
+    await _open(tester, e);
+    final pot = find.byKey(const ValueKey('decor-decor_flower_pot'));
+    // 위로 200pt (띠 위 끝 650에서 멈춤)
+    var at = tester.getCenter(pot);
+    await _drag(tester, at, at + const Offset(0, -200));
+    var row = await _row(tester, e, 'decor_flower_pot');
+    expect(_stage.fromRatio(row!.xRatio, row.yRatio).y, closeTo(650, 0.5));
+
+    // 정령 쪽으로 (발 x 92)
+    at = tester.getCenter(pot);
+    final before = (row.xRatio, row.yRatio);
+    await _drag(tester, at, at + const Offset(-208, 60));
+    await tester.pump(const Duration(milliseconds: 400));
+    row = await _row(tester, e, 'decor_flower_pot');
+    expect((row!.xRatio, row.yRatio), before, reason: '못 놓는 자리라 저장하지 않는다');
+    expect(find.byKey(const ValueKey('decor-held')), findsNothing);
+    expect(find.byType(SnackBar), findsNothing);
+    await end(tester, e);
+  });
+
+  testWidgets('놓인 물품을 서랍으로 끌어 넣으면 치운다 (건 그림은 남음)', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () async {
+      await _own(e, ['decor_easel']);
+      await _place(e, 'decor_easel', const ScenePoint(300, 700));
+      await e.db.into(e.db.decorPaintings).insert(
+          DecorPaintingsCompanion.insert(decorId: 'decor_easel', slot: 0, paintingKey: 'sketch'));
+    });
+    await _open(tester, e);
+    final at = tester.getCenter(find.byKey(const ValueKey('decor-decor_easel')));
+    await _drag(tester, at, const Offset(195, 800));
+    expect(await _row(tester, e, 'decor_easel'), isNull);
+    expect(find.byKey(const ValueKey('decor-drawer-decor_easel')), findsOneWidget);
+    final hung = await tester.runAsync(() => e.db.select(e.db.decorPaintings).get());
+    expect(hung, hasLength(1));
+    await end(tester, e);
+  });
+
+  testWidgets('서랍에서 길게 눌러 끌어 놓기, 이미 최대로 놓였으면 서랍 칸이 흐리고 집히지 않는다', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () => _own(e, ['decor_stump']));
+    await _open(tester, e);
+    await tester.tap(find.byKey(const ValueKey('rest-side-decorate')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final cell = tester.getCenter(find.byKey(const ValueKey('decor-drawer-decor_stump')));
+    // 서랍이 열려 장면이 올라가 있다: 땅 띠 아래 끝(800)이 서랍 위 8pt에 오게
+    // 장면 (330, 760) = 화면 (330, 760 − 올린 만큼)
+    const lift = 800 + 8 - (844 - DecorDrawer.height);
+    expect(_liftOf(tester), closeTo(lift, 0.5));
+    const up = 760 - lift;
+    await _drag(tester, cell, Offset(330, up));
+    final row = await _row(tester, e, 'decor_stump');
+    expect(row, isNotNull);
+    final foot = _stage.fromRatio(row!.xRatio, row.yRatio);
+    expect(foot.x, closeTo(330, 1));
+    expect(foot.y, closeTo(760, 1));
+    await end(tester, e);
+  });
+
+  testWidgets('뒤집기 버튼: 고른 물품을 좌우로 뒤집어 바로 저장, 빈 장면을 누르면 고르기가 풀린다', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () async {
+      await _own(e, ['decor_bench']);
+      await _place(e, 'decor_bench', const ScenePoint(300, 760));
+    });
+    await _open(tester, e);
+    // 꾸미기 중이 아니면 짧게 눌러도 고르지 않는다 (그림 거는 물품이 아니라 아무 일 없음)
+    await tester.tap(find.byKey(const ValueKey('decor-decor_bench')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('decor-flip-button')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('rest-side-decorate')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const ValueKey('decor-decor_bench')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('decor-flip-button')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('decor-flip-button')));
+    await _saved(tester);
+    expect((await _row(tester, e, 'decor_bench'))!.flipped, isTrue);
+    await tester.tap(find.byKey(const ValueKey('decor-flip-button')));
+    await _saved(tester);
+    expect((await _row(tester, e, 'decor_bench'))!.flipped, isFalse);
+    // 빈 하늘을 누르면 고르기가 풀린다
+    await tester.tapAt(const Offset(200, 200));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const ValueKey('decor-flip-button')), findsNothing);
+    await end(tester, e);
+  });
+
+  testWidgets('화면 오른쪽 끝 40pt 안으로 끌고 있으면 장면이 밀리고, 놓으면 그 자리 (장면 오른쪽)', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () async {
+      await _own(e, ['decor_flower_pot']);
+      await _place(e, 'decor_flower_pot', const ScenePoint(300, 760));
+    });
+    await _open(tester, e);
+    final at = tester.getCenter(find.byKey(const ValueKey('decor-decor_flower_pot')));
+    final g = await tester.startGesture(at);
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 300));
+    await g.moveTo(Offset(375, at.dy));
+    // 1초 동안 끝에 머문다 (초당 240pt, 밀 수 있는 끝은 585 − 390 = 195pt)
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await g.up();
+    await _saved(tester);
+    await tester.pump(const Duration(seconds: 1));
+    final row = await _row(tester, e, 'decor_flower_pot');
+    final foot = _stage.fromRatio(row!.xRatio, row.yRatio);
+    // 손가락 375 + 장면이 민 195 = 장면 x 570 근처 (화분 폭 37pt, 띠 오른쪽 끝 577)
+    expect(foot.x, greaterThan(540));
+    expect(foot.x, lessThanOrEqualTo(577));
+    await end(tester, e);
+  });
+
+  testWidgets('첫 그림에 도착하면(동기화 끝) 이젤이 첫 그림을 건 채 정해진 자리에 서 있다 (설명 글 없음)', (tester) async {
+    final e = UiEnv();
+    await e.seed(tester, () => e.arriveAtSketch());
+    await _open(tester, e);
+    expect(find.byKey(const ValueKey('decor-decor_easel')), findsNothing);
+    // 앱의 동기화(꾸밈 물품을 아는 서비스)가 돌면
+    final c = _c(tester);
+    await tester.runAsync(() async => (await c.read(syncServiceProvider.future)).sync(e.now));
+    c.invalidate(snapshotProvider);
+    await settle(tester, () => find.byKey(const ValueKey('decor-decor_easel')).evaluate().isNotEmpty);
+    await tester.pump();
+    final easel = tester.getRect(find.byKey(const ValueKey('decor-decor_easel')));
+    expect(easel.bottom, closeTo(_stage.easelStart.y, 0.5));
+    expect(easel.center.dx, closeTo(_stage.easelStart.x, 0.5));
+    expect(find.byType(FramedPainting), findsOneWidget, reason: '첫 그림이 나무 액자째 걸려 있다');
+    expect(find.byType(SnackBar), findsNothing);
+    await end(tester, e);
+  });
+
+  group('등불·석등 밤 빛 (4단계, config rest.decor.nightLight)', () {
+    /// 한국 2026-11-18에서 출발 동네 하늘이 [phase]인 첫 시각 (분 단위로 찾는다)
+    DateTime at(SkyPhase phase) {
+      final start = DateTime.utc(2026, 11, 17, 15);
+      for (var m = 0; m < 24 * 60; m++) {
+        final t = start.add(Duration(minutes: m));
+        if (sceneLook(t, testHome, false, landmarks, rules).phase == phase) return t.add(const Duration(minutes: 5));
+      }
+      throw StateError('$phase 없음');
+    }
+
+    Future<UiEnv> lit(WidgetTester tester, DateTime now) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _own(e, ['decor_lantern', 'decor_stone_lantern', 'decor_bench']);
+        await _place(e, 'decor_lantern', const ScenePoint(300, 700));
+        await _place(e, 'decor_stone_lantern', const ScenePoint(360, 790), flipped: true);
+        await _place(e, 'decor_bench', const ScenePoint(260, 790));
+      });
+      e.now = now;
+      await _open(tester, e);
+      return e;
+    }
+
+    testWidgets('밤에는 물품 자리(납품 lightAt)에서 반지름 lightRadiusPx ÷ 3으로 빛, 벤치는 빛이 없다', (tester) async {
+      final e = await lit(tester, at(SkyPhase.night));
+      final light = find.byKey(const ValueKey('decor-light-decor_lantern'));
+      expect(light, findsOneWidget);
+      final l = _stage.layout(decorCatalog.byId('decor_lantern')!, const ScenePoint(300, 700));
+      final r = tester.getRect(light);
+      expect(r.center.dx, closeTo(l.lightAt!.x, 0.5));
+      expect(r.center.dy, closeTo(l.lightAt!.y, 0.5));
+      expect(r.width / 2, closeTo(220 / 3, 0.5));
+      // 뒤집힌 석등은 빛 자리도 뒤집힌다
+      final stone = _stage.layout(decorCatalog.byId('decor_stone_lantern')!, const ScenePoint(360, 790), flipped: true);
+      final sr = tester.getRect(find.byKey(const ValueKey('decor-light-decor_stone_lantern')));
+      expect(sr.center.dx, closeTo(stone.lightAt!.x, 0.5));
+      expect(sr.width / 2, closeTo(260 / 3, 0.5));
+      expect(find.byKey(const ValueKey('decor-light-decor_bench')), findsNothing);
+      // 반딧불 빛: 더하기, 가운데 0.35
+      final glow = tester.widget<CustomPaint>(find.descendant(of: light, matching: find.byType(CustomPaint)));
+      final painter = glow.painter! as DecorGlowPainter;
+      expect((painter.light.centerAlpha, painter.light.additive), (0.35, true));
+      await end(tester, e);
+    });
+
+    testWidgets('노을·새벽에도 켜지고 낮에는 꺼진다', (tester) async {
+      for (final (phase, on) in [(SkyPhase.sunset, true), (SkyPhase.dawn, true), (SkyPhase.day, false)]) {
+        final e = await lit(tester, at(phase));
+        expect(find.byKey(const ValueKey('decor-light-decor_lantern')), on ? findsOneWidget : findsNothing,
+            reason: '$phase');
+        await end(tester, e);
+      }
+    });
+
+    testWidgets('물품에도 계절·시간대 보정: 밤과 낮의 색 행렬이 다르다', (tester) async {
+      List<double>? matrixOf(WidgetTester tester) {
+        final piece = find.byWidgetPredicate((w) => w is DecorPiece && w.view.id == 'decor_bench');
+        return tester.widget<DecorPiece>(piece).tint;
+      }
+
+      var e = await lit(tester, at(SkyPhase.day));
+      final day = matrixOf(tester);
+      await end(tester, e);
+      e = await lit(tester, at(SkyPhase.night));
+      final night = matrixOf(tester);
+      expect(night, isNotNull);
+      expect(night, isNot(equals(day)));
+      expect(find.descendant(
+        of: find.byWidgetPredicate((w) => w is DecorPiece && w.view.id == 'decor_bench'),
+        matching: find.byType(ColorFiltered),
+      ), findsOneWidget);
+      await end(tester, e);
+    });
+  });
+
+  group('그림 걸기 (2단계, config rest.decor.hungPaintingTap)', () {
+    Future<UiEnv> withPaintings(WidgetTester tester, Map<String, ScenePoint> items) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _own(e, items.keys.toList());
+        for (final i in items.entries) {
+          await _place(e, i.key, i.value);
+        }
+        await e.ownPaintings({'sketch': Frame.wood, 'kr001': Frame.gold, 'kr002': Frame.silver});
+      });
+      await _open(tester, e);
+      return e;
+    }
+
+    Future<Map<int, String>> hung(WidgetTester tester, UiEnv e, String id) async => {
+          for (final r in (await tester.runAsync(() => e.db.select(e.db.decorPaintings).get()))!)
+            if (r.decorId == id) r.slot: r.paintingKey,
+        };
+
+    testWidgets('그림이 안 걸린 이젤을 누르면 그림 고르기 시트, 고르면 걸리고 닫힌다 (액자째)', (tester) async {
+      final e = await withPaintings(tester, {'decor_easel': const ScenePoint(300, 700)});
+      expect(find.byType(FramedPainting), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('decor-decor_easel')));
+      await transition(tester);
+      await settle(tester, () => find.byKey(const ValueKey('painting-pick-kr001')).evaluate().isNotEmpty);
+      expect(find.text('이젤에 걸 그림'), findsOneWidget);
+      expect(find.byKey(const ValueKey('painting-pick-sketch')), findsOneWidget);
+      expect(find.byKey(const ValueKey('painting-pick-kr002')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('painting-pick-kr001')));
+      await _saved(tester);
+      await transition(tester);
+      expect(find.byKey(const ValueKey('painting-pick-sheet')), findsNothing);
+      expect(await hung(tester, e, 'decor_easel'), {0: 'kr001'});
+      // 쉼터의 이젤 칸에 액자째 걸린다 (칸 = 납품 걸 자리)
+      final framed = find.descendant(
+          of: find.byWidgetPredicate((w) => w is DecorPiece && w.view.id == 'decor_easel'),
+          matching: find.byType(FramedPainting));
+      expect(framed, findsOneWidget);
+      final slot = _stage.layout(decorCatalog.byId('decor_easel')!, const ScenePoint(300, 700)).slots.single;
+      final r = tester.getRect(framed);
+      expect(r.left, closeTo(slot.left, 0.5));
+      expect(r.top, closeTo(slot.top, 0.5));
+      expect(r.height, closeTo(slot.height, 0.5));
+      await end(tester, e);
+    });
+
+    testWidgets('걸린 그림을 누르면 크게 보기, 넘기기는 그 물품에 걸린 그림 안에서만 (누른 칸부터)', (tester) async {
+      final e = await withPaintings(tester, {
+        'decor_clothesline': const ScenePoint(300, 790),
+        'decor_easel': const ScenePoint(500, 790),
+      });
+      await tester.runAsync(() async {
+        final s = e.db;
+        await s.batch((b) => b.insertAll(s.decorPaintings, [
+              DecorPaintingsCompanion.insert(decorId: 'decor_clothesline', slot: 0, paintingKey: 'kr001'),
+              DecorPaintingsCompanion.insert(decorId: 'decor_clothesline', slot: 2, paintingKey: 'sketch'),
+              DecorPaintingsCompanion.insert(decorId: 'decor_easel', slot: 0, paintingKey: 'kr002'),
+            ]));
+      });
+      _c(tester).invalidate(decorProvider);
+      await _saved(tester);
+      final slots = _stage.layout(decorCatalog.byId('decor_clothesline')!, const ScenePoint(300, 790)).slots;
+      final third = Offset(slots[2].left + slots[2].width / 2, slots[2].top + slots[2].height / 2);
+      await tester.tapAt(third);
+      await transition(tester);
+      final viewer = tester.widget<PaintingViewer>(find.byType(PaintingViewer));
+      expect([for (final p in viewer.items) p.landmark.id], ['kr001', 'sketch']);
+      expect(viewer.initialIndex, 1);
+      await end(tester, e);
+    });
+
+    testWidgets('꾸미기 중 고른 물품 위 ‘그림 걸기’: 빨랫줄은 칸 3개 중 골라 걸고, 같은 그림을 여러 곳에, 내리기', (tester) async {
+      final e = await withPaintings(tester, {
+        'decor_clothesline': const ScenePoint(300, 790),
+        'decor_easel': const ScenePoint(360, 700),
+      });
+      await tester.runAsync(() => e.db.into(e.db.decorPaintings).insert(
+          DecorPaintingsCompanion.insert(decorId: 'decor_easel', slot: 0, paintingKey: 'kr001')));
+      _c(tester).invalidate(decorProvider);
+      await _saved(tester);
+      await tester.tap(find.byKey(const ValueKey('rest-side-decorate')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      // 꾸미기 중에는 걸린 그림을 눌러도 크게 보기 대신 고르기
+      await tester.tap(find.byKey(const ValueKey('decor-decor_easel')));
+      await tester.pump();
+      expect(find.byType(PaintingViewer), findsNothing);
+      expect(find.byKey(const ValueKey('decor-paint-button')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('decor-decor_clothesline')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('decor-paint-button')));
+      await transition(tester);
+      await settle(tester, () => find.byKey(const ValueKey('painting-pick-kr001')).evaluate().isNotEmpty);
+      expect(find.text('그림 빨랫줄에 걸 그림'), findsOneWidget);
+      expect(find.byKey(const ValueKey('painting-pick-slot-2')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('painting-pick-slot-2')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('painting-pick-kr001')));
+      await _saved(tester);
+      // 칸이 여럿이면 시트가 남는다
+      expect(find.byKey(const ValueKey('painting-pick-sheet')), findsOneWidget);
+      expect(await hung(tester, e, 'decor_clothesline'), {2: 'kr001'});
+      expect(await hung(tester, e, 'decor_easel'), {0: 'kr001'}, reason: '같은 그림을 두 곳에');
+      await tester.tap(find.byKey(const ValueKey('painting-pick-clear')));
+      await _saved(tester);
+      expect(await hung(tester, e, 'decor_clothesline'), isEmpty);
+      await end(tester, e);
+    });
+
+    testWidgets('그림을 거는 물품이 아니면 눌러도 아무 일 없다, 얻은 그림이 없으면 시트에 안내', (tester) async {
+      final e = UiEnv();
+      await e.seed(tester, () async {
+        await _own(e, ['decor_bench', 'decor_easel']);
+        await _place(e, 'decor_bench', const ScenePoint(300, 760));
+        await _place(e, 'decor_easel', const ScenePoint(360, 700));
+      });
+      await _open(tester, e);
+      await tester.tap(find.byKey(const ValueKey('decor-decor_bench')));
+      await transition(tester);
+      expect(find.byKey(const ValueKey('painting-pick-sheet')), findsNothing);
+      expect(find.byType(PaintingViewer), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('decor-decor_easel')));
+      await transition(tester);
+      await settle(tester, () => find.byKey(const ValueKey('painting-pick-empty')).evaluate().isNotEmpty);
+      expect(find.text('아직 얻은 그림이 없어요'), findsOneWidget);
+      await end(tester, e);
+    });
+  });
+}
+
+/// 서랍이 열려 장면을 올린 만큼 (장면 상자 위 끝 = − 올린 만큼)
+double _liftOf(WidgetTester tester) {
+  final scene = find.byType(Transform).evaluate().map((el) => el.widget as Transform).where((t) {
+    final m = t.transform.getTranslation();
+    return m.x == 0 && m.y < 0;
+  });
+  return scene.isEmpty ? 0 : -scene.first.transform.getTranslation().y;
+}

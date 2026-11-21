@@ -91,8 +91,8 @@ void main() {
     expect(find.byTooltip('나의 정보'), findsNothing);
     expect(find.byTooltip('설정'), findsNothing);
     expect(find.byKey(const ValueKey('rest-gem')), findsOneWidget);
-    // 옆 버튼은 지도·배낭·상점 (쉼터 꾸미기는 T15가 켠다), 오른쪽 12pt에 위에서부터
-    final ids = ['map', 'backpack', 'shop'];
+    // 옆 버튼은 지도·배낭·상점·꾸미기 (꾸미기는 T15가 켰다), 오른쪽 12pt에 위에서부터
+    final ids = ['map', 'backpack', 'shop', 'decorate'];
     final rects = [for (final id in ids) tester.getRect(find.byKey(ValueKey('rest-side-$id')))];
     for (final r in rects) {
       expect(r.right, closeTo(390 - 12, 0.5));
@@ -100,7 +100,7 @@ void main() {
     }
     expect(rects[0].top, lessThan(rects[1].top));
     expect(rects[1].top, lessThan(rects[2].top));
-    expect(find.byKey(const ValueKey('rest-side-decorate')), findsNothing);
+    expect(rects[2].top, lessThan(rects[3].top));
     // 걷기·나 탭은 아직 짓지 않았다 (처음 갈 때 짓는다)
     expect(find.byType(WalkingScreen, skipOffstage: false), findsNothing);
     await end(tester, e);

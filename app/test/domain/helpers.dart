@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:doobal/domain/asset_index.dart';
 import 'package:doobal/domain/badge.dart';
 import 'package:doobal/domain/boat.dart';
+import 'package:doobal/domain/decor.dart';
 import 'package:doobal/domain/bucket.dart';
 import 'package:doobal/domain/camp_theme.dart';
 import 'package:doobal/domain/geo.dart';
@@ -65,6 +66,11 @@ final EventCatalog eventCatalog = EventCatalog.fromJson(
 /// 실제 badges.json (도장 20개와 하늘 구간)
 final ShopCatalog shopCatalog = parseShop(
   jsonDecode(File('assets/data/shop.json').readAsStringSync()) as Map<String, dynamic>,
+);
+
+/// 실제 decor.json (쉼터 꾸밈 물품 12, T15)
+final DecorCatalog decorCatalog = parseDecor(
+  jsonDecode(File('assets/data/decor.json').readAsStringSync()) as Map<String, dynamic>,
 );
 
 final BoatCatalog boatCatalog = parseBoats(

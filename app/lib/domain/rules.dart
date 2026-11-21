@@ -1,3 +1,4 @@
+import 'decor_rules.dart';
 import 'geo.dart';
 import 'map_album_rules.dart';
 import 'paint_color.dart';
@@ -385,6 +386,7 @@ class Rules {
     required this.paintColor,
     required this.screen,
     required this.mapAlbum,
+    this.decor = CampDecorRules.none,
   });
 
   /// 하루 카드·걷기 리포트 (config report)
@@ -398,6 +400,9 @@ class Rules {
 
   /// 지도 연필 선·핀·그림 칸, 화집 탭·소품 바로 입기·가진 것만·크게 보기 가로 (config map.style·map.card·album, T18)
   final MapAlbumRules mapAlbum;
+
+  /// 쉼터 꾸미기 놓는 규칙·첫 그림 선물·완결 동행 돌아다니기 (config rest.decor·coins.firstSketchGift·companions.finaleRoam, T15)
+  final CampDecorRules decor;
 
   /// 설치 뒤 며칠까지 둘째·셋째 동행을 꼭 만나는지 (config companions.guaranteeByDay)
   final List<int> companionGuaranteeDays;
@@ -977,6 +982,7 @@ class Rules {
       paintColor: PaintColorRules.fromJson(paintColor, paintDrop: paintDrop),
       screen: ScreenRules.fromJson(j),
       mapAlbum: MapAlbumRules.fromJson(j),
+      decor: CampDecorRules.fromJson(j),
     );
   }
 }

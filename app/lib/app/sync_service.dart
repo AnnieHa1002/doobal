@@ -12,6 +12,9 @@ import '../domain/bucket.dart';
 import '../domain/color_props.dart';
 import '../domain/companion.dart';
 import '../domain/companion_engine.dart';
+import '../domain/decor.dart';
+import '../domain/decor_place.dart' show DecorRatio, decorToUnlock;
+import '../domain/decor_rules.dart' show FirstSketchGift;
 import '../domain/eta.dart';
 import '../domain/gait.dart';
 import '../domain/geo.dart';
@@ -38,6 +41,7 @@ import '../domain/walk_record.dart';
 import 'notification_service.dart';
 
 part 'sync_companion.dart';
+part 'sync_decor.dart';
 part 'sync_shop.dart';
 
 /// 한 번 가져온 결과. 출처별 걸음은 허용 목록을 정하는 실기기 확인용
@@ -542,6 +546,7 @@ class SyncService {
     this.companionCatalog,
     this.shopCatalog,
     this.boatCatalog,
+    this.decorSeed,
   }) : assert(distanceScale > 0);
 
   final AppDb db;
@@ -584,6 +589,9 @@ class SyncService {
 
   /// 배 9척 (boats.json). 없으면 보상 배를 주지 않는다
   final BoatCatalog? boatCatalog;
+
+  /// 쉼터 꾸밈 물품 (decor.json·첫 그림 선물·그 첫 자리). 없으면 꾸밈 물품을 주지 않는다 (sync_decor.dart, T15)
+  final DecorSeed? decorSeed;
 
   final _newBadges = StreamController<List<Badge>>.broadcast();
 
@@ -655,6 +663,7 @@ class SyncService {
       arrivalEnds = await _advanceJourney(to);
       newProps = await _unlockProps(to);
       newBoats = await _unlockBoats(to);
+      await _unlockDecor(to);
       final companion = await _syncCompanions(to);
       newProps = [...newProps, ...companion.props];
       newBadges = await _awardBadges(to);

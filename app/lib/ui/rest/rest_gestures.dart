@@ -3,13 +3,24 @@ import 'package:flutter/material.dart';
 import '../../domain/rest_camera.dart';
 
 /// 쉼터 장면을 끌어 밀고 두 손가락으로 확대한다. 손을 떼면 [RestGeometry.settle]이 정한 자리로 부드럽게 간다.
-/// [camera] 값만 바꾸므로 그림은 다시 그리지 않는다
+/// [camera] 값만 바꾸므로 그림은 다시 그리지 않는다.
+/// [onTap]이 있으면 물품·정령이 받지 않은 빈 장면 누르기 (꾸미기 중 고른 물품 놓기).
+/// [settle]이 울리면 지금 자리에서 손을 뗀 것처럼 붙는다 (물품을 화면 끝으로 끌어 장면을 민 뒤)
 class RestGestures extends StatefulWidget {
-  const RestGestures({super.key, required this.stage, required this.camera, required this.child});
+  const RestGestures({
+    super.key,
+    required this.stage,
+    required this.camera,
+    required this.child,
+    this.onTap,
+    this.settle,
+  });
 
   final RestGeometry stage;
   final ValueNotifier<RestCamera> camera;
   final Widget child;
+  final VoidCallback? onTap;
+  final Listenable? settle;
 
   @override
   State<RestGestures> createState() => _RestGesturesState();
@@ -31,6 +42,23 @@ class _RestGesturesState extends State<RestGestures> with SingleTickerProviderSt
       vsync: this,
       duration: Duration(milliseconds: (widget.stage.rules.snapSec * 1000).round()),
     )..addListener(_onSettle);
+    widget.settle?.addListener(_settleNow);
+  }
+
+  @override
+  void didUpdateWidget(RestGestures old) {
+    super.didUpdateWidget(old);
+    if (old.settle != widget.settle) {
+      old.settle?.removeListener(_settleNow);
+      widget.settle?.addListener(_settleNow);
+    }
+  }
+
+  void _settleNow() {
+    _from = widget.camera.value;
+    _to = widget.stage.settle(_from);
+    if (_to == _from) return;
+    _settle.forward(from: 0);
   }
 
   void _onSettle() {
@@ -67,6 +95,7 @@ class _RestGesturesState extends State<RestGestures> with SingleTickerProviderSt
 
   @override
   void dispose() {
+    widget.settle?.removeListener(_settleNow);
     _settle.dispose();
     super.dispose();
   }
@@ -75,6 +104,7 @@ class _RestGesturesState extends State<RestGestures> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
+      onTap: widget.onTap,
       onScaleStart: _onStart,
       onScaleUpdate: _onUpdate,
       onScaleEnd: _onEnd,
