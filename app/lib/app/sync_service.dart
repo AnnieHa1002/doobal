@@ -12,7 +12,7 @@ import '../domain/bucket.dart';
 import '../domain/color_props.dart';
 import '../domain/companion.dart';
 import '../domain/companion_engine.dart';
-import '../domain/day_card.dart' show CardJourney, CardStory, DayRange, mergeStrokes;
+import '../domain/day_card.dart' show CardJourney, CardStory, DayRange, mergePatternStrokes;
 import '../domain/decor.dart';
 import '../domain/decor_place.dart' show DecorRatio, decorToUnlock;
 import '../domain/decor_rules.dart' show FirstSketchGift;
@@ -24,7 +24,8 @@ import '../domain/journey.dart';
 import '../domain/landmark.dart';
 import '../domain/laps.dart';
 import '../domain/notification_policy.dart';
-import '../domain/paint_color.dart' show PaintSegment, TrailPaint, TubeReward, paintedColorAt, tubesLeft;
+import '../domain/paint_color.dart'
+    show PaintSegment, TrailPaint, TubeReward, paintedColorAt, paintedPatternAt, tubesLeft;
 import '../domain/paint_trail.dart';
 import '../domain/prop.dart';
 import '../domain/restore_floor.dart';
@@ -38,12 +39,14 @@ import '../domain/shop_cart.dart';
 import '../domain/sketch.dart';
 import '../domain/sun.dart';
 import '../domain/time_kst.dart';
+import '../domain/trail_pattern.dart';
 import '../domain/walk_record.dart';
 import 'notification_service.dart';
 
 part 'sync_boat.dart';
 part 'sync_companion.dart';
 part 'sync_decor.dart';
+part 'sync_pattern.dart';
 part 'sync_report.dart';
 part 'sync_shop.dart';
 
@@ -495,6 +498,8 @@ class MapData {
     this.destPoint,
     this.paintLines = const [],
     this.paintLineColors = const [],
+    this.paintLinePatterns = const [],
+    this.paintLineJoined = const [],
   });
 
   /// 그림을 얻은 명소 id → 지금 액자 (내 동네 스케치는 명소가 아니라 넣지 않는다)
@@ -508,6 +513,13 @@ class MapData {
 
   /// [paintLines] 줄마다 칠한 물감 색 id (같은 차례·같은 길이, M1 v0.7 구간 색: 고른 색이나 기본 물감)
   final List<String> paintLineColors;
+
+  /// [paintLines] 줄마다 그 구간의 무늬 id (같은 차례, null = 기본 방울, 16장 11/19). 비어 있으면 모두 기본
+  final List<String?> paintLinePatterns;
+
+  /// [paintLines] 줄마다 바로 앞 줄에 이어지는가 (같은 여정에서 색·무늬만 바뀐 곳, 사이에 연필 구간 없음).
+  /// 이어진 줄은 한 줄로 그린다 (무늬가 바뀌는 곳 끝 1개 + 여백, 색만 바뀌면 이어 그림). 비어 있으면 모두 따로
+  final List<bool> paintLineJoined;
 
   /// 진행 중인 여정의 목적지. 여정이 없으면 null (내 동네 스케치면 'sketch')
   final String? destId;
@@ -550,6 +562,7 @@ class SyncService {
     this.shopCatalog,
     this.boatCatalog,
     this.decorSeed,
+    this.trailCatalog,
   }) : assert(distanceScale > 0);
 
   final AppDb db;
@@ -596,6 +609,14 @@ class SyncService {
   /// 쉼터 꾸밈 물품 (decor.json·첫 그림 선물·그 첫 자리). 없으면 꾸밈 물품을 주지 않는다 (sync_decor.dart, T15)
   final DecorSeed? decorSeed;
 
+  /// 물감 길 무늬 (trails.json). 없으면 무늬 거리 보상을 주지 않고 지도 구간 무늬도 모두 기본이다 (sync_pattern.dart, T17b)
+  final TrailCatalog? trailCatalog;
+
+  final _newPatterns = StreamController<List<PatternReward>>.broadcast();
+
+  /// 어느 화면에서 동기화했든 무늬 거리 보상(새 무늬나 그 대신 럭)을 받으면 흘려보낸다. AutoSync가 듣고 한 줄 토스트
+  Stream<List<PatternReward>> get newPatternRewards => _newPatterns.stream;
+
   final _newBadges = StreamController<List<Badge>>.broadcast();
 
   /// 어느 화면에서 동기화했든 새로 받은 도장이 있으면 흘려보낸다 ([SyncReport.newBadges], 이벤트로 받은 것도).
@@ -641,6 +662,7 @@ class SyncService {
     var newProps = <Prop>[];
     var newBadges = <Badge>[];
     var newBoats = <Boat>[];
+    var newPatterns = <PatternReward>[];
     var arrivalEnds = <ArrivalTrailEnd>[];
     await db.transaction(() async {
       final activeBefore = await _activeJourney();
@@ -667,6 +689,7 @@ class SyncService {
       newProps = await _unlockProps(to);
       newBoats = await _unlockBoats(to);
       await _unlockDecor(to);
+      newPatterns = await _awardPatterns(to);
       final companion = await _syncCompanions(to);
       newProps = [...newProps, ...companion.props];
       newBadges = await _awardBadges(to);
@@ -709,6 +732,7 @@ class SyncService {
     if (newProps.isNotEmpty) _newProps.add(newProps);
     if (newBadges.isNotEmpty) _newBadges.add(newBadges);
     if (newBoats.isNotEmpty) _newBoats.add(newBoats);
+    if (newPatterns.isNotEmpty) _newPatterns.add(newPatterns);
     arrivalEnds.forEach(_arrivalEnds.add);
     return _report(raw, kept,
         advancedKm: advancedKm,
@@ -1942,13 +1966,17 @@ class SyncService {
     final paths = <List<LatLng>>[];
     final paintLines = <List<LatLng>>[];
     final paintLineColors = <String>[];
+    final paintLinePatterns = <String?>[];
+    final paintLineJoined = <bool>[];
     final windows = await _windows();
     final trailPaints = await _trailPaints();
     for (final r in rows) {
       // 물감 길 구간은 여정을 시작할 때의 경로(목적지까지) 위에 덧그린다
-      for (final (line, color) in await _paintLinesOf(r, windows, trailPaints, now)) {
-        paintLines.add(line);
-        paintLineColors.add(color);
+      for (final line in await _paintLinesOf(r, windows, trailPaints, now)) {
+        paintLines.add(line.points);
+        paintLineColors.add(line.colorId);
+        paintLinePatterns.add(line.patternId);
+        paintLineJoined.add(line.joined);
       }
       // 진행 중인 여정은 자기 경로를 지금 지점에서 자른다 (배 위에 있어도 항구를 거친다)
       if (r.status == JourneyStatus.active) {
@@ -1980,6 +2008,8 @@ class SyncService {
       paths: paths,
       paintLines: paintLines,
       paintLineColors: paintLineColors,
+      paintLinePatterns: paintLinePatterns,
+      paintLineJoined: paintLineJoined,
       destId: active?.destId,
       position: here.position,
       fundKm: (await _fund()).km,
@@ -1987,10 +2017,11 @@ class SyncService {
     );
   }
 
-  /// 여정 [r]의 물감 길 구간을 경로 위 점 목록으로 (M1 명세 v0.5 ⑤ trailSegments의 paint만).
+  /// 여정 [r]의 물감 길 구간을 경로 위 점 목록으로 (M1 명세 v0.5 ⑤ trailSegments의 paint만, 색·무늬가 바뀌면 나뉜다).
   /// 경로는 여정을 시작할 때의 경로(출발지 → 목적지)이고, 진행 km는 경비 + 상점 효과(앞의 연필) + 분마다 실제 거리
-  /// × 디버그 거리 배수다. 끝난 여정은 끝난 시각까지의 분만, 도착한 여정은 경로 끝에서 자른다
-  Future<List<(List<LatLng>, String)>> _paintLinesOf(
+  /// × 디버그 거리 배수다. 끝난 여정은 끝난 시각까지의 분만, 도착한 여정은 경로 끝에서 자른다.
+  /// joined는 바로 앞 물감 구간에 이어지는가 (사이에 연필 구간이 없다)
+  Future<List<({List<LatLng> points, String colorId, String? patternId, bool joined})>> _paintLinesOf(
     JourneyRow r,
     List<PaintTrailWindow> windows,
     List<TrailPaint> trailPaints,
@@ -2016,11 +2047,17 @@ class SyncService {
       totalKm: route.totalEffectiveKm,
       paintAt: (minute) => paintedColorAt(
           trailPaints, minute * Duration.millisecondsPerMinute, rules.paintColor.defaultId),
+      patternAt: (minute) => paintedPatternAt(trailPaints, minute * Duration.millisecondsPerMinute),
     );
     return [
-      for (final seg in segments)
+      for (final (i, seg) in segments.indexed)
         if (seg.kind == TrailKind.paint)
-          (routeSlice(route, seg.fromKm, seg.toKm), seg.colorId ?? rules.paintColor.defaultId),
+          (
+            points: routeSlice(route, seg.fromKm, seg.toKm),
+            colorId: seg.colorId ?? rules.paintColor.defaultId,
+            patternId: seg.patternId,
+            joined: i > 0 && segments[i - 1].kind == TrailKind.paint,
+          ),
     ];
   }
 
@@ -2030,7 +2067,7 @@ class SyncService {
     for (final r in await (db.select(db.paintTrailColors)
           ..orderBy([(t) => OrderingTerm(expression: t.fromUtc)]))
         .get()) {
-      (segs[r.trailId] ??= []).add(PaintSegment(r.fromUtc, r.colorId));
+      (segs[r.trailId] ??= []).add(PaintSegment(r.fromUtc, r.colorId, r.patternId));
     }
     return [
       for (final r in await (db.select(db.paintTrails)

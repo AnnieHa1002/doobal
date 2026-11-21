@@ -10,16 +10,19 @@ import '../../app/report_providers.dart';
 import '../../domain/day_card.dart';
 import '../../domain/geo.dart';
 import '../../domain/landmark.dart';
+import '../../domain/paint_pattern_rules.dart';
 import '../../domain/rules.dart';
 import '../../domain/scene.dart' show SceneLook, sceneLook;
 import '../../domain/sketch.dart';
 import '../../domain/spirit_look.dart';
 import '../../domain/time_kst.dart';
+import '../../domain/trail_layout.dart';
 import '../album/painting_share.dart' show capturePng;
 import '../common/format.dart';
 import '../common/framed_painting.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
+import '../common/trail_pattern_paint.dart';
 import '../scene/scene_art.dart' show SceneArtHost;
 import '../scene/scene_art_painter.dart' show SceneArtPainter;
 import '../scene/scene_painter.dart' show SceneMode, ScenePass;
@@ -806,6 +809,9 @@ class PostcardScene extends ConsumerWidget {
                 pathY: pathY,
                 endX: W * 196 / 342,
                 k: H / 188,
+                art: trailArtOrNone(ref.watch(trailArtProvider), rules.paintPattern.defaultId),
+                trail: rules.mapTrail,
+                patterns: rules.paintPattern,
               ),
             ),
           ),
@@ -927,7 +933,10 @@ class _SceneBand extends StatelessWidget {
 }
 
 /// 길 위 물감 색 구간 (캔버스 strokesB): 왼쪽 끝에서 [endX](정령 뒷발)까지 걸은 차례로, 거리만큼 나눠
-/// 굵기 12 진하게 + 18 옅게 두 번 칠한 붓 선. 그 아래 연필 점선 길 (캔버스 #8c6f4e 1.6, 3·6 점선, 70%)
+/// 굵기 12 진하게 + 18 옅게 두 번 칠한 붓 선. 그 아래 연필 점선 길 (캔버스 #8c6f4e 1.6, 3·6 점선, 70%).
+/// 무늬(T17b): 기본 방울 구간은 붓 선 그대로, 무늬 구간은 지도와 같은 무늬 타일·끝([paintTrailRun], 크기·숫자 규칙은
+/// 지도 값 × [k]). 무늬 그림이 없는 구간은 기본 방울 = 붓 선 (config paintPattern.missingArt drawAsDefault).
+/// 붓 선과 무늬가 바뀌는 곳도 끝 1개 + 여백 8pt (붓 선의 둥근 끝이 그 끝)
 class _TrailPainter extends CustomPainter {
   const _TrailPainter({
     required this.strokes,
@@ -935,6 +944,9 @@ class _TrailPainter extends CustomPainter {
     required this.pathY,
     required this.endX,
     required this.k,
+    required this.art,
+    required this.trail,
+    required this.patterns,
   });
 
   final List<PaintStroke> strokes;
@@ -944,6 +956,17 @@ class _TrailPainter extends CustomPainter {
 
   /// 설계 188pt에 대한 배율 (선 굵기·물결)
   final double k;
+
+  /// 읽어 둔 무늬 그림
+  final TrailArt art;
+
+  /// 무늬 크기·테두리 (config mapTrail.paint)와 숫자 규칙 (mapTrail.patterns)
+  final MapTrailRules trail;
+  final PaintPatternRules patterns;
+
+  /// 붓 선 굵기 (진한 속·옅은 번짐, 설계 pt)
+  static const _core = 12.0;
+  static const _wash = 18.0;
 
   Path _wave(double x0, double x1) {
     final y = pathY;
@@ -971,32 +994,95 @@ class _TrailPainter extends CustomPainter {
     final total = strokes.fold(0.0, (s, p) => s + p.meters);
     if (total <= 0) return;
     const start = -6.0;
+    final drawn = [for (final p in strokes) art.drawn(p.patternId)];
+    if (drawn.any((id) => id != art.defaultId)) {
+      _paintPatterns(canvas, drawn, start, total);
+      return;
+    }
     var x = start;
     for (final p in strokes) {
       final x1 = x + (endX - start) * p.meters / total;
-      final path = _wave(x, x1);
-      final color = colorOf(p.colorId);
-      canvas.drawPath(
-          path,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeCap = StrokeCap.round
-            ..strokeWidth = 18 * k
-            ..color = color.withValues(alpha: .22));
-      canvas.drawPath(
-          path,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeCap = StrokeCap.round
-            ..strokeWidth = 12 * k
-            ..color = color.withValues(alpha: .88));
+      _brush(canvas, _wave(x, x1), colorOf(p.colorId));
       x = x1;
     }
   }
 
+  void _brush(Canvas canvas, Path path, Color color) {
+    canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = _wash * k
+          ..color = color.withValues(alpha: .22));
+    canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = _core * k
+          ..color = color.withValues(alpha: .88));
+  }
+
+  /// 무늬가 섞인 날: 구간마다 같은 물결을 점으로 펴서 한 줄로 놓고([layoutTrailRun]), 기본 방울 덩어리는 붓 선,
+  /// 무늬 덩어리는 무늬 타일·끝
+  void _paintPatterns(Canvas canvas, List<String> drawn, double start, double total) {
+    final pieces = <TrailPiece>[];
+    var x = start;
+    for (final (i, p) in strokes.indexed) {
+      final x1 = x + (endX - start) * p.meters / total;
+      final points = <(double, double)>[];
+      for (final m in _wave(x, x1).computeMetrics()) {
+        for (var d = 0.0; d < m.length; d += 2) {
+          final o = m.getTangentForOffset(d)!.position;
+          points.add((o.dx, o.dy));
+        }
+        final end = m.getTangentForOffset(m.length)!.position;
+        points.add((end.dx, end.dy));
+      }
+      pieces.add(TrailPiece(points, colorId: p.colorId, patternId: drawn[i]));
+      x = x1;
+    }
+    final layout = layoutTrailRun(pieces, trailLayoutRules(trail, patterns), k: k);
+    // 붓 선 덩어리: 무늬와 맞닿는 쪽은 둥근 끝(굵기 반)까지 넣어 앞 무늬 끝 + 여백 8pt를 지킨다
+    final ends = layout.pieceEnds;
+    final half = _core / 2 * k;
+    for (final (gi, g) in layout.groups.indexed) {
+      if (g.patternId != art.defaultId) continue;
+      final from = g.afterSwitch ? g.from + patterns.switchGapPt * k + half : g.from;
+      final to = gi < layout.groups.length - 1 ? g.to - half : g.to;
+      for (var i = 0; i < ends.length; i++) {
+        final a = math.max(i == 0 ? 0.0 : ends[i - 1], from);
+        final b = math.min(ends[i], to);
+        if (b > a) _brush(canvas, _slice(layout.line, a, b), colorOf(pieces[i].colorId));
+      }
+    }
+    // 엽서는 낮 장면만 물감 구간이 있다 (쉬어 간 날 밤 장면은 구간 없음) → 낮 테두리
+    paintTrailRun(canvas, layout, art, trailPaintStyle(trail, patterns, k: k, night: false), colorOf,
+        skip: {art.defaultId});
+  }
+
+  /// 줄 [line]의 [a]~[b](px) 부분
+  static Path _slice(TrailPolyline line, double a, double b) {
+    final first = line.at(a);
+    final out = Path()..moveTo(first.x, first.y);
+    for (var d = a + 2; d < b; d += 2) {
+      final p = line.at(d);
+      out.lineTo(p.x, p.y);
+    }
+    final last = line.at(b);
+    return out..lineTo(last.x, last.y);
+  }
+
   @override
   bool shouldRepaint(_TrailPainter old) =>
-      old.strokes != strokes || old.pathY != pathY || old.endX != endX || old.k != k;
+      old.strokes != strokes ||
+      old.pathY != pathY ||
+      old.endX != endX ||
+      old.k != k ||
+      !identical(old.art, art) ||
+      !identical(old.trail, trail) ||
+      !identical(old.patterns, patterns);
 }
 
 /// 엽서 정령: 발 [foot]·키 [figureHeight] (600 캔버스의 머리 위 y150~발바닥 y440 잣대, 걷는 중과 같은 놓기).

@@ -84,7 +84,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     if (id == 'paints') _seePaints();
   }
 
-  /// 물감 탭을 열면 새 색 표시(배낭의 점)를 지운다
+  /// 물감 탭을 열면 새 색·새 무늬 표시(배낭의 점)를 지운다. 이번에 연 탭의 무늬 칸 새 표시는 다시 읽을 때까지 남는다
   Future<void> _seePaints() async {
     final paint = await ref.read(paintServiceProvider.future);
     await paint.markSeen();
@@ -94,6 +94,12 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   /// 물감을 고른다 (누르면 바로 ‘쓰는 중’, 캔버스 6-1). 걷는 중이면 그 순간부터 그 색으로 칠한다 (16장 11/16)
   Future<void> _choosePaint(String colorId) async {
     await ref.read(paintTrailProvider.notifier).choosePaint(colorId);
+    if (mounted) ref.invalidate(paintShelfProvider);
+  }
+
+  /// 무늬를 고른다 (맨 위 무늬 줄, 누르면 바로 ‘쓰는 중’). 걷는 중이면 그 순간부터 그 무늬로 칠한다 (16장 11/19)
+  Future<void> _choosePattern(String patternId) async {
+    await ref.read(paintTrailProvider.notifier).choosePattern(patternId);
     if (mounted) ref.invalidate(paintShelfProvider);
   }
 
@@ -213,6 +219,8 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
           now: ref.read(clockProvider)(),
           canChoose: rules.paintColor.chooseWhileWalking || !walking,
           onChoose: _choosePaint,
+          canChoosePattern: rules.paintPattern.whileWalking || !walking,
+          onChoosePattern: _choosePattern,
         ),
       ),
     );
