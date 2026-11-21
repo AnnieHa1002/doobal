@@ -29,5 +29,5 @@ Future<CompanionCatalog> loadCompanionCatalog() async =>
 /// 쉼터 꾸밈 물품 (decor.json). 화면 연결은 T15
 Future<DecorCatalog> loadDecorCatalog() async => parseDecor(await _json('decor.json'));
 
-/// 물감 길 무늬 (trails.json). 화면 연결은 T17
+/// 물감 길 무늬 (trails.json)
 Future<TrailCatalog> loadTrailCatalog() async => parseTrails(await _json('trails.json'));

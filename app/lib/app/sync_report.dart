@@ -1,6 +1,6 @@
 part of 'sync_service.dart';
 
-// 하루 카드 엽서 (T10b, 16장 11/19 하루 카드 개편). 하루 요약에 없는 값: 카드 끝날의 여정과 칠한 물감 구간.
+// 하루 카드 엽서 (T10b, 16장 11/19 하루 카드 개편). 하루 요약에 없는 값: 카드 끝날의 여정과 칠한 물감 구간(색·무늬).
 // 계산만 하고 아무것도 쓰지 않는다 (sync_service.dart 본문이 부딪히지 않게 이 파일에 둔다)
 
 extension ReportSync on SyncService {
@@ -48,10 +48,15 @@ extension ReportSync on SyncService {
     final minutes = await _travelFrom(_minuteOf(fromMs), now, beforeMinute: _minuteOf(toMs));
     return CardStory(
       journey: journey,
-      strokes: mergeStrokes([
+      // 색과 무늬(T17b, null = 기본 방울)가 같은 분끼리 이어 붙인다
+      strokes: mergePatternStrokes([
         for (final m in minutes)
           if (m.inTrail)
-            (paintedColorAt(trailPaints, m.minute * Duration.millisecondsPerMinute, defaultId), m.actualM),
+            (
+              paintedColorAt(trailPaints, m.minute * Duration.millisecondsPerMinute, defaultId),
+              paintedPatternAt(trailPaints, m.minute * Duration.millisecondsPerMinute),
+              m.actualM,
+            ),
       ]),
       position: position,
     );

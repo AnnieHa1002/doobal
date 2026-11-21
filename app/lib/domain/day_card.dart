@@ -129,33 +129,45 @@ class BestDay {
   final int steps;
 }
 
-/// 카드 날에 칠한 물감 한 구간: 물감 색 id와 그 색으로 걸은 실제 거리(m). 걸은 차례대로 (엽서 장면의 길 색)
+/// 카드 날에 칠한 물감 한 구간: 물감 색 id와 그 색으로 걸은 실제 거리(m), 그 구간의 무늬 id (null = 기본 방울,
+/// T17b). 걸은 차례대로 (엽서 장면의 길 색·무늬)
 class PaintStroke {
-  const PaintStroke(this.colorId, this.meters);
+  const PaintStroke(this.colorId, this.meters, [this.patternId]);
 
   final String colorId;
   final double meters;
+  final String? patternId;
 
   @override
   bool operator ==(Object other) =>
-      other is PaintStroke && other.colorId == colorId && (other.meters - meters).abs() < 1e-6;
+      other is PaintStroke &&
+      other.colorId == colorId &&
+      other.patternId == patternId &&
+      (other.meters - meters).abs() < 1e-6;
 
   @override
-  int get hashCode => Object.hash(colorId, meters.toStringAsFixed(3));
+  int get hashCode => Object.hash(colorId, patternId, meters.toStringAsFixed(3));
 
   @override
-  String toString() => 'PaintStroke($colorId ${meters.toStringAsFixed(1)}m)';
+  String toString() =>
+      'PaintStroke($colorId${patternId == null ? '' : ' $patternId'} ${meters.toStringAsFixed(1)}m)';
 }
 
 /// 걸은 차례의 분마다 (물감 색 id, 실제 거리 m)을 같은 색끼리 이어 붙인다. 거리가 0인 분은 건너뛴다
-List<PaintStroke> mergeStrokes(Iterable<(String, double)> minutes) {
+List<PaintStroke> mergeStrokes(Iterable<(String, double)> minutes) =>
+    mergePatternStrokes([for (final (color, m) in minutes) (color, null, m)]);
+
+/// 걸은 차례의 분마다 (물감 색 id, 무늬 id, 실제 거리 m)을 색과 무늬가 같은 것끼리 이어 붙인다.
+/// 거리가 0인 분은 건너뛴다
+List<PaintStroke> mergePatternStrokes(Iterable<(String, String?, double)> minutes) {
   final out = <PaintStroke>[];
-  for (final (color, m) in minutes) {
+  for (final (color, pattern, m) in minutes) {
     if (!(m > 0)) continue;
-    if (out.isNotEmpty && out.last.colorId == color) {
-      out[out.length - 1] = PaintStroke(color, out.last.meters + m);
+    final last = out.lastOrNull;
+    if (last != null && last.colorId == color && last.patternId == pattern) {
+      out[out.length - 1] = PaintStroke(color, last.meters + m, pattern);
     } else {
-      out.add(PaintStroke(color, m));
+      out.add(PaintStroke(color, m, pattern));
     }
   }
   return out;

@@ -18,6 +18,7 @@ import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
+import '../common/trail_pattern_paint.dart';
 import '../album/painting_viewer.dart';
 import 'landmark_card.dart';
 import 'map_geometry.dart';
@@ -397,6 +398,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                 trail: rules.mapTrail,
                 palette: rules.paintColor,
                 style: rules.mapAlbum.map,
+                patterns: rules.paintPattern,
+                patternArt: ref.watch(trailArtProvider).value,
                 nextRoute: nextRoute,
                 seaRoutes: _sea(rules),
                 faceColor: faceColor,

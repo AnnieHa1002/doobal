@@ -24,5 +24,5 @@ final companionCatalogProvider = FutureProvider<CompanionCatalog>((ref) => loadC
 /// 쉼터 꾸밈 물품 (decor.json). 아직 읽는 화면이 없다 (T15)
 final decorCatalogProvider = FutureProvider<DecorCatalog>((ref) => loadDecorCatalog());
 
-/// 물감 길 무늬 (trails.json). 아직 읽는 화면이 없다 (T17)
+/// 물감 길 무늬 (trails.json): 배낭 무늬 줄·구간 무늬·거리 보상·지도와 엽서 그리기 (T17b)
 final trailCatalogProvider = FutureProvider<TrailCatalog>((ref) => loadTrailCatalog());

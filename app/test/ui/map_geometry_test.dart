@@ -163,6 +163,7 @@ void main() {
           trail: rules.mapTrail,
           palette: palette ?? rules.paintColor,
           style: style ?? rules.mapAlbum.map,
+          patterns: rules.paintPattern,
           nextRoute: nextRoute ?? next,
           seaRoutes: sea,
           faceColor: face,
