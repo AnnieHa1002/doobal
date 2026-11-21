@@ -27,11 +27,12 @@ void main() {
     expect((logical.right - notePaperSlice.right) * notePaperScale, 60);
   });
 
-  test('하루 카드·화집 일기는 같은 메모지 바탕을 쓴다 (가운데 칸을 따로 적지 않음)', () {
-    for (final path in ['lib/ui/day_card/day_card_view.dart', 'lib/ui/album/album_diary.dart']) {
-      final src = File(path).readAsStringSync();
-      expect(src.contains('notePaperImage'), isTrue, reason: path);
-      expect(src.contains('centerSlice'), isFalse, reason: path);
-    }
+  test('화집 일기는 메모지 바탕을 쓴다 (가운데 칸을 따로 적지 않음), 하루 카드는 종이 대신 디자인 시스템 카드 (16장 11/19)', () {
+    final diary = File('lib/ui/album/album_diary.dart').readAsStringSync();
+    expect(diary.contains('notePaperImage'), isTrue);
+    expect(diary.contains('centerSlice'), isFalse);
+    final card = File('lib/ui/day_card/day_card_view.dart').readAsStringSync();
+    expect(card.contains('notePaperImage'), isFalse);
+    expect(card.contains('centerSlice'), isFalse);
   });
 }
