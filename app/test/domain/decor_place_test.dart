@@ -41,12 +41,22 @@ void main() {
     });
 
     test('캔버스 → 화면 배율: 그림 상자가 있으면 상자로, 없으면 걸 칸의 보이는 높이 ÷ 칸 높이', () {
-      // README: 이젤 칸 293px이 화면 150px (그림 상자 높이 645 → 330과 같은 배율)
-      expect(_item('decor_easel').pxPerCanvasPx, closeTo(150 / 293, 1e-9));
-      expect(_item('decor_easel').pxPerCanvasPx, closeTo(330 / 645, 0.002));
-      expect(_item('decor_clothesline').pxPerCanvasPx, closeTo(120 / 158, 1e-9));
-      // 걸 칸이 없으면 화면 높이 ÷ 바닥점 y (추정)
-      expect(_item('decor_lantern').pxPerCanvasPx, closeTo(230 / 471, 1e-9));
+      // decor.json bboxPx (11/22, 납품 bbox): 화면 높이 ÷ 상자 높이. 이젤 330 ÷ 645 = README 칸 293px → 150px와 거의 같다
+      expect(_item('decor_easel').pxPerCanvasPx, closeTo(330 / 645, 1e-9));
+      expect(_item('decor_easel').pxPerCanvasPx, closeTo(150 / 293, 0.002));
+      expect(_item('decor_clothesline').pxPerCanvasPx, closeTo(235 / 310, 1e-9));
+      expect(_item('decor_clothesline').pxPerCanvasPx, closeTo(120 / 158, 0.002));
+      expect(_item('decor_lantern').pxPerCanvasPx, closeTo(230 / 430, 1e-9));
+      expect(_item('decor_bench').pxPerCanvasPx, closeTo(128 / 245, 1e-9));
+      // 상자가 없으면(11/22 전 decor.json) 걸 칸의 보이는 높이 ÷ 칸 높이, 그것도 없으면 화면 높이 ÷ 바닥점 y (추정)
+      final raw = _json('decor.json');
+      for (final i in raw['items'] as List) {
+        (i as Map).remove('bboxPx');
+      }
+      final noBox = parseDecor(raw);
+      expect(noBox.byId('decor_easel')!.pxPerCanvasPx, closeTo(150 / 293, 1e-9));
+      expect(noBox.byId('decor_clothesline')!.pxPerCanvasPx, closeTo(120 / 158, 1e-9));
+      expect(noBox.byId('decor_lantern')!.pxPerCanvasPx, closeTo(230 / 471, 1e-9));
       final withBox = parseDecor({
         'maxPlaced': 20,
         'perItem': 1,
@@ -189,10 +199,12 @@ void main() {
     test('그림 칸·빛 자리, 좌우 뒤집으면 칸 x → W − x − w', () {
       final easel = _item('decor_easel');
       const foot = ScenePoint(300, 700);
-      final k = 150 / 293 / 3;
+      // 그림 상자 배율 (bboxPx 높이 645 → 화면 330px)
+      final k = 330 / 645 / 3;
       final l = _stage.layout(easel, foot);
-      // 칸 높이 = 보이는 액자 높이 150px = 50pt
-      expect(l.slots.single.height, closeTo(50, 1e-9));
+      // 칸 높이 ≈ 보이는 액자 높이 150px = 50pt (상자 배율이라 0.06% 작다)
+      expect(l.slots.single.height, closeTo(293 * k, 1e-9));
+      expect(l.slots.single.height, closeTo(50, 0.05));
       expect(l.slots.single.left, closeTo(300 + (192 - 384) * k, 1e-9));
       expect(l.slots.single.top, closeTo(700 + (202 - 707) * k, 1e-9));
       expect(l.hangs.single.x, closeTo(300 + (387 - 384) * k, 1e-9));
@@ -203,7 +215,7 @@ void main() {
       expect(f.box.left, l.box.left);
       expect(l.lightAt, isNull);
       final lantern = _stage.layout(_item('decor_lantern'), foot);
-      final lk = 230 / 471 / 3;
+      final lk = 230 / 430 / 3;
       expect(lantern.lightAt!.x, closeTo(300 + (323 - 256) * lk, 1e-9));
       expect(lantern.lightAt!.y, closeTo(700 + (231 - 471) * lk, 1e-9));
       expect(lantern.lightRadius, closeTo(220 / 3, 1e-9));
