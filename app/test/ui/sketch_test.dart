@@ -52,6 +52,8 @@ Future<void> _openAlbum(WidgetTester tester, UiEnv e, {double height = 844}) asy
   // 그림 값까지 한 박자 더
   await settle(tester, () => false, tries: 6);
   await tester.tap(find.byKey(const ValueKey('view-all')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400)); // 일기·전체 종이 넘김 0.35초 (연출 ⑤)
   await settle(tester, () => false, tries: 3);
 }
 

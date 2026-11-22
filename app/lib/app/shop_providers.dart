@@ -66,9 +66,9 @@ final todayCartProvider = FutureProvider.autoDispose<TodayCart>((ref) async {
   return svc.todayCart(ref.read(clockProvider)());
 });
 
-/// 상점을 본 것으로 적는다 (새 상품 점이 꺼진다, 상점 화면이 열려 있는 동안 지금 시각)
+/// 상점을 본 것으로 적는다 (새 상품 점이 꺼진다, 상점 화면이 열려 있는 동안 지금 시각). 상점을 열 때마다 적는다:
+/// 연출 ③이 이 시각 뒤에 팔린 칸·열린 칸만 움직이게 (T19, 전에는 새 상품이 있을 때만 적었다)
 Future<void> markShopSeen(WidgetRef ref) async {
-  if (ref.read(todayCartProvider).value?.news != true) return;
   final svc = await ref.read(syncServiceProvider.future);
   await svc.markShopSeen(ref.read(clockProvider)());
   ref.invalidate(todayCartProvider);

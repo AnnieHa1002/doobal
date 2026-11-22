@@ -50,6 +50,7 @@ class SceneView extends StatelessWidget {
     this.spiritCue,
     this.spiritCues,
     this.onSpiritLongPress,
+    this.spiritWrap,
   });
 
   final SceneMode mode;
@@ -116,6 +117,10 @@ class SceneView extends StatelessWidget {
 
   /// 정령을 길게 누르면 (쉼터 → 정령 꾸미기, config character.tapReaction.longPress). 없으면 길게 눌러도 그대로
   final VoidCallback? onSpiritLongPress;
+
+  /// 쉼터 정령을 감싸는 층 (쓰다듬기 연출 ②, rest_pet.dart). 정령 600 캔버스 상자를 꽉 채운 정령을 받는다.
+  /// 쉼터에서만 쓴다. 없으면 그대로
+  final Widget Function(Widget spirit)? spiritWrap;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +301,7 @@ class SceneView extends StatelessWidget {
       top: foot.dy - 440 * scale,
       width: 600 * scale,
       height: 600 * scale,
-      child: SceneTinted(
+      child: _wrapSpirit(SceneTinted(
         tint: tint,
         child: _longPress(RepaintBoundary(
           child: DoobalCharacter(
@@ -313,8 +318,13 @@ class SceneView extends StatelessWidget {
             cues: spiritCues,
           ),
         )),
-      ),
+      )),
     );
+  }
+
+  Widget _wrapSpirit(Widget spirit) {
+    final wrap = spiritWrap;
+    return wrap == null || mode != SceneMode.rest ? spirit : wrap(spirit);
   }
 
   /// 정령 길게 누르기. 누르기 반응(정령 안의 탭)과 겨루다 0.5초가 지나면 이쪽이 이긴다.

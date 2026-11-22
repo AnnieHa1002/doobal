@@ -12,6 +12,7 @@ import '../common/palette.dart';
 import '../companion/companion_art.dart';
 import '../scene/scene_view.dart' show SceneTinted;
 import 'decor_layer.dart';
+import 'decor_wiggle.dart';
 
 // 쉼터를 돌아다니는 완결 동행 (16장 11/18 ④·11/19 ②, config companions.finaleRoam, M2~M6 AB 보충).
 // 그림은 동행 자리표시 그림(CompanionFigure)이다. 동행 Rive 걷기·앉기(T2c)가 오면 걷기·서기·앉기를 그 클립으로 바꾼다.
@@ -170,6 +171,7 @@ class RestGroundLayer extends StatelessWidget {
     this.decorTint,
     this.selected,
     this.hidden,
+    this.wiggle,
   });
 
   final RestGeometry geometry;
@@ -186,6 +188,9 @@ class RestGroundLayer extends StatelessWidget {
   final String? selected;
   final String? hidden;
 
+  /// 누른 꾸밈 물품 흔들기 (연출 ②)
+  final DecorWiggler? wiggle;
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -200,7 +205,7 @@ class RestGroundLayer extends StatelessWidget {
         // 물품과 동행을 발 y로 섞는다 (같으면 물품이 뒤)
         final entries = <(double, int, Widget)>[
           for (final (i, v) in decor.indexed)
-            (v.spot.foot.y, i, decorArtWidgets(g, [v], tint: decorTint, selected: selected, hidden: hidden).single),
+            (v.spot.foot.y, i, decorArtWidgets(g, [v], tint: decorTint, selected: selected, hidden: hidden, wiggle: wiggle).single),
           for (final c in walkers) (c.state.at.y, decor.length + 1, _companion(c)),
         ]..sort((a, b) => a.$1 != b.$1 ? a.$1.compareTo(b.$1) : a.$2.compareTo(b.$2));
         return Stack(clipBehavior: Clip.none, children: [for (final e in entries) e.$3]);

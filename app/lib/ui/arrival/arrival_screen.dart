@@ -99,14 +99,16 @@ class _ArrivalScreenState extends ConsumerState<ArrivalScreen> {
     ));
   }
 
-  /// 다음 목적지: 지도로 바꿔 연다 (지도에서 뒤로 가면 이 탭 처음 화면, 출발하기는 쉼터 탭)
+  /// 다음 목적지: 지도로 바꿔 연다 (지도에서 뒤로 가면 이 탭 처음 화면, 출발하기는 쉼터 탭). 지도는 도착한 명소를 고른다
   Future<void> _next() async {
     if (_leaving) return;
     _leaving = true;
+    final arrivedId = ref.read(arrivalViewProvider(widget.journeyId)).value?.dest.id;
     await _markShown();
     if (!mounted) return;
+    // 지도는 도착한 명소를 골라 두고 그 핀을 떨어뜨린다 (연출 ①)
     await Navigator.of(context)
-        .pushReplacement(MaterialPageRoute<void>(builder: (_) => const MapScreen()));
+        .pushReplacement(MaterialPageRoute<void>(builder: (_) => MapScreen(arrivedId: arrivedId)));
   }
 
   @override

@@ -10,6 +10,7 @@ import '../../domain/color_props.dart';
 import '../../domain/landmark.dart';
 import '../../domain/look.dart';
 import '../../domain/map_album_rules.dart';
+import '../../domain/motion_rules.dart';
 import '../../domain/prop.dart';
 import '../../domain/rules.dart';
 import '../../domain/screen_rules.dart';
@@ -19,11 +20,13 @@ import '../common/app_text.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
 import '../common/game_button.dart';
+import '../common/motion.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
 import '../decorate/decorate_screen.dart';
 import '../scene/spirit_character.dart';
 import 'album_diary.dart';
+import 'album_flip.dart';
 import 'album_paints.dart';
 import 'album_widgets.dart';
 import 'painting_viewer.dart';
@@ -43,7 +46,9 @@ const albumDecorateLink = '꾸미기에서 색·얼굴 바꾸기';
 /// 화집 = 배낭 (16장 11/19 ③·11/20, 캔버스 6-1): 탭은 config album.tabs 차례로 그림·소품·물감, 도장은 나 탭.
 /// 가진 것만 보인다(album.ownedOnly): 그림 탭은 얻은 그림(첫 그림 + 얻은 명소), 소품 탭은 가진 소품, 물감 탭은 가진 물감.
 /// 소품 탭은 누르면 바로 입고 다시 누르면 벗는다(옷은 안 벗음, album.propsTab): 위 정령이 바로 바뀌고 잠깐 기뻐하며 한 줄 토스트.
-/// 위 배경·벽 액자는 없다 (11/4). 그림 탭은 ‘일기 · 전체’ 두 보기이고 기본은 일기다 (캔버스 6-1, 16장 11/2)
+/// 위 배경·벽 액자는 없다 (11/4). 그림 탭은 ‘일기 · 전체’ 두 보기이고 기본은 일기다 (캔버스 6-1, 16장 11/2).
+/// 연출 ⑤(config ui.motion.albumFlip): 일기·전체를 바꾸면 아래 내용이 오른쪽 끝을 축으로 종이처럼 넘어가고
+/// (앞 절반은 전 보기, 뒤 절반은 새 보기), 일기에서 달 머리줄이 화면에 들어오면 그 줄이 넘어간다. 움직임 줄이기면 바로 바뀜
 class AlbumScreen extends ConsumerStatefulWidget {
   const AlbumScreen({super.key});
 
@@ -51,7 +56,7 @@ class AlbumScreen extends ConsumerStatefulWidget {
   ConsumerState<AlbumScreen> createState() => _AlbumScreenState();
 }
 
-class _AlbumScreenState extends ConsumerState<AlbumScreen> {
+class _AlbumScreenState extends ConsumerState<AlbumScreen> with SingleTickerProviderStateMixin {
   /// 지금 탭 id. null이면 config album.tabs의 첫 탭
   String? _tab;
 
@@ -59,8 +64,14 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   SpiritCue? _joy;
   var _wearing = false;
 
-  /// 그림 탭 보기: 일기(기본)인가, 전체(3열 격자)인가
+  /// 그림 탭 보기: 일기(기본)인가, 전체(3열 격자)인가 (바꾸기 단추가 보이는 값)
   var _diary = true;
+
+  /// 지금 그리는 보기. 넘기는 동안 앞 절반은 전 보기라 [_diary]와 다를 수 있다
+  var _diaryShown = true;
+
+  /// 일기·전체 넘김 시계 (연출 ⑤). 넘기지 않을 때는 끝(1)
+  late final AnimationController _flip = motionController(this, 0)..addListener(_onFlip);
 
   /// 그림 탭의 권역 거르기. null이면 전체
   String? _region;
@@ -72,6 +83,37 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   void initState() {
     super.initState();
     _seePaintings();
+  }
+
+  @override
+  void dispose() {
+    _flip.dispose();
+    super.dispose();
+  }
+
+  AlbumFlipMotion? get _flipMotion => ref.read(rulesProvider).value?.motion.albumFlip;
+
+  /// 일기·전체 바꾸기. 넘기는 중에 또 누르면 하던 넘김은 끝으로 건너뛰고 지금 보기에서 다시 넘긴다
+  void _switchView(bool diary) {
+    if (diary == _diary) return;
+    final m = _flipMotion;
+    final flip = m != null && m.on.contains(AlbumFlipOn.diaryAllToggle) && !motionReduced(context);
+    setState(() {
+      _diaryShown = _diary;
+      _diary = diary;
+      if (!flip) _diaryShown = diary;
+    });
+    if (!flip) return;
+    _flip
+      ..duration = motionDuration(m.sec)
+      ..forward(from: 0);
+  }
+
+  /// 넘김이 가운데(가로 0)를 지나면 새 보기를 그린다 (끝에 닿아도)
+  void _onFlip() {
+    final m = _flipMotion;
+    if (_diaryShown == _diary) return;
+    if (m == null || motionTime(_flip, m.sec) >= m.swapSec) setState(() => _diaryShown = _diary);
   }
 
   void _openTab(String id) {
@@ -176,6 +218,8 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
         },
     ];
     const gutter = EdgeInsets.symmetric(horizontal: 16);
+    // 그림 탭에 있는 동안은 전체를 보는 중에도 일기를 들고 있다 (일기로 넘길 때 뒤 절반이 빈 종이가 되지 않게)
+    if (tab == 'paintings') ref.watch(diaryProvider);
     return CustomScrollView(
       slivers: [
         SliverPadding(
@@ -192,9 +236,16 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
         ),
         if (tab == 'paintings') ...[
           SliverToBoxAdapter(
-            child: _ViewSwitch(diary: _diary, onSelect: (d) => setState(() => _diary = d)),
+            child: _ViewSwitch(diary: _diary, onSelect: _switchView),
           ),
-          if (_diary) ..._diarySlivers(owned) else ..._paintingSlivers(owned, landmarks),
+          _flipped(
+            rules.motion.albumFlip,
+            SliverMainAxisGroup(
+              slivers: _diaryShown
+                  ? _diarySlivers(owned, rules.motion.albumFlip)
+                  : _paintingSlivers(owned, landmarks),
+            ),
+          ),
         ] else if (tab == 'props')
           ..._propSlivers(rules.mapAlbum.propsTab)
         else
@@ -234,13 +285,31 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     openPaintingViewer(context, [for (final i in ids) BigPainting.owned(owned[i]!)], at);
   }
 
+  /// 일기·전체 넘김 중이면 [sliver]를 그 모습으로 (아니면 그대로)
+  Widget _flipped(AlbumFlipMotion? m, Widget sliver) {
+    if (m == null) return sliver;
+    return ListenableBuilder(
+      listenable: _flip,
+      builder: (context, child) {
+        final t = motionTime(_flip, m.sec);
+        return SliverFlip(key: const ValueKey('album-flip'), scaleX: m.scaleXAt(t), shadow: m.shadowAt(t), sliver: child!);
+      },
+      child: sliver,
+    );
+  }
+
   /// 그림 탭의 일기: 도착마다 한 항목, 최근이 위 (읽는 동안은 비워 둔다). 크게 보기는 다시 간 명소를
-  /// 한 번만 (처음 나온 자리에서) 넘긴다
-  List<Widget> _diarySlivers(Map<String, OwnedPaintingView> owned) {
+  /// 한 번만 (처음 나온 자리에서) 넘긴다. 달 머리줄은 화면에 들어올 때 넘긴다 (albumFlip.on monthHeader)
+  List<Widget> _diarySlivers(Map<String, OwnedPaintingView> owned, AlbumFlipMotion? flip) {
     final entries = ref.watch(diaryProvider).value;
     if (entries == null) return const [SliverToBoxAdapter()];
     final order = [for (final e in entries) e.dest.id];
-    return diarySlivers(context, entries, onOpen: (id) => _openViewer(owned, order, id));
+    return diarySlivers(
+      context,
+      entries,
+      onOpen: (id) => _openViewer(owned, order, id),
+      monthFlip: flip != null && flip.on.contains(AlbumFlipOn.monthHeader) ? flip : null,
+    );
   }
 
   /// 그림 탭의 전체: 권역 칩과 얻은 그림 3열 (첫 그림이 맨 앞, 명소는 landmarks.json 순서).

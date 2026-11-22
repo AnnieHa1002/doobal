@@ -16,7 +16,8 @@ import 'map_painter.dart' show pinHeadColors;
 /// [distance]는 `남은 거리 …` 줄 (아직 계산 중이면 null).
 /// 그림 칸은 [slots]개(config map.card.paintingSlot.count, MVP 1, 16장 11/19 밤 창구 Q004): 받기 전엔 연필 점선 빈 칸,
 /// 받으면 그 그림 액자 색 칸 + 썸네일, 글 없음(‘그림 n / 3’·액자 안내 없음). 받은 칸을 누르면 [onPainting](크게 보기).
-/// 버튼은 주 [primaryLabel](`출발하기`)과 보조 [secondaryLabel](`목적지 바꾸기`·`여정 멈추기`, 없으면 안 보임)
+/// 버튼은 주 [primaryLabel](`출발하기`)과 보조 [secondaryLabel](`목적지 바꾸기`·`여정 멈추기`, 없으면 안 보임).
+/// [stampScale]은 도착 연출(① config ui.motion.arrivalPin)에서 받은 첫 칸이 찍히는 크기 (1.3 → 1, 보통 1)
 class LandmarkCard extends StatelessWidget {
   const LandmarkCard({
     super.key,
@@ -26,6 +27,7 @@ class LandmarkCard extends StatelessWidget {
     required this.primaryLabel,
     required this.onPrimary,
     this.slots = 1,
+    this.stampScale = 1,
     this.onPainting,
     this.secondaryLabel,
     this.onSecondary,
@@ -35,6 +37,7 @@ class LandmarkCard extends StatelessWidget {
   final Frame? frame;
   final String? distance;
   final int slots;
+  final double stampScale;
   final VoidCallback? onPainting;
   final String primaryLabel;
   final VoidCallback onPrimary;
@@ -86,6 +89,7 @@ class LandmarkCard extends StatelessWidget {
                   key: ValueKey('painting-slot-$i'),
                   landmark: i == 0 && f != null ? landmark : null,
                   frame: i == 0 ? f : null,
+                  scale: i == 0 ? stampScale : 1,
                   onTap: i == 0 && f != null ? onPainting : null,
                 ),
               ],
@@ -116,12 +120,13 @@ const _slotTilt = -8 * math.pi / 180;
 const _slotBand = 3.0;
 
 /// 그림 칸 하나 (지름 40pt, 누르는 자리는 44pt). [frame]이 있으면 그 액자 색(지도 핀 머리와 같은 색) 테두리 안에
-/// [landmark] 그림 썸네일, 없으면 연필 점선 빈 칸(자물쇠·글 없음)
+/// [landmark] 그림 썸네일, 없으면 연필 점선 빈 칸(자물쇠·글 없음). 받은 칸은 [scale]배로 (도장 찍힘)
 class PaintingSlot extends StatelessWidget {
-  const PaintingSlot({super.key, this.landmark, this.frame, this.onTap});
+  const PaintingSlot({super.key, this.landmark, this.frame, this.scale = 1, this.onTap});
 
   final Landmark? landmark;
   final Frame? frame;
+  final double scale;
   final VoidCallback? onTap;
 
   @override
@@ -160,8 +165,10 @@ class PaintingSlot extends StatelessWidget {
         child: SizedBox.square(
           dimension: 44,
           child: Center(
-            child: Transform.rotate(
-              angle: _slotTilt,
+            child: Transform(
+              key: const ValueKey('painting-slot-stamp'),
+              alignment: Alignment.center,
+              transform: Matrix4.rotationZ(_slotTilt)..scaleByDouble(scale, scale, 1, 1),
               child: Container(
                 key: const ValueKey('painting-slot-filled'),
                 width: _slotSize,

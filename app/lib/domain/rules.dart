@@ -2,6 +2,7 @@ import 'day_card_rules.dart';
 import 'decor_rules.dart';
 import 'geo.dart';
 import 'map_album_rules.dart';
+import 'motion_rules.dart';
 import 'paint_pattern_rules.dart';
 import 'paint_color.dart';
 import 'screen_rules.dart';
@@ -395,6 +396,7 @@ class Rules {
     required this.mapAlbum,
     required this.paintPattern,
     this.decor = CampDecorRules.none,
+    this.motion = MotionRules.none,
   });
 
   /// 하루 카드·걷기 리포트 (config report)
@@ -414,6 +416,9 @@ class Rules {
 
   /// 쉼터 꾸미기 놓는 규칙·첫 그림 선물·완결 동행 돌아다니기 (config rest.decor·coins.firstSketchGift·companions.finaleRoam, T15)
   final CampDecorRules decor;
+
+  /// 연출 5개 중 ②③④ (config ui.motion, T19, 16장 11/20 Q008)
+  final MotionRules motion;
 
   /// 설치 뒤 며칠까지 둘째·셋째 동행을 꼭 만나는지 (config companions.guaranteeByDay)
   final List<int> companionGuaranteeDays;
@@ -995,6 +1000,7 @@ class Rules {
       mapAlbum: MapAlbumRules.fromJson(j),
       paintPattern: PaintPatternRules.fromJson(j),
       decor: CampDecorRules.fromJson(j),
+      motion: MotionRules.fromJson(j),
     );
   }
 }

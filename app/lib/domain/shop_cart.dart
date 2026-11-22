@@ -258,6 +258,8 @@ class TodayCart {
     required this.cartKm,
     required this.totalKm,
     this.news = false,
+    this.seenUtc,
+    this.seenSlots = 0,
   });
 
   static const empty = TodayCart(day: '', fixed: [], slots: [], cartKm: 0, totalKm: 0);
@@ -277,6 +279,14 @@ class TodayCart {
 
   /// 새 상품 점: 그날 처음 나온 상품이 있고 그날 수레가 바뀐 뒤 아직 상점을 안 봤다
   final bool news;
+
+  /// 마지막으로 상점을 본 시각 (epoch ms, 본 적 없으면 설치 시각, 모르면 null). 연출 ③이 그 뒤에 팔린 칸만
+  /// 빠짐 + 도장을 돌린다 (상점 화면이 연 순간 값을 쥐고, 열면 지금 시각으로 다시 적는다)
+  final int? seenUtc;
+
+  /// [seenUtc]의 수레 날 칸 수 (그날 수레를 정한 거리로, [CartRules.slotsAt]). 연출 ③이 이 번호부터의 칸을
+  /// 그 뒤 새로 열린 칸으로 본다 (열린 칸마다 한 번, oncePerUnlock)
+  final int seenSlots;
 
   /// 살 수 있는 칸 (팔리지 않은 칸)
   Iterable<CartSlot> get open => slots.where((s) => !s.sold);

@@ -269,6 +269,11 @@ extension ShopSync on SyncService {
       }
       final sync = await (db.select(db.syncState)..where((t) => t.id.equals(1))).getSingleOrNull();
       final seen = sync?.shopSeenUtc ?? sync?.installUtc;
+      // 마지막으로 본 날의 칸 수 (연출 ③ 새 칸 열림, 그날 수레를 정한 거리 = 그 수레 날 전날까지)
+      final seenDay = seen == null ? null : cart.dayOf(DateTime.fromMillisecondsSinceEpoch(seen, isUtc: true));
+      final seenKm = seenDay == null
+          ? cartKm
+          : summaries.where((d) => d.day.compareTo(seenDay) < 0).fold(0.0, (a, d) => a + d.distanceM) / 1000;
       return TodayCart(
         day: day,
         fixed: [
@@ -282,6 +287,8 @@ extension ShopSync on SyncService {
             seen != null &&
             seen < cart.dayStartUtc(day).millisecondsSinceEpoch &&
             slots.any((s) => s.fresh),
+        seenUtc: seen,
+        seenSlots: cart.slotsAt(seenKm),
       );
     });
   }

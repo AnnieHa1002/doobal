@@ -11,11 +11,13 @@ import '../../domain/landmark.dart';
 import '../../domain/map_first_view.dart';
 import '../../domain/map_projection.dart';
 import '../../domain/map_regions.dart';
+import '../../domain/motion_rules.dart';
 import '../../domain/rules.dart';
 import '../../domain/sketch.dart';
 import '../../domain/time_kst.dart';
 import '../common/corner_button.dart';
 import '../common/format.dart';
+import '../common/motion.dart';
 import '../common/palette.dart';
 import '../common/toast.dart';
 import '../common/trail_pattern_paint.dart';
@@ -43,15 +45,20 @@ const _bottomReserve = 270.0;
 /// 처음 열면 내 현재 위치 기준으로 확대해서 명소가 3곳 이상 보이게 한다 (domain/map_first_view).
 /// 카드: 주 `출발하기`(여정만 정하고 쉼터로, 16장 11/13: 걷는 중은 걸으면 저절로 열린다),
 /// 보조 `목적지 바꾸기`(다른 명소를 골랐을 때, 시트 하나)·`여정 멈추기`(현재 목적지, 시트).
-/// 첫 여정(내 동네 스케치) 중에는 바꾸기·멈추기를 숨긴다. 뒤로는 쉼터
+/// 첫 여정(내 동네 스케치) 중에는 바꾸기·멈추기를 숨긴다. 뒤로는 쉼터.
+/// 도착 화면의 `다음 목적지`로 열면 [arrivedId](방금 도착한 명소)를 골라 두고 연출 ①(config ui.motion.arrivalPin):
+/// 그 핀이 위에서 떨어져 꽂히고 튄 뒤 카드 그림 칸이 도장처럼 찍힌다. 움직임 줄이기면 끝 상태만
 class MapScreen extends ConsumerStatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({super.key, this.arrivedId});
+
+  /// 방금 도착한 명소 (도착 화면에서 열 때만). 다녀온 명소가 아니면(내 동네 스케치 등) 연출 없음
+  final String? arrivedId;
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProviderStateMixin {
+class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateMixin {
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
   late final AnimationController _anim;
@@ -75,9 +82,17 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
   var _selectionReady = false;
   var _busy = false;
 
+  /// 도착 연출 (① 핀 떨어짐 → 그림 칸 찍힘)의 시계와 그 명소. 연출이 없으면 끝(1)에 있다
+  late final AnimationController _arrive;
+  String? _arriving;
+
+  /// 방금 도착해 지금 서 있는 명소 (도착 화면에서 열었을 때). 그 카드는 남은 거리 줄이 없다
+  String? _landedId;
+
   @override
   void initState() {
     super.initState();
+    _arrive = motionController(this, 0);
     _anim = AnimationController(vsync: this, duration: _moveDuration)..addListener(_onMove);
     _curve = CurvedAnimation(parent: _anim, curve: Curves.easeInOut);
     _searchFocus.addListener(() {
@@ -87,6 +102,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
 
   @override
   void dispose() {
+    _arrive.dispose();
     _anim.dispose();
     _tc?.dispose();
     _search.dispose();
@@ -316,7 +332,18 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     final geometry = _geometryOf(projection, regions, landmarks);
     if (!_selectionReady) {
       _selectionReady = true;
-      _selectedId = data.destId;
+      final arrived = widget.arrivedId;
+      final landed = arrived != null && geometry.byId.containsKey(arrived) && data.visited.containsKey(arrived);
+      _selectedId = landed ? arrived : data.destId;
+      if (landed) _landedId = arrived;
+      // 지도·카드를 처음 그리기 전에 시계를 0에 둔다 (아직 듣는 위젯이 없다)
+      final m = rules.motion.arrivalPin;
+      if (landed && m != null && !motionReduced(context)) {
+        _arriving = arrived;
+        _arrive
+          ..duration = motionDuration(m.totalSec)
+          ..forward(from: 0);
+      }
     }
 
     return Scaffold(
@@ -344,7 +371,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     final size = Size(_view.width, _view.width * g.projection.height / g.projection.width);
     final body = ref.watch(spiritLookProvider).bodyArgb;
     return ListenableBuilder(
-      listenable: tc,
+      listenable: Listenable.merge([tc, _arrive]),
       builder: (context, _) => _viewer(
         g,
         data,
@@ -354,8 +381,24 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
         rules,
         nextRoute: _next(snap),
         faceColor: body == null ? null : Color(body),
+        lift: _lift(rules),
       ),
     );
+  }
+
+  /// 도착 연출의 지금 모습 (연출 중이 아니면 null)
+  ArrivalPinFrame? _arrivalFrame(Rules rules) {
+    final m = rules.motion.arrivalPin;
+    if (_arriving == null || m == null || !_arrive.isAnimating) return null;
+    return m.at(motionTime(_arrive, m.totalSec));
+  }
+
+  /// 떨어지는 핀 (핀이 다 꽂힌 뒤에는 null이라 지도를 다시 그리지 않는다)
+  PinLift? _lift(Rules rules) {
+    final f = _arrivalFrame(rules);
+    final id = _arriving;
+    if (f == null || id == null || (f.pinLiftPt == 0 && f.pinScale == 1)) return null;
+    return (id: id, liftPt: f.pinLiftPt, scale: f.pinScale);
   }
 
   Widget _viewer(
@@ -367,6 +410,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     Rules rules, {
     required List<LatLng> nextRoute,
     required Color? faceColor,
+    PinLift? lift,
   }) {
     return InteractiveViewer(
       transformationController: tc,
@@ -403,6 +447,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                 nextRoute: nextRoute,
                 seaRoutes: _sea(rules),
                 faceColor: faceColor,
+                lift: lift,
               ),
             ),
           ),
@@ -480,7 +525,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     final l = g.byId[id];
     if (id == null || l == null) return const [];
 
-    // 현재 목적지는 쉼터와 같은 남은 거리·도착 예정일, 다른 명소는 지금 자리에서 가는 거리
+    // 현재 목적지는 쉼터와 같은 남은 거리·도착 예정일, 다른 명소는 지금 자리에서 가는 거리, 방금 도착한 명소는 없음
     String? distance;
     final j = snap.journey;
     final isJourneyDest = j != null && j.dest.id == id;
@@ -489,7 +534,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
         j.progress.remainingKm,
         j.eta.difference(dayFromKey(snap.today)).inDays,
       );
-    } else {
+    } else if (id != _landedId) {
       final preview = ref.watch(journeyPreviewProvider(id)).value;
       if (preview != null) distance = _distanceLine(preview.totalKm, preview.etaDays);
     }
@@ -508,16 +553,25 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
           top: false,
           child: Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: LandmarkCard(
-              landmark: l,
-              frame: frame,
-              distance: distance,
-              slots: slot.count,
-              onPainting: frame == null || !slot.tapBigView ? null : () => _openPainting(l, frame),
-              primaryLabel: '출발하기',
-              onPrimary: hasJourney ? _toRest : () => _onGo(l, snap, change: false),
-              secondaryLabel: !canChange ? null : (isJourneyDest ? '여정 멈추기' : '목적지 바꾸기'),
-              onSecondary: isJourneyDest ? _onStop : () => _onGo(l, snap, change: true),
+            // 도착 연출 중이면 그 명소의 그림 칸은 찍히기 전까지 빈 칸, 찍히는 동안 1.3 → 1배
+            child: ListenableBuilder(
+              listenable: _arrive,
+              builder: (context, _) {
+                final f = id == _arriving ? _arrivalFrame(rules) : null;
+                final shown = f == null || f.stampShown ? frame : null;
+                return LandmarkCard(
+                  landmark: l,
+                  frame: shown,
+                  distance: distance,
+                  slots: slot.count,
+                  stampScale: f?.stampScale ?? 1,
+                  onPainting: shown == null || !slot.tapBigView ? null : () => _openPainting(l, shown),
+                  primaryLabel: '출발하기',
+                  onPrimary: hasJourney ? _toRest : () => _onGo(l, snap, change: false),
+                  secondaryLabel: !canChange ? null : (isJourneyDest ? '여정 멈추기' : '목적지 바꾸기'),
+                  onSecondary: isJourneyDest ? _onStop : () => _onGo(l, snap, change: true),
+                );
+              },
             ),
           ),
         ),
