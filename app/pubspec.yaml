@@ -56,6 +56,8 @@ flutter:
     - assets/map/
     # 승인된 v10 후경·v11 배경 원화
     - assets/backgrounds/v11/
+    # 쉼터 꾸밈 물품 12장 (decor.json art, Drive camp_deco_v01, domain/asset_index.dart decorDir)
+    - assets/backgrounds/camp_deco/
     # 명소 풍경화 추천101장 (최종 채택 전 검토본)
     - assets/paintings/
     # 옛 기본 소품 아이콘 6장만 남음 (칸 그림, domain/asset_index.dart). 입는 조각은 11/16 T5 정리에서 뺌

@@ -574,15 +574,16 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
             label: '지도',
             // 여정이 없으면 점 (출발하기 버튼이 없어서 목적지를 고르는 곳을 알린다, 캔버스 2-2)
             dot: snap.journey == null,
-            icon: const _SideImage('assets/backgrounds/v11/obj_rest_map_v11_clean.png', Icons.map_outlined),
+            icon: const _SideIcon('map', Icons.map_outlined,
+                fallback: _SideImage('assets/backgrounds/v11/obj_rest_map_v11_clean.png', Icons.map_outlined)),
             onTap: () => _push(context, const MapScreen()),
           ),
         'backpack' => _SideButtonSpec(
             id: id,
             label: '배낭',
             dot: _hasNew(snap),
-            icon: const _SideImage(
-                'assets/backgrounds/v11/obj_rest_backpack_v11_clean.png', Icons.backpack_outlined),
+            icon: const _SideIcon('backpack', Icons.backpack_outlined,
+                fallback: _SideImage('assets/backgrounds/v11/obj_rest_backpack_v11_clean.png', Icons.backpack_outlined)),
             onTap: () => _push(context, const AlbumScreen()),
           ),
         // 상품이 없으면(수레 자리가 비면) 상점 입구를 숨긴다 (스키마 13장)
@@ -590,7 +591,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
             id: id,
             label: '상점',
             dot: shopDot,
-            icon: const ShopCartArt(),
+            icon: const _SideIcon('shop', Icons.storefront_outlined, fallback: ShopCartArt()),
             onTap: () => openShop(context),
           ),
         // 쉼터 꾸미기: 서랍(가진 물품 중 안 놓은 것)을 열고 닫는다 (config rest.sideButtons.exits rest.decorDrawer)
@@ -598,7 +599,7 @@ class _RestScreenState extends ConsumerState<RestScreen> with TickerProviderStat
             id: id,
             label: '꾸미기',
             semantics: '쉼터 꾸미기',
-            icon: const _DecorateIcon(),
+            icon: const _SideIcon('decorate', Icons.handyman_outlined),
             onTap: _edit.toggleDrawer,
           ),
         _ => null,
@@ -692,18 +693,23 @@ class _Signal extends ChangeNotifier {
   void fire() => notifyListeners();
 }
 
-/// 옆 버튼 ‘꾸미기’ 아이콘: 납품 아이콘(기본안 망치 + 화분, 16장 11/20 Q014)이 assets/ui/에 있으면 그것, 없으면 자리표시
-class _DecorateIcon extends ConsumerWidget {
-  const _DecorateIcon();
+/// 옆 버튼 아이콘: 납품 아이콘 `icon_rest_side_<id>_v01`(config rest.sideButtons.icons, codex_camp_deco_v01 T04.
+/// 꾸미기는 기본안 망치 + 화분, 16장 11/20 Q014)이 assets/ui/에 있으면 그것, 없으면 [fallback]
+/// (쉼터 물건 그림·수레 그림, 없으면 [icon])
+class _SideIcon extends ConsumerWidget {
+  const _SideIcon(this.id, this.icon, {this.fallback});
 
-  /// config rest.sideButtons.icons의 꾸미기 이름 (codex_camp_deco_v01 T04)
-  static const _name = 'icon_rest_side_decorate_v01';
+  final String id;
+
+  /// 그림이 없거나 못 읽을 때 아이콘
+  final IconData icon;
+  final Widget? fallback;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final path = ref.watch(assetIndexProvider).value?.sprite(_name);
-    if (path == null) return const Icon(Icons.handyman_outlined, color: Palette.ink, size: 28);
-    return _SideImage(path, Icons.handyman_outlined);
+    final path = ref.watch(assetIndexProvider).value?.sprite('icon_rest_side_${id}_v01');
+    if (path == null) return fallback ?? Icon(icon, color: Palette.ink, size: 28);
+    return _SideImage(path, icon);
   }
 }
 
@@ -797,8 +803,7 @@ class _SideButtons extends StatelessWidget {
   }
 }
 
-/// 옆 버튼 그림 자리: 쉼터 물건 그림을 줄인 것 (Codex camp_deco_v01 T04 아이콘이 오면 바꾼다).
-/// 그림을 못 읽으면 아이콘
+/// 옆 버튼 그림 (납품 아이콘, 없으면 쉼터 물건 그림을 줄인 것). 그림을 못 읽으면 아이콘
 class _SideImage extends StatelessWidget {
   const _SideImage(this.file, this.fallback);
 

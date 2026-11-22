@@ -216,6 +216,7 @@ class _HomeTabsState extends ConsumerState<HomeTabs> {
                   current: current,
                   walking: walking,
                   walkDot: story || sign,
+                  art: TabIconArt.from(ref.watch(assetIndexProvider).value),
                   onTap: _select,
                 ),
               ),
