@@ -229,7 +229,9 @@ extension ShopSync on SyncService {
 
   /// 상점 화면이 읽는 그날 수레. 그날 줄이 없으면 지금 정해 저장하고(그날은 다시 정하지 않는다) 지난 날 줄은
   /// 지운다. 줄에 있는 칸 중 그사이 가지게 된 물건(사거나 걸어서 얻음, 물감 통·여행 효과 빼고)은 지금 시각으로
-  /// 팔림 표시를 한다. 상점 데이터가 없으면 빈 수레
+  /// 팔림 표시를 한다. 상점 데이터가 없으면 빈 수레.
+  /// 설치 번호(만 14세 확인 때 생김)가 없으면 정하지도 저장하지도 않고 빈 수레: 계정 삭제 직후 쉼터가 닫히기 전에
+  /// 이 값을 다시 읽으면 빈 DB에 설치 번호 없는 수레 줄·나온 횟수가 다시 생겨서다 (계정삭제_경합 노트)
   Future<TodayCart> todayCart(DateTime now) async {
     final shop = shopCatalog;
     if (shop == null) return TodayCart.empty;
@@ -237,10 +239,11 @@ extension ShopSync on SyncService {
     final day = cart.dayOf(now);
     final at = now.toUtc().millisecondsSinceEpoch;
     return db.transaction(() async {
+      final seed = (await _profileRow())?.installId;
+      if (seed == null) return TodayCart.empty;
       final summaries = await db.select(db.daySummaries).get();
       final cartKm = summaries.where((d) => d.day.compareTo(day) < 0).fold(0.0, (a, d) => a + d.distanceM) / 1000;
       final totalKm = summaries.fold(0.0, (a, d) => a + d.distanceM) / 1000;
-      final seed = (await _profileRow())?.installId ?? '';
       final owned = await _owned();
       var rows = await _cartRows(day);
       if (rows.isEmpty) {

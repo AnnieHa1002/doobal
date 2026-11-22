@@ -116,6 +116,19 @@ void main() {
       expect([for (final i in (await e.svc.todayCart(_kst('2026-11-18', 10))).fixed) i.id], ['fx_shortcut', 'fx_tailwind']);
     });
 
+    test('설치 번호가 없으면(만 14세 확인 전·계정 삭제 뒤) 정하지 않는다: 빈 수레, 줄·나온 횟수 0', () async {
+      final e = _Env();
+      await e.svc.sync(_t0);
+      final cart = await e.svc.todayCart(_kst('2026-11-18', 10));
+      expect(cart.slots, isEmpty);
+      expect(cart.fixed, isEmpty);
+      expect(await e.db.select(e.db.shopCartSlots).get(), isEmpty);
+      expect(await e.db.select(e.db.shopShown).get(), isEmpty);
+      // 확인을 마치면 그날 줄을 정한다
+      await completeOnboarding(e.db);
+      expect(await e.ids(_kst('2026-11-18', 10)), hasLength(3));
+    });
+
     test('새벽 5시 전후로 바뀐다: 새 줄은 안 나온 것 먼저라 겹치지 않고, 지난 날 줄은 지운다', () async {
       final e = await _env();
       final day1 = await e.ids(_kst('2026-11-19', 4, 59));
