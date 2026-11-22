@@ -81,7 +81,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!mounted) return;
     // 지운 값을 쥔 상태를 비운다. 시작 관문이 프로필을 다시 읽어 환영 화면을 띄운다.
     // 쉼터가 사라지기 전에 걸음·여정 상태를 다시 읽어서 설치 기록(SyncState·TravelFund 한 줄씩,
-    // 경비 0)이 새로 생길 수 있다. 처음 설치해서 첫 동기화가 만드는 것과 같은 빈 상태다
+    // 경비 0)이 새로 생길 수 있다. 처음 설치해서 첫 동기화가 만드는 것과 같은 빈 상태다.
+    // 쉼터 수레도 다시 읽지만 설치 번호가 없어서 줄을 정하지 않는다 (ShopSync.todayCart)
     ref.invalidate(onboardingStepProvider);
     ref.invalidate(snapshotProvider);
     ref.invalidate(mapDataProvider);
