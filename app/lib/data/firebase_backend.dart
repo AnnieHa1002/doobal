@@ -11,12 +11,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import 'backup_store.dart';
 import 'server.dart';
+import 'server_options.dart';
 
-/// 서버를 어디에 붙일까 (빌드 때 --dart-define=DOOBAL_SERVER=…).
-/// - off(기본): 서버 없이 돈다. 실제 프로젝트 옵션(firebase_options.dart)이 생기기 전까지 기본이다
-/// - emulator: 맥에서 켠 에뮬레이터(demo-doobal). 디버그 빌드에서만 듣는다
-/// - real: 실제 프로젝트(doobal-47236). [realFirebaseOptions]가 생긴 뒤에 쓴다
-const serverModeName = String.fromEnvironment('DOOBAL_SERVER', defaultValue: 'off');
+/// 서버를 어디에 붙일까 (빌드 때 --dart-define=DOOBAL_SERVER=off|emulator|real, [ServerMode]).
+/// 기본은 real이고, 실제 프로젝트 값(secrets.json, [SecretKeys])을 주지 않은 빌드·시험은 서버 없이 돈다
+const serverModeName = String.fromEnvironment('DOOBAL_SERVER', defaultValue: 'real');
 
 /// 에뮬레이터 주소. 비우면 127.0.0.1이고 안드로이드 에뮬레이터에서는 패키지가 10.0.2.2로 바꾼다.
 /// 무선 adb 실기기는 맥의 LAN 주소를 주거나, `adb reverse`로 포트를 넘기고 127.0.0.1을 준다
@@ -27,12 +26,10 @@ const _emulatorHost = String.fromEnvironment('DOOBAL_EMULATOR_HOST');
 /// 같은 값을 주면 같은 사람이라서 다른 기기에서 '그 계정으로 바꾸기'를 시험할 수 있다
 const _fakeLoginId = String.fromEnvironment('DOOBAL_FAKE_LOGIN', defaultValue: '1');
 
-/// 구글 로그인의 서버 클라이언트 id (안드로이드 Credential Manager가 요구한다).
-/// 실제 프로젝트를 등록하면 google-services.json의 웹 클라이언트 id다
-const _googleServerClientId = String.fromEnvironment('DOOBAL_GOOGLE_SERVER_CLIENT_ID');
+/// 구글 로그인의 서버 클라이언트 id (안드로이드 Credential Manager가 요구한다). secrets.json에서 받는다
+final _googleServerClientId = secretValue(buildSecrets, SecretKeys.googleServerClientId);
 
 const _region = 'asia-northeast3';
-const _emulatorProject = 'demo-doobal';
 
 /// 함수 하나를 기다리는 시간. 방명록 화면이 오래 멈추지 않게 짧게 둔다
 const _callTimeout = Duration(seconds: 20);
@@ -41,30 +38,23 @@ const _callTimeout = Duration(seconds: 20);
 /// 이 시간 뒤에는 기다리지 않는다
 const _writeTimeout = Duration(seconds: 20);
 
-/// 실제 프로젝트 옵션. `flutterfire configure`가 만드는 firebase_options.dart의
-/// DefaultFirebaseOptions.currentPlatform으로 바꾼다 (Annie와 같이, 아직 안 함)
-FirebaseOptions? realFirebaseOptions() => null;
-
-/// 서버를 켠다. 꺼 둔 빌드거나 옵션이 없거나 실패하면 null (앱은 서버 없이 돈다).
-/// 네트워크는 기다리지 않는다 (초기화는 기기 안의 일)
+/// 서버를 켠다. 꺼 둔 빌드거나 실제 프로젝트 값이 비었거나 실패하면 null (앱은 서버 없이 돈다).
+/// 꺼진 까닭은 디버그 로그에만 남긴다(키 이름만). 네트워크는 기다리지 않는다 (초기화는 기기 안의 일)
 Future<ServerBackend?> startServer() async {
-  final emulator = serverModeName == 'emulator' && !kReleaseMode;
-  final real = serverModeName == 'real';
-  if (!emulator && !real) return null;
+  final plan = planServer(
+    modeName: serverModeName,
+    values: buildSecrets,
+    platform: defaultTargetPlatform,
+    release: kReleaseMode,
+  );
+  final options = plan.options;
+  if (options == null) {
+    if (!kReleaseMode) debugPrint('서버 끔: ${plan.reason}');
+    return null;
+  }
+  final emulator = plan.mode == ServerMode.emulator;
+  final real = plan.mode == ServerMode.real;
   try {
-    final options = emulator
-        // 가짜 값. 꼴만 맞춘다 (함수 SDK가 Firebase Installations로 API 키 꼴 AIza…·39자를 검사한다)
-        ? const FirebaseOptions(
-            apiKey: 'AIzaSyDemoKeyForFirebaseEmulatorOnly000',
-            appId: '1:1234567890:android:0000000000000000',
-            messagingSenderId: '1234567890',
-            projectId: _emulatorProject,
-          )
-        : realFirebaseOptions();
-    if (options == null) {
-      debugPrint('서버: 실제 프로젝트 옵션이 아직 없어서 끈다');
-      return null;
-    }
     final app = await Firebase.initializeApp(options: options);
     final auth = FirebaseAuth.instanceFor(app: app);
     final firestore = FirebaseFirestore.instanceFor(app: app);
@@ -80,7 +70,12 @@ Future<ServerBackend?> startServer() async {
     }
     // 에뮬레이터는 App Check를 보지 않는다. 가짜 API 키로 켜면 토큰을 받다 실패해서 함수·Firestore 호출이
     // 모두 막히므로(손 확인 11/9) 실제 프로젝트에서만 켠다
-    if (real) await _startAppCheck(app);
+    if (real) {
+      await _startAppCheck(app);
+      if (!kReleaseMode && _googleServerClientId == null) {
+        debugPrint('서버: ${SecretKeys.googleServerClientId}가 비어 안드로이드 구글 연결은 준비 중');
+      }
+    }
     final fake = emulator && _fakeLoginId.isNotEmpty;
     return ServerBackend(
       auth: FirebaseAuthGateway(auth, fakeLoginId: fake ? _fakeLoginId : null),
@@ -96,17 +91,20 @@ Future<ServerBackend?> startServer() async {
   }
 }
 
-/// App Check: 디버그 빌드는 디버그 제공자(로그에 나오는 토큰을 콘솔에 등록해야 통과), 출시 빌드는
+/// App Check: 디버그 빌드는 디버그 제공자(secrets.json의 토큰이나 로그에 나오는 토큰을 콘솔에 등록해야 통과), 출시 빌드는
 /// Play Integrity·App Attest. 강제는 서버(함수 enforceAppCheck)와 콘솔이 정한다. 에뮬레이터에서는 켜지 않는다.
 /// 실패해도 앱은 돈다 (토큰 없이 부르면 강제하는 곳에서만 거절된다)
 Future<void> _startAppCheck(FirebaseApp app) async {
+  // 디버그 토큰을 secrets.json에 두면 다시 설치해도 같은 토큰이라 콘솔에 한 번만 등록한다
+  final debugToken = secretValue(buildSecrets, SecretKeys.appCheckDebug);
   try {
     await FirebaseAppCheck.instanceFor(app: app).activate(
-      providerAndroid:
-          kReleaseMode ? const AndroidPlayIntegrityProvider() : const AndroidDebugProvider(),
+      providerAndroid: kReleaseMode
+          ? const AndroidPlayIntegrityProvider()
+          : AndroidDebugProvider(debugToken: debugToken),
       providerApple: kReleaseMode
           ? const AppleAppAttestWithDeviceCheckFallbackProvider()
-          : const AppleDebugProvider(),
+          : AppleDebugProvider(debugToken: debugToken),
     );
   } catch (e) {
     debugPrint('App Check 시작 실패: $e');
@@ -209,12 +207,14 @@ class FirebaseAuthGateway implements AuthGateway {
     if (provider != LinkProvider.google) throw const LinkUnavailable();
     final google = GoogleSignIn.instance;
     if (!_googleReady) {
-      if (defaultTargetPlatform == TargetPlatform.android && _googleServerClientId.isEmpty) {
+      // 안드로이드는 웹 클라이언트 id, iOS는 iOS 클라이언트 id(옵션의 iosClientId)가 있어야 창을 띄운다
+      final ios = defaultTargetPlatform == TargetPlatform.iOS;
+      final iosClientId = ios ? _auth.app.options.iosClientId : null;
+      if (defaultTargetPlatform == TargetPlatform.android && _googleServerClientId == null) {
         throw const LinkUnavailable();
       }
-      await google.initialize(
-        serverClientId: _googleServerClientId.isEmpty ? null : _googleServerClientId,
-      );
+      if (ios && iosClientId == null) throw const LinkUnavailable();
+      await google.initialize(clientId: iosClientId, serverClientId: _googleServerClientId);
       _googleReady = true;
     }
     if (!google.supportsAuthenticate()) throw const LinkUnavailable();

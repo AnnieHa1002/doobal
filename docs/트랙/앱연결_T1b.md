@@ -67,7 +67,8 @@ cd app && flutter run --dart-define=DOOBAL_SERVER=emulator
 | 파일 | 내용 |
 |---|---|
 | `lib/data/server.dart` (새) | Firebase를 읽지 않는 약속: `AuthGateway`·`ServerApi`·`RemoteStore`·`KakaoLogin`·`ServerBackend`, `ServerError`(code·`details.reason`·offline), `KakaoSignIn`(linked·needsConfirm·switched), `LinkConflict` |
-| `lib/data/firebase_backend.dart` (새) | `startServer()`: `DOOBAL_SERVER=off·emulator·real`(기본 off), 에뮬레이터 연결, App Check. Firebase 구현: Auth(가짜 구글·애플 자격 포함), Callable 6개, users·받은 하트·`config/moderation`, `FirestoreBackupStore`, `FakeKakaoLogin` |
+| `lib/data/firebase_backend.dart` (새) | `startServer()`: `DOOBAL_SERVER=off·emulator·real`(11/22부터 기본 real, 값 없으면 off), 에뮬레이터 연결, App Check. Firebase 구현: Auth(가짜 구글·애플 자격 포함), Callable 6개, users·받은 하트·`config/moderation`, `FirestoreBackupStore`, `FakeKakaoLogin` |
+| `lib/data/server_options.dart` (새, 11/22) | 순수 함수 `planServer()`·`realFirebaseOptions()`, 값 이름 `SecretKeys`, `buildSecrets`(secrets.json), 에뮬레이터 가짜 옵션 |
 | `lib/app/account_service.dart` (새) | 익명 로그인(만 14세 확인 뒤, 한 번만), users 올리기(차례로, 같은 값 건너뜀), 연결·바꾸기+복원·해제, 서버 계정 삭제, `linkedOf` |
 | `lib/app/guestbook_server.dart` (새) | 남기기(서버 먼저, 오프라인이면 pending), pending 다시 올리기, 읽기·반응·받은 하트 |
 | `lib/app/server_providers.dart` (새) | `serverBackendProvider`(기본 null), `authUserProvider`, `accountServiceProvider`, `accountStateProvider`, `guestbookServerProvider`, `myHeartsProvider` |
@@ -84,7 +85,7 @@ cd app && flutter run --dart-define=DOOBAL_SERVER=emulator
 
 ## 판단한 곳 (다르면 말해 주세요)
 
-1. **서버는 빌드 때 고른다.** `--dart-define=DOOBAL_SERVER=emulator|real|off`, 지금 기본은 off(옵션 파일이 없어서). off·시험에서는 `serverBackendProvider`가 null이라 모든 것이 지금처럼 기기 안에서 돈다. 실제 프로젝트를 붙이면 기본을 real로 바꾼다. 에뮬레이터는 디버그 빌드에서만 듣는다.
+1. **서버는 빌드 때 고른다.** `--dart-define=DOOBAL_SERVER=emulator|real|off`, 지금 기본은 off(옵션 파일이 없어서). off·시험에서는 `serverBackendProvider`가 null이라 모든 것이 지금처럼 기기 안에서 돈다. 실제 프로젝트를 붙이면 기본을 real로 바꾼다. 에뮬레이터는 디버그 빌드에서만 듣는다. **11/22: 기본을 real로 바꿨다. secrets.json 값이 없으면 지금처럼 서버 없이 돈다(아래 ‘실제 연결 준비’).**
 2. **`sign_in_with_apple`은 넣지 않았다.** `firebase_auth`의 `AppleAuthProvider`가 iOS는 기기 창, 안드로이드는 웹 창을 띄워서 패키지 6개로 된다. 허락받은 7개 중 하나를 안 쓴 것.
 3. **App Check는 실제 프로젝트에서만 켠다.** 디버그 빌드는 디버그 제공자(로그의 토큰을 콘솔에 등록), 출시 빌드는 Play Integrity·App Attest(+DeviceCheck). 에뮬레이터에서 켜면 호출이 모두 막혀서 끈다(손 확인 ①).
 4. **카카오 연결 상태는 DB 열 대신 `Profile.linkConsentAt`으로 버틴다.** 구글·애플은 Firebase Auth가 알지만 카카오는 Auth 연결이 아니다. ‘커스텀 토큰 세션 + 연결 동의 시각 있음’이면 카카오로 보고, 해제하면 동의 시각을 지운다(다시 연결할 때 동의 줄이 다시 보이니 뜻도 맞다). 제대로 하려면 열이 필요하다(합칠 때 함께 고칠 것).
@@ -136,19 +137,198 @@ cd app && flutter run --dart-define=DOOBAL_SERVER=emulator
 - **override**: `syncServiceProvider`가 기다리는 새 provider가 없어서 네 시험 파일(`ui_env.dart` 등)은 안 고쳤다.
 - **DB 열 제안**(통합 세션이 번호를 잡을 때): `Profile.kakaoLinkedAt`(또는 `linkedProvider`). 생기면 판단 4의 `linkConsentAt` 겸용을 걷어 낸다. 그 밖의 열은 필요 없었다(글 상태는 기존 `PostStatus` pending·sent·rejected).
 - `firestore.rules`·`functions/src`는 안 고쳤다. `functions/scripts/fake_kakao.ts`만 더함(빌드에 들어가지만 배포 `ignore`에 `lib/scripts`가 있다).
-- iOS(T6b, 11/28): FlutterFire 새 판의 iOS 최소 판·Podfile, `GoogleService-Info.plist`, 애플 로그인 capability. 이번에 안 봤다.
+- iOS(T6b, 11/28): FlutterFire 새 판의 iOS 최소 판·Podfile, 애플 로그인 capability. 이번에 안 봤다. `GoogleService-Info.plist`는 쓰지 않는다(11/22, secrets.json iOS 키).
 - 빌드 중 Gradle이 Android SDK Platform 34를 스스로 받았다(플러그인이 요구). Kotlin 내장 이전 경고(`migrate-to-built-in-kotlin`)가 플러그인 쪽에서 난다(빌드는 됨).
 - `CLAUDE.md` 리포 구조 `functions/` 줄(‘배포·앱 연결 전’), 계획 문서 T1b 줄.
 - 손 확인 때 만든 AVD `doobal_t1b`(Homebrew SDK `~/.android/avd`)가 남아 있다. 필요 없으면 `avdmanager delete avd -n doobal_t1b`.
 
-## 실제 프로젝트 연결에 남은 일 (Annie 체크리스트, 모두 Annie 허락 뒤)
+## 실제 연결 준비 (11/22, 키·콘솔 없이 한 코드)
 
-1. **Blaze**: 콘솔 → 사용량 및 결제에서 요금제 확인(통합 세션이 확인 못 함). Functions 배포에 필요.
-2. **로그인 방법**: Authentication → 로그인 방법에서 익명·Google 켜기. Apple은 Apple Developer(11/28) 뒤 Services ID·키를 넣어 켠다.
-3. **안드로이드 앱 등록**: 패키지 `com.annieha.doobal`, SHA-1·SHA-256(디버그 키: `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`, 출시 키는 T6a 서명 뒤 + Play 앱 서명 키). `flutterfire configure`(flutterfire_cli 설치 허락 필요)로 `firebase_options.dart`·`google-services.json`을 만들고 `realFirebaseOptions()`를 그것으로, `DOOBAL_SERVER` 기본을 real로. 구글 로그인은 웹 클라이언트 id가 필요하다(지금은 `--dart-define=DOOBAL_GOOGLE_SERVER_CLIENT_ID`, 등록 뒤 옵션에서 읽게 바꿈).
-4. **`firebase login`**: 지금 CLI에 로그인된 계정이 없다(`functions/node_modules/.bin/firebase login:list` → 없음). 맥 gcloud 계정은 다른 사람 것이라 쓰지 않는다.
-5. **카카오(1월 초)**: `functions/.env.doobal-47236`에 `KAKAO_APP_ID`, Functions 서비스 계정에 ‘서비스 계정 토큰 생성자’ 역할(`createCustomToken`). 앱은 `kakao_flutter_sdk` 허락 뒤 `KakaoLogin` 구현 한 곳만 바꾸면 된다.
-6. **배포**: `firebase deploy --only firestore:rules,firestore:indexes,functions --project doobal-47236`. 지금 Firestore는 프로덕션 모드(전부 거부)라 규칙 배포 전에는 앱이 아무것도 못 읽고 쓴다.
-7. **seed**: `GCLOUD_PROJECT=doobal-47236 npm run seed -- --real`(config/guestbook·config/moderation). 없으면 글을 받지 않는다.
-8. **App Check**: 콘솔에 Play Integrity(SHA-256)·App Attest 등록, 디버그 빌드 로그의 디버그 토큰 등록. **함수는 배포 환경에서 이미 App Check를 강제한다**(`enforceAppCheck`)라 등록 전에 배포하면 Callable이 모두 거절된다. Firestore 강제는 지표를 본 뒤 켠다.
-9. (선택) 쓰지 않는 익명 계정 자동 정리는 Identity Platform 업그레이드가 필요하다. 판단 11과 같이 본다.
+브랜치 `claude/t1b-real-prep-bd51b4`, dev-batch `013ac4e`에서 시작했다. 실제 키를 만들거나 적지 않았고, 콘솔과 `firebase login`도 하지 않았다.
+
+- `lib/data/server_options.dart`(새): 순수 함수 `planServer()`·`realFirebaseOptions()`. 빌드 때 `--dart-define-from-file=secrets.json`으로 받은 값(`SecretKeys`)으로 `FirebaseOptions`를 만든다. flutterfire 파일(`firebase_options.dart`·`google-services.json`·`GoogleService-Info.plist`)과 안드로이드 google-services 플러그인은 쓰지 않는다.
+- `DOOBAL_SERVER` 기본을 off에서 **real**로 바꿨다. 그 플랫폼의 필수 값이 하나라도 비었거나 견본 값(`Fake…`)이면 서버 없이 돈다(지금과 같음). 꺼진 까닭은 디버그 로그 `서버 끔: …`에 키 이름만 남는다.
+- `app/secrets.json.example`(새): 키 9개와 설명. 값은 모두 `Fake: …`다.
+- App Check 디버그 토큰을 secrets.json에서 받는다(`DOOBAL_APP_CHECK_DEBUG_TOKEN`, 디버그 빌드만). iOS 구글 로그인은 옵션의 iOS 클라이언트 id를 쓰고, 없으면 `준비 중`이다(iOS 손 확인 전).
+- 시험 `test/data/server_options_test.dart` 18개: off·emulator(디버그·출시)·모르는 이름·기본 real·값 다 있음·하나씩 빠짐·빈칸·앞뒤 공백·견본 값·선택 값·iOS·다른 플랫폼, 견본 파일 키가 코드와 같은지.
+
+| 키 (secrets.json) | 필수 | 어디서 |
+|---|---|---|
+| `DOOBAL_FIREBASE_PROJECT_ID` | 둘 다 | `doobal-47236` |
+| `DOOBAL_FIREBASE_SENDER_ID` | 둘 다 | Firebase 콘솔 → 프로젝트 설정 → 일반 → 프로젝트 번호 |
+| `DOOBAL_FIREBASE_ANDROID_API_KEY` | 안드로이드 | Google Cloud 콘솔 → API 및 서비스 → 사용자 인증 정보 → `Android key (auto created by Firebase)` → 키 표시 |
+| `DOOBAL_FIREBASE_ANDROID_APP_ID` | 안드로이드 | 프로젝트 설정 → 일반 → 내 앱 → 안드로이드 앱 → 앱 ID |
+| `DOOBAL_FIREBASE_IOS_API_KEY` | iOS (11/28 뒤) | 사용자 인증 정보 → `iOS key (auto created by Firebase)` |
+| `DOOBAL_FIREBASE_IOS_APP_ID` | iOS (11/28 뒤) | 내 앱 → iOS 앱 → 앱 ID |
+| `DOOBAL_FIREBASE_IOS_CLIENT_ID` | 아님 | iOS 앱 등록 뒤 사용자 인증 정보 → OAuth 2.0 클라이언트 ID → iOS 클라이언트. 없으면 iOS 구글 연결만 준비 중 |
+| `DOOBAL_GOOGLE_SERVER_CLIENT_ID` | 아님 | Authentication → 로그인 방법 → Google → 웹 SDK 구성 → 웹 클라이언트 ID. 없으면 안드로이드 구글 연결만 준비 중 |
+| `DOOBAL_APP_CHECK_DEBUG_TOKEN` | 아님 (디버그 빌드) | App Check → 앱 → 디버그 토큰 관리 → 생성. 없으면 로그에 나오는 기기 토큰을 쓴다(설치할 때마다 바뀜) |
+
+## 실제 프로젝트 연결 (Annie 체크리스트, 순서대로, 모두 Annie가 직접)
+
+키 값은 어디에도 적지 않는다. 콘솔에서 본 값은 먼저 비밀번호 관리자의 ‘두발 Firebase’ 항목에 넣고, secrets.json에는 **비밀번호 관리자에서 복사**해 붙인다. 채팅·문서·커밋 메시지·Drive에는 붙이지 않는다. `.firebaserc`가 없어서 명령마다 `--project doobal-47236`을 붙인다.
+
+### 1. 콘솔 확인 (11/10 켠 것)
+
+- Firebase 콘솔 → 사용량 및 결제: Blaze인지.
+- Firestore → 데이터베이스: 위치가 `asia-northeast3`인지(함수 트리거 리전과 같아야 한다).
+- Authentication → 로그인 방법: 익명·Google이 켜져 있는지. Apple은 11/28 뒤.
+
+### 2. `firebase login` (리포 `functions/`에서)
+
+```bash
+cd functions && npm ci
+```
+
+```bash
+npx firebase login
+```
+
+```bash
+npx firebase projects:list
+```
+
+- 브라우저가 열리면 프로젝트 주인 Google 계정으로 들어간다. 목록에 `doobal-47236`이 보이면 된다.
+- 이 맥의 gcloud 계정은 다른 사람 것이라 쓰지 않는다. `firebase login`은 gcloud와 따로 저장된다.
+
+### 3. 안드로이드 앱 등록과 SHA
+
+```bash
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android | grep -E "SHA1|SHA256"
+```
+
+(`android`는 디버그 키의 공개 기본 비밀번호다. 출시 키가 아니다.)
+
+- Firebase 콘솔 → 프로젝트 설정(톱니) → 일반 → 내 앱 → 앱 추가 → Android.
+  - 패키지 이름 `com.annieha.doobal`, 앱 닉네임 `두발 안드로이드`, ‘디버그 서명 인증서 SHA-1’에 위 SHA1.
+  - ‘google-services.json 다운로드’와 ‘Firebase SDK 추가’ 단계는 받지 않고 다음으로 넘긴다(앱이 쓰지 않는다). 받았으면 리포에 두지 말고 지운다.
+- 등록한 안드로이드 앱 칸 → ‘디지털 지문 추가’ → SHA-256도 넣는다(App Check Play Integrity가 쓴다).
+- 출시 키(T6a 업로드 키)와 Play 앱 서명 키(Play Console → 앱 무결성 → 앱 서명)의 SHA-1·SHA-256은 생기면 같은 곳에 더한다.
+
+### 4. 값 모으기 → 비밀번호 관리자
+
+위 표의 ‘어디서’를 따라 프로젝트 번호·안드로이드 앱 ID·안드로이드 API 키·웹 클라이언트 ID를 비밀번호 관리자에 넣는다. `Android key (auto created by Firebase)`가 목록에 없으면, 프로젝트 설정 → 내 앱에서 google-services.json을 리포 밖(다운로드 폴더)에 받는다. 그 파일의 `current_key` 값을 비밀번호 관리자로 옮기고 파일은 지운다.
+
+### 5. API 키 제한
+
+Google Cloud 콘솔(프로젝트 `doobal-47236`) → API 및 서비스 → 사용자 인증 정보 → `Android key (auto created by Firebase)` → 수정.
+
+- 애플리케이션 제한사항: ‘Android 앱’ → 항목 추가: 패키지 `com.annieha.doobal` + 3의 디버그 SHA-1 → 저장.
+- 출시·Play 앱 서명 SHA-1이 생기면 항목을 더한다. 빠진 SHA-1로 서명한 빌드는 로그인·Firestore가 막힌다.
+- API 제한사항: Firebase가 정해 둔 목록을 바꾸지 않는다.
+- 적용까지 몇 분 걸린다.
+- iOS 키(11/28 뒤): ‘iOS 앱’ 제한 + 번들 ID `com.annieha.doobal`.
+
+### 6. App Check 등록 (함수 배포 전에)
+
+함수는 배포 환경에서 App Check를 강제한다(`enforceAppCheck`). 등록하기 전에는 Callable(방명록 남기기·읽기·반응, 카카오, 날씨, 계정 삭제)이 모두 거절된다.
+
+- Firebase 콘솔 → App Check → 앱 → 안드로이드 앱 → Play Integrity → 등록(3의 SHA-256이 필요하다).
+- 같은 줄 메뉴(⋮) → 디버그 토큰 관리 → 디버그 토큰 추가 → 이름 `두발 디버그` → 생성 → 값을 비밀번호 관리자에 넣는다. 이것이 `DOOBAL_APP_CHECK_DEBUG_TOKEN`이다.
+- App Check → API 탭에서 Firestore·Authentication **강제는 켜지 않는다**(지표를 본 뒤).
+
+### 7. 규칙·함수 배포 (`functions/`에서, firebase.json은 리포 루트에서 찾는다)
+
+기상청 키가 들어 있는지 본다(버전 목록만 나오고 값은 나오지 않는다):
+
+```bash
+npx firebase functions:secrets:get KMA_SERVICE_KEY --project doobal-47236
+```
+
+없으면 넣는다. 값은 묻는 칸에 비밀번호 관리자에서 복사해 붙인다:
+
+```bash
+npx firebase functions:secrets:set KMA_SERVICE_KEY --project doobal-47236
+```
+
+배포:
+
+```bash
+npx firebase deploy --only firestore:rules,firestore:indexes,functions --project doobal-47236
+```
+
+- `KAKAO_APP_ID`를 물으면 1월 카카오 앱 키 전까지 `0`을 넣는다(가안: 어떤 카카오 토큰도 통과하지 않는다). 답은 `functions/.env.doobal-47236`(무시 목록)에 저장된다.
+- 첫 배포는 필요한 API(Cloud Functions·Cloud Build·Artifact Registry·Eventarc 등)를 켜자고 묻는다 → 예. 권한이 퍼지기 전이라 트리거 함수가 실패하면 몇 분 뒤 같은 명령을 다시 친다.
+- 배포 뒤 콘솔 → Functions에 함수가 `asia-northeast3`으로 보이는지 본다. 규칙을 배포하기 전에는 Firestore가 프로덕션 모드(전부 거부)라 앱이 아무것도 읽고 쓰지 못한다.
+
+### 8. seed (`config/guestbook`·`config/moderation`·`config/weather`)
+
+seed는 Firebase Admin을 써서, `firebase login`이 아니라 Google 기본 자격(ADC)이 필요하다. 이 맥에 있는 다른 사람의 gcloud 설정을 건드리지 않게 Annie 전용 설정 폴더를 쓴다(가안):
+
+```bash
+CLOUDSDK_CONFIG=$HOME/.config/gcloud-annie gcloud auth application-default login
+```
+
+```bash
+npm run build && GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gcloud-annie/application_default_credentials.json GCLOUD_PROJECT=doobal-47236 npm run seed -- --real
+```
+
+- `설정 문서를 넣었어요 (doobal-47236)`가 나오면 Firestore에 문서 3개가 보인다. 없으면 방명록이 글을 받지 않는다.
+- 다 쓰면 자격을 지울 수 있다:
+
+```bash
+CLOUDSDK_CONFIG=$HOME/.config/gcloud-annie gcloud auth application-default revoke
+```
+
+### 9. secrets.json 채우기 (리포 `app/`에서)
+
+```bash
+cp secrets.json.example secrets.json
+```
+
+```bash
+git check-ignore -v secrets.json
+```
+
+- 두 번째 명령이 `.gitignore:…:secrets.json`을 보여 줘야 한다(무시 목록). 아무것도 안 나오면 멈추고 묻는다.
+- 편집기로 secrets.json을 열어 `"Fake: …"`를 하나씩 **비밀번호 관리자에서 복사**한 값으로 바꾼다. iOS 세 줄은 11/28 전까지 `Fake…` 그대로 둔다(빈 값으로 본다).
+- 이 파일은 그 체크아웃에만 있다. 워크트리에서 빌드하면 값이 없어 서버 없이 돈다. 그때는 이 파일의 절대 경로를 준다.
+
+### 10. 빌드
+
+디버그(폰 확인용, App Check 디버그 토큰):
+
+```bash
+flutter run --dart-define-from-file=secrets.json
+```
+
+- 로그에 `서버 끔: …`이 없으면 붙은 것이다. `서버 끔: 실제 프로젝트 값이 비었다: <키>`가 나오면 그 키가 비었거나 `Fake`로 남았다.
+- 디버그 메뉴의 백업 시험 화면 연결 줄이 `실제 프로젝트 doobal-47236`이다.
+- 첫 실행 → 만 14세 확인 → 콘솔 Authentication 사용자에 익명 1명. 닉네임을 정하면 Firestore `users/{uid}`.
+
+출시(Play 내부 테스트에 올릴 때, T6a 서명 뒤):
+
+```bash
+flutter build appbundle --release --dart-define-from-file=secrets.json
+```
+
+- `--dart-define-from-file`을 빠뜨리면 서버 없이 도는 앱이 된다. 출시 빌드는 까닭 로그도 남기지 않는다.
+- 에뮬레이터는 그대로 `--dart-define=DOOBAL_SERVER=emulator`(실제 값을 보지 않는다). 값을 줘도 서버를 끄려면 `--dart-define=DOOBAL_SERVER=off`.
+
+### 11. 나중에
+
+- 카카오(1월 초): `functions/.env.doobal-47236`의 `KAKAO_APP_ID`를 진짜 앱 ID로 바꾼다. Google Cloud 콘솔 → IAM에서 Functions 실행 서비스 계정에 ‘서비스 계정 토큰 생성자’ 역할을 준다(`createCustomToken`). 함수를 다시 배포한다. 앱은 `kakao_flutter_sdk` 허락 뒤 `KakaoLogin` 한 곳만 바꾼다.
+- iOS(11/28 뒤, T6b): iOS 앱을 등록한다(번들 ID `com.annieha.doobal`). iOS 세 줄을 secrets.json에 넣고, iOS 키를 제한하고(5), App Check App Attest를 등록한다.
+- 애플 로그인: Services ID와 키를 Firebase 콘솔에만 넣는다(`.p8`은 리포에 두지 않는다).
+- iOS 구글 로그인: `Info.plist` URL 스킴(거꾸로 쓴 클라이언트 id)이 더 필요하다. `Secrets.xcconfig`(무시 목록)에서 읽게 할 일이고 코드는 아직이다.
+- (선택) 쓰지 않는 익명 계정 자동 정리는 Identity Platform 업그레이드가 필요하다.
+
+## 판단 (11/22 실제 연결 준비, 다르면 말해 주세요)
+
+1. **기본 real, 값이 없으면 off.** secrets.json을 주는 것만으로 붙고, 값 없는 빌드·시험·워크트리 빌드는 지금처럼 기기 안에서 돈다. 에뮬레이터는 그대로 `DOOBAL_SERVER=emulator`.
+2. **`Fake`로 시작하는 값은 빈 값으로 본다.** 견본을 그대로 복사해 빌드해도 실제 연결을 켜지 않게 했다. 실제 값은 `AIza`·`1:`·숫자·`doobal`로 시작해 겹치지 않는다.
+3. **필수는 플랫폼마다 4개**(프로젝트 id·프로젝트 번호·API 키·앱 ID). 구글 클라이언트 id 둘과 App Check 디버그 토큰은 선택이다. 없으면 그 기능만 `준비 중`이고 디버그 로그에 한 줄 남는다.
+4. **견본 이름은 `app/secrets.json.example`**(가안). `secrets.example.json`은 `.gitignore`의 `secrets.*.json`과 `check_secrets.py`의 비밀 값 파일 이름 규칙에 둘 다 걸린다. 이 이름은 규칙을 바꾸지 않고 통과하고, 내용 검사는 그대로 받는다.
+5. **Dart 상수 이름은 `androidKey`·`iosKey`·`appCheckDebug`.** `androidApiKey = 'DOOBAL_…'` 꼴이 검사의 ‘키처럼 보이는 값’에 오탐돼서다. 검사 규칙은 바꾸지 않았다.
+6. **꺼진 까닭은 디버그·프로필 빌드에서만 로그를 남긴다.** 키 이름만 남고 값은 남기지 않는다. 기존 `서버 시작 실패: …` 로그는 그대로 뒀다.
+7. **넣지 않은 옵션**: `storageBucket`·`authDomain`·웹 앱 값(Storage·웹을 쓰지 않음). iOS 번들 ID는 코드 상수(`com.annieha.doobal`).
+8. **`flutterfire_cli`는 이제 필요 없다.** 계획 T1b 줄의 ‘`flutterfire_cli` 허락’은 뺄 수 있다.
+9. **App Check 디버그 토큰을 secrets.json에 둔다.** 다시 설치해도 같은 토큰이라 콘솔에 한 번만 등록한다. 새어 나가면 콘솔에서 그 토큰만 지우면 된다.
+
+## 질문 대장 후보 (11/22)
+
+1. **견본 파일 이름**: ① `app/secrets.json.example`(지금, 규칙 그대로) ② `app/secrets.example.json` + `.gitignore`에 `!app/secrets.example.json` + `check_secrets.py`의 `ALLOWED_FILES` 한 줄(`functions/.env.demo-doobal` 선례, 규칙을 느슨하게 하는 일이라 Annie 허락). 추천 ①.
+2. **1월 전 배포 때 `KAKAO_APP_ID`**: ① `0`(가안, 카카오 토큰이 하나도 통과하지 않음) ② 카카오 함수 둘을 빼고 배포(명령이 함수 목록으로 길어진다). 추천 ①.
+3. **seed 자격**: ① Annie 전용 gcloud 설정 폴더(가안, 다른 사람 gcloud 설정을 건드리지 않음) ② 콘솔에서 손으로 문서 3개(moderation이 커서 틀리기 쉬움). 추천 ①.
+4. **폰 확인 빌드**: 폰에 직접 설치한 출시 빌드는 Play Integrity를 통과하지 못할 수 있다(Play에서 받은 앱이 아니라서, 추정). 그러면 Callable이 거절된다. 추천: 폰 확인은 디버그 빌드 + 디버그 토큰으로 하고, 출시 빌드 확인은 Play 내부 테스트(T6a) 뒤에.
+5. **합칠 때(통합 세션)**: `CLAUDE.md` 리포 구조에 `app/secrets.json.example` 한 줄, 계획 T1b 줄에서 `flutterfire_cli` 허락 빼기·‘서버 기본값을 real로’ 끝냄 표시. `tools/check_secrets.py` `FAKE`의 에뮬레이터 키 옆 주석이 `firebase_backend.dart`를 가리키는데, 가짜 옵션은 `server_options.dart`로 옮겼다(값으로 맞추니 검사는 통과, 주석만 낡음, 이 트랙은 그 파일을 안 고침). DB 열 `Profile.kakaoLinkedAt`은 그대로 통합 세션 몫.
