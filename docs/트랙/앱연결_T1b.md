@@ -148,7 +148,7 @@ cd app && flutter run --dart-define=DOOBAL_SERVER=emulator
 
 - `lib/data/server_options.dart`(새): 순수 함수 `planServer()`·`realFirebaseOptions()`. 빌드 때 `--dart-define-from-file=secrets.json`으로 받은 값(`SecretKeys`)으로 `FirebaseOptions`를 만든다. flutterfire 파일(`firebase_options.dart`·`google-services.json`·`GoogleService-Info.plist`)과 안드로이드 google-services 플러그인은 쓰지 않는다.
 - `DOOBAL_SERVER` 기본을 off에서 **real**로 바꿨다. 그 플랫폼의 필수 값이 하나라도 비었거나 견본 값(`Fake…`)이면 서버 없이 돈다(지금과 같음). 꺼진 까닭은 디버그 로그 `서버 끔: …`에 키 이름만 남는다.
-- `app/secrets.json.example`(새): 키 9개와 설명. 값은 모두 `Fake: …`다.
+- `app/secrets.json.example`(새): 키 9개와 설명. 값은 모두 `Fake: …`다. 이름은 11/22 통합 세션이 정했다(무시 목록·검사 규칙을 바꾸지 않음). 쓰는 법: 리포 루트에서 `cp app/secrets.json.example app/secrets.json` 뒤 값을 채운다(9).
 - App Check 디버그 토큰을 secrets.json에서 받는다(`DOOBAL_APP_CHECK_DEBUG_TOKEN`, 디버그 빌드만). iOS 구글 로그인은 옵션의 iOS 클라이언트 id를 쓰고, 없으면 `준비 중`이다(iOS 손 확인 전).
 - 시험 `test/data/server_options_test.dart` 18개: off·emulator(디버그·출시)·모르는 이름·기본 real·값 다 있음·하나씩 빠짐·빈칸·앞뒤 공백·견본 값·선택 값·iOS·다른 플랫폼, 견본 파일 키가 코드와 같은지.
 
@@ -270,21 +270,24 @@ npm run build && GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gcloud-annie/appli
 CLOUDSDK_CONFIG=$HOME/.config/gcloud-annie gcloud auth application-default revoke
 ```
 
-### 9. secrets.json 채우기 (리포 `app/`에서)
+### 9. secrets.json 채우기 (리포 루트에서)
+
+견본 `app/secrets.json.example`을 복사한다(리포에 올라가는 것은 견본뿐이다):
 
 ```bash
-cp secrets.json.example secrets.json
+cp app/secrets.json.example app/secrets.json
 ```
 
 ```bash
-git check-ignore -v secrets.json
+git check-ignore -v app/secrets.json
 ```
 
 - 두 번째 명령이 `.gitignore:…:secrets.json`을 보여 줘야 한다(무시 목록). 아무것도 안 나오면 멈추고 묻는다.
+- `git status`에 `app/secrets.json`이 보이면 안 된다.
 - 편집기로 secrets.json을 열어 `"Fake: …"`를 하나씩 **비밀번호 관리자에서 복사**한 값으로 바꾼다. iOS 세 줄은 11/28 전까지 `Fake…` 그대로 둔다(빈 값으로 본다).
 - 이 파일은 그 체크아웃에만 있다. 워크트리에서 빌드하면 값이 없어 서버 없이 돈다. 그때는 이 파일의 절대 경로를 준다.
 
-### 10. 빌드
+### 10. 빌드 (리포 `app/`에서)
 
 디버그(폰 확인용, App Check 디버그 토큰):
 
@@ -318,7 +321,7 @@ flutter build appbundle --release --dart-define-from-file=secrets.json
 1. **기본 real, 값이 없으면 off.** secrets.json을 주는 것만으로 붙고, 값 없는 빌드·시험·워크트리 빌드는 지금처럼 기기 안에서 돈다. 에뮬레이터는 그대로 `DOOBAL_SERVER=emulator`.
 2. **`Fake`로 시작하는 값은 빈 값으로 본다.** 견본을 그대로 복사해 빌드해도 실제 연결을 켜지 않게 했다. 실제 값은 `AIza`·`1:`·숫자·`doobal`로 시작해 겹치지 않는다.
 3. **필수는 플랫폼마다 4개**(프로젝트 id·프로젝트 번호·API 키·앱 ID). 구글 클라이언트 id 둘과 App Check 디버그 토큰은 선택이다. 없으면 그 기능만 `준비 중`이고 디버그 로그에 한 줄 남는다.
-4. **견본 이름은 `app/secrets.json.example`**(가안). `secrets.example.json`은 `.gitignore`의 `secrets.*.json`과 `check_secrets.py`의 비밀 값 파일 이름 규칙에 둘 다 걸린다. 이 이름은 규칙을 바꾸지 않고 통과하고, 내용 검사는 그대로 받는다.
+4. **견본 이름은 `app/secrets.json.example`**(11/22 통합 세션이 정함). `secrets.example.json`은 `.gitignore`의 `secrets.*.json`과 `check_secrets.py`의 비밀 값 파일 이름 규칙에 둘 다 걸린다. 이 이름은 규칙을 바꾸지 않고 통과하고, 내용 검사는 그대로 받는다.
 5. **Dart 상수 이름은 `androidKey`·`iosKey`·`appCheckDebug`.** `androidApiKey = 'DOOBAL_…'` 꼴이 검사의 ‘키처럼 보이는 값’에 오탐돼서다. 검사 규칙은 바꾸지 않았다.
 6. **꺼진 까닭은 디버그·프로필 빌드에서만 로그를 남긴다.** 키 이름만 남고 값은 남기지 않는다. 기존 `서버 시작 실패: …` 로그는 그대로 뒀다.
 7. **넣지 않은 옵션**: `storageBucket`·`authDomain`·웹 앱 값(Storage·웹을 쓰지 않음). iOS 번들 ID는 코드 상수(`com.annieha.doobal`).
@@ -327,7 +330,7 @@ flutter build appbundle --release --dart-define-from-file=secrets.json
 
 ## 질문 대장 후보 (11/22)
 
-1. **견본 파일 이름**: ① `app/secrets.json.example`(지금, 규칙 그대로) ② `app/secrets.example.json` + `.gitignore`에 `!app/secrets.example.json` + `check_secrets.py`의 `ALLOWED_FILES` 한 줄(`functions/.env.demo-doobal` 선례, 규칙을 느슨하게 하는 일이라 Annie 허락). 추천 ①.
+1. ~~견본 파일 이름~~: 11/22 통합 세션이 `app/secrets.json.example`로 정했다(규칙 그대로라 Annie 허락이 필요 없음). `secrets.example.json` + 무시 목록·검사 예외는 하지 않는다.
 2. **1월 전 배포 때 `KAKAO_APP_ID`**: ① `0`(가안, 카카오 토큰이 하나도 통과하지 않음) ② 카카오 함수 둘을 빼고 배포(명령이 함수 목록으로 길어진다). 추천 ①.
 3. **seed 자격**: ① Annie 전용 gcloud 설정 폴더(가안, 다른 사람 gcloud 설정을 건드리지 않음) ② 콘솔에서 손으로 문서 3개(moderation이 커서 틀리기 쉬움). 추천 ①.
 4. **폰 확인 빌드**: 폰에 직접 설치한 출시 빌드는 Play Integrity를 통과하지 못할 수 있다(Play에서 받은 앱이 아니라서, 추정). 그러면 Callable이 거절된다. 추천: 폰 확인은 디버그 빌드 + 디버그 토큰으로 하고, 출시 빌드 확인은 Play 내부 테스트(T6a) 뒤에.
