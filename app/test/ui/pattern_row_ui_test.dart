@@ -71,10 +71,11 @@ void main() {
     expect(x('pattern-drops') < x('pattern-trail_01') && x('pattern-trail_01') < x('pattern-trail_03'), isTrue);
     expect(_key('pattern-trail_02'), findsNothing);
     expect(_in('pattern-row', find.text('3')), findsOneWidget);
-    // 새로 얻은 별가루만 새 표시 (이번 방문 동안 남는다), 그림이 없으면 점선 칸 + 이름
+    // 새로 얻은 별가루만 새 표시 (이번 방문 동안 남는다), 칸은 무늬 아이콘 그림 (11/22 받음, 없으면 점선 칸 + 이름)
     expect(_in('pattern-trail_03', _key('pattern-new')), findsOneWidget);
     expect(_in('pattern-trail_01', _key('pattern-new')), findsNothing);
-    expect(_in('pattern-trail_03', _key('item-placeholder')), findsOneWidget);
+    expect(_in('pattern-trail_03', _asset('ui_trail_star_icon')), findsOneWidget);
+    expect(_in('pattern-trail_03', _key('item-placeholder')), findsNothing);
     // 얻었어도 지금 무늬는 기본 방울
     expect(_in('pattern-drops', find.text(paintUsingLabel)), findsOneWidget);
     final unseen = await tester.runAsync(
@@ -121,3 +122,11 @@ void main() {
     await end(tester, e);
   });
 }
+
+/// 이름에 [stem]이 든 앱 그림 (Image.asset, cacheWidth면 ResizeImage 안)
+Finder _asset(String stem) => find.byWidgetPredicate((w) {
+      if (w is! Image) return false;
+      var p = w.image;
+      if (p is ResizeImage) p = p.imageProvider;
+      return p is AssetImage && p.assetName.contains(stem);
+    });

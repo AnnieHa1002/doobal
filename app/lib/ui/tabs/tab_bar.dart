@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
+import '../../domain/asset_index.dart';
 import '../common/notice_dot.dart';
 import '../common/palette.dart';
 import 'home_tab.dart';
@@ -37,7 +38,8 @@ abstract final class TabBarMetrics {
 /// 지금 탭은 잉크 글자 + 테라코타 밑줄 18×3, 나머지는 옅은 잉크.
 /// 걷는 중이면 걷기 아이콘의 발자국 두 개가 0.9초에 번갈아 깜빡인다 (쉼터 위 글 없음, 움직임 줄이기면 멈춤).
 /// 걷기 아이콘 점 = 안 읽은 이야기·방명록 쓸 기회 (config ui.tabs.dots.walk).
-/// 나 아이콘은 정령 얼굴 자리 (앱이 Rive로 그릴 때까지 얼굴 모양 자리표시)
+/// 나 아이콘은 정령 얼굴 자리 (앱이 Rive로 그릴 때까지 얼굴 모양 자리표시).
+/// 쉼터·걷기 아이콘은 납품 그림([art])이 있으면 그것, 없으면 코드 그림
 class DoobalTabBar extends StatelessWidget {
   const DoobalTabBar({
     super.key,
@@ -47,7 +49,10 @@ class DoobalTabBar extends StatelessWidget {
     required this.walking,
     required this.walkDot,
     required this.onTap,
+    this.art = const TabIconArt(),
   });
+
+  final TabIconArt art;
 
   final List<HomeTab> tabs;
   final Map<String, String> labels;
@@ -80,6 +85,7 @@ class DoobalTabBar extends StatelessWidget {
                 active: t == current,
                 walking: walking,
                 dot: t == HomeTab.walk && walkDot,
+                art: art,
                 onTap: () => onTap(t),
               ),
             ),
@@ -96,6 +102,7 @@ class _TabItem extends StatelessWidget {
     required this.active,
     required this.walking,
     required this.dot,
+    required this.art,
     required this.onTap,
   });
 
@@ -104,6 +111,7 @@ class _TabItem extends StatelessWidget {
   final bool active;
   final bool walking;
   final bool dot;
+  final TabIconArt art;
   final VoidCallback onTap;
 
   @override
@@ -111,8 +119,11 @@ class _TabItem extends StatelessWidget {
     final color = active ? Palette.ink : Palette.subInk;
     final walkingNow = tab == HomeTab.walk && walking;
     final icon = switch (tab) {
-      HomeTab.rest => CustomPaint(painter: _TentPainter(active: active)),
-      HomeTab.walk => _Footprints(active: active, walking: walkingNow),
+      HomeTab.rest => switch (art.rest) {
+          final file? => _TabMask(file, color),
+          null => CustomPaint(painter: _TentPainter(active: active)),
+        },
+      HomeTab.walk => _Footprints(active: active, walking: walkingNow, art: art),
       HomeTab.me => _FacePlaceholder(color: color),
     };
     final semantics = [
@@ -178,6 +189,50 @@ class _TabItem extends StatelessWidget {
   }
 }
 
+/// 탭 아이콘 그림 (codex_camp_deco_v01 T05, config ui.tabs.icons, assets/ui/). 흰 마스크라 탭 색을 입혀 그린다.
+/// 없는 것은 null (코드 그림). 걷는 중 발자국은 step1·step2(한 발씩)를 번갈아 켜고 walk(두 발)를 옅게 깐다
+/// (step3은 두 발 = walk와 같은 그림이라 안 씀)
+class TabIconArt {
+  const TabIconArt({this.rest, this.walk, this.stepA, this.stepB});
+
+  factory TabIconArt.from(AssetIndex? assets) => assets == null
+      ? const TabIconArt()
+      : TabIconArt(
+          rest: assets.sprite('icon_tab_camp_v01'),
+          walk: assets.sprite('icon_tab_walk_v01'),
+          stepA: assets.sprite('icon_tab_walk_step1_v01'),
+          stepB: assets.sprite('icon_tab_walk_step2_v01'),
+        );
+
+  final String? rest;
+  final String? walk;
+  final String? stepA;
+  final String? stepB;
+
+  /// 걷기 아이콘을 그림으로 그릴 수 있다 (셋 다 있어야)
+  bool get hasWalk => walk != null && stepA != null && stepB != null;
+}
+
+/// 흰 마스크 탭 아이콘 그림에 [color]를 입힌 것
+class _TabMask extends StatelessWidget {
+  const _TabMask(this.file, this.color);
+
+  final String file;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Image.asset(
+        file,
+        color: color,
+        colorBlendMode: BlendMode.srcIn,
+        fit: BoxFit.contain,
+        excludeFromSemantics: true,
+        gaplessPlayback: true,
+        cacheWidth: (TabBarMetrics.icon * MediaQuery.devicePixelRatioOf(context)).ceil(),
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      );
+}
+
 /// 쉼터 아이콘: 텐트와 작은 불 (캔버스 TabBar svg). 지금 탭이면 텐트 #e6c99a·불 테라코타로 칠하고, 아니면 선만
 class _TentPainter extends CustomPainter {
   const _TentPainter({required this.active});
@@ -224,10 +279,11 @@ class _TentPainter extends CustomPainter {
 
 /// 걷기 아이콘: 발자국 두 개. 걷는 중이면 0.9초에 왼발·오른발이 번갈아 밝다 (캔버스 tbStepL·tbStepR, steps(1))
 class _Footprints extends StatefulWidget {
-  const _Footprints({required this.active, required this.walking});
+  const _Footprints({required this.active, required this.walking, required this.art});
 
   final bool active;
   final bool walking;
+  final TabIconArt art;
 
   @override
   State<_Footprints> createState() => _FootprintsState();
@@ -267,17 +323,32 @@ class _FootprintsState extends State<_Footprints> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
+    final art = widget.art;
     return AnimatedBuilder(
       animation: _step,
-      builder: (context, _) => CustomPaint(
-        key: ValueKey(widget.walking ? 'tab-walk-steps' : 'tab-walk-still'),
-        painter: _FootprintPainter(
-          active: widget.active,
-          // 걷는 중이 아니면 둘 다 밝다
-          leftLit: !_step.isAnimating || _step.value < 0.5,
-          rightLit: !_step.isAnimating || _step.value >= 0.5,
-        ),
-      ),
+      builder: (context, _) {
+        final key = ValueKey(widget.walking ? 'tab-walk-steps' : 'tab-walk-still');
+        // 걷는 중이 아니면 둘 다 밝다
+        final leftLit = !_step.isAnimating || _step.value < 0.5;
+        final rightLit = !_step.isAnimating || _step.value >= 0.5;
+        if (!art.hasWalk) {
+          return CustomPaint(
+            key: key,
+            painter: _FootprintPainter(active: widget.active, leftLit: leftLit, rightLit: rightLit),
+          );
+        }
+        // 그림: 두 발을 꺼진 불투명도로 깔고 밝은 발만 위에 (발마다 그림이 따로라 바꿔 끼우지 않고 숨긴다)
+        final color = widget.active ? Palette.terracotta : Palette.subInk;
+        return Stack(
+          key: key,
+          fit: StackFit.expand,
+          children: [
+            _TabMask(art.walk!, color.withValues(alpha: _FootprintPainter._dim)),
+            Opacity(opacity: leftLit ? 1 : 0, child: _TabMask(art.stepA!, color)),
+            Opacity(opacity: rightLit ? 1 : 0, child: _TabMask(art.stepB!, color)),
+          ],
+        );
+      },
     );
   }
 }

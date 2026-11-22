@@ -4,6 +4,7 @@ import 'package:doobal/app/decor_providers.dart';
 import 'package:doobal/app/providers.dart';
 import 'package:doobal/app/screen_providers.dart';
 import 'package:doobal/data/db/app_db.dart';
+import 'package:doobal/domain/asset_index.dart';
 import 'package:doobal/domain/decor_place.dart';
 import 'package:doobal/domain/scene.dart' show sceneLook;
 import 'package:doobal/domain/sky.dart';
@@ -57,6 +58,14 @@ Future<void> _open(WidgetTester tester, UiEnv e) async {
   await settle(tester, () => find.byKey(const ValueKey('rest-side-decorate')).evaluate().isNotEmpty);
   await tester.pump();
 }
+
+/// 이름에 [stem]이 든 앱 그림 (Image.asset, cacheWidth면 ResizeImage 안)
+Finder _asset(String stem) => find.byWidgetPredicate((w) {
+      if (w is! Image) return false;
+      var p = w.image;
+      if (p is ResizeImage) p = p.imageProvider;
+      return p is AssetImage && p.assetName.contains(stem);
+    });
 
 Future<DecorPlacedRow?> _row(WidgetTester tester, UiEnv e, String id) => tester.runAsync<DecorPlacedRow?>(
     () => (e.db.select(e.db.decorPlaced)..where((t) => t.decorId.equals(id))).getSingleOrNull());
@@ -171,7 +180,8 @@ void main() {
     await end(tester, e);
   });
 
-  testWidgets('놓인 물품은 저장한 비율 자리에 그림 없는 자리표시(점선 + 이름)로, 발이 아래 가운데', (tester) async {
+  testWidgets('놓인 물품은 저장한 비율 자리에 납품 그림으로(그림이 없으면 점선 + 이름 자리표시), 발이 아래 가운데',
+      (tester) async {
     final e = UiEnv();
     await e.seed(tester, () async {
       await _own(e, ['decor_easel', 'decor_pond']);
@@ -185,13 +195,32 @@ void main() {
     expect(easel.top, closeTo(590, 0.5));
     expect(easel.width, closeTo(72, 0.5));
     expect(easel.bottom, closeTo(700, 0.5));
-    expect(find.text('이젤'), findsOneWidget);
-    expect(find.text('작은 연못'), findsOneWidget);
-    expect(find.byKey(const ValueKey('decor-placeholder')), findsNWidgets(2));
+    // 물품 그림 (11/22 넣음, assets/backgrounds/camp_deco/)
+    expect(_asset('obj_camp_deco_easel'), findsOneWidget);
+    expect(_asset('obj_camp_deco_pond'), findsOneWidget);
+    expect(find.byKey(const ValueKey('decor-placeholder')), findsNothing);
     // 발 y가 정령 발(725)보다 아래인 연못은 정령 앞 층, 이젤은 뒤 층
     final views = tester.widgetList<DecorPiece>(find.byType(DecorPiece)).map((p) => p.view.id).toList();
     expect(views, ['decor_easel', 'decor_pond']);
     expect(_stage.frontOfSpirit(const ScenePoint(400, 790)), isTrue);
+    await end(tester, e);
+  });
+
+  testWidgets('물품 그림이 없으면 같은 자리에 점선 자리표시 + 이름', (tester) async {
+    final e = UiEnv(assets: AssetIndex(const []));
+    await e.seed(tester, () async {
+      await _own(e, ['decor_easel', 'decor_pond']);
+      await _place(e, 'decor_easel', const ScenePoint(300, 700));
+      await _place(e, 'decor_pond', const ScenePoint(400, 790), flipped: true);
+    });
+    await _open(tester, e);
+    final easel = tester.getRect(find.byKey(const ValueKey('decor-decor_easel')));
+    expect(easel.left, closeTo(264, 0.5));
+    expect(easel.bottom, closeTo(700, 0.5));
+    expect(find.text('이젤'), findsOneWidget);
+    expect(find.text('작은 연못'), findsOneWidget);
+    expect(find.byKey(const ValueKey('decor-placeholder')), findsNWidgets(2));
+    expect(_asset('obj_camp_deco_'), findsNothing);
     await end(tester, e);
   });
 
