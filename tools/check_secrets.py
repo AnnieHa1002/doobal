@@ -44,7 +44,7 @@ PATTERNS = [
 
 # 리포에 두는 가짜 값 (이것만 통과)
 FAKE = {
-    'AIzaSyDemoKeyForFirebaseEmulatorOnly000',  # T1b 에뮬레이터 demo-doobal 전용 (app/lib/data/firebase_backend.dart)
+    'AIzaSyDemoKeyForFirebaseEmulatorOnly000',  # T1b 에뮬레이터 demo-doobal 전용 (app/lib/data/server_options.dart)
 }
 
 # 글이 아닌 파일은 내용 검사를 건너뛴다
