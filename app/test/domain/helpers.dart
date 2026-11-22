@@ -97,6 +97,13 @@ final AssetIndex assetIndex = AssetIndex([
     if (f is File) f.path,
 ]);
 
+/// 실제 assets 파일 목록에서 경로에 [without] 중 하나가 든 파일을 뺀 것. 그림 없는 칸(점선·색 상자)을 볼 때 쓴다
+/// (11/23부터 MVP 소품은 물빛 구슬·효과 빼고 모두 칸 그림이 있다)
+AssetIndex assetIndexWithout(List<String> without) => AssetIndex([
+      for (final f in Directory('assets').listSync(recursive: true))
+        if (f is File && !without.any(f.path.contains)) f.path,
+    ]);
+
 /// 실제 themes/camp_wide.json (v5: 땅 위 물건은 수레만)
 final CampTheme campTheme = CampTheme.fromJson(
   jsonDecode(File('assets/data/themes/camp_wide.json').readAsStringSync()) as Map<String, dynamic>,

@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../domain/helpers.dart';
+
 // 상점·꾸미기·화집이 같이 쓰는 칸
 
 const _icon = 'assets/items/basic_v02/item_hat_01_icon_v02.png';
@@ -49,6 +51,38 @@ void main() {
       await _pump(tester, const ItemArt(id: 'face_01', name: '헤드폰'), files: [file]);
       final image = _image(tester).image as ResizeImage;
       expect((image.imageProvider as AssetImage).assetName, file);
+    });
+
+    testWidgets('실제 앱 아이콘(11/23 v01): 소품·색 소품·미니 친구 칸이 그림을 풀어 그린다', (tester) async {
+      final byId = {for (final p in props) p.id: p};
+      const ids = ['hat_01', 'hat_01_c1', 'pet_06'];
+      await tester.pumpWidget(ProviderScope(
+        overrides: [assetIndexProvider.overrideWith((ref) => assetIndex)],
+        child: MaterialApp(
+          home: Scaffold(body: Row(children: [for (final id in ids) ItemArt.prop(byId[id]!)])),
+        ),
+      ));
+      // 파일 목록을 읽고, 그림 파일을 실제로 푼다 (못 읽으면 점선 칸·색 상자로 돌아간다)
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 25)));
+        await tester.pump();
+      }
+      expect(
+        [
+          for (final image in tester.widgetList<Image>(find.byType(Image)))
+            ((image.image as ResizeImage).imageProvider as AssetImage).assetName,
+        ],
+        [for (final id in ids) 'assets/items/icons/item_${id}_icon_v01_clean.webp'],
+      );
+      final drawn = tester.widgetList<RawImage>(find.byType(RawImage)).toList();
+      expect(drawn, hasLength(ids.length));
+      for (final r in drawn) {
+        expect(r.image, isNotNull);
+        expect(r.image!.width, 192);
+      }
+      // 색 소품도 색 상자 대신 그림
+      expect(find.byType(ItemSwatch), findsNothing);
+      expect(find.byType(ItemPlaceholder), findsNothing);
     });
 
     testWidgets('파일을 못 읽으면 점선 칸으로 돌아간다', (tester) async {
