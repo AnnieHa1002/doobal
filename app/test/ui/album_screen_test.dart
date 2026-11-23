@@ -469,7 +469,8 @@ void main() {
     });
 
     testWidgets('걸어서 얻은 소품은 그 칸에 props.json 순서로 붙는다 (11km → 봇짐)', (tester) async {
-      final e = UiEnv();
+      // 11/23부터 소품 칸 그림이 있다. 그림 없는 칸을 보려고 봇짐 그림만 뺀 파일 목록을 쓴다
+      final e = UiEnv(assets: assetIndexWithout(['item_hand_02_icon']));
       await e.seed(tester, () => _walk11km(e));
       await openProps(tester, e, ready: _prop('hand_02'));
 

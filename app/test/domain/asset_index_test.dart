@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:doobal/domain/asset_index.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -51,12 +54,32 @@ void main() {
       expect(index.itemIcon('bag_01'), 'assets/items/icons/item_bag_01_icon_v01_clean.webp');
     });
 
-    test('실제 앱 파일: 옛 기본 소품 6개는 그림이 있고 상점 소품은 없다 (11/6 기준)', () {
-      for (final id in ['hat_01', 'hand_01', 'pet_01', 'bag_01', 'cloth_01', 'shoe_01']) {
-        expect(assetIndex.itemIcon(id), 'assets/items/basic_v02/item_${id}_icon_v02.png', reason: id);
+    test('실제 앱 파일: props.json icon이 있는 소품은 아이콘 폴더 v01 그림, 그 밖의 상품은 없다 (11/23 기준)', () {
+      final raw = (jsonDecode(File('assets/data/props.json').readAsStringSync()) as Map<String, dynamic>)['props']
+          as List<dynamic>;
+      final withIcon = {
+        for (final p in raw.cast<Map<String, dynamic>>())
+          if (p['icon'] != null) p['id'] as String,
+      };
+      // 물빛 구슬(ui_icon_float_04_v01)은 11/23 받은 묶음(소품 v01·미니 친구 v01)에 없다
+      const notYet = {'float_04'};
+      expect(withIcon.length, 67);
+      for (final id in withIcon.difference(notYet)) {
+        // 옛 기본 소품 6개(basic_v02)도 아이콘 폴더가 먼저다
+        expect(assetIndex.itemIcon(id), 'assets/items/icons/item_${id}_icon_v01_clean.webp', reason: id);
       }
-      expect(assetIndex.itemIcon('hat_02'), isNull);
+      for (final id in notYet) {
+        expect(assetIndex.itemIcon(id), isNull, reason: id);
+      }
+      // 아이콘 폴더의 파일은 모두 icon이 있는 소품의 것 (이름 규칙 item_<id>_icon_v01_clean.webp)
+      final files = [
+        for (final f in Directory(AssetIndex.iconDir).listSync())
+          if (!f.uri.pathSegments.last.startsWith('.')) f.uri.pathSegments.last,
+      ];
+      expect(files.toSet(), {for (final id in withIcon.difference(notYet)) 'item_${id}_icon_v01_clean.webp'});
+      // 소품이 아닌 상품(여행 효과·무늬·물감 통·쉼터 물품·배)과 효과 소품은 아직 칸 그림이 없다
       for (final item in shopCatalog.items) {
+        if (withIcon.contains(item.propId)) continue;
         expect(assetIndex.itemIcon(item.id), isNull, reason: item.id);
       }
     });

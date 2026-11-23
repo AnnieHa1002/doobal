@@ -172,7 +172,8 @@ void main() {
     testWidgets('그림 없는 칸은 점선 + 이름, 아이콘 파일을 넣으면 그 그림', (tester) async {
       final day = _dayWith(tube: false);
       final first = _firstLine(day).first;
-      final e = UiEnv();
+      // 11/23부터 소품 칸 그림이 있다. 그림 없는 칸을 보려고 첫 칸 소품 그림만 뺀 파일 목록을 쓴다
+      final e = UiEnv(assets: assetIndexWithout(['item_${first}_icon']));
       e.now = _noon(day);
       await e.seed(tester);
       await _open(tester, e);
@@ -556,7 +557,8 @@ void main() {
 
     testWidgets('쉼터 수레 위에 그날 수레 물건이 얹힌다 (팔린 칸은 빠짐, 그림 없으면 짐 상자)', (tester) async {
       final day = _dayWith(tube: false);
-      final e = UiEnv();
+      // 11/23부터 소품 칸 그림이 있다. 짐 상자를 보려고 칸 그림 폴더를 뺀 파일 목록을 쓴다
+      final e = UiEnv(assets: assetIndexWithout([AssetIndex.iconDir]));
       e.now = _noon(day);
       await e.seed(tester, () => _giveCoins(e, 1000));
       await openRest(tester, e);
@@ -576,6 +578,25 @@ void main() {
       await settle(tester, () => find.byKey(const ValueKey('cart-top-parcel')).evaluate().length == 2);
       expect(find.byKey(const ValueKey('cart-top-parcel')), findsNWidgets(2));
       expect(_key('cart-top-0'), findsNothing);
+      await end(tester, e);
+    });
+
+    testWidgets('쉼터 수레 위 소품 상품은 짐 상자 대신 칸 그림 (11/23 소품 아이콘)', (tester) async {
+      final day = _dayWith(tube: false);
+      final line = _firstLine(day);
+      final e = UiEnv();
+      e.now = _noon(day);
+      await e.seed(tester);
+      await openRest(tester, e);
+      Finder imageAt(int slot) => find.descendant(of: _key('cart-top-$slot'), matching: find.byType(Image));
+      await settle(tester, () => imageAt(line.length - 1).evaluate().isNotEmpty);
+      for (final (slot, id) in line.indexed) {
+        final image = tester.widget<Image>(imageAt(slot)).image as AssetImage;
+        expect(image.assetName, 'assets/items/icons/item_${id}_icon_v01_clean.webp', reason: id);
+      }
+      // 그림 파일을 실제로 풀어도 짐 상자로 돌아가지 않는다
+      await settle(tester, () => false, tries: 12);
+      expect(find.byKey(const ValueKey('cart-top-parcel')), findsNothing);
       await end(tester, e);
     });
 

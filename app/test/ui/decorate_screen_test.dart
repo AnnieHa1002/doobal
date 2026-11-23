@@ -293,7 +293,8 @@ void main() {
     });
 
     testWidgets('소품 칸: 그림이 있는 소품은 그림을, 없는 소품과 없음 칸은 그림 없이 놓는다', (tester) async {
-      final e = UiEnv();
+      // 11/23부터 소품 칸 그림이 있다. 그림 없는 칸을 보려고 여행 모자 그림만 뺀 파일 목록을 쓴다
+      final e = UiEnv(assets: assetIndexWithout(['item_hat_02_icon']));
       await e.seed(tester, () => _ownProps(e.db, ['hat_02']));
       await _open(tester, e);
 
@@ -658,7 +659,8 @@ void main() {
     });
 
     testWidgets('공용 칸: 파일이 있는 소품은 64×64 그림, 없는 소품은 점선 + 이름, 없음 칸은 빈 점선', (tester) async {
-      final e = UiEnv();
+      // 11/23부터 소품 칸 그림이 있다. 그림 없는 칸을 보려고 여행 모자 그림만 뺀 파일 목록을 쓴다
+      final e = UiEnv(assets: assetIndexWithout(['item_hat_02_icon']));
       await e.seed(tester, () => _ownProps(e.db, ['hat_02']));
       await _open(tester, e);
       await _goTab(tester, 'hat');
@@ -1105,7 +1107,8 @@ void main() {
     }
 
     testWidgets('산 색 소품은 같은 칸에 기본 소품 바로 뒤 따로 된 칸, 그림이 없으면 그 색 상자', (tester) async {
-      final e = UiEnv();
+      // 11/23부터 색 소품 칸 그림이 있다. 색 상자를 보려고 밤바다 베레모 그림만 뺀 파일 목록을 쓴다
+      final e = UiEnv(assets: assetIndexWithout(['item_hat_01_c2_icon']));
       await e.seed(tester, () => _ownProps(e.db, ['hat_02_c1', 'hat_02', 'hat_01_c2']));
       await _open(tester, e);
       await _goTab(tester, 'hat');
